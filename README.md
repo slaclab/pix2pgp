@@ -9,3 +9,9 @@ If you want to run a testbench (here it is _Pix2PgpGearboxWrapperTb_), run:
 ```
 $ bash ghdlRun.sh Pix2PgpGearboxWrapperTb
 ```
+## Dependencies
+You should have the following two packages in your server to run this:
+```
+* ghdl-llvm
+* gtkwave
+```
