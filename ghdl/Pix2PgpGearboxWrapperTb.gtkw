@@ -1,0 +1,58 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed May 15 08:53:34 2024
+[*]
+[dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/ghdl/Pix2PgpGearboxWrapperTb.ghw"
+[dumpfile_mtime] "Wed May 15 08:50:50 2024"
+[dumpfile_size] 24700
+[savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/ghdl/Pix2PgpGearboxWrapperTb.gtkw"
+[timestart] 60100000
+[size] 1850 1016
+[pos] -1 -1
+*-26.000000 200000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.pix2pgpgearboxwrappertb.
+[treeopen] top.pix2pgpgearboxwrappertb.u_dut.
+[sst_width] 302
+[signals_width] 262
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@200
+-intGbox
+@28
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.masterbitorder
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.masterready
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.mastervalid
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.slip
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.startofseq
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.slavebitorder
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.slaveready
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.slavevalid
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.rst
+top.pix2pgpgearboxwrappertb.u_dut.u_arbiter_gearbox.clk
+@200
+-pgp gearbox
+@28
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.masterbitorder
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.masterready
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.mastervalid
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.slip
+@22
+#{top.pix2pgpgearboxwrappertb.pgpdata[63:0]} top.pix2pgpgearboxwrappertb.pgpdata[63] top.pix2pgpgearboxwrappertb.pgpdata[62] top.pix2pgpgearboxwrappertb.pgpdata[61] top.pix2pgpgearboxwrappertb.pgpdata[60] top.pix2pgpgearboxwrappertb.pgpdata[59] top.pix2pgpgearboxwrappertb.pgpdata[58] top.pix2pgpgearboxwrappertb.pgpdata[57] top.pix2pgpgearboxwrappertb.pgpdata[56] top.pix2pgpgearboxwrappertb.pgpdata[55] top.pix2pgpgearboxwrappertb.pgpdata[54] top.pix2pgpgearboxwrappertb.pgpdata[53] top.pix2pgpgearboxwrappertb.pgpdata[52] top.pix2pgpgearboxwrappertb.pgpdata[51] top.pix2pgpgearboxwrappertb.pgpdata[50] top.pix2pgpgearboxwrappertb.pgpdata[49] top.pix2pgpgearboxwrappertb.pgpdata[48] top.pix2pgpgearboxwrappertb.pgpdata[47] top.pix2pgpgearboxwrappertb.pgpdata[46] top.pix2pgpgearboxwrappertb.pgpdata[45] top.pix2pgpgearboxwrappertb.pgpdata[44] top.pix2pgpgearboxwrappertb.pgpdata[43] top.pix2pgpgearboxwrappertb.pgpdata[42] top.pix2pgpgearboxwrappertb.pgpdata[41] top.pix2pgpgearboxwrappertb.pgpdata[40] top.pix2pgpgearboxwrappertb.pgpdata[39] top.pix2pgpgearboxwrappertb.pgpdata[38] top.pix2pgpgearboxwrappertb.pgpdata[37] top.pix2pgpgearboxwrappertb.pgpdata[36] top.pix2pgpgearboxwrappertb.pgpdata[35] top.pix2pgpgearboxwrappertb.pgpdata[34] top.pix2pgpgearboxwrappertb.pgpdata[33] top.pix2pgpgearboxwrappertb.pgpdata[32] top.pix2pgpgearboxwrappertb.pgpdata[31] top.pix2pgpgearboxwrappertb.pgpdata[30] top.pix2pgpgearboxwrappertb.pgpdata[29] top.pix2pgpgearboxwrappertb.pgpdata[28] top.pix2pgpgearboxwrappertb.pgpdata[27] top.pix2pgpgearboxwrappertb.pgpdata[26] top.pix2pgpgearboxwrappertb.pgpdata[25] top.pix2pgpgearboxwrappertb.pgpdata[24] top.pix2pgpgearboxwrappertb.pgpdata[23] top.pix2pgpgearboxwrappertb.pgpdata[22] top.pix2pgpgearboxwrappertb.pgpdata[21] top.pix2pgpgearboxwrappertb.pgpdata[20] top.pix2pgpgearboxwrappertb.pgpdata[19] top.pix2pgpgearboxwrappertb.pgpdata[18] top.pix2pgpgearboxwrappertb.pgpdata[17] top.pix2pgpgearboxwrappertb.pgpdata[16] top.pix2pgpgearboxwrappertb.pgpdata[15] top.pix2pgpgearboxwrappertb.pgpdata[14] top.pix2pgpgearboxwrappertb.pgpdata[13] top.pix2pgpgearboxwrappertb.pgpdata[12] top.pix2pgpgearboxwrappertb.pgpdata[11] top.pix2pgpgearboxwrappertb.pgpdata[10] top.pix2pgpgearboxwrappertb.pgpdata[9] top.pix2pgpgearboxwrappertb.pgpdata[8] top.pix2pgpgearboxwrappertb.pgpdata[7] top.pix2pgpgearboxwrappertb.pgpdata[6] top.pix2pgpgearboxwrappertb.pgpdata[5] top.pix2pgpgearboxwrappertb.pgpdata[4] top.pix2pgpgearboxwrappertb.pgpdata[3] top.pix2pgpgearboxwrappertb.pgpdata[2] top.pix2pgpgearboxwrappertb.pgpdata[1] top.pix2pgpgearboxwrappertb.pgpdata[0]
+@24
+#{top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[9:0]} top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[9] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[8] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[7] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[6] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[5] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[4] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[3] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[2] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[1] top.pix2pgpgearboxwrappertb.u_dut.arbiterdout[0]
+@29
+top.pix2pgpgearboxwrappertb.arbiterdatavalid
+@22
+#{top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[7:0]} top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[7] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[6] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[5] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[4] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[3] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[2] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[1] top.pix2pgpgearboxwrappertb.u_dut.pgpgearboxwriteindex[0]
+@24
+#{top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[9:0]} top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[9] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[8] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[7] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[6] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[5] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[4] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[3] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[2] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[1] top.pix2pgpgearboxwrappertb.u_dut.arbitergearboxwriteindex[0]
+@28
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.startofseq
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.slavebitorder
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.slaveready
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.slavevalid
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.rst
+top.pix2pgpgearboxwrappertb.u_dut.u_pgp_gearbox.clk
+[pattern_trace] 1
+[pattern_trace] 0
