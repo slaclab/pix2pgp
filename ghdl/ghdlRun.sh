@@ -40,6 +40,7 @@ SURF_PKG=${SURF_PKG_DIR}/StdRtlPkg.vhd
 
 CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
+GHW=${GHDL_DIR}/*.ghw
 VCD=${GHDL_DIR}/*.vcd
 TB=${TB_DIR}/*Tb.vhd
 FST=${GHDL_DIR}/*.fst

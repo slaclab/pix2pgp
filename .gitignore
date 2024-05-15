@@ -18,6 +18,7 @@
 *.htm
 *.log
 *.cf
+*.ghw
 
 # Matlab
 *.autosave

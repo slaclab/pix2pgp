@@ -37,7 +37,7 @@ entity Pix2PgpGearboxWrapper is
       pgpClk              : in  sl;
       rst                 : in  sl := not(RST_POLARITY_G);
       -- Arbiter Interface
-      arbiterDataValid    : in  sl;
+      arbiterDvalid       : in  sl;
       arbiterDout         : in  slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
       arbiterGearboxReady : out sl;
       -- PGP Interface
@@ -59,14 +59,14 @@ architecture rtl of Pix2PgpGearboxWrapper is
 
    type RegType is record
       -- i/o
-      arbiterDataValid : sl;
-      arbiterDout      : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
+      arbiterDvalid : sl;
+      arbiterDout   : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      arbiterDataValid    => '0',
-      arbiterDout         => (others => '0'));
+      arbiterDvalid => '0',
+      arbiterDout   => (others => '0'));
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -76,7 +76,7 @@ begin
    ------------------------------------------------
    -- Adapter FSM
    ------------------------------------------------
-   comb : process (r, rst, arbiterDataValid, arbiterDout) is
+   comb : process (r, rst, arbiterDvalid, arbiterDout) is
 
       variable v : RegType;
 
@@ -87,8 +87,8 @@ begin
 
 
       -- Register inputs
-      v.arbiterDataValid := arbiterDataValid;
-      v.arbiterDout      := arbiterDout;
+      v.arbiterDvalid := arbiterDvalid;
+      v.arbiterDout   := arbiterDout;
       --v.arbiterStart    := arbiterStart;
       --v.statusFifoError := statusFifoError;
       --v.dataFifoError   := dataFifoError;
@@ -136,7 +136,7 @@ begin
          clk            => pgpClk,
          rst            => rst,
          -- Slave Interface
-         slaveValid     => r.arbiterDataValid,
+         slaveValid     => r.arbiterDvalid,
          slaveData      => r.arbiterDout,
          slaveReady     => arbiterGearboxReady,
          writeIndex     => arbiterGearboxWriteIndex,

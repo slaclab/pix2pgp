@@ -21,7 +21,7 @@ architecture test of Pix2PgpGearboxWrapperTb is
    signal clk  : sl := '0';
    signal rst  : sl := '1';
 
-   signal arbiterDataValid     : sl := '0';
+   signal arbiterDvalid        : sl := '0';
    signal arbiterDout          : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0) := (others => '0');
    signal arbiterGearboxReady  : sl := '0';
 
@@ -51,7 +51,7 @@ begin
          pgpClk              => clk,
          rst                 => rst,
          -- Arbiter Interface
-         arbiterDataValid    => arbiterDataValid,
+         arbiterDvalid       => arbiterDvalid,
          arbiterDout         => arbiterDout,
          arbiterGearboxReady => arbiterGearboxReady,
          -- PGP Interface
@@ -74,13 +74,13 @@ begin
   begin
    if rising_edge(clk) then
       if rst = '0' then
-         if allBits(arbiterDout, '0') and arbiterDataValid = '0' then
-            arbiterDataValid <= '1';
+         if allBits(arbiterDout, '0') and arbiterDvalid = '0' then
+            arbiterDvalid <= '1';
          elsif arbiterDout = toSlv(31, arbiterDout'length) then
-            arbiterDataValid <= '0';
+            arbiterDvalid <= '0';
          elsif allBits(arbiterDout, '1') then
             arbiterDout      <= (others => '1');
-            arbiterDataValid <= '0';
+            arbiterDvalid <= '0';
          else
             arbiterDout      <= arbiterDout + 1;
          end if;
