@@ -50,7 +50,11 @@ entity Pix2PgpArbiter is
       alignError      : in  sl;
       colBitmask      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum          : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
-      arbiterBusy     : out sl);
+      arbiterBusy     : out sl;
+      -- Gearbox Interface
+      gearboxReady    : in  sl;
+      gearboxDvalid   : out sl;
+      gearboxDout     : out slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
@@ -58,7 +62,7 @@ architecture rtl of Pix2PgpArbiter is
    type StateType is (
       IDLE_S,
       CHK_STATUS_S,
-     -- TX_HEADER_S,
+      TX_HEADER_S,
       CHK_DATALEN_S,
       INCR_SEL_S,
       WAIT_BUS_S
@@ -78,9 +82,14 @@ architecture rtl of Pix2PgpArbiter is
       colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbiterBusy     : sl;
+      gearboxReady    : sl;
+      gearboxDvalid   : sl;
+      gearboxDout     : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
       -- internal
       eventEmpty      : sl;
       headerOnly      : sl;
+      dataHeader      : slv(HEADER_DWITDH_C-1 downto 0);
+      headerSel       : slv(bitSize(HEADER_DWITDH_C/ARB_GEARBOX_INPUT_WIDTH_G) downto 0);
       waitCnt         : slv(WAITCNT_WIDTH_G-1 downto 0);
       state           : StateType;
    end record RegType;
@@ -99,9 +108,14 @@ architecture rtl of Pix2PgpArbiter is
       colBitmask      => (others => '0'),
       trgNum          => (others => '0'),
       arbiterBusy     => '0',
+      gearboxReady    => '0',
+      gearboxDvalid   => '0',
+      gearboxDout     => (others => '0'),
       -- internal
       eventEmpty      => '0',
       headerOnly      => '0',
+      dataHeader      => (others => '0'),
+      headerSel       => (others => '0'),
       waitCnt         => (others => '0'),
       state           => IDLE_S);
 
@@ -114,7 +128,8 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, rst, statusBusSel, dataBusSel, arbiterStart, statusFifoError,
-                   dataFifoError, overOccError, alignError, colBitmask, trgNum) is
+                   dataFifoError, overOccError, alignError, colBitmask, trgNum,
+                   gearboxReady) is
 
       variable v : RegType;
 
@@ -136,6 +151,7 @@ begin
       v.alignError      := alignError;
       v.colBitmask      := colBitmask;
       v.trgNum          := trgNum;
+      v.gearboxReady    := gearboxReady;
 
       v.eventEmpty      := not(uOr(r.colBitmask));
 
@@ -145,29 +161,47 @@ begin
          -- supervisor signals a start of sequence
          -- raise the busy flag
          when IDLE_S =>
+            v.gearboxDvalid := '0';
+            v.headerSel     := (others => '0');
+
             if r.arbiterStart = '1' then
                v.arbiterBusy := '1';
-               v.state       := CHK_STATUS_S;
+               v.state       := TX_HEADER_S;
             end if;
 
          ----------------------------------------------------------------------
          -- check the error flags first (overocc is ignored by the Arbiter)
-         when CHK_STATUS_S =>
-            if r.statusFifoError = '1' or
-               r.dataFifoError   = '1' or
-               r.alignError      = '1' or
-               r.eventEmpty      = '1' then
+         when TX_HEADER_S =>
+            -- Flow control defaults
+            v.slaveReady := '0';
 
-               v.headerOnly := '1';
-               null; --v.state      := TX_HEADER_S;
-            else
-               v.state      := CHK_DATALEN_S;
+            if (r.gearboxReady = '1') then -- TO-DO: do I need to evaluate the variable?????
+               v.gearboxDvalid := '0';
+            end if;
+
+            -- Only do anything if ready for data output
+            if (v.gearboxDvalid = '0') then
+               v.headerSel     := r.headerSel + 1;
+               v.gearboxDvalid := '1';
+            end if;
+
+            if (allBits(r.headerSel, '1')) then -- maxed-out; time to move on.
+               if r.statusFifoError = '1' or
+                  r.dataFifoError   = '1' or
+                  r.alignError      = '1' or
+                  r.eventEmpty      = '1' then
+                  v.state := IDLE_S;
+               else
+                  v.state := CHK_DATALEN_S;
+               end if;
             end if;
 
          ----------------------------------------------------------------------
          -- check the data length of the selected column
          when CHK_DATALEN_S =>
-            v.waitCnt := (others => '0');
+            v.gearboxDvalid := '0';
+            v.headerSel     := (others => '0');
+            v.waitCnt       := (others => '0');
 
             if allBits((r.statusBusSel.dataLen), '0') then
                v.state := INCR_SEL_S;
@@ -193,11 +227,31 @@ begin
                v.state := CHK_DATALEN_S;
             end if;
       end case;
-      -------------------------------------------------------------------------
+      -----------------------------------------------------------------------
+
+      -- Header demux
+      -- (my eyes hurt)
+      v.gearboxDout := r.dataHeader(
+                           HEADER_DWITDH_C-1 -
+                           (conv_integer(unsigned(r.headerSel)))*ARB_GEARBOX_INPUT_WIDTH_G
+                           downto
+                           ARB_GEARBOX_INPUT_WIDTH_G*((conv_integer(unsigned(r.headerSel))) + 1));
+
+      -- header mapping
+      v.dataHeader(OVEROCC_FLAG_POS_C)     := r.overOccError;
+      v.dataHeader(DATA_FULL_FLAG_POS_C)   := r.dataFifoError;
+      v.dataHeader(STATUS_FULL_FLAG_POS_C) := r.statusFifoError;
+      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := r.alignError;
+      v.dataHeader(TIMEOUT_HEADER_POS_C)   := '0'; -- assigned later on
+      v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
+      v.dataHeader(COL_BITMASK_POS_C)      := r.colBitmask;
+      v.dataHeader(TRG_CNT_POS_C)          := r.trgNum;
 
       -- Outputs
-      dataRd <= r.dataRd;
-      colSel <= r.colSel;
+      gearboxDout   <= r.gearboxDout;
+      gearboxDvalid <= r.gearboxDvalid;
+      dataRd        <= r.dataRd;
+      colSel        <= r.colSel;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = '1') then
