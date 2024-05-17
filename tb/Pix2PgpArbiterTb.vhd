@@ -17,6 +17,8 @@ architecture test of Pix2PgpArbiterTb is
 
    constant TPD_C       : time    := 0 ns;
    constant RST_ASYNC_C : boolean := true;
+   constant ARB_FIFO_RD_DELAY_C      : positive := 3; -- standalone/generic FIFO
+   --constant ARB_FIFO_RD_DELAY_C      : natural := ????; -- designware FIFO
 
    type dinArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(SPARSE_DWIDTH_C-1 downto 0);
    type doutArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(DATABUS_DWIDTH_C-1 downto 0);
@@ -67,9 +69,10 @@ begin
   -- Instantiate the design under test
    U_DUT : entity pix2pgp.Pix2PgpArbiter
       generic map (
-         TPD_G        => TPD_C,
-         RST_ASYNC_G  => RST_ASYNC_C,
-         STANDALONE_G => true)
+         TPD_G           => TPD_C,
+         RST_ASYNC_G     => RST_ASYNC_C,
+         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_C,
+         STANDALONE_G    => true)
       port map (
          -- General Interface
          pgpClk          => clk,

@@ -34,16 +34,16 @@ entity Pix2PgpGearboxWrapper is
       RST_POLARITY_G  : sl       := '1');
    port(
       -- General Interface
-      pgpClk              : in  sl;
-      rst                 : in  sl := not(RST_POLARITY_G);
+      pgpClk    : in  sl;
+      rst       : in  sl := not(RST_POLARITY_G);
       -- Arbiter Interface
-      arbiterDvalid       : in  sl;
-      arbiterDout         : in  slv(DATABUS_DWIDTH_C-1 downto 0);
-      arbiterGearboxReady : out sl;
+      arbValid  : in  sl;
+      arbDout   : in  slv(DATABUS_DWIDTH_C-1 downto 0);
+      arbReady  : out sl;
       -- PGP Interface
-      pgpReady            : in  sl;
-      pgpValid            : out sl;
-      pgpData             : out slv(PGP_DWIDTH_C-1 downto 0));
+      pgpReady  : in  sl;
+      pgpValid  : out sl;
+      pgpData   : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpGearboxWrapper;
 
 architecture rtl of Pix2PgpGearboxWrapper is
@@ -57,14 +57,14 @@ architecture rtl of Pix2PgpGearboxWrapper is
 
    type RegType is record
       -- i/o
-      arbiterDvalid : sl;
-      arbiterDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
+      arbValid : sl;
+      arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      arbiterDvalid => '0',
-      arbiterDout   => (others => '0'));
+      arbValid => '0',
+      arbDout  => (others => '0'));
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -81,9 +81,9 @@ begin
    severity failure;
 
    ------------------------------------------------
-   -- Adapter FSM
+   -- Gearbox FSM
    ------------------------------------------------
-   comb : process (r, rst, arbiterDvalid, arbiterDout) is
+   comb : process (r, rst, arbValid, arbDout) is
 
       variable v : RegType;
 
@@ -94,8 +94,8 @@ begin
 
 
       -- Register inputs
-      v.arbiterDvalid := arbiterDvalid;
-      v.arbiterDout   := arbiterDout;
+      v.arbValid := arbValid;
+      v.arbDout  := arbDout;
       --v.arbiterStart    := arbiterStart;
       --v.statusFifoError := statusFifoError;
       --v.dataFifoError   := dataFifoError;
@@ -136,6 +136,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
          SLAVE_WIDTH_G  => DATABUS_DWIDTH_C,
          MASTER_WIDTH_G => GEARBOX_OUTPUT_WIDTH_C)
       port map (
@@ -143,9 +144,9 @@ begin
          clk            => pgpClk,
          rst            => rst,
          -- Slave Interface
-         slaveValid     => r.arbiterDvalid,
-         slaveData      => r.arbiterDout,
-         slaveReady     => arbiterGearboxReady,
+         slaveValid     => r.arbValid,
+         slaveData      => r.arbDout,
+         slaveReady     => arbReady,
          writeIndex     => arbiterGearboxWriteIndex,
          slaveBitOrder  => '0',
          -- Master Interface
@@ -161,6 +162,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
          SLAVE_WIDTH_G  => GEARBOX_OUTPUT_WIDTH_C,
          MASTER_WIDTH_G => 64)
       port map (

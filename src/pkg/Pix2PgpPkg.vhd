@@ -32,6 +32,8 @@ package Pix2PgpPkg is
    constant PIXADDR_WIDTH_C : natural := 10;
    constant SPARSE_DWIDTH_C : natural := ADC_DWIDTH_C + PIXADDR_WIDTH_C;
 
+   type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(SPARSE_DWIDTH_C-1 downto 0);
+
    -- ColumnManager-related
    constant DATALEN_WIDTH_C  : natural := 10; -- 672 pixels max (TO-DO: make this dynamic)
    -- data bus width is twice the pixel data width;
@@ -50,10 +52,10 @@ package Pix2PgpPkg is
    constant STATUSFIFO_OVEROCC_POS_C : natural := STATUSFIFO_DWIDTH_C-1;
 
    subtype STATUSFIFO_TRG_POS_C     is natural range STATUSFIFO_DWIDTH_C-2
-                                           downto DATALEN_WIDTH_C;
+                                               downto DATALEN_WIDTH_C;
 
    subtype STATUSFIFO_DATALEN_POS_C is natural range DATALEN_WIDTH_C-1
-                                           downto 0;
+                                               downto 0;
 
    type Pix2PgpStatusBusType is record
       -- flags begin

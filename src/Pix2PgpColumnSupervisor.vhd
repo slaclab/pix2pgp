@@ -31,7 +31,6 @@ entity Pix2PgpColumnSupervisor is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      WAITCNT_WIDTH_G : positive := 8;
       WAIT_CYCLES_G   : positive := 4);
    port(
       -- General Interface
@@ -78,7 +77,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colOverOccErr    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colDataFullErr   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colStatusFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt          : slv(WAITCNT_WIDTH_G-1 downto 0);
+      waitCnt          : slv(bitSize(WAIT_CYCLES_G)-1 downto 0);
       state            : StateType;
    end record RegType;
 

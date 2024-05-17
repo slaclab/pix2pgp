@@ -21,16 +21,13 @@ architecture test of Pix2PgpGearboxWrapperTb is
    signal clk  : sl := '0';
    signal rst  : sl := '1';
 
-   signal arbiterDvalid        : sl := '0';
-   signal arbiterDout          : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
-   signal arbiterGearboxReady  : sl := '0';
+   signal arbValid  : sl := '0';
+   signal arbDout   : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal arbReady  : sl := '0';
 
-   signal pgpReady             : sl := '1';
-   signal pgpValid             : sl := '0';
-   signal pgpData              : slv(63 downto 0) := (others => '0');
-
-   signal test                 : sl := '0';
-
+   signal pgpReady  : sl := '1';
+   signal pgpValid  : sl := '0';
+   signal pgpData   : slv(63 downto 0) := (others => '0');
 
    constant CLK_PERIOD_C : time := 10 ns;
 
@@ -48,16 +45,16 @@ begin
          RST_ASYNC_G => RST_ASYNC_C)
       port map (
          -- General Interface
-         pgpClk              => clk,
-         rst                 => rst,
+         pgpClk    => clk,
+         rst       => rst,
          -- Arbiter Interface
-         arbiterDvalid       => arbiterDvalid,
-         arbiterDout         => arbiterDout,
-         arbiterGearboxReady => arbiterGearboxReady,
+         arbValid => arbValid,
+         arbDout   => arbDout,
+         arbReady  => arbReady,
          -- PGP Interface
-         pgpValid            => pgpValid,
-         pgpData             => pgpData,
-         pgpReady            => pgpReady);
+         pgpValid  => pgpValid,
+         pgpData   => pgpData,
+         pgpReady  => pgpReady);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -80,15 +77,15 @@ begin
   begin
    if rising_edge(clk) then
       if rst = '0' then
-         if allBits(arbiterDout, '0') and arbiterDvalid = '0' then
-            arbiterDvalid <= '1';
-         elsif arbiterDout = toSlv(7, arbiterDout'length) then
-            arbiterDvalid <= '0';
-         elsif allBits(arbiterDout, '1') then
-            arbiterDout      <= (others => '1');
-            arbiterDvalid <= '0';
+         if allBits(arbDout, '0') and arbValid = '0' then
+            arbValid <= '1';
+         elsif arbDout = toSlv(7, arbDout'length) then
+            arbValid <= '0';
+         elsif allBits(arbDout, '1') then
+            arbDout      <= (others => '1');
+            arbValid <= '0';
          else
-            arbiterDout      <= arbiterDout + 1;
+            arbDout      <= arbDout + 1;
          end if;
       end if;
    end if;

@@ -20,6 +20,11 @@
 *.cf
 *.ghw
 
+# tb executable names
+ghdl/pix2pgpgearboxwrappertb
+ghdl/pix2pgptoptb
+ghdl/pix2pgparbitertb
+
 # Matlab
 *.autosave
 *.slxc

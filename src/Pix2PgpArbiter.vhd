@@ -31,7 +31,8 @@ entity Pix2PgpArbiter is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      STANDALONE_G    : boolean := false);
+      FIFO_RD_DELAY_G : positive := 3;
+      STANDALONE_G    : boolean  := false);
    port(
       -- General Interface
       pgpClk          : in  sl;
@@ -56,9 +57,6 @@ entity Pix2PgpArbiter is
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
-
-   constant STANDALONE_FIFO_WR_DELAY_C : natural := 3;
-   --constant VENDOR_FIFO_WR_DELAY_C     : natural := ????;
 
    constant COLDATAFIFO_IS_FWFT_C : natural := 1; -- set to 1 for true, 0 for false
 
@@ -224,11 +222,11 @@ begin
             end if;
 
             -- arbValid control
-            if r.dataRdCnt >= STANDALONE_FIFO_WR_DELAY_C then
+            if r.dataRdCnt >= FIFO_RD_DELAY_G then
                v.arbValid := '1';
             end if;
 
-            if r.dataRdCnt = r.dataRdCycles + STANDALONE_FIFO_WR_DELAY_C then
+            if r.dataRdCnt = r.dataRdCycles + FIFO_RD_DELAY_G then
                v.arbValid := '0';
                v.state    := INCR_SEL_S;
             end if;
