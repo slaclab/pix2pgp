@@ -169,6 +169,14 @@ begin
 
             -- done; time to write into the status FIFO and go back to idle
             if (r.ackCnt = r.wrEnCnt) then
+
+               if r.wrEnCnt(0) = '1' then
+                  -- wrote odd number of hits? write a dummy word;
+                  -- hold for one clock cycle;
+                  -- wrEn will switch to input port input by default on next cycle
+                  v.wrEn := '1';
+               end if;
+
                v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
                v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
                v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;

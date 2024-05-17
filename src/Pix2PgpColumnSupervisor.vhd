@@ -57,6 +57,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       MON_STATUS_S,
       WAIT_BUS_S,
       REG_STATUS_S,
+      CHECK_ERROR_S,
       WAIT_ARB_S);
 
    type RegType is record
@@ -176,11 +177,25 @@ begin
             v.dataFifoError   := uOr(r.colDataFullErr);
             v.overOccError    := uOr(r.colOverOccErr);
             v.alignError      := uOr(r.colTrgAlignErr);
-            v.arbiterStart    := '1';
 
             if r.arbiterBusy = '1' then
-               v.state := WAIT_ARB_S;
+               v.state := CHECK_ERROR_S;
             end if;
+
+         ----------------------------------------------------------------------
+         -- change the column bitmask if an error is reported
+         -- overOcc is read-out normally, so don't change the bitmask
+         when CHECK_ERROR_S =>
+            if r.statusFifoError = '1' then
+               v.colBitmask := r.colStatusFullErr;
+            elsif r.dataFifoError = '1' then
+               v.colBitmask := r.colDataFullErr;
+            elsif r.alignError = '1' then
+               v.colBitmask := r.colTrgAlignErr;
+            end if;
+            v.arbiterStart := '1';
+
+            v.state := WAIT_ARB_S;
 
          ----------------------------------------------------------------------
          -- wait for the arbiter to finish parsing the data

@@ -62,6 +62,7 @@ begin
                RST_ASYNC_G     => RST_ASYNC_G,
                RST_POLARITY_G  => RST_POLARITY_G,
                SYNTH_MODE_G    => "inferred",
+               FWFT_EN_G       => False,
                GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
                DATA_WIDTH_G    => WR_DATA_WIDTH_G,
                ADDR_WIDTH_G    => ADDR_WIDTH_G)
@@ -85,6 +86,7 @@ begin
                RST_ASYNC_G     => RST_ASYNC_G,
                RST_POLARITY_G  => RST_POLARITY_G,
                SYNTH_MODE_G    => "inferred",
+               FWFT_EN_G       => True,
                GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
                WR_DATA_WIDTH_G => WR_DATA_WIDTH_G,
                RD_DATA_WIDTH_G => RD_DATA_WIDTH_G,
