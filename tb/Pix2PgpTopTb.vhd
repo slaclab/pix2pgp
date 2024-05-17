@@ -22,15 +22,12 @@ architecture test of Pix2PgpTopTb is
    constant PIPELINE_C     : boolean := true;
    constant CLK_PERIOD_C   : time := 5.384 ns;
 
-   type dinArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(SPARSE_DWIDTH_C-1 downto 0);
-   type doutArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(DATABUS_DWIDTH_C-1 downto 0);
-
    signal clk       : sl := '0';
    signal rst       : sl := '1';
 
-   signal tok       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal tok       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal ackN      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal ackN      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal wrEn      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal din       : Pix2PgpSparseDinArray := (others => (others => '0'));
 
@@ -49,12 +46,16 @@ architecture test of Pix2PgpTopTb is
    signal fillFifos : sl := '0';
    signal fillCnt   : natural range 0 to 1023;
 
+   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
+   signal hitLen  : hitLenArray := (others => (others => '0'));
+   signal overOcc : sl := '0';
+   signal sro     : sl := '0';
+
 begin
 
   -- rst and clk
   clk <= not clk after CLK_PERIOD_C - TPD_C;
   rst <= '1', '0' after CLK_PERIOD_C*20;
-
 
   -- Instantiate the design under test
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
@@ -88,17 +89,43 @@ begin
          -- Configuration Register Interface (TO-DO: add more)
          frameSize => frameSize);
 
+   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+      U_DummyPixel : entity pix2pgp.DummyPixel
+         generic map(
+            TPD_G        => TPD_C,
+            RST_ASYNC_G  => RST_ASYNC_C,
+            WAIT_FB_G    => 4,
+            WAIT_ACKN_G  => 2,
+            WAIT_WREN_G  => 3,
+            COL_ID_G     => col)
+         port map(
+            clk     => clk,
+            rst     => rst,
+            sro     => sro,
+            hitLen  => hitLen(col),
+            overOcc => overOcc,
+            tok     => tok(col),
+            tokFb   => tokFb(col),
+            ackN    => ackN(col),
+            wrEn    => wrEn(col),
+            dout    => din(col));
+   end generate GEN_DUMMY_PIXEL;
+
   -- Generate the test stimulus
   stimulus: process begin
 
     -- Wait for the rst to be released before
     wait until (rst = '0');
+    for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+      -- only even number of events please
+      hitLen(col) <= toSlv(0, hitLen(col)'length);
+    end loop;
 
     wait for CLK_PERIOD_C*300;
-      fillFifos <= '1';
+      sro <= '1';
 
-    wait for CLK_PERIOD_C*320;
-      fillFifos  <= '0';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
     wait;
 
   end process stimulus;

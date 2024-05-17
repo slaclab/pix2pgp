@@ -180,6 +180,7 @@ ghdlClean()
     echo "[INFO]: Pix2pgp libraries found in ${SRC}. Importing..."
     ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
     ${GHDL_IMPORT_PIX2PGP} ${SRC}
+    ${GHDL_IMPORT_PIX2PGP} ${SRC}
   else
     echo "[ERROR]: No pix2pgp files found..."
     exit 1
