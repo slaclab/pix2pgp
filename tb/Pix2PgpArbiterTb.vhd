@@ -18,7 +18,8 @@ architecture test of Pix2PgpArbiterTb is
    constant TPD_C       : time    := 0 ns;
    constant RST_ASYNC_C : boolean := true;
 
-   type dataArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(DATABUS_WIDTH_C-1 downto 0);
+   type dinArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(SPARSE_DWIDTH_C-1 downto 0);
+   type doutArrayType is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(DATABUS_DWIDTH_C-1 downto 0);
 
    signal clk             : sl := '0';
    signal rst             : sl := '1';
@@ -27,24 +28,23 @@ architecture test of Pix2PgpArbiterTb is
    signal dataRd          : sl := '0';
    signal colSel          : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
 
-   signal arbiterStart    : sl := '0';
+   signal arbStart        : sl := '0';
    signal statusFifoError : sl := '0';
    signal dataFifoError   : sl := '0';
    signal overOccError    : sl := '0';
    signal alignError      : sl := '0';
    signal colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
-   signal arbiterBusy     : sl := '0';
+   signal arbBusy         : sl := '0';
    --
-   signal arbRdEn         : sl := '0';
-   signal arbEmpty        : sl := '0';
-   signal arbDout         : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0) := (others => '0');
+   signal arbValid        : sl := '0';
+   signal arbDout         : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    --
    signal wrEn            : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal dinArray        : dataArray := (others => (others => '0'));
+   signal dinArray        : dinArrayType := (others => (others => '0'));
    signal empty           : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal rdEn            : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal doutArray       : dataArray := (others => (others => '0'));
+   signal doutArray       : doutArrayType := (others => (others => '0'));
 
    signal fillFifos       : sl := '0';
    signal fillCnt         : natural range 0 to 1023;
@@ -54,7 +54,7 @@ architecture test of Pix2PgpArbiterTb is
    signal statusBus       : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
    signal dataBus         : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
 
-   signal statusBusSel  : Pix2PgpStatusBusType := DEFAULT_PIX2PGP_STATUSBUS_C;
+   signal statusBusSel    : Pix2PgpStatusBusType := DEFAULT_PIX2PGP_STATUSBUS_C;
 
 
 begin
@@ -80,17 +80,16 @@ begin
          dataRd          => dataRd,
          colSel          => colSel,
          -- Column Supervisor Interface
-         arbiterStart    => arbiterStart,
+         arbStart        => arbStart,
          statusFifoError => statusFifoError,
          dataFifoError   => dataFifoError,
          overOccError    => overOccError,
          alignError      => alignError,
          colBitmask      => colBitmask,
          trgNum          => trgNum,
-         arbiterBusy     => arbiterBusy,
+         arbBusy         => arbBusy,
          -- Gearbox Interface
-         arbRdEn         => arbRdEn,
-         arbEmpty        => arbEmpty,
+         arbValid        => arbValid,
          arbDout         => arbDout);
 
   -- Generate the test stimulus
@@ -101,6 +100,7 @@ begin
 
     wait for CLK_PERIOD_C;
     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+      -- only even number of events please
       statusBus(col).dataLen <= toSlv(4, statusBus(col).dataLen'length);
     end loop;
 
@@ -113,10 +113,10 @@ begin
       trgNum     <= toSlv(1, trgNum'length);
 
    wait for CLK_PERIOD_C*10;
-      arbiterStart <= '1';
+      arbStart <= '1';
 
    wait for CLK_PERIOD_C*5;
-      arbiterStart <= '0';
+      arbStart <= '0';
 
     wait;
 
@@ -131,7 +131,8 @@ begin
             TPD_G           => TPD_C,
             RST_ASYNC_G     => RST_ASYNC_C,
             GEN_SYNC_FIFO_G => false,
-            DATA_WIDTH_G    => DATABUS_WIDTH_C,
+            WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
+            RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
             ADDR_WIDTH_G    => 4,
             STANDALONE_G    => true)
          port map (

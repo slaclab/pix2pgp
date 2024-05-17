@@ -38,27 +38,27 @@ entity Pix2PgpGearboxWrapper is
       rst                 : in  sl := not(RST_POLARITY_G);
       -- Arbiter Interface
       arbiterDvalid       : in  sl;
-      arbiterDout         : in  slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
+      arbiterDout         : in  slv(DATABUS_DWIDTH_C-1 downto 0);
       arbiterGearboxReady : out sl;
       -- PGP Interface
       pgpReady            : in  sl;
       pgpValid            : out sl;
-      pgpData             : out slv(63 downto 0));
+      pgpData             : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpGearboxWrapper;
 
 architecture rtl of Pix2PgpGearboxWrapper is
 
-   constant ARB_GEARBOX_OUTPUT_WIDTH_C : natural := 320;
-   signal pgpGearboxDataWordValid      : sl := '0';
-   signal pgpGearboxDataWord           : slv(ARB_GEARBOX_OUTPUT_WIDTH_C-1 downto 0) := (others => '0');
-   signal arbiterGearboxWriteIndex     : slv(bitSize(ARB_GEARBOX_OUTPUT_WIDTH_C) downto 0);
-   signal pgpGearboxWriteIndex         : slv(bitSize(64) downto 0) := (others => '0');
-   signal pgpGearboxReady              : sl := '0';
+   constant GEARBOX_OUTPUT_WIDTH_C  : natural := DATABUS_DWIDTH_C*8;
+   signal pgpGearboxDataWordValid   : sl := '0';
+   signal pgpGearboxDataWord        : slv(GEARBOX_OUTPUT_WIDTH_C-1 downto 0) := (others => '0');
+   signal arbiterGearboxWriteIndex  : slv(bitSize(GEARBOX_OUTPUT_WIDTH_C) downto 0);
+   signal pgpGearboxWriteIndex      : slv(bitSize(PGP_DWIDTH_C) downto 0) := (others => '0');
+   signal pgpGearboxReady           : sl := '0';
 
    type RegType is record
       -- i/o
       arbiterDvalid : sl;
-      arbiterDout   : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
+      arbiterDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -72,12 +72,12 @@ architecture rtl of Pix2PgpGearboxWrapper is
 begin
 
    -- safeguards
-   assert (ARB_GEARBOX_OUTPUT_WIDTH_C rem ARB_GEARBOX_INPUT_WIDTH_G = 0)
-   report "[ERROR]: ARB_GEARBOX_OUTPUT_WIDTH_C/ARB_GEARBOX_INPUT_WIDTH_G ratio is not an integer!"
+   assert (GEARBOX_OUTPUT_WIDTH_C rem DATABUS_DWIDTH_C = 0)
+   report "[ERROR]: GEARBOX_OUTPUT_WIDTH_C/DATABUS_DWIDTH_C ratio is not an integer!"
    severity failure;
 
-   assert (ARB_GEARBOX_OUTPUT_WIDTH_C rem 64 = 0)
-   report "[ERROR]: ARB_GEARBOX_OUTPUT_WIDTH_C/64-bit PGP input bus ratio is not an integer!"
+   assert (GEARBOX_OUTPUT_WIDTH_C rem PGP_DWIDTH_C = 0)
+   report "[ERROR]: GEARBOX_OUTPUT_WIDTH_C/64-bit PGP input bus ratio is not an integer!"
    severity failure;
 
    ------------------------------------------------
@@ -130,14 +130,14 @@ begin
    end process seq;
 
    -----------------
-   -- 20:320 Gearbox
+   -- 40:320 Gearbox
    -----------------
    U_Arbiter_Gearbox : entity pix2pgp.Pix2PgpGearbox
       generic map (
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         SLAVE_WIDTH_G  => ARB_GEARBOX_INPUT_WIDTH_G,
-         MASTER_WIDTH_G => ARB_GEARBOX_OUTPUT_WIDTH_C)
+         SLAVE_WIDTH_G  => DATABUS_DWIDTH_C,
+         MASTER_WIDTH_G => GEARBOX_OUTPUT_WIDTH_C)
       port map (
          -- Clock and Reset
          clk            => pgpClk,
@@ -161,7 +161,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         SLAVE_WIDTH_G  => ARB_GEARBOX_OUTPUT_WIDTH_C,
+         SLAVE_WIDTH_G  => GEARBOX_OUTPUT_WIDTH_C,
          MASTER_WIDTH_G => 64)
       port map (
          -- Clock and Reset

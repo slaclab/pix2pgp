@@ -22,10 +22,10 @@ architecture test of Pix2PgpGearboxWrapperTb is
    signal rst  : sl := '1';
 
    signal arbiterDvalid        : sl := '0';
-   signal arbiterDout          : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0) := (others => '0');
+   signal arbiterDout          : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    signal arbiterGearboxReady  : sl := '0';
 
-   signal pgpReady             : sl := '0';
+   signal pgpReady             : sl := '1';
    signal pgpValid             : sl := '0';
    signal pgpData              : slv(63 downto 0) := (others => '0');
 
@@ -57,7 +57,7 @@ begin
          -- PGP Interface
          pgpValid            => pgpValid,
          pgpData             => pgpData,
-         pgpReady            => '1');
+         pgpReady            => pgpReady);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -65,6 +65,12 @@ begin
     -- Wait for the rst to be released before
     wait until (rst = '0');
     -- Testing complete
+
+    wait for 250 ns;
+    pgpReady <= '0';
+
+    wait for 200 ns;
+    pgpReady <= '1';
 
     wait;
 
@@ -76,7 +82,7 @@ begin
       if rst = '0' then
          if allBits(arbiterDout, '0') and arbiterDvalid = '0' then
             arbiterDvalid <= '1';
-         elsif arbiterDout = toSlv(15, arbiterDout'length) then
+         elsif arbiterDout = toSlv(7, arbiterDout'length) then
             arbiterDvalid <= '0';
          elsif allBits(arbiterDout, '1') then
             arbiterDout      <= (others => '1');

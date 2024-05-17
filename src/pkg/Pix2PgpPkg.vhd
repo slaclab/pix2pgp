@@ -34,8 +34,11 @@ package Pix2PgpPkg is
 
    -- ColumnManager-related
    constant DATALEN_WIDTH_C  : natural := 10; -- 672 pixels max (TO-DO: make this dynamic)
-   -- data bus
-   constant DATABUS_WIDTH_C : natural := SPARSE_DWIDTH_C;
+   -- data bus width is twice the pixel data width;
+   -- to maximize bandwidth
+   constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+
+   constant PGP_DWIDTH_C     : natural := 64;
 
    -- status FIFO bus
    -- does not have the same width as the whole status bus;
@@ -77,7 +80,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusType is record
       -- flags begin
-      data : slv(SPARSE_DWIDTH_C-1 downto 0);
+      data : slv(DATABUS_DWIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_DATABUS_C : Pix2PgpDataBusType := (
@@ -89,12 +92,12 @@ package Pix2PgpPkg is
    -- Pix2Pgp data frame header
    ----------------------------
 
-   -- the Pix2Pgp data frame header *has* to be an interger-multiple of the sparse data width
-   constant HEADER_DWITDH_C     : natural := 2*SPARSE_DWIDTH_C;
+   -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
+   constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
    -- constant STATUSFIFO_TRG_WIDTH_C : natural := 8;               -- 8
    constant FLAGS_WIDTH_C       : natural := 8;                     -- 8
    constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24
-   -- 8+8+24=40 -> 2*SPARSE_DWIDTH_C
+   -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
 
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
@@ -116,10 +119,8 @@ package Pix2PgpPkg is
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
    -------------------------------------------
-
-   -- and finally, the Pix2Pgp data frame data also have to be related to the sparse data width
    -- the receiver can deduce which columns have data from the bitmask
-   -- and it can also deduce how many data by appending the dataLen before each seq of hits
+   -- and it can also deduce how many data by reading the dataLen before each seq of hits
 
    -- examples of the final pix2pgp frame format:
    -- e.g. 1: this event has 2 hits from two different cols (cols 0 and 5)
@@ -127,47 +128,14 @@ package Pix2PgpPkg is
    -- e.g. 2: this event has 3 hits from one column (col 2)
    -- pgp data frame header | col2_dataLen | col2_hit0 | col2_hit1 | col2_hit2
 
-   -- if the gearbox input data width is 20-bit wide, it makes it very fast to parse the data in;
-   -- (SPARSE_DWIDTH_C = 20)
-   -- convenient, since the frame header is 40-bit wide, so it can be parsed-in in two clock cycles
-   -- unfortunately, the dataLen is 10-bit wide, so have to pad it and lose 10 bits per column
+   -- note that because the datalength is 40-bit, the colX_dataLen word is padded with zeros;
+   -- (on the MSB)
 
-   constant ARB_GEARBOX_INPUT_WIDTH_G  : natural := 20;
-
-   -- functions
-   function selRange (inputBusLen : positive; lenRatio : positive; sel : slv; isLow : boolean) return integer;
-   function selBus (inputBus : slv; lenRatio : positive; sel : slv) return slv;
+   -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
+   -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
 
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
-
-   function selRange (inputBusLen : positive; lenRatio : positive; sel : slv; isLow : boolean) return integer is
-      variable low          : integer;
-      variable high         : integer;
-      variable retVar       : integer;
-   begin
-      high   := inputBusLen - 1 - lenRatio*conv_integer(unsigned(sel));
-      low    := inputBusLen - LenRatio*(conv_integer(unsigned(sel))+1);
-      retVar := high;
-      report "sel" & integer'image(conv_integer(unsigned(sel)));
-      report "LOW=" & integer'image(low);
-      report "HIGH=" & integer'image(high);
-      if isLow then
-         retVar := low;
-      end if;
-      return retVar;
-   end;
-
-   function selBus (inputBus : slv; lenRatio : positive; sel : slv) return slv is
-      variable low    : integer;
-      variable high   : integer;
-      variable retBus : slv(19 downto 0);
-   begin
-      low    := selRange(inputBus'length, lenRatio, sel, True);
-      high   := selRange(inputBus'length, lenRatio, sel, False);
-      retBus := inputBus(high downto low);
-      return retBus;
-   end;
 
 end package body Pix2PgpPkg;

@@ -19,6 +19,9 @@ use ieee.numeric_std.all;
 library surf;
 use surf.StdRtlPkg.all;
 
+library pix2pgp;
+use pix2pgp.Pix2PgpPkg.all;
+
 entity Pix2PgpFifo is
    -- SYNTH_MODE_G Options: {"inferred", "xpm", "altera_mf"}
    -- MEMORY_TYPE_G: Xilinx Options: {"auto", "block", "distributed", "ultra"}

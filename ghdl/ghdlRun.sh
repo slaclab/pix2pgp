@@ -84,7 +84,6 @@ prepareSurf()
   # otherwise, this ERROR shows up: `entity "xxx" is obsoleted by package "stdrtlpkg"`
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/StdRtlPkg.vhd ${SURF_PKG_DIR}/StdRtlPkg.vhd
 
-  # ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Gearbox.vhd ${SURF_DIR}/Gearbox.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd ${SURF_DIR}/RstSync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd ${SURF_DIR}/Synchronizer.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd ${SURF_DIR}/SynchronizerVector.vhd

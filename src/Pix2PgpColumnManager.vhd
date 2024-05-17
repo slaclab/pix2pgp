@@ -206,7 +206,8 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          GEN_SYNC_FIFO_G => true,
-         DATA_WIDTH_G    => STATUSFIFO_DWIDTH_C,
+         WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
+         RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          ADDR_WIDTH_G    => 8,
          STANDALONE_G    => STANDALONE_G)
       port map (
@@ -247,7 +248,8 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          GEN_SYNC_FIFO_G => true,
-         DATA_WIDTH_G    => DATABUS_WIDTH_C,
+         WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
+         RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
          ADDR_WIDTH_G    => 12,
          STANDALONE_G    => STANDALONE_G)
       port map (
