@@ -31,17 +31,16 @@ entity Pix2PgpArbiter is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      WAITCNT_WIDTH_G : positive := 8;
-      WAIT_CYCLES_G   : positive := 4);
+      STANDALONE_G    : boolean := false);
    port(
       -- General Interface
       pgpClk          : in  sl;
       rst             : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
-      statusBusSel    : in  Pix2PgpStatusBusType;
+      dataLenSel      : in  slv(DATALEN_WIDTH_C-1 downto 0);
       dataBusSel      : in  Pix2PgpDataBusType;
       dataRd          : out sl;
-      colSel          : out slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      colSel          : out slv(BITMAX_COL_MANAGERS_C downto 0);
       -- Column Supervisor Interface
       arbiterStart    : in  sl;
       statusFifoError : in  sl;
@@ -52,28 +51,33 @@ entity Pix2PgpArbiter is
       trgNum          : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbiterBusy     : out sl;
       -- Gearbox Interface
-      gearboxReady    : in  sl;
-      gearboxDvalid   : out sl;
-      gearboxDout     : out slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0));
+      arbRdEn         : in  sl;
+      arbEmpty        : out sl;
+      arbDout         : out slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
+   constant STANDALONE_FIFO_WR_DELAY_C : natural := 3;
+   --constant VENDOR_FIFO_WR_DELAY_C     : natural := ????;
+
+   signal fifoFull  : sl := '0';
+   signal dataRdDly : sl := '0';
+
    type StateType is (
       IDLE_S,
-      CHK_STATUS_S,
       TX_HEADER_S,
-      CHK_DATALEN_S,
+      ROUND_ROBIN_S,
       INCR_SEL_S,
-      WAIT_BUS_S
-      );
+      PARSE_DATA_S,
+      DONE_S);
 
    type RegType is record
       -- i/o
-      statusBusSel    : Pix2PgpStatusBusType;
+      dataLenSel      : slv(DATALEN_WIDTH_C-1 downto 0);
       dataBusSel      : Pix2PgpDataBusType;
       dataRd          : sl;
-      colSel          : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      colSel          : slv(BITMAX_COL_MANAGERS_C downto 0);
       arbiterStart    : sl;
       statusFifoError : sl;
       dataFifoError   : sl;
@@ -82,21 +86,23 @@ architecture rtl of Pix2PgpArbiter is
       colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbiterBusy     : sl;
-      gearboxReady    : sl;
-      gearboxDvalid   : sl;
-      gearboxDout     : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
       -- internal
       eventEmpty      : sl;
       headerOnly      : sl;
       dataHeader      : slv(HEADER_DWITDH_C-1 downto 0);
-      headerSel       : slv(bitSize(HEADER_DWITDH_C/ARB_GEARBOX_INPUT_WIDTH_G) downto 0);
-      waitCnt         : slv(WAITCNT_WIDTH_G-1 downto 0);
+      headerSel       : sl;
+      dataRdCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
+      fifoDin         : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
+      fifoValid       : sl;
+      fifoDinArb      : slv(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 0);
+      fifoValidArb    : sl;
+      busyCnt         : natural range 0 to 4095;
       state           : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      statusBusSel    => DEFAULT_PIX2PGP_STATUSBUS_C,
+      dataLenSel      => (others => '0'),
       dataBusSel      => DEFAULT_PIX2PGP_DATABUS_C,
       dataRd          => '0',
       colSel          => (others => '0'),
@@ -108,15 +114,17 @@ architecture rtl of Pix2PgpArbiter is
       colBitmask      => (others => '0'),
       trgNum          => (others => '0'),
       arbiterBusy     => '0',
-      gearboxReady    => '0',
-      gearboxDvalid   => '0',
-      gearboxDout     => (others => '0'),
       -- internal
       eventEmpty      => '0',
       headerOnly      => '0',
       dataHeader      => (others => '0'),
-      headerSel       => (others => '0'),
-      waitCnt         => (others => '0'),
+      headerSel       => '0',
+      dataRdCnt       => (others => '0'),
+      fifoDin         => (others => '0'),
+      fifoValid       => '0',
+      fifoDinArb      => (others => '0'),
+      fifoValidArb    => '0',
+      busyCnt         => 0,
       state           => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -127,9 +135,8 @@ begin
    ------------------------------------------------
    -- Arbiter FSM
    ------------------------------------------------
-   comb : process (r, rst, statusBusSel, dataBusSel, arbiterStart, statusFifoError,
-                   dataFifoError, overOccError, alignError, colBitmask, trgNum,
-                   gearboxReady) is
+   comb : process (r, rst, dataLenSel, dataBusSel, arbiterStart, statusFifoError,
+                   dataFifoError, overOccError, alignError, colBitmask, trgNum, dataRdDly) is
 
       variable v : RegType;
 
@@ -138,11 +145,8 @@ begin
       -- Latch the current value
       v := r;
 
-      -- Strobes
-      v.dataRd := '0';
-
       -- Register inputs
-      v.statusBusSel    := statusBusSel;
+      v.dataLenSel      := dataLenSel;
       v.dataBusSel      := dataBusSel;
       v.arbiterStart    := arbiterStart;
       v.statusFifoError := statusFifoError;
@@ -151,18 +155,21 @@ begin
       v.alignError      := alignError;
       v.colBitmask      := colBitmask;
       v.trgNum          := trgNum;
-      v.gearboxReady    := gearboxReady;
 
       v.eventEmpty      := not(uOr(r.colBitmask));
 
+      if (r.arbiterBusy = '1') then
+         v.busyCnt := r.busyCnt + 1;
+      end if;
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
          -- supervisor signals a start of sequence
          -- raise the busy flag
          when IDLE_S =>
-            v.gearboxDvalid := '0';
-            v.headerSel     := (others => '0');
+            v.fifoValid   := '0';
+            v.headerSel   := '0';
+            v.arbiterBusy := '0';
 
             if r.arbiterStart = '1' then
                v.arbiterBusy := '1';
@@ -172,70 +179,87 @@ begin
          ----------------------------------------------------------------------
          -- check the error flags first (overocc is ignored by the Arbiter)
          when TX_HEADER_S =>
-            -- Flow control defaults
-            v.slaveReady := '0';
 
-            if (r.gearboxReady = '1') then -- TO-DO: do I need to evaluate the variable?????
-               v.gearboxDvalid := '0';
-            end if;
+            -- Header demux
+            case r.headerSel is
+            when '0'    => v.fifoDin := r.dataHeader(39 downto 20); v.fifoValid := '1';
+            when '1'    => v.fifoDin := r.dataHeader(19 downto  0); v.fifoValid := '1';
+            when others => v.fifoDin := (others => '0'); v.fifoValid := '0';
+            end case;
 
-            -- Only do anything if ready for data output
-            if (v.gearboxDvalid = '0') then
-               v.headerSel     := r.headerSel + 1;
-               v.gearboxDvalid := '1';
-            end if;
+            v.headerSel := not r.headerSel;
 
-            if (allBits(r.headerSel, '1')) then -- maxed-out; time to move on.
+            if (r.headerSel = '1') then -- maxed-out; time to move on.
                if r.statusFifoError = '1' or
                   r.dataFifoError   = '1' or
                   r.alignError      = '1' or
                   r.eventEmpty      = '1' then
-                  v.state := IDLE_S;
+                  v.state := DONE_S;
                else
-                  v.state := CHK_DATALEN_S;
+                  v.state := ROUND_ROBIN_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
          -- check the data length of the selected column
-         when CHK_DATALEN_S =>
-            v.gearboxDvalid := '0';
-            v.headerSel     := (others => '0');
-            v.waitCnt       := (others => '0');
-
-            if allBits((r.statusBusSel.dataLen), '0') then
+         when ROUND_ROBIN_S =>
+            v.fifoValid := '0';
+            v.headerSel := '0';
+            if allBits((r.dataLenSel), '0') then
                v.state := INCR_SEL_S;
             else
-               null; --TO-DO FILL ME
+               -- TX the dataLength and start reading the data fifo
+               v.fifoDin(ARB_GEARBOX_INPUT_WIDTH_G-1 downto 10) := (others => '0');
+               v.fifoDin(9 downto 0)                            := r.dataLenSel;
+               v.dataRdCnt := (others => '0');
+               v.fifoValid := '1';
+               v.dataRd    := '1';
+               v.state     := PARSE_DATA_S;
             end if;
 
          ----------------------------------------------------------------------
          -- check the data length of the selected column
          when INCR_SEL_S =>
-            if (r.colSel <= NUM_OF_COL_MANAGERS_C-1) then
-               v.state := CHK_DATALEN_S;
+            v.colSel := r.colSel + 1;
+            if (conv_integer(unsigned(r.colSel)) <= NUM_OF_COL_MANAGERS_C-1) then
+               v.state := ROUND_ROBIN_S;
             else
-               null; -- v.state := TX_HEADER_S;
+               v.state := DONE_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- wait for the bus to stabilize
-         when WAIT_BUS_S =>
-            v.waitCnt := r.waitCnt + 1;
+         -- parse the data from the selected data bus
+         when PARSE_DATA_S =>
+            v.fifoValid := '0';
+            v.fifoDin   := v.dataBusSel.data;
+            v.dataRdCnt := r.dataRdCnt + 1;
 
-            if r.waitCnt = WAIT_CYCLES_G then
-               v.state := CHK_DATALEN_S;
+            -- dataRd control
+            if r.dataRdCnt = r.dataLenSel - 1 then
+               v.dataRd := '0';
             end if;
+
+            -- fifoValid control
+            if r.dataRdCnt >= STANDALONE_FIFO_WR_DELAY_C then
+               v.fifoValid := '1';
+            end if;
+
+            if r.dataRdCnt = r.dataLenSel + STANDALONE_FIFO_WR_DELAY_C then
+               v.fifoValid := '0';
+               v.dataRdCnt := (others => '0');
+               v.state     := INCR_SEL_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- last state
+         when DONE_S =>
+            v.arbiterBusy := '0';
+            if r.arbiterStart = '0' then
+               v.state := IDLE_S;
+            end if;
+
       end case;
       -----------------------------------------------------------------------
-
-      -- Header demux
-      -- (my eyes hurt)
-      v.gearboxDout := r.dataHeader(
-                           HEADER_DWITDH_C-1 -
-                           (conv_integer(unsigned(r.headerSel)))*ARB_GEARBOX_INPUT_WIDTH_G
-                           downto
-                           ARB_GEARBOX_INPUT_WIDTH_G*((conv_integer(unsigned(r.headerSel))) + 1));
 
       -- header mapping
       v.dataHeader(OVEROCC_FLAG_POS_C)     := r.overOccError;
@@ -248,10 +272,8 @@ begin
       v.dataHeader(TRG_CNT_POS_C)          := r.trgNum;
 
       -- Outputs
-      gearboxDout   <= r.gearboxDout;
-      gearboxDvalid <= r.gearboxDvalid;
-      dataRd        <= r.dataRd;
-      colSel        <= r.colSel;
+      dataRd <= r.dataRd;
+      colSel <= r.colSel;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = '1') then
@@ -271,5 +293,68 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   STANDALONE_DELAY_GEN : if (STANDALONE_G = true) generate
+      -- delay the FIFO write wrt data FIFO rd by 2 cycles if using native blockRAM (sim)
+      U_DelayWrFifo : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            RST_ASYNC_G    => true,
+            STAGES_G       => STANDALONE_FIFO_WR_DELAY_C)
+         port map (
+            clk     => pgpClk,
+            rst     => rst,
+            dataIn  => r.dataRd,
+            dataOut => dataRdDly);
+   end generate STANDALONE_DELAY_GEN;
+
+   ASIC_FLOW_GEN : if (STANDALONE_G = false) generate
+
+      --U_DelayWrFifo : entity surf.Synchronizer
+      --   generic map (
+      --      TPD_G          => TPD_G,
+      --      RST_POLARITY_G => RST_POLARITY_G,
+      --      RST_ASYNC_G    => true,
+      --      STAGES_G       => VENDOR_FIFO_WR_DELAY_C)
+      --   port map (
+      --      clk     => pgpClk,
+      --      rst     => rst,
+      --      dataIn  => r.dataRd,
+      --      dataOut => dataRdDly);
+
+      -- vendor proprietary fifo placeholder
+      -- remove this once you place the vendor FIFO
+      assert (STANDALONE_G = false)
+      report "[ERROR]: No vendor proprietary FIFO implemented yet!"
+      severity failure;
+
+   end generate ASIC_FLOW_GEN;
+
+   ------------------------------------------------
+   -- Data FIFO (does not have to be deep)
+   ------------------------------------------------
+   U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
+      generic map (
+         TPD_G           => TPD_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         GEN_SYNC_FIFO_G => false,
+         DATA_WIDTH_G    => ARB_GEARBOX_INPUT_WIDTH_G,
+         ADDR_WIDTH_G    => 4,
+         STANDALONE_G    => STANDALONE_G)
+      port map (
+         -- Resets
+         rst   => rst,
+         -- Write Interface
+         wrClk => pgpClk,
+         wrEn  => r.fifoValid,
+         full  => fifoFull,
+         din   => r.fifoDin,
+         -- Read Interface
+         rdClk => pgpClk,
+         empty => arbEmpty,
+         rdEn  => arbRdEn,
+         dout  => arbDout);
 
 end rtl;

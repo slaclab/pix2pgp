@@ -54,11 +54,12 @@ begin
 
    STANDALONE_FLOW_GEN : if (STANDALONE_G = true) generate
 
-      U_StandaloneFifo : entity surf.Fifo
+      U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
          generic map (
             TPD_G           => TPD_G,
             RST_ASYNC_G     => RST_ASYNC_G,
             RST_POLARITY_G  => RST_POLARITY_G,
+            SYNTH_MODE_G    => "inferred",
             GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
             DATA_WIDTH_G    => DATA_WIDTH_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
@@ -79,9 +80,11 @@ begin
    ASIC_FLOW_GEN : if (STANDALONE_G = false) generate
 
       -- vendor proprietary fifo placeholder
-      assert STANDALONE_G = false report "[ERROR]: No vendor proprietary FIFO implemented yet" severity error;
+      -- remove this once you place the vendor FIFO
+      assert (STANDALONE_G = false)
+      report "[ERROR]: No vendor proprietary FIFO implemented yet!"
+      severity failure;
 
    end generate ASIC_FLOW_GEN;
-
 
 end rtl;

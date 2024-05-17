@@ -127,15 +127,47 @@ package Pix2PgpPkg is
    -- e.g. 2: this event has 3 hits from one column (col 2)
    -- pgp data frame header | col2_dataLen | col2_hit0 | col2_hit1 | col2_hit2
 
-   -- since the dataLen is 10-bit wide, the gearbox input datawidth will be 10-bit.
-   -- i.e. one pix2pgp data frame header is 4 words
-   -- one dataLen word is exactly one word
-   -- each hit is two words
+   -- if the gearbox input data width is 20-bit wide, it makes it very fast to parse the data in;
+   -- (SPARSE_DWIDTH_C = 20)
+   -- convenient, since the frame header is 40-bit wide, so it can be parsed-in in two clock cycles
+   -- unfortunately, the dataLen is 10-bit wide, so have to pad it and lose 10 bits per column
 
-   constant ARB_GEARBOX_INPUT_WIDTH_G  : natural := 10; -- (SPARSE_DWIDTH_C/2)
+   constant ARB_GEARBOX_INPUT_WIDTH_G  : natural := 20;
+
+   -- functions
+   function selRange (inputBusLen : positive; lenRatio : positive; sel : slv; isLow : boolean) return integer;
+   function selBus (inputBus : slv; lenRatio : positive; sel : slv) return slv;
 
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
+
+   function selRange (inputBusLen : positive; lenRatio : positive; sel : slv; isLow : boolean) return integer is
+      variable low          : integer;
+      variable high         : integer;
+      variable retVar       : integer;
+   begin
+      high   := inputBusLen - 1 - lenRatio*conv_integer(unsigned(sel));
+      low    := inputBusLen - LenRatio*(conv_integer(unsigned(sel))+1);
+      retVar := high;
+      report "sel" & integer'image(conv_integer(unsigned(sel)));
+      report "LOW=" & integer'image(low);
+      report "HIGH=" & integer'image(high);
+      if isLow then
+         retVar := low;
+      end if;
+      return retVar;
+   end;
+
+   function selBus (inputBus : slv; lenRatio : positive; sel : slv) return slv is
+      variable low    : integer;
+      variable high   : integer;
+      variable retBus : slv(19 downto 0);
+   begin
+      low    := selRange(inputBus'length, lenRatio, sel, True);
+      high   := selRange(inputBus'length, lenRatio, sel, False);
+      retBus := inputBus(high downto low);
+      return retBus;
+   end;
 
 end package body Pix2PgpPkg;

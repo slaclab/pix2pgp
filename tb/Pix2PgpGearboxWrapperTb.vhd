@@ -15,7 +15,7 @@ end entity Pix2PgpGearboxWrapperTb;
 
 architecture test of Pix2PgpGearboxWrapperTb is
 
-   constant TPD_C       : time    := 1 ns;
+   constant TPD_C       : time    := 0 ns;
    constant RST_ASYNC_C : boolean := true;
 
    signal clk  : sl := '0';
@@ -76,7 +76,7 @@ begin
       if rst = '0' then
          if allBits(arbiterDout, '0') and arbiterDvalid = '0' then
             arbiterDvalid <= '1';
-         elsif arbiterDout = toSlv(31, arbiterDout'length) then
+         elsif arbiterDout = toSlv(15, arbiterDout'length) then
             arbiterDvalid <= '0';
          elsif allBits(arbiterDout, '1') then
             arbiterDout      <= (others => '1');

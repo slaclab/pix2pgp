@@ -166,7 +166,7 @@ begin
          masterData <= r.shiftReg(MASTER_WIDTH_G-1 downto 0);
       end if;
 
-      writeIndex <= conv_std_logic_vector(r.writeIndex, writeIndex'length);
+      writeIndex <= toSlv(r.writeIndex, writeIndex'length);
 
    end process comb;
 

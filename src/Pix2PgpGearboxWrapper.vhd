@@ -48,9 +48,7 @@ end Pix2PgpGearboxWrapper;
 
 architecture rtl of Pix2PgpGearboxWrapper is
 
-
-   constant ARB_GEARBOX_OUTPUT_WIDTH_C : natural := ARB_GEARBOX_INPUT_WIDTH_G*32;
-   -- x32 beacause it has to be a multiple of 64 bits
+   constant ARB_GEARBOX_OUTPUT_WIDTH_C : natural := 320;
    signal pgpGearboxDataWordValid      : sl := '0';
    signal pgpGearboxDataWord           : slv(ARB_GEARBOX_OUTPUT_WIDTH_C-1 downto 0) := (others => '0');
    signal arbiterGearboxWriteIndex     : slv(bitSize(ARB_GEARBOX_OUTPUT_WIDTH_C) downto 0);
@@ -72,6 +70,15 @@ architecture rtl of Pix2PgpGearboxWrapper is
    signal rin : RegType;
 
 begin
+
+   -- safeguards
+   assert (ARB_GEARBOX_OUTPUT_WIDTH_C rem ARB_GEARBOX_INPUT_WIDTH_G = 0)
+   report "[ERROR]: ARB_GEARBOX_OUTPUT_WIDTH_C/ARB_GEARBOX_INPUT_WIDTH_G ratio is not an integer!"
+   severity failure;
+
+   assert (ARB_GEARBOX_OUTPUT_WIDTH_C rem 64 = 0)
+   report "[ERROR]: ARB_GEARBOX_OUTPUT_WIDTH_C/64-bit PGP input bus ratio is not an integer!"
+   severity failure;
 
    ------------------------------------------------
    -- Adapter FSM
@@ -123,7 +130,7 @@ begin
    end process seq;
 
    -----------------
-   -- 10:320 Gearbox
+   -- 20:320 Gearbox
    -----------------
    U_Arbiter_Gearbox : entity pix2pgp.Pix2PgpGearbox
       generic map (

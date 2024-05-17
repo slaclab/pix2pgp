@@ -42,7 +42,7 @@ entity Pix2PgpBridge is
       statusBusGlbl : out Pix2PgpStatusBusArray;
       -- Arbiter Interface
       dataRdIn      : in  sl;
-      colSel        : in  slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      colSel        : in  slv(BITMAX_COL_MANAGERS_C downto 0);
       statusBusSel  : out Pix2PgpStatusBusType;
       dataBusSel    : out Pix2PgpDataBusType);
 end Pix2PgpBridge;
@@ -65,7 +65,6 @@ begin
             dataBusSel           <= dataBusIn(conv_integer(unsigned(colSel)));
             dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn;
          else
-            -- latch safeguard
             statusBusSel.dataLen <= (others => '0');
             dataBusSel           <= DEFAULT_PIX2PGP_DATABUS_C;
             dataRdOut            <= (others => '0');
@@ -91,9 +90,15 @@ begin
                statusRdOut(col) <= statusRdIn after TPD_G;
             end loop;
 
-            statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen after TPD_G;
-            dataBusSel           <= dataBusIn(conv_integer(unsigned(colSel))) after TPD_G;
-            dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn after TPD_G;
+            if colSel <= NUM_OF_COL_MANAGERS_C-1 then
+               statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen after TPD_G;
+               dataBusSel           <= dataBusIn(conv_integer(unsigned(colSel))) after TPD_G;
+               dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn after TPD_G;
+            else
+               statusBusSel.dataLen <= (others => '0');
+               dataBusSel           <= DEFAULT_PIX2PGP_DATABUS_C;
+               dataRdOut            <= (others => '0');
+         end if;
          end if;
       end process;
    end generate GEN_PIPELINE;
