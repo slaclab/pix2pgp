@@ -164,9 +164,9 @@ begin
             v.arbValid := '0';
 
             if r.arbStart = '1' then
-               v.arbBusy     := '1';
-               v.arbValid    := '1';
-               v.arbDout     := r.dataHeader;
+               v.arbBusy  := '1';
+               v.arbValid := '1';
+               v.arbDout  := r.dataHeader;
 
                if r.statusFifoError = '1' or
                   r.dataFifoError   = '1' or
@@ -176,7 +176,6 @@ begin
                else
                   v.state := ROUND_ROBIN_S;
                end if;
-
             end if;
 
          ----------------------------------------------------------------------
@@ -234,7 +233,8 @@ begin
          ----------------------------------------------------------------------
          -- last state
          when DONE_S =>
-            v.arbBusy := '0';
+            v.arbBusy  := '0';
+            v.arbValid := '0';
             if r.arbStart = '0' then
                v.state := IDLE_S;
             end if;
@@ -253,6 +253,7 @@ begin
       v.dataHeader(TRG_CNT_POS_C)          := r.trgNum;
 
       -- Outputs
+      arbBusy  <= r.arbBusy;
       dataRd   <= r.dataRd;
       colSel   <= r.colSel;
       arbDout  <= r.arbDout;

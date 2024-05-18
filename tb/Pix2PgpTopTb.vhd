@@ -94,9 +94,9 @@ begin
          generic map(
             TPD_G        => TPD_C,
             RST_ASYNC_G  => RST_ASYNC_C,
-            WAIT_FB_G    => 4,
-            WAIT_ACKN_G  => 2,
-            WAIT_WREN_G  => 3,
+            WAIT_FB_G    => 2,
+            WAIT_ACKN_G  => 1,
+            WAIT_WREN_G  => 1,
             COL_ID_G     => col)
          port map(
             clk     => clk,
@@ -123,7 +123,57 @@ begin
 
     wait for CLK_PERIOD_C*300;
       sro <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
 
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
     wait;

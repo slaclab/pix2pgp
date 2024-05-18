@@ -31,7 +31,7 @@ entity Pix2PgpColumnSupervisor is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      WAIT_CYCLES_G   : positive := 4);
+      WAIT_CYCLES_G   : positive := 3);
    port(
       -- General Interface
       pgpClk          : in  sl;
@@ -130,14 +130,22 @@ begin
 
          -- check Data Length from each column manager's status bus and set the colBitmask accordingly
          -- a high bit on the bitmask indicates that the associated column does have hits
-         v.colBitmask(col) := ite(allBits(r.statusBusGlbl(col).dataLen, '0'), '0', '1');
+         if allBits(r.statusBusGlbl(col).dataLen, '0') then
+            v.colBitmask(col) := '0';
+         else
+            v.colBitmask(col) := '1';
+         end if;
 
          -- error-checking
-         -- reference trigger number is associated with "middle" column (arbitrary)
-         v.refTrgNum := r.statusBusGlbl(NUM_OF_COL_MANAGERS_C/2).trgNum;
+         -- reference trigger number is associated with the first column
+         v.refTrgNum := r.statusBusGlbl(0).trgNum;
 
          -- check if all triggers are aligned with each other
-         v.colTrgAlignErr(col) := ite(r.statusBusGlbl(col).trgNum = r.refTrgNum, '0', '1');
+         if r.statusBusGlbl(col).trgNum = r.refTrgNum then
+            v.colTrgAlignErr(col) := '0';
+         else
+            v.colTrgAlignErr(col) := '1';
+         end if;
 
          -- check for any over-occupancy errors
          v.colOverOccErr(col) := r.statusBusGlbl(col).overOcc;
@@ -170,16 +178,14 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- register the status bits and signal the arbiter to do its thing
+         -- register the status bits
          when REG_STATUS_S =>
             v.statusFifoError := uOr(r.colStatusFullErr);
             v.dataFifoError   := uOr(r.colDataFullErr);
             v.overOccError    := uOr(r.colOverOccErr);
             v.alignError      := uOr(r.colTrgAlignErr);
 
-            if r.arbiterBusy = '1' then
-               v.state := CHECK_ERROR_S;
-            end if;
+            v.state := CHECK_ERROR_S;
 
          ----------------------------------------------------------------------
          -- change the column bitmask if an error is reported
@@ -192,9 +198,11 @@ begin
             elsif r.alignError = '1' then
                v.colBitmask := r.colTrgAlignErr;
             end if;
-            v.arbiterStart := '1';
 
-            v.state := WAIT_ARB_S;
+            v.arbiterStart := '1';
+            if r.arbiterBusy = '1' then
+               v.state := WAIT_ARB_S;
+            end if;
 
          ----------------------------------------------------------------------
          -- wait for the arbiter to finish parsing the data

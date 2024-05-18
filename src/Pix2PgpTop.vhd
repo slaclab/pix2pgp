@@ -60,7 +60,7 @@ end Pix2PgpTop;
 architecture rtl of Pix2PgpTop is
 
    -- constants
-   constant SUPERVISOR_WAIT_CYCLES_C : positive := 4;
+   constant SUPERVISOR_WAIT_CYCLES_C : positive := 5;
    constant ARB_FIFO_RD_DELAY_C      : positive := 3; -- standalone/generic FIFO
    --constant ARB_FIFO_RD_DELAY_C      : natural := ????; -- designware FIFO
 
