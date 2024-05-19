@@ -26,10 +26,12 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnManager is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';
-      STANDALONE_G   : boolean := false);
+      TPD_G             : time    := 1 ns;
+      RST_ASYNC_G       : boolean := false;
+      RST_POLARITY_G    : sl      := '1';
+      DATAFIFO_PIPE_G   : positive := 2;
+      STATUSFIFO_PIPE_G : positive := 2;
+      STANDALONE_G      : boolean := false);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -53,6 +55,11 @@ architecture rtl of Pix2PgpColumnManager is
    signal statusFifoDout : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal statusFifoFull : sl := '0';
    signal dataFifoFull   : sl := '0';
+
+   signal statusWrEn     : sl := '0';
+   signal statusDin      : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataWrEn       : sl := '0';
+   signal dataDin        : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
@@ -147,6 +154,7 @@ begin
             v.overOcc        := '0';
             v.statusFifoWrEn := '0';
             v.wrEnCnt        := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt         := toSlv(0, DATALEN_WIDTH_C);
 
             -- falling-edge detection
             if (v.tok = '0' and r.tok = '1') then
@@ -208,6 +216,30 @@ begin
    ------------------------------------------------
    -- Status FIFO
    ------------------------------------------------
+   -- pipeline the status FIFO input signals to give some freedom in placement
+   U_PipelineStatusWrEn : entity surf.Synchronizer
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         STAGES_G    => STATUSFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         rst     => rst,
+         dataIn  => r.statusFifoWrEn,
+         dataOut => statusWrEn);
+
+   U_PipelineStatusDin : entity surf.SynchronizerVector
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         WIDTH_G     => STATUSFIFO_DWIDTH_C,
+         STAGES_G    => STATUSFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         rst     => rst,
+         dataIn  => r.statusFifoDin,
+         dataOut => statusDin);
+
    U_StatusFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
          TPD_G           => TPD_G,
@@ -223,8 +255,8 @@ begin
          rst   => rst,
          -- Write Interface
          wrClk => sparseClk,
-         wrEn  => r.statusFifoWrEn,
-         din   => r.statusFifoDin,
+         wrEn  => statusWrEn,
+         din   => statusDin,
          full  => statusFifoFull,
          -- Read Interface
          rdClk => pgpClk,
@@ -240,7 +272,7 @@ begin
       generic map (
          TPD_G       => TPD_G,
          RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => 2)
+         STAGES_G    => STATUSFIFO_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -250,6 +282,30 @@ begin
    ------------------------------------------------
    -- Data FIFO
    ------------------------------------------------
+   -- pipeline the data FIFO input signals to give some freedom in placement
+   U_PipelineDataWrEn : entity surf.Synchronizer
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         STAGES_G    => DATAFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         rst     => rst,
+         dataIn  => r.wrEn,
+         dataOut => dataWrEn);
+
+   U_PipelineDataDin : entity surf.SynchronizerVector
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         WIDTH_G     => SPARSE_DWIDTH_C,
+         STAGES_G    => DATAFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         rst     => rst,
+         dataIn  => r.din,
+         dataOut => dataDin);
+
    U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
          TPD_G           => TPD_G,
@@ -265,9 +321,9 @@ begin
          rst   => rst,
          -- Write Interface
          wrClk => sparseClk,
-         wrEn  => r.wrEn,
+         wrEn  => dataWrEn,
          full  => dataFifoFull,
-         din   => r.din,
+         din   => dataDin,
          -- Read Interface
          rdClk => pgpClk,
          rdEn  => dataRd,
@@ -277,7 +333,7 @@ begin
       generic map (
          TPD_G       => TPD_G,
          RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => 2)
+         STAGES_G    => STATUSFIFO_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,

@@ -27,11 +27,17 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := true;
-      RST_POLARITY_G  : sl       := '1';
-      STANDALONE_G    : boolean  := true;
-      PIPELINE_G      : boolean  := true);
+      TPD_G                 : time     := 1 ns;
+      RST_ASYNC_G           : boolean  := true;
+      RST_POLARITY_G        : sl       := '1';
+      STANDALONE_G          : boolean  := true;
+      DATAFIFO_FWFT_G       : boolean  := true;
+      PIPELINE_BRIDGE_G     : boolean  := false;
+      DATAFIFO_PIPE_G       : positive := 2;
+      STATUSFIFO_PIPE_G     : positive := 2;
+      SUPER_FIFO_RD_DELAY_G : positive := 3;
+      ARB_FIFO_RD_DELAY_G   : positive := 1;
+      ARB_DOUT_PIPE_G       : positive := 2);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -59,16 +65,10 @@ end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
 
-   -- constants
-   constant SUPERVISOR_WAIT_CYCLES_C : positive := 5;
-   constant ARB_FIFO_RD_DELAY_C      : positive := 3; -- standalone/generic FIFO
-   --constant ARB_FIFO_RD_DELAY_C      : natural := ????; -- designware FIFO
-
-   --
    signal dataRd          : sl := '0';
    signal statusRd        : sl := '0';
    signal colSel          : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
-   signal dataRdSel        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal dataRdSel       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal statusBusSel    : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;
    signal dataBusSel      : Pix2PgpDataBusType    := DEFAULT_PIX2PGP_DATABUS_C;
    signal statusBus       : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
@@ -98,10 +98,12 @@ begin
    GEN_COL_MANAGER: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
       U_ColumnManager: entity pix2pgp.Pix2PgpColumnManager
          generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            STANDALONE_G   => STANDALONE_G)
+            TPD_G             => TPD_G,
+            RST_ASYNC_G       => RST_ASYNC_G,
+            RST_POLARITY_G    => RST_POLARITY_G,
+            DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
+            STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
+            STANDALONE_G      => STANDALONE_G)
          port map(
             -- General Interface
             sparseClk => sparseClk,
@@ -123,10 +125,13 @@ begin
    ---------------------------------------
    -- Bridge
    ---------------------------------------
+   -- set bridge to no pipelining since we are pipelining on the column manager level;
+   -- that is, the FIFO dins/wrEns are pipelined; these signals can be 'slower'.
+   -- reading and switching between FIFOs should be much faster. So no pipelinening.
    U_Bridge : entity pix2pgp.Pix2PgpBridge
       generic map(
          TPD_G      => TPD_G,
-         PIPELINE_G => PIPELINE_G)
+         PIPELINE_G => PIPELINE_BRIDGE_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
@@ -149,10 +154,10 @@ begin
    ---------------------------------------
    U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
       generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WAIT_CYCLES_G  => SUPERVISOR_WAIT_CYCLES_C)
+         TPD_G           => TPD_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G)
       port map(
          -- General Interface
          pgpClk          => pgpClk,
@@ -178,7 +183,9 @@ begin
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
-         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_C,
+         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_G,
+         DOUT_PIPE_G     => ARB_DOUT_PIPE_G,
+         DATAFIFO_FWFT_G => DATAFIFO_FWFT_G,
          STANDALONE_G    => STANDALONE_G)
       port map (
          -- General Interface

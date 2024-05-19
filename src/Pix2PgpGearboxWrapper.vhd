@@ -164,7 +164,7 @@ begin
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
          SLAVE_WIDTH_G  => GEARBOX_OUTPUT_WIDTH_C,
-         MASTER_WIDTH_G => 64)
+         MASTER_WIDTH_G => PGP_DWIDTH_C)
       port map (
          -- Clock and Reset
          clk            => pgpClk,

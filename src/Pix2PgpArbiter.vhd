@@ -31,7 +31,9 @@ entity Pix2PgpArbiter is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 3;
+      FIFO_RD_DELAY_G : positive := 1;
+      DOUT_PIPE_G     : positive := 2;
+      DATAFIFO_FWFT_G : boolean  := true;
       STANDALONE_G    : boolean  := false);
    port(
       -- General Interface
@@ -58,14 +60,22 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
-   constant COLDATAFIFO_IS_FWFT_C : natural := 1; -- set to 1 for true, 0 for false
+   function toInt (inVar : sl) return integer is
+   begin
+      if (inVar = '1') then
+         return 1;
+      else
+         return 0;
+      end if;
+   end function toInt;
 
-   signal fifoFull  : sl := '0';
+   constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
+
+   signal fifoFull : sl := '0';
 
    type StateType is (
       IDLE_S,
-      ROUND_ROBIN_S,
-      INCR_SEL_S,
+      CHECK_DATALEN_S,
       PARSE_DATA_S,
       DONE_S);
 
@@ -115,7 +125,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty      => '0',
       headerOnly      => '0',
       dataHeader      => (others => '0'),
-      dataRdCnt       => toSlv(COLDATAFIFO_IS_FWFT_C, DATALEN_WIDTH_C),
+      dataRdCnt       => toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C),
       dataRdCycles    => (others => '0'),
       busyCnt         => 0,
       state           => IDLE_S);
@@ -174,38 +184,46 @@ begin
                   r.eventEmpty      = '1' then
                   v.state := DONE_S;
                else
-                  v.state := ROUND_ROBIN_S;
+                  v.state := CHECK_DATALEN_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
          -- check the data length of the selected column
-         when ROUND_ROBIN_S =>
+         -- if non-zero, write the length and start reading immediately
+         when CHECK_DATALEN_S =>
             v.arbValid := '0';
 
             if allBits((r.dataLenSel), '0') then
-               v.state := INCR_SEL_S;
+               v.colSel := r.colSel + 1;
+               if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
+                  v.state := DONE_S;
+               end if;
+
             else
+
+               v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
+               v.arbValid  := '1';
+               v.dataRd    := '1';
+
                -- TX the dataLength and start reading the data fifo
                v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
                v.arbDout(9 downto 0)                   := r.dataLenSel;
+
                -- divide-by-2 (dumb, but asic synth tool will like it)
                v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
                v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := r.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
-               v.dataRdCnt := toSlv(COLDATAFIFO_IS_FWFT_C, DATALEN_WIDTH_C);
-               v.arbValid  := '1';
-               v.dataRd    := '1';
-               v.state     := PARSE_DATA_S;
-            end if;
+               if r.dataLenSel = 1 then -- override
+                  v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
+               end if;
 
-         ----------------------------------------------------------------------
-         -- check the data length of the selected column
-         when INCR_SEL_S =>
-            v.colSel := r.colSel + 1;
-            if (conv_integer(unsigned(r.colSel)) < NUM_OF_COL_MANAGERS_C-1) then
-               v.state := ROUND_ROBIN_S;
-            else
-               v.state := DONE_S;
+               -- probably smaller footprint than '<'
+               -- you don't have to read if it is FWFT with one/two hits
+               if ((r.dataLenSel = 1 or r.dataLenSel = 2) and DATAFIFO_FWFT_G) then
+                  v.dataRd := '0';
+               end if;
+
+               v.state := PARSE_DATA_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -227,7 +245,12 @@ begin
 
             if r.dataRdCnt = r.dataRdCycles + FIFO_RD_DELAY_G then
                v.arbValid := '0';
-               v.state    := INCR_SEL_S;
+               v.colSel   := r.colSel + 1;
+               if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
+                  v.state := DONE_S;
+               else
+                  v.state := CHECK_DATALEN_S;
+               end if;
             end if;
 
          ----------------------------------------------------------------------
@@ -256,8 +279,6 @@ begin
       arbBusy  <= r.arbBusy;
       dataRd   <= r.dataRd;
       colSel   <= r.colSel;
-      arbDout  <= r.arbDout;
-      arbValid <= r.arbValid;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = '1') then
@@ -277,5 +298,29 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   -- pipeline the data output to give some freedom in placement
+   U_PipelineValid : entity surf.Synchronizer
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         STAGES_G    => DOUT_PIPE_G)
+      port map (
+         clk     => pgpClk,
+         rst     => rst,
+         dataIn  => r.arbValid,
+         dataOut => arbValid);
+
+   U_PipelineDout : entity surf.SynchronizerVector
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         WIDTH_G     => DATABUS_DWIDTH_C,
+         STAGES_G    => DOUT_PIPE_G)
+      port map (
+         clk     => pgpClk,
+         rst     => rst,
+         dataIn  => r.arbDout,
+         dataOut => arbDout);
 
 end rtl;

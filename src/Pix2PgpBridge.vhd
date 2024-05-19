@@ -28,7 +28,7 @@ use pix2pgp.Pix2PgpPkg.all;
 entity Pix2PgpBridge is
    generic(
       TPD_G      : time    := 1 ns;
-      PIPELINE_G : boolean := true);
+      PIPELINE_G : boolean := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
