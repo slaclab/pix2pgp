@@ -46,7 +46,12 @@ TB=${TB_DIR}/*Tb.vhd
 FST=${GHDL_DIR}/*.fst
 OUT=${GHDL_DIR}/*.o
 
+#############################
 GHDL_CMD="ghdl-llvm"
+# check if your ghdl version is < 1.0.0; if it is, you need to use a downloaded tarball from https://github.com/ghdl/ghdl/releases
+# example below...
+# GHDL_CMD="/home/cbakalis/Downloads/bin/ghdl"
+#############################
 GHDL_GLBL_FLAGS="--ieee=standard -fexplicit -fsynopsys"
 GHDL_STD_FLAG="--std=93c"
 
