@@ -75,7 +75,7 @@ architecture rtl of Pix2PgpArbiter is
 
    type StateType is (
       IDLE_S,
-      CHECK_DATALEN_S,
+      CHECK_BITMASK_S,
       PARSE_DATA_S,
       DONE_S);
 
@@ -184,43 +184,40 @@ begin
                   r.eventEmpty      = '1' then
                   v.state := DONE_S;
                else
-                  v.state := CHECK_DATALEN_S;
+                  v.state := CHECK_BITMASK_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
-         -- check the data length of the selected column
+         -- check the bitmask value of the selected column
          -- if non-zero, write the length and start reading immediately
-         when CHECK_DATALEN_S =>
+         -- note the use of v.dataLenSel to save one cycle (hope it meets timing)
+         when CHECK_BITMASK_S =>
             v.arbValid := '0';
 
-            if allBits((r.dataLenSel), '0') then
+            if r.colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state := DONE_S;
                end if;
 
             else
-
                v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
                v.arbValid  := '1';
                v.dataRd    := '1';
 
                -- TX the dataLength and start reading the data fifo
                v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-               v.arbDout(9 downto 0)                   := r.dataLenSel;
+               v.arbDout(9 downto 0)                   := v.dataLenSel;
 
                -- divide-by-2 (dumb, but asic synth tool will like it)
                v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
-               v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := r.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
-               if r.dataLenSel = 1 then -- override
-                  v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
-               end if;
+               v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := v.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
 
                -- probably smaller footprint than '<'
-               -- you don't have to read if it is FWFT with one/two hits
-               if ((r.dataLenSel = 1 or r.dataLenSel = 2) and DATAFIFO_FWFT_G) then
-                  v.dataRd := '0';
+               -- override the previous assertion to cover for the one-hit corner case
+               if v.dataLenSel = conv_std_logic_vector(1, v.dataLenSel'length) then
+                  v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
                end if;
 
                v.state := PARSE_DATA_S;
@@ -234,7 +231,7 @@ begin
             v.dataRdCnt := r.dataRdCnt + 1;
 
             -- dataRd control
-            if r.dataRdCnt = r.dataRdCycles - 1 then
+            if r.dataRdCnt = r.dataRdCycles then
                v.dataRd := '0';
             end if;
 
@@ -249,7 +246,7 @@ begin
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state := DONE_S;
                else
-                  v.state := CHECK_DATALEN_S;
+                  v.state := CHECK_BITMASK_S;
                end if;
             end if;
 
@@ -258,6 +255,7 @@ begin
          when DONE_S =>
             v.arbBusy  := '0';
             v.arbValid := '0';
+            v.colSel   := (others => '0');
             if r.arbStart = '0' then
                v.state := IDLE_S;
             end if;

@@ -170,11 +170,16 @@ begin
       sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
+      hitLen(0) <= toSlv(10, hitLen(0)'length);
+      hitLen(5) <= toSlv(10, hitLen(5)'length);
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+        hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
