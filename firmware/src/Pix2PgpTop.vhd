@@ -222,15 +222,16 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G)
       port map (
          -- General Interface
-         pgpClk    => pgpClk,
-         rst       => rst,
+         pgpClk     => pgpClk,
+         rst        => rst,
          -- Arbiter Interface
-         arbValid  => arbValid,
-         arbDout   => arbDout,
-         arbReady  => open, -- TO-DO: evaluate; do I need to route this to the arbiter?
+         arbValid   => arbValid,
+         arbDout    => arbDout,
+         arbReady   => open, -- TO-DO: evaluate; do I need to route this to the arbiter?
+         writeIndex => open, -- TO-DO: route this to arbiter
          -- PGP Interface
-         pgpReady  => '1', -- TO-DO: evaluate; do I need to route this to the PGP FIFO logic?
-         pgpValid  => pgpValid,
-         pgpData   => pgpData);
+         pgpReady   => '1', -- TO-DO: evaluate; do I need to route this to the PGP FIFO logic?
+         pgpValid   => pgpValid,
+         pgpData    => pgpData);
 
 end rtl;

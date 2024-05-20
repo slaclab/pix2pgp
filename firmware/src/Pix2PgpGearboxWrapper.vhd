@@ -34,16 +34,17 @@ entity Pix2PgpGearboxWrapper is
       RST_POLARITY_G  : sl       := '1');
    port(
       -- General Interface
-      pgpClk    : in  sl;
-      rst       : in  sl := not(RST_POLARITY_G);
+      pgpClk     : in  sl;
+      rst        : in  sl := not(RST_POLARITY_G);
       -- Arbiter Interface
-      arbValid  : in  sl;
-      arbDout   : in  slv(DATABUS_DWIDTH_C-1 downto 0);
-      arbReady  : out sl;
+      arbValid   : in  sl;
+      arbDout    : in  slv(DATABUS_DWIDTH_C-1 downto 0);
+      arbReady   : out sl;
+      writeIndex : out slv(bitSize(GEARBOX_OUTPUT_WIDTH_C) downto 0);
       -- PGP Interface
-      pgpReady  : in  sl;
-      pgpValid  : out sl;
-      pgpData   : out slv(PGP_DWIDTH_C-1 downto 0));
+      pgpReady   : in  sl;
+      pgpValid   : out sl;
+      pgpData    : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpGearboxWrapper;
 
 architecture rtl of Pix2PgpGearboxWrapper is
@@ -55,20 +56,6 @@ architecture rtl of Pix2PgpGearboxWrapper is
    signal pgpGearboxWriteIndex      : slv(bitSize(PGP_DWIDTH_C) downto 0) := (others => '0');
    signal pgpGearboxReady           : sl := '0';
 
-   type RegType is record
-      -- i/o
-      arbValid : sl;
-      arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0);
-   end record RegType;
-
-   constant REG_INIT_C : RegType := (
-      -- i/o
-      arbValid => '0',
-      arbDout  => (others => '0'));
-
-   signal r   : RegType := REG_INIT_C;
-   signal rin : RegType;
-
 begin
 
    -- safeguards
@@ -79,56 +66,6 @@ begin
    assert (GEARBOX_OUTPUT_WIDTH_C rem PGP_DWIDTH_C = 0)
    report "[ERROR]: GEARBOX_OUTPUT_WIDTH_C/64-bit PGP input bus ratio is not an integer!"
    severity failure;
-
-   ------------------------------------------------
-   -- Gearbox FSM
-   ------------------------------------------------
-   comb : process (r, rst, arbValid, arbDout) is
-
-      variable v : RegType;
-
-   begin
-
-      -- Latch the current value
-      v := r;
-
-
-      -- Register inputs
-      v.arbValid := arbValid;
-      v.arbDout  := arbDout;
-      --v.arbiterStart    := arbiterStart;
-      --v.statusFifoError := statusFifoError;
-      --v.dataFifoError   := dataFifoError;
-      --v.overOccError    := overOccError;
-      --v.alignError      := alignError;
-      --v.colBitmask      := colBitmask;
-      --v.trgNum          := trgNum;
-
-      --v.eventEmpty      := not(uOr(r.colBitmask));
-
-      -- Outputs
-      --dataRd <= r.dataRd;
-      --colSel <= r.colSel;
-
-      -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
-         v := REG_INIT_C;
-      end if;
-
-      -- Register the variable for next clock cycle
-      rin <= v;
-
-   end process comb;
-
-   seq : process (pgpClk, rst) is
-   begin
-      if (RST_ASYNC_G and rst = '1') then
-         r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(pgpClk) then
-         r <= rin after TPD_G;
-      end if;
-   end process seq;
-
    -----------------
    -- 40:320 Gearbox
    -----------------
@@ -144,8 +81,8 @@ begin
          clk            => pgpClk,
          rst            => rst,
          -- Slave Interface
-         slaveValid     => r.arbValid,
-         slaveData      => r.arbDout,
+         slaveValid     => arbValid,
+         slaveData      => arbDout,
          slaveReady     => arbReady,
          writeIndex     => arbiterGearboxWriteIndex,
          slaveBitOrder  => '0',
@@ -154,6 +91,8 @@ begin
          masterReady    => pgpGearboxReady,
          masterValid    => pgpGearboxDataWordValid,
          masterData     => pgpGearboxDataWord);
+
+   writeIndex <= arbiterGearboxWriteIndex;
 
    -----------------
    -- 320:64 Gearbox

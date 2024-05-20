@@ -21,9 +21,9 @@
 *.ghw
 
 # tb executable names
-ghdl/pix2pgpgearboxwrappertb
-ghdl/pix2pgptoptb
-ghdl/pix2pgparbitertb
+firmware/ghdl/pix2pgpgearboxwrappertb
+firmware/ghdl/pix2pgptoptb
+firmware/ghdl/pix2pgparbitertb
 
 # Matlab
 *.autosave

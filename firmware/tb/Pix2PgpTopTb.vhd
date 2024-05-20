@@ -170,8 +170,8 @@ begin
       sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
-      hitLen(0) <= toSlv(10, hitLen(0)'length);
-      hitLen(5) <= toSlv(10, hitLen(5)'length);
+      hitLen(0) <= toSlv(2, hitLen(0)'length);
+      hitLen(5) <= toSlv(2, hitLen(5)'length);
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';

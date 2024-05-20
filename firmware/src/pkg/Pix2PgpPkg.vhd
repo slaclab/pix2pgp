@@ -136,6 +136,8 @@ package Pix2PgpPkg is
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
 
+   constant GEARBOX_OUTPUT_WIDTH_C  : natural := DATABUS_DWIDTH_C*8;
+
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
