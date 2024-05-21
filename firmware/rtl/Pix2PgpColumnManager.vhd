@@ -31,6 +31,7 @@ entity Pix2PgpColumnManager is
       RST_POLARITY_G    : sl      := '1';
       DATAFIFO_PIPE_G   : positive := 2;
       STATUSFIFO_PIPE_G : positive := 2;
+      DWARE_DEPTH_G     : integer := 32;
       GHDL_SIM_G        : boolean := false;
       SYNTHESIZE_G      : boolean := false);
    port(
@@ -249,6 +250,7 @@ begin
          GEN_SYNC_FIFO_G => true,
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
+         DWARE_DEPTH_G   => DWARE_DEPTH_G,
          ADDR_WIDTH_G    => 8,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
@@ -316,6 +318,7 @@ begin
          GEN_SYNC_FIFO_G => true,
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
          RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
+         DWARE_DEPTH_G   => DWARE_DEPTH_G,
          ADDR_WIDTH_G    => 12,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)

@@ -34,6 +34,8 @@ entity Pix2PgpTop is
       SYNTHESIZE_G          : boolean  := false;
       DATAFIFO_FWFT_G       : boolean  := true;
       PIPELINE_BRIDGE_G     : boolean  := false;
+      COLMANAGER_DEPTH_G    : integer  := 32;
+      PGPADAPTER_DEPTH_G    : integer  := 12;
       DATAFIFO_PIPE_G       : positive := 2;
       STATUSFIFO_PIPE_G     : positive := 2;
       SUPER_FIFO_RD_DELAY_G : positive := 3;
@@ -104,6 +106,7 @@ begin
             RST_POLARITY_G    => RST_POLARITY_G,
             DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
             STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
+            DWARE_DEPTH_G     => COLMANAGER_DEPTH_G,
             GHDL_SIM_G        => GHDL_SIM_G,
             SYNTHESIZE_G      => SYNTHESIZE_G)
          port map(
@@ -234,5 +237,31 @@ begin
          pgpReady   => '1', -- TO-DO: evaluate; do I need to route this to the PGP FIFO logic?
          pgpValid   => pgpValid,
          pgpData    => pgpData);
+
+   -----------------------------------------
+   -- PGP FIFO adapter
+   -----------------------------------------
+   U_Adapter: entity pix2pgp.Pix2PgpAdapter
+   generic map(
+      TPD_G           => TPD_G,
+      RST_ASYNC_G     => RST_ASYNC_G,
+      RST_POLARITY_G  => RST_POLARITY_G,
+      DWARE_DEPTH_G   => PGPADAPTER_DEPTH_G,
+      GHDL_SIM_G      => GHDL_SIM_G,
+      SYNTHESIZE_G    => SYNTHESIZE_G)
+   port map(
+      -- General Interface
+      pgpClk     => pgpClk,
+      rst        => rst,
+      -- Gearbox Interface
+      pgpValid   => pgpValid,
+      pgpData    => pgpData,
+      -- Pgp4TxLite Interface
+      txReady    => txReady,
+      txValid    => txValid,
+      txData     => txData,
+      txSof      => txSof,
+      txEof      => txEof,
+      txEofe     => txEofe);
 
 end rtl;

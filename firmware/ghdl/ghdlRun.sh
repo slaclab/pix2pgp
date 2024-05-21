@@ -1,14 +1,14 @@
 #!/bin/sh
 # simple GHDL wrapper script
 ##########################################################################
-# it is assumed that there are three directories: src/ tb/ ghdl/ ; all on the same level
-# src/ is where the source files are located; tb/ are all sim-related files; ghdl/ is where the ghdl script is
+# it is assumed that there are three directories: rtl/ tb/ ghdl/ ; all on the same level
+# rtl/ is where the source files are located; tb/ are all sim-related files; ghdl/ is where the ghdl script is
 # this script will *not* work if this structure is not followed
-# also, the surf library files should be added in a dir named surf/ directly under src/
+# also, the surf library files should be added in a dir named surf/ directly under rtl/
 ##########################################################################
 # two uses: 1) $ bash ghdlRun.sh
 #           2) $ bash ghdlRun.sh <name of top-level tb name> <stop time (e.g. 100us)>
-# if no arguments are given (option 1), then a simple analysis of the .vhd files in the src/ dir is performed.
+# if no arguments are given (option 1), then a simple analysis of the .vhd files in the rtl/ dir is performed.
 # if arguments are given (option 2), then a testbench is compiled and run
 # e.g.: bash ghdlRun.sh ModuleTb 5
 # the command above will run the ModuleTb.vhd testbench for 5us.
@@ -18,17 +18,17 @@
 
 ROOT_DIR=${PWD}/../../
 
-SRC_DIR=${ROOT_DIR}/firmware/src
+RTL_DIR=${ROOT_DIR}/firmware/rtl
 TB_DIR=${ROOT_DIR}/firmware/tb
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
-SRC=${SRC_DIR}/*.vhd
+RTL=${RTL_DIR}/*.vhd
 
 # note that the package has to be declared separately in order to be imported first
-PIX2PGP_PKG_DIR=${SRC_DIR}/pkg
+PIX2PGP_PKG_DIR=${RTL_DIR}/pkg
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 
-SURF_DIR=${SRC_DIR}/surf
+SURF_DIR=${RTL_DIR}/surf
 SURF=${SURF_DIR}/*.vhd
 SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
@@ -39,7 +39,7 @@ SURF_PKG_DIR=${SURF_DIR}/pkg
 SURF_PKG=${SURF_PKG_DIR}/StdRtlPkg.vhd
 
 # stub dware files
-DWARE_DIR=${SRC_DIR}/dw
+DWARE_DIR=${RTL_DIR}/dw
 DWARE=${DWARE_DIR}/*.vhd
 DWARE_PKG_DIR=${DWARE_DIR}/pkg
 DWARE_PKG=${DWARE_PKG_DIR}/DWpackages.vhd
@@ -100,6 +100,8 @@ prepareSurf()
 
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd ${SURF_DIR}/RstSync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd ${SURF_DIR}/Synchronizer.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerOneShot.vhd ${SURF_DIR}/SynchronizerOneShot.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerEdge.vhd ${SURF_DIR}/SynchronizerEdge.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd ${SURF_DIR}/SynchronizerVector.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/SimpleDualPortRam.vhd ${SURF_DIR}/SimpleDualPortRam.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/FifoOutputPipeline.vhd ${SURF_DIR}/FifoOutputPipeline.vhd
@@ -136,11 +138,11 @@ printHelp()
   if [ "$1" == "--help" ]; then
     echo ""
     echo "Simple ghdl wrapper script."
-    echo "It is assumed that there are three directories: src/ tb/ ghdl/ ; all on the same level"
-    echo "src/ is where the source files are located; tb/ are all sim-related files; ghdl/ is where the ghdl script is"
+    echo "It is assumed that there are three directories: rtl/ tb/ ghdl/ ; all on the same level"
+    echo "rtl/ is where the source files are located; tb/ are all sim-related files; ghdl/ is where the ghdl script is"
     echo "this script will *not* work if this structure is not followed"
     echo "Provide the name of the top-level testbench entity as a first argument."
-    echo "If no argument is given, the files in src/ will simply be analyzed."
+    echo "If no argument is given, the files in rtl/ will simply be analyzed."
     echo "Provide the stop time (in us) as a second argument"
     echo "example usage: $ bash ghdlRun.sh my_tb 100"
     echo "NB: The script assumes "
@@ -210,14 +212,14 @@ ghdlClean()
 
   prepareDWare
 
-  checkFileExists ${SRC}
+  checkFileExists ${RTL}
   pix2pgp_exists=$?
 
   # pix2pgp import
   if [[ $pix2pgp_exists -eq 1 ]]; then
-    echo "[INFO]: Pix2pgp libraries found in ${SRC}. Importing..."
+    echo "[INFO]: Pix2pgp libraries found in ${RTL}. Importing..."
     ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
-    ${GHDL_IMPORT_PIX2PGP} ${SRC}
+    ${GHDL_IMPORT_PIX2PGP} ${RTL}
   else
     echo "[ERROR]: No pix2pgp files found..."
     exit 1
@@ -231,9 +233,9 @@ ghdlAnalyze()
 ##########################################################################
   # analyze the files to make sure their syntax is correct
   echo "Analyzing:"
-  echo "$(ls ${SRC})"
+  echo "$(ls ${RTL})"
   echo "$(ls ${TB})"
-  ${GHDL_ANALYZE} ${SRC}
+  ${GHDL_ANALYZE} ${RTL}
   ${GHDL_ANALYZE} ${TB}
 }
 
@@ -293,10 +295,10 @@ main()
     doTb=0
   fi
 
-  checkFileExists "$SRC"
-  srcExists=$?
-  if [[ $srcExists -eq 0 ]]; then
-    echo "[ERROR]: There are no .vhd files in src/."
+  checkFileExists "$RTL"
+  rtlExists=$?
+  if [[ $rtlExists -eq 0 ]]; then
+    echo "[ERROR]: There are no .vhd files in rtl/."
     exit 1
   fi
 

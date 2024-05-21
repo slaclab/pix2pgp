@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Mon May 20 20:42:34 2024
+[*] Tue May 21 07:51:48 2024
 [*]
 [dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Mon May 20 20:42:12 2024"
-[dumpfile_size] 737502
+[dumpfile_mtime] "Tue May 21 01:44:13 2024"
+[dumpfile_size] 789545
 [savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 6920400000
+[timestart] 7002900000
 [size] 1850 1016
 [pos] -1 -1
-*-25.000000 7129000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.000000 7142536000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
@@ -17,7 +17,8 @@
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.databus.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_adapter.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.statusbusglbl.[0].
@@ -72,8 +73,22 @@ top.pix2pgptoptb.u_pix2pgptop.datard
 [color] 2
 top.pix2pgptoptb.u_pix2pgptop.pgpvalid
 top.pix2pgptoptb.u_pix2pgptop.txeofe
-top.pix2pgptoptb.u_pix2pgptop.txeof
+@420
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.state
+@28
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.fiforden
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.fifoempty
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.txeofe
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.txeof
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.txsof
 top.pix2pgptoptb.u_pix2pgptop.txsof
+@22
+#{top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.rdcnt[3:0]} top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.rdcnt[3] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.rdcnt[2] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.rdcnt[1] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.rdcnt[0]
+@28
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.txvalid
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.txready
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.pgpvalid
+top.pix2pgptoptb.u_pix2pgptop.txeof
 top.pix2pgptoptb.u_pix2pgptop.txvalid
 top.pix2pgptoptb.u_pix2pgptop.txready
 top.pix2pgptoptb.u_pix2pgptop.rst
@@ -175,5 +190,20 @@ top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.datard
 @420
 [color] 1
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.busycnt
+@28
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.pgpvalid
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.fifoempty
+@29
+top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.fiforden
+@22
+[color] 7
+#{top.pix2pgptoptb.txdata[63:0]} top.pix2pgptoptb.txdata[63] top.pix2pgptoptb.txdata[62] top.pix2pgptoptb.txdata[61] top.pix2pgptoptb.txdata[60] top.pix2pgptoptb.txdata[59] top.pix2pgptoptb.txdata[58] top.pix2pgptoptb.txdata[57] top.pix2pgptoptb.txdata[56] top.pix2pgptoptb.txdata[55] top.pix2pgptoptb.txdata[54] top.pix2pgptoptb.txdata[53] top.pix2pgptoptb.txdata[52] top.pix2pgptoptb.txdata[51] top.pix2pgptoptb.txdata[50] top.pix2pgptoptb.txdata[49] top.pix2pgptoptb.txdata[48] top.pix2pgptoptb.txdata[47] top.pix2pgptoptb.txdata[46] top.pix2pgptoptb.txdata[45] top.pix2pgptoptb.txdata[44] top.pix2pgptoptb.txdata[43] top.pix2pgptoptb.txdata[42] top.pix2pgptoptb.txdata[41] top.pix2pgptoptb.txdata[40] top.pix2pgptoptb.txdata[39] top.pix2pgptoptb.txdata[38] top.pix2pgptoptb.txdata[37] top.pix2pgptoptb.txdata[36] top.pix2pgptoptb.txdata[35] top.pix2pgptoptb.txdata[34] top.pix2pgptoptb.txdata[33] top.pix2pgptoptb.txdata[32] top.pix2pgptoptb.txdata[31] top.pix2pgptoptb.txdata[30] top.pix2pgptoptb.txdata[29] top.pix2pgptoptb.txdata[28] top.pix2pgptoptb.txdata[27] top.pix2pgptoptb.txdata[26] top.pix2pgptoptb.txdata[25] top.pix2pgptoptb.txdata[24] top.pix2pgptoptb.txdata[23] top.pix2pgptoptb.txdata[22] top.pix2pgptoptb.txdata[21] top.pix2pgptoptb.txdata[20] top.pix2pgptoptb.txdata[19] top.pix2pgptoptb.txdata[18] top.pix2pgptoptb.txdata[17] top.pix2pgptoptb.txdata[16] top.pix2pgptoptb.txdata[15] top.pix2pgptoptb.txdata[14] top.pix2pgptoptb.txdata[13] top.pix2pgptoptb.txdata[12] top.pix2pgptoptb.txdata[11] top.pix2pgptoptb.txdata[10] top.pix2pgptoptb.txdata[9] top.pix2pgptoptb.txdata[8] top.pix2pgptoptb.txdata[7] top.pix2pgptoptb.txdata[6] top.pix2pgptoptb.txdata[5] top.pix2pgptoptb.txdata[4] top.pix2pgptoptb.txdata[3] top.pix2pgptoptb.txdata[2] top.pix2pgptoptb.txdata[1] top.pix2pgptoptb.txdata[0]
+@28
+[color] 7
+top.pix2pgptoptb.txsof
+[color] 7
+top.pix2pgptoptb.txeof
+[color] 7
+top.pix2pgptoptb.txvalid
 [pattern_trace] 1
 [pattern_trace] 0
