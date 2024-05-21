@@ -48,7 +48,7 @@ You should have the following two packages in your server to run the simulation:
 * firmware/submodules/surf/base/fifo/rtl/inferred/FifoWrFsm.vhd
 * firmware/submodules/surf/base/fifo/rtl/inferred/FifoRdFsm.vhd
 * firmware/submodules/surf/base/fifo/rtl/inferred/FifoSync.vhd
-* firmware/submodules/surf/base/fifo/rtl/inferred/FifoASync.vhd
+* firmware/submodules/surf/base/fifo/rtl/inferred/FifoAsync.vhd
 ```
 
 Note that the FIFO/RAM related files of both libraries might not be needed, since we will import the DWare FIFOs for synthesis.
