@@ -38,6 +38,14 @@ TB=${TB_DIR}/*Tb.vhd
 SURF_PKG_DIR=${SURF_DIR}/pkg
 SURF_PKG=${SURF_PKG_DIR}/StdRtlPkg.vhd
 
+# stub dware files
+DWARE_DIR=${SRC_DIR}/dw
+DWARE=${DWARE_DIR}/*.vhd
+DWARE_PKG_DIR=${DWARE_DIR}/pkg
+DWARE_PKG=${DWARE_PKG_DIR}/DWpackages.vhd
+# actual file; test if exists
+DWARE_TEST_FILE="/afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf.vhd"
+
 CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
 GHW=${GHDL_DIR}/*.ghw
@@ -58,8 +66,9 @@ GHDL_STD_FLAG="--std=93c"
 GHDL_ANALYZE="${GHDL_CMD} -s ${GHDL_GLBL_FLAGS} ${GHDL_STD_FLAG}"
 GHDL_IMPORT_SURF="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=surf"
 GHDL_IMPORT_PIX2PGP="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=pix2pgp"
+GHDL_IMPORT_DWARE="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=dware"
 GHDL_IMPORT_WORK="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=work"
-GHDL_MAKE="${GHDL_CMD} -m  -g -Psurf -Ppix2pgp -Pwork --warn-unused ${GHDL_GLBL_FLAGS}"
+GHDL_MAKE="${GHDL_CMD} -m  -g -Psurf -Ppix2pgp -Pdware -Pwork --warn-unused ${GHDL_GLBL_FLAGS}"
 GHDL_RUN="${GHDL_CMD} --elab-run ${GHDL_GLBL_FLAGS}"
 
 DEFAULT_STOP_TIME_US="10"
@@ -98,6 +107,28 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoRdFsm.vhd ${SURF_DIR}/FifoRdFsm.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoSync.vhd ${SURF_DIR}/FifoSync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoAsync.vhd ${SURF_DIR}/FifoAsync.vhd
+ }
+
+ prepareDWare()
+ {
+    checkFileExists ${DWARE_TEST_FILE}
+    dwareExists=$?
+
+    if [[ $dwareExists -eq 1 ]]; then
+      echo "[INFO]: DWare Libraries found! Importing..."
+      # first clean up the local stub files
+      rm ${DWARE}
+      rm ${DWARE_PKG}
+      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/packages/dware/src/DWpackages.vhd ${DWARE_PKG_DIR}/DWpackages.vhd
+      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_asymfifo_s2_sf.vhd ${DWARE_DIR}/DW_asymfifo_s2_sf.vhd
+      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf.vhd ${DWARE_DIR}/DW_fifo_s2_sf.vhd
+    else
+      echo "[WARNING]: DWare Libraries NOT found! Importing the stub files instead..."
+    fi
+
+    ${GHDL_IMPORT_DWARE} ${DWARE_PKG}
+    ${GHDL_IMPORT_DWARE} ${DWARE}
+
  }
 
 printHelp()
@@ -177,6 +208,8 @@ ghdlClean()
     exit 1
   fi
 
+  prepareDWare
+
   checkFileExists ${SRC}
   pix2pgp_exists=$?
 
@@ -184,7 +217,6 @@ ghdlClean()
   if [[ $pix2pgp_exists -eq 1 ]]; then
     echo "[INFO]: Pix2pgp libraries found in ${SRC}. Importing..."
     ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
-    ${GHDL_IMPORT_PIX2PGP} ${SRC}
     ${GHDL_IMPORT_PIX2PGP} ${SRC}
   else
     echo "[ERROR]: No pix2pgp files found..."

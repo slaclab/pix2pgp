@@ -30,7 +30,8 @@ entity Pix2PgpTop is
       TPD_G                 : time     := 1 ns;
       RST_ASYNC_G           : boolean  := true;
       RST_POLARITY_G        : sl       := '1';
-      STANDALONE_G          : boolean  := true;
+      GHDL_SIM_G            : boolean  := true;
+      SYNTHESIZE_G          : boolean  := false;
       DATAFIFO_FWFT_G       : boolean  := true;
       PIPELINE_BRIDGE_G     : boolean  := false;
       DATAFIFO_PIPE_G       : positive := 2;
@@ -103,7 +104,8 @@ begin
             RST_POLARITY_G    => RST_POLARITY_G,
             DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
             STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
-            STANDALONE_G      => STANDALONE_G)
+            GHDL_SIM_G        => GHDL_SIM_G,
+            SYNTHESIZE_G      => SYNTHESIZE_G)
          port map(
             -- General Interface
             sparseClk => sparseClk,
@@ -185,8 +187,7 @@ begin
          RST_POLARITY_G  => RST_POLARITY_G,
          FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_G,
          DOUT_PIPE_G     => ARB_DOUT_PIPE_G,
-         DATAFIFO_FWFT_G => DATAFIFO_FWFT_G,
-         STANDALONE_G    => STANDALONE_G)
+         DATAFIFO_FWFT_G => DATAFIFO_FWFT_G)
       port map (
          -- General Interface
          pgpClk          => pgpClk,

@@ -1,0 +1,17 @@
+-- pix2pgp stub file
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_arith.all;
+
+
+package DWpackages is
+
+   constant DUMMY_CONSTANT_C : natural := 0;
+
+end DWpackages;
+
+package body DWpackages is
+
+end package body DWpackages;

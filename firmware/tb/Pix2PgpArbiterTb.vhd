@@ -71,8 +71,7 @@ begin
       generic map (
          TPD_G           => TPD_C,
          RST_ASYNC_G     => RST_ASYNC_C,
-         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_C,
-         STANDALONE_G    => true)
+         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_C)
       port map (
          -- General Interface
          pgpClk          => clk,
@@ -137,7 +136,7 @@ begin
             WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
             RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
             ADDR_WIDTH_G    => 4,
-            STANDALONE_G    => true)
+            GHDL_SIM_G      => true)
          port map (
             -- Resets
             rst   => rst,

@@ -22,7 +22,7 @@ architecture test of Pix2PgpTopTb is
    constant TPD_C                 : time    := 1 ns;
    constant RST_ASYNC_C           : boolean := True;
    constant RST_POLARITY_C        : sl := '1';
-   constant STANDALONE_C          : boolean := True;
+   constant GHDL_SIM_C            : boolean := True;
    constant DATAFIFO_PIPE_C       : positive := 2;
    constant STATUSFIFO_PIPE_C     : positive := 2;
    constant DATAFIFO_FWFT_C       : boolean := True;
@@ -74,7 +74,7 @@ begin
          TPD_G                 => TPD_C,
          RST_ASYNC_G           => RST_ASYNC_C,
          RST_POLARITY_G        => RST_POLARITY_C,
-         STANDALONE_G          => STANDALONE_C,
+         GHDL_SIM_G            => GHDL_SIM_C,
          DATAFIFO_FWFT_G       => DATAFIFO_FWFT_C,
          PIPELINE_BRIDGE_G     => PIPELINE_BRIDGE_C,
          DATAFIFO_PIPE_G       => DATAFIFO_PIPE_C,

@@ -24,6 +24,9 @@ use surf.StdRtlPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
+library dware;
+use dware.DWpackages.all;
+
 entity Pix2PgpFifoWrapper is
    generic(
       TPD_G            : time    := 1 ns;
@@ -33,7 +36,8 @@ entity Pix2PgpFifoWrapper is
       RD_DATA_WIDTH_G  : natural := 20;
       ADDR_WIDTH_G     : natural := 12;
       GEN_SYNC_FIFO_G  : boolean := false;
-      STANDALONE_G     : boolean := false);
+      GHDL_SIM_G       : boolean := false;
+      SYNTHESIZE_G     : boolean := false);
    port(
       -- Resets
       rst   : in  sl;
@@ -53,7 +57,7 @@ architecture rtl of Pix2PgpFifoWrapper is
 
 begin
 
-   STANDALONE_FLOW_GEN : if (STANDALONE_G = true) generate
+   STANDALONE_FLOW_GEN : if (GHDL_SIM_G = true) generate
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
          U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
@@ -106,14 +110,24 @@ begin
 
    end generate STANDALONE_FLOW_GEN;
 
-   ASIC_FLOW_GEN : if (STANDALONE_G = false) generate
+   ASIC_SIM_FLOW_GEN : if (GHDL_SIM_G = false and SYNTHESIZE_G = false) generate
 
       -- vendor proprietary fifo placeholder
       -- remove this once you place the vendor FIFO
-      assert (STANDALONE_G = false)
-      report "[ERROR]: No vendor proprietary FIFO implemented yet!"
+      assert (GHDL_SIM_G = false)
+      report "[ERROR]: No vendor proprietary FIFO simulation behavioral model implemented yet!"
       severity failure;
 
-   end generate ASIC_FLOW_GEN;
+   end generate ASIC_SIM_FLOW_GEN;
+
+   ASIC_SYNTH_FLOW_GEN : if (SYNTHESIZE_G = true) generate
+
+      -- vendor proprietary fifo placeholder
+      -- remove this once you place the vendor FIFO
+      assert (GHDL_SIM_G = false)
+      report "[ERROR]: No vendor proprietary FIFO behavioral model implemented yet!"
+      severity failure;
+
+   end generate ASIC_SYNTH_FLOW_GEN;
 
 end rtl;

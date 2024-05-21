@@ -33,8 +33,7 @@ entity Pix2PgpArbiter is
       RST_POLARITY_G  : sl       := '1';
       FIFO_RD_DELAY_G : positive := 1;
       DOUT_PIPE_G     : positive := 2;
-      DATAFIFO_FWFT_G : boolean  := true;
-      STANDALONE_G    : boolean  := false);
+      DATAFIFO_FWFT_G : boolean  := true);
    port(
       -- General Interface
       pgpClk          : in  sl;

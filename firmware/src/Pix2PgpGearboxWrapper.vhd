@@ -49,7 +49,6 @@ end Pix2PgpGearboxWrapper;
 
 architecture rtl of Pix2PgpGearboxWrapper is
 
-   constant GEARBOX_OUTPUT_WIDTH_C  : natural := DATABUS_DWIDTH_C*8;
    signal pgpGearboxDataWordValid   : sl := '0';
    signal pgpGearboxDataWord        : slv(GEARBOX_OUTPUT_WIDTH_C-1 downto 0) := (others => '0');
    signal arbiterGearboxWriteIndex  : slv(bitSize(GEARBOX_OUTPUT_WIDTH_C) downto 0);
