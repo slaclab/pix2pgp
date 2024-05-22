@@ -53,6 +53,7 @@ entity Pix2PgpArbiter is
       trgNum          : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbBusy         : out sl;
       -- Gearbox Interface
+      arbReady        : in  sl := '1';
       arbValid        : out sl;
       arbDout         : out slv(DATABUS_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
@@ -138,7 +139,8 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, rst, dataLenSel, dataBusSel, arbStart, statusFifoError,
-                   dataFifoError, overOccError, alignError, colBitmask, trgNum) is
+                   dataFifoError, overOccError, alignError, colBitmask, trgNum,
+                   arbReady) is
 
       variable v : RegType;
 
@@ -163,6 +165,14 @@ begin
       if (r.arbBusy = '1') then
          v.busyCnt := r.busyCnt + 1;
       end if;
+
+      -- flow control check
+      v.dataRd := '0';
+      if (arbReady = '1') then
+         v.arbValid := '0';
+      end if;
+
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -172,7 +182,7 @@ begin
             v.arbBusy  := '0';
             v.arbValid := '0';
 
-            if r.arbStart = '1' then
+            if r.arbStart = '1' and v.arbValid = '0' then
                v.arbBusy  := '1';
                v.arbValid := '1';
                v.arbDout  := r.dataHeader;
@@ -192,7 +202,6 @@ begin
          -- if non-zero, write the length and start reading immediately
          -- note the use of v.dataLenSel to save one cycle (hope it meets timing)
          when CHECK_BITMASK_S =>
-            v.arbValid := '0';
 
             if r.colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
@@ -201,51 +210,46 @@ begin
                end if;
 
             else
-               v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
-               v.arbValid  := '1';
-               v.dataRd    := '1';
+               if (v.arbValid = '0') then
+                  v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
+                  v.arbValid  := '1';
 
-               -- TX the dataLength and start reading the data fifo
-               v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-               v.arbDout(9 downto 0)                   := v.dataLenSel;
+                  -- TX the dataLength and start reading the data fifo
+                  v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
+                  v.arbDout(9 downto 0)                   := v.dataLenSel;
 
-               -- divide-by-2 (dumb, but asic synth tool will like it)
-               v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
-               v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := v.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
+                  -- divide-by-2 (dumb, but asic synth tool will like it)
+                  v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
+                  v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := v.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
 
-               -- probably smaller footprint than '<'
-               -- override the previous assertion to cover for the one-hit corner case
-               if v.dataLenSel = conv_std_logic_vector(1, v.dataLenSel'length) then
-                  v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
+                  -- probably smaller footprint than '<'
+                  -- override the previous assertion to cover for the one-hit corner case
+                  if v.dataLenSel = conv_std_logic_vector(1, v.dataLenSel'length) then
+                     v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
+                  end if;
+
+                  v.state := PARSE_DATA_S;
                end if;
-
-               v.state := PARSE_DATA_S;
             end if;
 
          ----------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.arbValid  := '0';
-            v.arbDout   := v.dataBusSel.data;
-            v.dataRdCnt := r.dataRdCnt + 1;
+            v.arbDout := v.dataBusSel.data;
 
-            -- dataRd control
-            if r.dataRdCnt = r.dataRdCycles then
-               v.dataRd := '0';
-            end if;
-
-            -- arbValid control
-            if r.dataRdCnt >= FIFO_RD_DELAY_G then
-               v.arbValid := '1';
-            end if;
-
-            if r.dataRdCnt = r.dataRdCycles + FIFO_RD_DELAY_G then
-               v.arbValid := '0';
-               v.colSel   := r.colSel + 1;
-               if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                  v.state := DONE_S;
+            if v.arbValid = '0' then
+               if r.dataRdCnt /= r.dataRdCycles + FIFO_RD_DELAY_G then
+                  v.arbValid  := '1';
+                  v.dataRd    := '1';
+                  v.dataRdCnt := r.dataRdCnt + 1;
                else
-                  v.state := CHECK_BITMASK_S;
+                  -- Done with column
+                  v.colSel := r.colSel + 1;
+                  v.state  := CHECK_BITMASK_S;
+                  -- Check if last column
+                  if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
+                     v.state := DONE_S;
+                  end if;
                end if;
             end if;
 
@@ -253,7 +257,6 @@ begin
          -- last state
          when DONE_S =>
             v.arbBusy  := '0';
-            v.arbValid := '0';
             v.colSel   := (others => '0');
             if r.arbStart = '0' then
                v.state := IDLE_S;
@@ -274,7 +277,7 @@ begin
 
       -- Outputs
       arbBusy  <= r.arbBusy;
-      dataRd   <= r.dataRd;
+      dataRd   <= v.dataRd;
       colSel   <= r.colSel;
 
       -- Reset
