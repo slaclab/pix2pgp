@@ -28,7 +28,7 @@ entity Pix2PgpFifo is
    -- MEMORY_TYPE_G: Altera Options: {"auto", "MLAB", "M20K" and "M144K"}
    generic (
       TPD_G           : time                       := 1 ns;
-      RST_POLARITY_G  : boolean                    := true;  -- true for active high rst, false for active low
+      RST_POLARITY_G  : sl                         := '1';  -- '1' for active high rst, '0' for active low
       RST_ASYNC_G     : boolean                    := false;
       GEN_SYNC_FIFO_G : boolean                    := false;
       FWFT_EN_G       : boolean                    := false;
@@ -43,7 +43,7 @@ entity Pix2PgpFifo is
       EMPTY_THRES_G   : integer range 1 to (2**24) := 1);
    port (
       -- Resets
-      rst           : in  sl := not toSl(RST_POLARITY_G);
+      rst           : in  sl := not RST_POLARITY_G;
       --Write Ports (wr_clk domain)
       wr_clk        : in  sl;
       wr_en         : in  sl := '0';

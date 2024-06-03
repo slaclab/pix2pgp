@@ -27,7 +27,7 @@ entity Pix2PgpFifoMux is
       TPD_G              : time                       := 1 ns;
       CASCADE_SIZE_G     : integer range 1 to (2**24) := 1;  -- number of FIFOs to cascade (if set to 1, then no FIFO cascading)
       LAST_STAGE_ASYNC_G : boolean                    := true;  -- if set to true, the last stage will be the ASYNC FIFO
-      RST_POLARITY_G     : boolean                    := true;  -- true for active high rst, false for active low
+      RST_POLARITY_G     : sl                         := '1';  -- '1' for active high rst, '0' for active low
       RST_ASYNC_G        : boolean                    := false;
       GEN_SYNC_FIFO_G    : boolean                    := false;
       SYNTH_MODE_G       : string                     := "inferred";
@@ -170,10 +170,10 @@ begin
 
    wrSeq : process (rst, wr_clk) is
    begin
-      if (RST_ASYNC_G and rst = toSl(RST_POLARITY_G)) then
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          wrR <= WR_REG_INIT_C after TPD_G;
       elsif (rising_edge(wr_clk)) then
-         if (RST_ASYNC_G = false and rst = toSl(RST_POLARITY_G)) then
+         if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
             wrR <= WR_REG_INIT_C after TPD_G;
          else
             wrR <= wrRin after TPD_G;
@@ -240,10 +240,10 @@ begin
    -- If fifo is asynchronous, must use async reset on rd side.
    rdSeq : process (rdRst, rd_clk) is
    begin
-      if (GEN_SYNC_FIFO_G = false and rdRst = toSl(RST_POLARITY_G)) then
+      if (GEN_SYNC_FIFO_G = false and rdRst = RST_POLARITY_G) then
          rdR <= RD_REG_INIT_C after TPD_G;
       elsif (rising_edge(rd_clk)) then
-         if (GEN_SYNC_FIFO_G and RST_ASYNC_G = false and rdRst = toSl(RST_POLARITY_G)) then
+         if (GEN_SYNC_FIFO_G and RST_ASYNC_G = false and rdRst = RST_POLARITY_G) then
             rdR <= RD_REG_INIT_C after TPD_G;
          else
             rdR <= rdRin after TPD_G;

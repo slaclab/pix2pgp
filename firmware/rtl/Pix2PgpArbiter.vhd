@@ -30,14 +30,14 @@ entity Pix2PgpArbiter is
    generic(
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : boolean  := true;
+      RST_POLARITY_G  : sl       := '1';
       FIFO_RD_DELAY_G : positive := 1;
       DOUT_PIPE_G     : positive := 2;
       DATAFIFO_FWFT_G : boolean  := true);
    port(
       -- General Interface
       pgpClk          : in  sl;
-      rst             : in  sl := not(toSl(RST_POLARITY_G));
+      rst             : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
       dataLenSel      : in  slv(DATALEN_WIDTH_C-1 downto 0);
       dataBusSel      : in  Pix2PgpDataBusType;
@@ -281,7 +281,7 @@ begin
       colSel   <= r.colSel;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = toSl(RST_POLARITY_G)) then
+      if (RST_ASYNC_G = false and rst = '1') then
          v := REG_INIT_C;
       end if;
 
@@ -292,7 +292,7 @@ begin
 
    seq : process (pgpClk, rst) is
    begin
-      if (RST_ASYNC_G and rst = toSl(RST_POLARITY_G)) then
+      if (RST_ASYNC_G and rst = '1') then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -302,10 +302,9 @@ begin
    -- pipeline the data output to give some freedom in placement
    U_PipelineValid : entity surf.Synchronizer
       generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         STAGES_G       => DOUT_PIPE_G)
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         STAGES_G    => DOUT_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -314,11 +313,10 @@ begin
 
    U_PipelineDout : entity surf.SynchronizerVector
       generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => DATABUS_DWIDTH_C,
-         STAGES_G       => DOUT_PIPE_G)
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G,
+         WIDTH_G     => DATABUS_DWIDTH_C,
+         STAGES_G    => DOUT_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,

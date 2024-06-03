@@ -29,7 +29,7 @@ entity Pix2PgpTop is
    generic(
       TPD_G                 : time     := 1 ns;
       RST_ASYNC_G           : boolean  := true;
-      RST_POLARITY_G        : boolean  := true;
+      RST_POLARITY_G        : sl       := '1';
       GHDL_SIM_G            : boolean  := true;
       SYNTHESIZE_G          : boolean  := false;
       DATAFIFO_FWFT_G       : boolean  := true;
