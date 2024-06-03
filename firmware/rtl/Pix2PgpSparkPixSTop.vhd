@@ -12,7 +12,7 @@ use ieee.std_logic_arith.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpTopSparkPixS is
+entity Pix2PgpSparkPixSTop is
    port(
       -- General Interface
       sparseClk : in  std_logic;
@@ -56,9 +56,9 @@ entity Pix2PgpTopSparkPixS is
       txSof     : out std_logic;
       txEof     : out std_logic;
       txEofe    : out std_logic);
-end entity Pix2PgpTopSparkPixS;
+end entity Pix2PgpSparkPixSTop;
 
-architecture rtl of Pix2PgpTopSparkPixS is
+architecture rtl of Pix2PgpSparkPixSTop is
 
    constant TPD_C                 : time    := 1 ns;
    constant RST_ASYNC_C           : boolean := True;
