@@ -26,14 +26,14 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnManager is
    generic(
-      TPD_G             : time    := 1 ns;
-      RST_ASYNC_G       : boolean := false;
-      RST_POLARITY_G    : sl      := '1';
+      TPD_G             : time     := 1 ns;
+      RST_ASYNC_G       : boolean  := false;
+      RST_POLARITY_G    : sl       := '1';
       DATAFIFO_PIPE_G   : positive := 2;
       STATUSFIFO_PIPE_G : positive := 2;
-      DWARE_DEPTH_G     : integer := 32;
-      GHDL_SIM_G        : boolean := false;
-      SYNTHESIZE_G      : boolean := false);
+      DWARE_DEPTH_G     : integer  := 32;
+      GHDL_SIM_G        : boolean  := false;
+      SYNTHESIZE_G      : boolean  := false);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -197,7 +197,7 @@ begin
       -------------------------------------------------------------------------
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -208,7 +208,7 @@ begin
 
    seq : process (sparseClk, rst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(sparseClk) then
          r <= rin after TPD_G;
@@ -221,9 +221,10 @@ begin
    -- pipeline the status FIFO input signals to give some freedom in placement
    U_PipelineStatusWrEn : entity surf.Synchronizer
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => STATUSFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         STAGES_G       => STATUSFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
          rst     => rst,
@@ -232,10 +233,11 @@ begin
 
    U_PipelineStatusDin : entity surf.SynchronizerVector
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         WIDTH_G     => STATUSFIFO_DWIDTH_C,
-         STAGES_G    => STATUSFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => STATUSFIFO_DWIDTH_C,
+         STAGES_G       => STATUSFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
          rst     => rst,
@@ -274,9 +276,10 @@ begin
 
    U_syncStatusFull : entity surf.Synchronizer
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => STATUSFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         STAGES_G       => STATUSFIFO_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -289,9 +292,10 @@ begin
    -- pipeline the data FIFO input signals to give some freedom in placement
    U_PipelineDataWrEn : entity surf.Synchronizer
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => DATAFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         STAGES_G       => DATAFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
          rst     => rst,
@@ -300,10 +304,11 @@ begin
 
    U_PipelineDataDin : entity surf.SynchronizerVector
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         WIDTH_G     => SPARSE_DWIDTH_C,
-         STAGES_G    => DATAFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => SPARSE_DWIDTH_C,
+         STAGES_G       => DATAFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
          rst     => rst,
@@ -337,9 +342,10 @@ begin
 
    U_syncDataFull : entity surf.Synchronizer
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => STATUSFIFO_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         STAGES_G       => STATUSFIFO_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,

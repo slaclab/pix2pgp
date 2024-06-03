@@ -30,9 +30,9 @@ entity Pix2PgpAdapter is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      DWARE_DEPTH_G   : integer := 12;
-      GHDL_SIM_G      : boolean := false;
-      SYNTHESIZE_G    : boolean := false);
+      DWARE_DEPTH_G   : integer  := 12;
+      GHDL_SIM_G      : boolean  := false;
+      SYNTHESIZE_G    : boolean  := false);
    port(
       -- General Interface
       pgpClk   : in  sl;
@@ -145,7 +145,7 @@ begin
       fifoRdEn <= r.fifoRdEn;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -156,7 +156,7 @@ begin
 
    seq : process (pgpClk, rst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r     <= rin after TPD_G;
@@ -166,9 +166,10 @@ begin
 
    U_rdEnStretch : entity surf.SynchronizerOneShot
       generic map (
-         TPD_G         => TPD_G,
-         RST_ASYNC_G   => true,
-         PULSE_WIDTH_G => 5)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         PULSE_WIDTH_G  => 5)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -177,9 +178,10 @@ begin
 
    U_txValidInt : entity surf.SynchronizerOneShot
       generic map (
-         TPD_G         => TPD_G,
-         RST_ASYNC_G   => true,
-         PULSE_WIDTH_G => 5)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         PULSE_WIDTH_G  => 5)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -188,8 +190,9 @@ begin
 
    U_txValid : entity surf.Synchronizer
       generic map (
-         TPD_G         => TPD_G,
-         RST_ASYNC_G   => true)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G)
       port map (
          clk     => pgpClk,
          rst     => rst,

@@ -281,7 +281,7 @@ begin
       colSel   <= r.colSel;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -292,7 +292,7 @@ begin
 
    seq : process (pgpClk, rst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -302,9 +302,10 @@ begin
    -- pipeline the data output to give some freedom in placement
    U_PipelineValid : entity surf.Synchronizer
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         STAGES_G    => DOUT_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         STAGES_G       => DOUT_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,
@@ -313,10 +314,11 @@ begin
 
    U_PipelineDout : entity surf.SynchronizerVector
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G,
-         WIDTH_G     => DATABUS_DWIDTH_C,
-         STAGES_G    => DOUT_PIPE_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => DATABUS_DWIDTH_C,
+         STAGES_G       => DOUT_PIPE_G)
       port map (
          clk     => pgpClk,
          rst     => rst,
