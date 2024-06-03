@@ -31,11 +31,11 @@ entity Pix2PgpGearboxWrapper is
    generic(
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1');
+      RST_POLARITY_G  : boolean  := true);
    port(
       -- General Interface
       pgpClk     : in  sl;
-      rst        : in  sl := not(RST_POLARITY_G);
+      rst        : in  sl := not(toSl(RST_POLARITY_G));
       -- Arbiter Interface
       arbValid   : in  sl;
       arbDout    : in  slv(DATABUS_DWIDTH_C-1 downto 0);

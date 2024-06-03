@@ -30,12 +30,12 @@ entity Pix2PgpColumnSupervisor is
    generic(
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1';
+      RST_POLARITY_G  : boolean  := true;  -- true for active high rst, false for active low
       FIFO_RD_DELAY_G : positive := 3);
    port(
       -- General Interface
       pgpClk          : in  sl;
-      rst             : in  sl := not(RST_POLARITY_G);
+      rst             : in  sl := not(toSl(RST_POLARITY_G));
       -- Column Manager Interface
       statusBusGlbl   : in  Pix2PgpStatusBusArray;
       statusRd        : out sl;
@@ -228,7 +228,7 @@ begin
       trgNum          <= r.refTrgNum;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and rst = toSl(RST_POLARITY_G)) then
          v := REG_INIT_C;
       end if;
 
@@ -239,7 +239,7 @@ begin
 
    seq : process (pgpClk, rst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and rst = toSl(RST_POLARITY_G)) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;

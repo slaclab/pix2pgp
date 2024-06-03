@@ -28,7 +28,7 @@ entity Pix2PgpFifoWrapper is
    generic(
       TPD_G            : time    := 1 ns;
       RST_ASYNC_G      : boolean := false;
-      RST_POLARITY_G   : sl      := '1';
+      RST_POLARITY_G   : boolean := true;  -- true for active high rst, false for active low
       WR_DATA_WIDTH_G  : integer := 20;
       RD_DATA_WIDTH_G  : integer := 20;
       ADDR_WIDTH_G     : integer := 12;

@@ -32,7 +32,7 @@ You should have the following two packages in your server to run the simulation:
 * firmware/rtl/Pix2PgpTop.vhd
 * firmware/rtl/Pix2PgpFifoWrapper.vhd
 * firmware/rtl/Pix2PgpAdapter.vhd
-* firmware/rtl/Pix2PgpTopSparkPixS.vhd
+* firmware/rtl/Pix2PgpSparkPixSTop.vhd
 ```
 
 ### In a VHDL library called `surf` import the following files:
@@ -61,7 +61,7 @@ Note that the FIFO/RAM related files of both libraries might not be needed, sinc
 ```
 
 ## Other related info regarding Synthesis
-The top-level that is to be instantiated within the Verilog/SystemVerilog containing the columns/SARlogic/SparseItfLogic etc. is: `firmware/rtl/Pix2PgpTopSparkPixS.vhd`
+The top-level that is to be instantiated within the Verilog/SystemVerilog containing the columns/SARlogic/SparseItfLogic etc. is: `firmware/rtl/Pix2PgpSparkPixSTop.vhd`
 
 Note that apart from the column-related ports, the said file also contains the following PGP-related ports:
 
