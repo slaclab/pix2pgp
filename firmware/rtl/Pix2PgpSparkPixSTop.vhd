@@ -13,6 +13,19 @@ library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpSparkPixSTop is
+   generic(
+      TPD_G                 : time      := 1 ns;
+      RST_ASYNC_G           : boolean   := True;
+      RST_POLARITY_G        : std_logic := '1';
+      SYNTHESIZE_G          : boolean   := True;
+      GHDL_SIM_G            : boolean   := False;
+      DATAFIFO_PIPE_G       : positive  := 2;
+      STATUSFIFO_PIPE_G     : positive  := 2;
+      DATAFIFO_FWFT_G       : boolean   := True;
+      PIPELINE_BRIDGE_G     : boolean   := False;
+      SUPER_FIFO_RD_DELAY_G : natural   := 3;
+      ARB_FIFO_RD_DELAY_G   : natural   := 1;
+      ARB_DOUT_PIPE_G       : natural   := 2);
    port(
       -- General Interface
       sparseClk : in  std_logic;
@@ -60,19 +73,6 @@ end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
 
-   constant TPD_C                 : time    := 1 ns;
-   constant RST_ASYNC_C           : boolean := True;
-   constant RST_POLARITY_C        : std_logic := '1';
-   constant SYNTHESIZE_C          : boolean := True;
-   constant GHDL_SIM_C            : boolean := False;
-   constant DATAFIFO_PIPE_C       : positive := 2;
-   constant STATUSFIFO_PIPE_C     : positive := 2;
-   constant DATAFIFO_FWFT_C       : boolean := True;
-   constant PIPELINE_BRIDGE_C     : boolean := False;
-   constant SUPER_FIFO_RD_DELAY_C : natural := 3;
-   constant ARB_FIFO_RD_DELAY_C   : natural := 1;
-   constant ARB_DOUT_PIPE_C       : natural := 2;
-
    signal din : Pix2PgpSparseDinArray := (others => (others => '0'));
 
 begin
@@ -80,18 +80,18 @@ begin
    -- Top Level
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
       generic map (
-         TPD_G                 => TPD_C,
-         RST_ASYNC_G           => RST_ASYNC_C,
-         RST_POLARITY_G        => RST_POLARITY_C,
-         GHDL_SIM_G            => GHDL_SIM_C,
-         SYNTHESIZE_G          => SYNTHESIZE_C,
-         DATAFIFO_FWFT_G       => DATAFIFO_FWFT_C,
-         PIPELINE_BRIDGE_G     => PIPELINE_BRIDGE_C,
-         DATAFIFO_PIPE_G       => DATAFIFO_PIPE_C,
-         STATUSFIFO_PIPE_G     => STATUSFIFO_PIPE_C,
-         SUPER_FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_C,
-         ARB_FIFO_RD_DELAY_G   => ARB_FIFO_RD_DELAY_C,
-         ARB_DOUT_PIPE_G       => ARB_DOUT_PIPE_C)
+         TPD_G                 => TPD_G,
+         RST_ASYNC_G           => RST_ASYNC_G,
+         RST_POLARITY_G        => RST_POLARITY_G,
+         GHDL_SIM_G            => GHDL_SIM_G,
+         SYNTHESIZE_G          => SYNTHESIZE_G,
+         DATAFIFO_FWFT_G       => DATAFIFO_FWFT_G,
+         PIPELINE_BRIDGE_G     => PIPELINE_BRIDGE_G,
+         DATAFIFO_PIPE_G       => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G     => STATUSFIFO_PIPE_G,
+         SUPER_FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G,
+         ARB_FIFO_RD_DELAY_G   => ARB_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G       => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
          sparseClk    => sparseClk,
