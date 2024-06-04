@@ -36,7 +36,7 @@ TB=${TB_DIR}/*Tb.vhd
 
 # note that the package has to be declared separately in order to be imported first
 SURF_PKG_DIR=${SURF_DIR}/pkg
-SURF_PKG=${SURF_PKG_DIR}/StdRtlPkg.vhd
+SURF_PKG=${SURF_PKG_DIR}/*Pkg.vhd
 
 # stub dware files
 DWARE_DIR=${RTL_DIR}/dw
@@ -58,7 +58,7 @@ OUT=${GHDL_DIR}/*.o
 GHDL_CMD="ghdl-llvm"
 # check if your ghdl version is < 1.0.0; if it is, you need to use a downloaded tarball from https://github.com/ghdl/ghdl/releases
 # example below...
-# GHDL_CMD="/home/cbakalis/Downloads/bin/ghdl"
+# GHDL_CMD="/home/cbakalis/Work/tools/ghdl/bin/ghdl"
 #############################
 GHDL_GLBL_FLAGS="--ieee=standard -fexplicit -fsynopsys"
 GHDL_STD_FLAG="--std=93c"
@@ -94,21 +94,38 @@ prepareSurf()
   fi
 
   # add files here accordingly
-  # note that I add StdRtlPkg.vhd in a separate dir that will be imported *first*;
-  # otherwise, this ERROR shows up: `entity "xxx" is obsoleted by package "stdrtlpkg"`
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/StdRtlPkg.vhd ${SURF_PKG_DIR}/StdRtlPkg.vhd
+  # note that I add all the *Pkg.vhd in a separate dir that will be imported *first*;
+  # otherwise, this ERROR shows up: `entity "xxx" is obsoleted by package "stdrtlpkg"` (or whatever *pkg)
+  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/StdRtlPkg.vhd                       ${SURF_PKG_DIR}/StdRtlPkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd              ${SURF_PKG_DIR}/Pgp4Pkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/CrcPkg.vhd                              ${SURF_PKG_DIR}/CrcPkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/ssi/rtl/SsiPkg.vhd                         ${SURF_PKG_DIR}/SsiPkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPkg.vhd                  ${SURF_PKG_DIR}/AxiStreamPkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd ${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/ArbiterPkg.vhd                      ${SURF_PKG_DIR}/ArbiterPkg.vhd
 
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd ${SURF_DIR}/RstSync.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd ${SURF_DIR}/Synchronizer.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerOneShot.vhd ${SURF_DIR}/SynchronizerOneShot.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerEdge.vhd ${SURF_DIR}/SynchronizerEdge.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd ${SURF_DIR}/SynchronizerVector.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/SimpleDualPortRam.vhd ${SURF_DIR}/SimpleDualPortRam.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/FifoOutputPipeline.vhd ${SURF_DIR}/FifoOutputPipeline.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoWrFsm.vhd ${SURF_DIR}/FifoWrFsm.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoRdFsm.vhd ${SURF_DIR}/FifoRdFsm.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoSync.vhd ${SURF_DIR}/FifoSync.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoAsync.vhd ${SURF_DIR}/FifoAsync.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd                            ${SURF_DIR}/RstSync.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd                       ${SURF_DIR}/Synchronizer.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerOneShot.vhd                ${SURF_DIR}/SynchronizerOneShot.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerEdge.vhd                   ${SURF_DIR}/SynchronizerEdge.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd                 ${SURF_DIR}/SynchronizerVector.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/SimpleDualPortRam.vhd              ${SURF_DIR}/SimpleDualPortRam.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/FifoOutputPipeline.vhd                 ${SURF_DIR}/FifoOutputPipeline.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoWrFsm.vhd                 ${SURF_DIR}/FifoWrFsm.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoRdFsm.vhd                 ${SURF_DIR}/FifoRdFsm.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoSync.vhd                  ${SURF_DIR}/FifoSync.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoAsync.vhd                 ${SURF_DIR}/FifoAsync.vhd
+
+  # PGP4
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPipeline.vhd             ${SURF_DIR}/AxiStreamPipeline.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/Crc32Parallel.vhd                       ${SURF_DIR}/Crc32Parallel.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Gearbox.vhd                         ${SURF_DIR}/Gearbox.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Scrambler.vhd                       ${SURF_DIR}/Scrambler.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd           ${SURF_DIR}/Pgp4TxLite.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd   ${SURF_DIR}/Pgp4TxLiteProtocol.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd    ${SURF_DIR}/Pgp4TxLiteWrapper.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamMux.vhd                  ${SURF_DIR}/AxiStreamMux.vhd
+
  }
 
  prepareDWare()
