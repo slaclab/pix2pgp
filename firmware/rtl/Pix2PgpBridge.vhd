@@ -98,7 +98,7 @@ begin
                statusBusSel.dataLen <= (others => '0');
                dataBusSel           <= DEFAULT_PIX2PGP_DATABUS_C;
                dataRdOut            <= (others => '0');
-         end if;
+            end if;
          end if;
       end process;
    end generate GEN_PIPELINE;
