@@ -263,7 +263,7 @@ begin
          wrClk => sparseClk,
          wrEn  => statusWrEn,
          din   => statusDin,
-         full  => statusFifoFull,
+         full  => statusBus.statusFull,
          -- Read Interface
          rdClk => pgpClk,
          rdEn  => statusRd,
@@ -273,18 +273,6 @@ begin
    statusBus.overOcc <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
    statusBus.trgNum  <= statusFifoDout(STATUSFIFO_TRG_POS_C);
    statusBus.dataLen <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
-
-   U_syncStatusFull : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         STAGES_G       => STATUSFIFO_PIPE_G)
-      port map (
-         clk     => pgpClk,
-         rst     => rst,
-         dataIn  => statusFifoFull,
-         dataOut => statusBus.statusFull);
 
    ------------------------------------------------
    -- Data FIFO
@@ -333,23 +321,11 @@ begin
          -- Write Interface
          wrClk => sparseClk,
          wrEn  => dataWrEn,
-         full  => dataFifoFull,
+         full  => statusBus.dataFull,
          din   => dataDin,
          -- Read Interface
          rdClk => pgpClk,
          rdEn  => dataRd,
          dout  => dataBus.data);
-
-   U_syncDataFull : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         STAGES_G       => STATUSFIFO_PIPE_G)
-      port map (
-         clk     => pgpClk,
-         rst     => rst,
-         dataIn  => dataFifoFull,
-         dataOut => statusBus.dataFull);
 
 end rtl;

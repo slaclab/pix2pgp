@@ -58,6 +58,8 @@ architecture rtl of Pix2PgpFifoWrapper is
       signal wrEnDwareFifo : sl := '0';
       signal rdEnDwareFifo : sl := '0';
 
+      signal fullWrDomain  : sl := '0';
+
    component DW_asymfifo_s2_sf is
       generic(
          data_in_width  : INTEGER  ;
@@ -154,7 +156,7 @@ begin
                wr_clk => wrClk,
                wr_en  => wrEn,
                din    => din,
-               full   => full,
+               full   => fullWrDomain,
                -- Read Interface
                rd_clk => rdClk,
                rd_en  => rdEn,
@@ -181,13 +183,25 @@ begin
                wr_clk => wrClk,
                wr_en  => wrEn,
                din    => din,
-               full   => full,
+               full   => fullWrDomain,
                -- Read Interface
                rd_clk => rdClk,
                rd_en  => rdEn,
                empty  => empty,
                dout   => dout);
       end generate ASYMM_GEN;
+
+      U_syncFull : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            STAGES_G       => 2)
+         port map (
+            clk     => rdClk,
+            rst     => rst,
+            dataIn  => fullWrDomain,
+            dataOut => full);
 
    end generate STANDALONE_FLOW_GEN;
 
@@ -217,11 +231,12 @@ begin
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
-               push_full  => full,
+               --push_full  => full,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
                pop_empty  => empty,
+               pop_full   => full,
                data_out   => dout);
       end generate SYMM_GEN;
 
@@ -238,11 +253,12 @@ begin
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
-               push_full  => full,
+               --push_full  => full,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
                pop_empty  => empty,
+               pop_full   => full,
                data_out   => dout);
       end generate ASYMM_GEN;
    end generate ASIC_SYNTH_FLOW_GEN;
