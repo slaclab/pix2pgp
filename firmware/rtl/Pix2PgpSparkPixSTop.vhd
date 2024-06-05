@@ -15,14 +15,16 @@ use pix2pgp.Pix2PgpPkg.all;
 entity Pix2PgpSparkPixSTop is
    generic(
       TPD_G                 : time      := 1 ns;
-      RST_ASYNC_G           : boolean   := True;
+      RST_ASYNC_G           : boolean   := true;
       RST_POLARITY_G        : std_logic := '1';
-      SYNTHESIZE_G          : boolean   := True;
-      GHDL_SIM_G            : boolean   := False;
+      SYNTHESIZE_G          : boolean   := true;
+      GHDL_SIM_G            : boolean   := false;
       DATAFIFO_PIPE_G       : positive  := 2;
       STATUSFIFO_PIPE_G     : positive  := 2;
-      DATAFIFO_FWFT_G       : boolean   := True;
-      PIPELINE_BRIDGE_G     : boolean   := False;
+      DATAFIFO_FWFT_G       : boolean   := true;
+      PIPELINE_BRIDGE_G     : boolean   := false;
+      COLMANAGER_DEPTH_G    : integer   := 8;
+      PGPADAPTER_DEPTH_G    : integer   := 6;
       SUPER_FIFO_RD_DELAY_G : natural   := 3;
       ARB_FIFO_RD_DELAY_G   : natural   := 1;
       ARB_DOUT_PIPE_G       : natural   := 2);
@@ -86,6 +88,8 @@ begin
          GHDL_SIM_G            => GHDL_SIM_G,
          SYNTHESIZE_G          => SYNTHESIZE_G,
          DATAFIFO_FWFT_G       => DATAFIFO_FWFT_G,
+         COLMANAGER_DEPTH_G    => COLMANAGER_DEPTH_G,
+         PGPADAPTER_DEPTH_G    => PGPADAPTER_DEPTH_G,
          PIPELINE_BRIDGE_G     => PIPELINE_BRIDGE_G,
          DATAFIFO_PIPE_G       => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G     => STATUSFIFO_PIPE_G,

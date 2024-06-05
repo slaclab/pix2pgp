@@ -34,8 +34,8 @@ entity Pix2PgpTop is
       SYNTHESIZE_G          : boolean  := false;
       DATAFIFO_FWFT_G       : boolean  := true;
       PIPELINE_BRIDGE_G     : boolean  := false;
-      COLMANAGER_DEPTH_G    : integer  := 32;
-      PGPADAPTER_DEPTH_G    : integer  := 12;
+      COLMANAGER_DEPTH_G    : integer  := 8;
+      PGPADAPTER_DEPTH_G    : integer  := 6;
       DATAFIFO_PIPE_G       : positive := 2;
       STATUSFIFO_PIPE_G     : positive := 2;
       SUPER_FIFO_RD_DELAY_G : positive := 3;
@@ -88,6 +88,7 @@ architecture rtl of Pix2PgpTop is
    signal colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
    signal arbValid        : sl := '0';
+   signal arbReady        : sl := '0';
    signal arbDout         : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    --
    signal pgpValid        : sl := '0';
@@ -210,6 +211,7 @@ begin
          trgNum          => trgNum,
          arbBusy         => arbBusy,
          -- Gearbox Interface
+         --arbReady        => arbReady,
          arbValid        => arbValid,
          arbDout         => arbDout);
 
@@ -217,26 +219,29 @@ begin
    arbDataDbg  <= arbDout;
 
    -----------------------------------------
-   -- Gearbox
+   -- Gearbox (40:64)
    -----------------------------------------
-   U_Gearbox : entity pix2pgp.Pix2PgpGearboxWrapper
+   U_Gearbox : entity surf.Gearbox
       generic map (
-         TPD_G           => TPD_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         RST_ASYNC_G     => RST_ASYNC_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         SLAVE_WIDTH_G  => DATABUS_DWIDTH_C,
+         MASTER_WIDTH_G => PGP_DWIDTH_C)
       port map (
-         -- General Interface
-         pgpClk     => pgpClk,
-         rst        => rst,
-         -- Arbiter Interface
-         arbValid   => arbValid,
-         arbDout    => arbDout,
-         arbReady   => open, -- TO-DO: evaluate; do I need to route this to the arbiter?
-         writeIndex => open, -- TO-DO: route this to arbiter
-         -- PGP Interface
-         pgpReady   => '1', -- TO-DO: evaluate; do I need to route this to the PGP FIFO logic?
-         pgpValid   => pgpValid,
-         pgpData    => pgpData);
+         -- Clock and Reset
+         clk            => pgpClk,
+         rst            => rst,
+         -- Slave Interface
+         slaveValid     => arbValid,
+         slaveData      => arbDout,
+         slaveReady     => arbReady,
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterReady    => '1', -- TO-DO: route me to Adapter
+         masterValid    => pgpValid,
+         masterData     => pgpData);
 
    -----------------------------------------
    -- PGP FIFO adapter

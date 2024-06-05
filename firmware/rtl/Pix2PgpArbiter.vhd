@@ -71,7 +71,9 @@ architecture rtl of Pix2PgpArbiter is
 
    constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
 
-   signal fifoFull : sl := '0';
+   signal fifoFull     : sl := '0';
+   signal arbValidComb : sl := '0';
+   signal arbDoutComb  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
@@ -80,55 +82,35 @@ architecture rtl of Pix2PgpArbiter is
       DONE_S);
 
    type RegType is record
-      -- i/o
-      dataLenSel      : slv(DATALEN_WIDTH_C-1 downto 0);
-      dataBusSel      : Pix2PgpDataBusType;
-      dataRd          : sl;
-      colSel          : slv(BITMAX_COL_MANAGERS_C downto 0);
-      arbStart        : sl;
-      statusFifoError : sl;
-      dataFifoError   : sl;
-      overOccError    : sl;
-      alignError      : sl;
-      colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
-      arbBusy         : sl;
-      arbValid        : sl;
-      arbDout         : slv(DATABUS_DWIDTH_C-1 downto 0);
+      -- outputs
+      dataRd       : sl;
+      colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
+      arbBusy      : sl;
+      arbValid     : sl;
+      arbDout      : slv(DATABUS_DWIDTH_C-1 downto 0);
       -- internal
-      eventEmpty      : sl;
-      headerOnly      : sl;
-      dataHeader      : slv(HEADER_DWITDH_C-1 downto 0);
-      dataRdCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
-      dataRdCycles    : slv(DATALEN_WIDTH_C-1 downto 0);
-      busyCnt         : natural range 0 to 4095;
-      state           : StateType;
+      eventEmpty   : sl;
+      headerOnly   : sl;
+      dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
+      dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
+      dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
+      state        : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      -- i/o
-      dataLenSel      => (others => '0'),
-      dataBusSel      => DEFAULT_PIX2PGP_DATABUS_C,
-      dataRd          => '0',
-      colSel          => (others => '0'),
-      arbStart        => '0',
-      statusFifoError => '0',
-      dataFifoError   => '0',
-      overOccError    => '0',
-      alignError      => '0',
-      colBitmask      => (others => '0'),
-      trgNum          => (others => '0'),
-      arbBusy         => '0',
-      arbValid        => '0',
-      arbDout         => (others => '0'),
+      -- outputs
+      dataRd       => '0',
+      colSel       => (others => '0'),
+      arbBusy      => '0',
+      arbValid     => '0',
+      arbDout      => (others => '0'),
       -- internal
-      eventEmpty      => '0',
-      headerOnly      => '0',
-      dataHeader      => (others => '0'),
-      dataRdCnt       => toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C),
-      dataRdCycles    => (others => '0'),
-      busyCnt         => 0,
-      state           => IDLE_S);
+      eventEmpty   => '0',
+      headerOnly   => '0',
+      dataHeader   => (others => '0'),
+      dataRdCnt    => toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C),
+      dataRdCycles => (others => '0'),
+      state        => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -149,22 +131,7 @@ begin
       -- Latch the current value
       v := r;
 
-      -- Register inputs
-      v.dataLenSel      := dataLenSel;
-      v.dataBusSel      := dataBusSel;
-      v.arbStart        := arbStart;
-      v.statusFifoError := statusFifoError;
-      v.dataFifoError   := dataFifoError;
-      v.overOccError    := overOccError;
-      v.alignError      := alignError;
-      v.colBitmask      := colBitmask;
-      v.trgNum          := trgNum;
-
-      v.eventEmpty      := not(uOr(r.colBitmask));
-
-      if (r.arbBusy = '1') then
-         v.busyCnt := r.busyCnt + 1;
-      end if;
+      v.eventEmpty := not(uOr(colBitmask));
 
       -- flow control check
       v.dataRd := '0';
@@ -182,15 +149,15 @@ begin
             v.arbBusy  := '0';
             v.arbValid := '0';
 
-            if r.arbStart = '1' and v.arbValid = '0' then
+            if arbStart = '1' and v.arbValid = '0' then
                v.arbBusy  := '1';
                v.arbValid := '1';
                v.arbDout  := r.dataHeader;
 
-               if r.statusFifoError = '1' or
-                  r.dataFifoError   = '1' or
-                  r.alignError      = '1' or
-                  r.eventEmpty      = '1' then
+               if statusFifoError = '1' or
+                  dataFifoError   = '1' or
+                  alignError      = '1' or
+                  v.eventEmpty    = '1' then
                   v.state := DONE_S;
                else
                   v.state := CHECK_BITMASK_S;
@@ -200,10 +167,9 @@ begin
          ----------------------------------------------------------------------
          -- check the bitmask value of the selected column
          -- if non-zero, write the length and start reading immediately
-         -- note the use of v.dataLenSel to save one cycle (hope it meets timing)
          when CHECK_BITMASK_S =>
 
-            if r.colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
+            if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state := DONE_S;
@@ -216,15 +182,15 @@ begin
 
                   -- TX the dataLength and start reading the data fifo
                   v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-                  v.arbDout(9 downto 0)                   := v.dataLenSel;
+                  v.arbDout(9 downto 0)                   := dataLenSel;
 
                   -- divide-by-2 (dumb, but asic synth tool will like it)
                   v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
-                  v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := v.dataLenSel(DATALEN_WIDTH_C-1 downto 1);
+                  v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1);
 
                   -- probably smaller footprint than '<'
                   -- override the previous assertion to cover for the one-hit corner case
-                  if v.dataLenSel = conv_std_logic_vector(1, v.dataLenSel'length) then
+                  if dataLenSel = conv_std_logic_vector(1, dataLenSel'length) then
                      v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
                   end if;
 
@@ -235,7 +201,7 @@ begin
          ----------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.arbDout := v.dataBusSel.data;
+            v.arbDout := dataBusSel.data;
 
             if v.arbValid = '0' then
                if r.dataRdCnt /= r.dataRdCycles + FIFO_RD_DELAY_G then
@@ -256,9 +222,9 @@ begin
          ----------------------------------------------------------------------
          -- last state
          when DONE_S =>
-            v.arbBusy  := '0';
-            v.colSel   := (others => '0');
-            if r.arbStart = '0' then
+            v.arbBusy := '0';
+            v.colSel  := (others => '0');
+            if arbStart = '0' then
                v.state := IDLE_S;
             end if;
 
@@ -266,19 +232,21 @@ begin
       -----------------------------------------------------------------------
 
       -- header mapping
-      v.dataHeader(OVEROCC_FLAG_POS_C)     := r.overOccError;
-      v.dataHeader(DATA_FULL_FLAG_POS_C)   := r.dataFifoError;
-      v.dataHeader(STATUS_FULL_FLAG_POS_C) := r.statusFifoError;
-      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := r.alignError;
+      v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError;
+      v.dataHeader(DATA_FULL_FLAG_POS_C)   := dataFifoError;
+      v.dataHeader(STATUS_FULL_FLAG_POS_C) := statusFifoError;
+      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
       v.dataHeader(TIMEOUT_HEADER_POS_C)   := '0'; -- assigned later on
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
-      v.dataHeader(COL_BITMASK_POS_C)      := r.colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)          := r.trgNum;
+      v.dataHeader(COL_BITMASK_POS_C)      := colBitmask;
+      v.dataHeader(TRG_CNT_POS_C)          := trgNum;
 
       -- Outputs
-      arbBusy  <= r.arbBusy;
-      dataRd   <= v.dataRd;
-      colSel   <= r.colSel;
+      arbBusy      <= v.arbBusy;
+      dataRd       <= v.dataRd;
+      colSel       <= v.colSel;
+      arbValidComb <= v.arbValid;
+      arbDoutComb  <= v.arbDout;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -309,7 +277,7 @@ begin
       port map (
          clk     => pgpClk,
          rst     => rst,
-         dataIn  => r.arbValid,
+         dataIn  => arbValidComb,
          dataOut => arbValid);
 
    U_PipelineDout : entity surf.SynchronizerVector
@@ -322,7 +290,7 @@ begin
       port map (
          clk     => pgpClk,
          rst     => rst,
-         dataIn  => r.arbDout,
+         dataIn  => arbDoutComb,
          dataOut => arbDout);
 
 end rtl;
