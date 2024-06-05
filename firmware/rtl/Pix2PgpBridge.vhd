@@ -27,8 +27,9 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpBridge is
    generic(
-      TPD_G      : time    := 1 ns;
-      PIPELINE_G : boolean := false);
+      TPD_G             : time    := 1 ns;
+      PIPELINE_DATA_G   : boolean := false;
+      PIPELINE_STATUS_G : boolean := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
@@ -51,8 +52,8 @@ architecture rtl of Pix2PgpBridge is
 
 begin
 
-   GEN_NO_PIPELINE : if (PIPELINE_G = false) generate
-      process(statusBusIn, colSel, dataBusIn, statusRdIn, dataRdIn)
+   GEN_NO_PIPELINE_STATUS : if (PIPELINE_STATUS_G = false) generate
+      process(statusBusIn, colSel, statusRdIn)
       begin
          statusBusGlbl <= statusBusIn;
          for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
@@ -62,25 +63,26 @@ begin
 
          if colSel <= NUM_OF_COL_MANAGERS_C-1 then
             statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen;
-            dataBusSel           <= dataBusIn(conv_integer(unsigned(colSel)));
-            dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn;
          else
             statusBusSel.dataLen <= (others => '0');
-            dataBusSel           <= DEFAULT_PIX2PGP_DATABUS_C;
-            dataRdOut            <= (others => '0');
          end if;
-
-         -- set static values
-         statusBusSel.dataFull    <= '0';
-         statusBusSel.statusFull  <= '0';
-         statusBusSel.statusEmpty <= '1';
-         statusBusSel.overOcc     <= '0';
-         statusBusSel.trgNum      <= (others => '0');
-
       end process;
-   end generate GEN_NO_PIPELINE;
+   end generate GEN_NO_PIPELINE_STATUS;
 
-   GEN_PIPELINE : if (PIPELINE_G = true) generate
+   GEN_NO_PIPELINE_DATA : if (PIPELINE_DATA_G = false) generate
+      process(colSel, dataBusIn, dataRdIn)
+      begin
+         if colSel <= NUM_OF_COL_MANAGERS_C-1 then
+            dataBusSel <= dataBusIn(conv_integer(unsigned(colSel)));
+            dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn;
+         else
+            dataBusSel <= DEFAULT_PIX2PGP_DATABUS_C;
+            dataRdOut  <= (others => '0');
+         end if;
+      end process;
+   end generate GEN_NO_PIPELINE_DATA;
+
+   GEN_PIPELINE_STATUS : if (PIPELINE_STATUS_G = true) generate
       process(pgpClk)
       begin
          if (rising_edge(pgpClk)) then
@@ -92,15 +94,21 @@ begin
 
             if colSel <= NUM_OF_COL_MANAGERS_C-1 then
                statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen after TPD_G;
-               dataBusSel           <= dataBusIn(conv_integer(unsigned(colSel))) after TPD_G;
-               dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn after TPD_G;
-            else
-               statusBusSel.dataLen <= (others => '0');
-               dataBusSel           <= DEFAULT_PIX2PGP_DATABUS_C;
-               dataRdOut            <= (others => '0');
             end if;
          end if;
       end process;
-   end generate GEN_PIPELINE;
+   end generate GEN_PIPELINE_STATUS;
+
+   GEN_PIPELINE_DATA : if (PIPELINE_DATA_G = true) generate
+      process(pgpClk)
+      begin
+         if (rising_edge(pgpClk)) then
+            if colSel <= NUM_OF_COL_MANAGERS_C-1 then
+               dataBusSel <= dataBusIn(conv_integer(unsigned(colSel))) after TPD_G;
+               dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn after TPD_G;
+            end if;
+         end if;
+      end process;
+   end generate GEN_PIPELINE_DATA;
 
 end rtl;

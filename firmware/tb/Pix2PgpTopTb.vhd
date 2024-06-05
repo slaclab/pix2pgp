@@ -19,19 +19,20 @@ end entity Pix2PgpTopTb;
 
 architecture test of Pix2PgpTopTb is
 
-   constant TPD_C                 : time    := 1 ns;
-   constant RST_ASYNC_C           : boolean := True;
-   constant RST_POLARITY_C        : sl := '1';
-   constant GHDL_SIM_C            : boolean := True;
-   constant DATAFIFO_PIPE_C       : positive := 2;
-   constant STATUSFIFO_PIPE_C     : positive := 2;
-   constant DATAFIFO_FWFT_C       : boolean := True;
-   constant PIPELINE_BRIDGE_C     : boolean := False;
-   constant SUPER_FIFO_RD_DELAY_C : natural := 3;
-   constant ARB_FIFO_RD_DELAY_C   : natural := 1;
-   constant ARB_DOUT_PIPE_C       : natural := 2;
+   constant TPD_C                    : time    := 1 ns;
+   constant RST_ASYNC_C              : boolean := True;
+   constant RST_POLARITY_C           : sl := '1';
+   constant GHDL_SIM_C               : boolean := True;
+   constant DATAFIFO_PIPE_C          : positive := 2;
+   constant STATUSFIFO_PIPE_C        : positive := 2;
+   constant DATAFIFO_FWFT_C          : boolean := True;
+   constant PIPELINE_BRIDGE_DATA_C   : boolean := False;
+   constant PIPELINE_BRIDGE_STATUS_C : boolean := True;
+   constant SUPER_FIFO_RD_DELAY_C    : natural := 3;
+   constant ARB_FIFO_RD_DELAY_C      : natural := 1;
+   constant ARB_DOUT_PIPE_C          : natural := 2;
    --
-   constant CLK_PERIOD_C          : time := 5.384 ns;
+   constant CLK_PERIOD_C             : time := 5.384 ns;
 
    signal clk          : sl := '0';
    signal rst          : sl := '1';
@@ -76,17 +77,18 @@ begin
   -- Instantiate the design under test
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
       generic map (
-         TPD_G                 => TPD_C,
-         RST_ASYNC_G           => RST_ASYNC_C,
-         RST_POLARITY_G        => RST_POLARITY_C,
-         GHDL_SIM_G            => GHDL_SIM_C,
-         DATAFIFO_FWFT_G       => DATAFIFO_FWFT_C,
-         PIPELINE_BRIDGE_G     => PIPELINE_BRIDGE_C,
-         DATAFIFO_PIPE_G       => DATAFIFO_PIPE_C,
-         STATUSFIFO_PIPE_G     => STATUSFIFO_PIPE_C,
-         SUPER_FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_C,
-         ARB_FIFO_RD_DELAY_G   => ARB_FIFO_RD_DELAY_C,
-         ARB_DOUT_PIPE_G       => ARB_DOUT_PIPE_C)
+         TPD_G                    => TPD_C,
+         RST_ASYNC_G              => RST_ASYNC_C,
+         RST_POLARITY_G           => RST_POLARITY_C,
+         GHDL_SIM_G               => GHDL_SIM_C,
+         DATAFIFO_FWFT_G          => DATAFIFO_FWFT_C,
+         PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_C,
+         PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_C,
+         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_C,
+         STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_C,
+         SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_C,
+         ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_C,
+         ARB_DOUT_PIPE_G          => ARB_DOUT_PIPE_C)
       port map (
          -- General Interface
          sparseClk    => clk,

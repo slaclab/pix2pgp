@@ -27,20 +27,21 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is
    generic(
-      TPD_G                 : time     := 1 ns;
-      RST_ASYNC_G           : boolean  := true;
-      RST_POLARITY_G        : sl       := '1';
-      GHDL_SIM_G            : boolean  := true;
-      SYNTHESIZE_G          : boolean  := false;
-      DATAFIFO_FWFT_G       : boolean  := true;
-      PIPELINE_BRIDGE_G     : boolean  := false;
-      COLMANAGER_DEPTH_G    : integer  := 8;
-      PGPADAPTER_DEPTH_G    : integer  := 6;
-      DATAFIFO_PIPE_G       : positive := 2;
-      STATUSFIFO_PIPE_G     : positive := 2;
-      SUPER_FIFO_RD_DELAY_G : positive := 3;
-      ARB_FIFO_RD_DELAY_G   : positive := 1;
-      ARB_DOUT_PIPE_G       : positive := 2);
+      TPD_G                    : time     := 1 ns;
+      RST_ASYNC_G              : boolean  := true;
+      RST_POLARITY_G           : sl       := '1';
+      GHDL_SIM_G               : boolean  := true;
+      SYNTHESIZE_G             : boolean  := false;
+      DATAFIFO_FWFT_G          : boolean  := true;
+      PIPELINE_BRIDGE_DATA_G   : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G : boolean  := false;
+      COLMANAGER_DEPTH_G       : integer  := 8;
+      PGPADAPTER_DEPTH_G       : integer  := 6;
+      DATAFIFO_PIPE_G          : positive := 2;
+      STATUSFIFO_PIPE_G        : positive := 2;
+      SUPER_FIFO_RD_DELAY_G    : positive := 3;
+      ARB_FIFO_RD_DELAY_G      : positive := 1;
+      ARB_DOUT_PIPE_G          : positive := 2);
    port(
       -- General Interface
       sparseClk    : in  sl;
@@ -136,8 +137,9 @@ begin
    -- reading and switching between FIFOs should be much faster. So no pipelinening.
    U_Bridge : entity pix2pgp.Pix2PgpBridge
       generic map(
-         TPD_G      => TPD_G,
-         PIPELINE_G => PIPELINE_BRIDGE_G)
+         TPD_G             => TPD_G,
+         PIPELINE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_STATUS_G => PIPELINE_BRIDGE_STATUS_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
