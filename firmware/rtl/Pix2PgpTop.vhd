@@ -247,26 +247,26 @@ begin
    -- PGP FIFO adapter
    -----------------------------------------
    U_Adapter: entity pix2pgp.Pix2PgpAdapter
-   generic map(
-      TPD_G           => TPD_G,
-      RST_ASYNC_G     => RST_ASYNC_G,
-      RST_POLARITY_G  => RST_POLARITY_G,
-      DWARE_DEPTH_G   => PGPADAPTER_DEPTH_G,
-      GHDL_SIM_G      => GHDL_SIM_G,
-      SYNTHESIZE_G    => SYNTHESIZE_G)
-   port map(
-      -- General Interface
-      pgpClk     => pgpClk,
-      rst        => rst,
-      -- Gearbox Interface
-      pgpValid   => pgpValid,
-      pgpData    => pgpData,
-      -- Pgp4TxLite Interface
-      txReady    => txReady,
-      txValid    => txValid,
-      txData     => txData,
-      txSof      => txSof,
-      txEof      => txEof,
-      txEofe     => txEofe);
+      generic map(
+         TPD_G           => TPD_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         DWARE_DEPTH_G   => PGPADAPTER_DEPTH_G,
+         GHDL_SIM_G      => GHDL_SIM_G,
+         SYNTHESIZE_G    => SYNTHESIZE_G)
+      port map(
+         -- General Interface
+         pgpClk     => pgpClk,
+         rst        => rst,
+         -- Gearbox Interface
+         pgpValid   => pgpValid,
+         pgpData    => pgpData,
+         -- Pgp4TxLite Interface
+         txReady    => txReady,
+         txValid    => txValid,
+         txData     => txData,
+         txSof      => txSof,
+         txEof      => txEof,
+         txEofe     => txEofe);
 
 end rtl;
