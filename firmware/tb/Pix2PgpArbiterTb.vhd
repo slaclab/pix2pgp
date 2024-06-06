@@ -139,17 +139,18 @@ begin
             GHDL_SIM_G      => true)
          port map (
             -- Resets
-            rst   => rst,
+            rst    => rst,
             -- Write Interface
-            wrClk => clk,
-            wrEn  => wrEn(fifo),
-            full  => open,
-            din   => dinArray(fifo),
+            wrClk  => clk,
+            wrEn   => wrEn(fifo),
+            fullWr => open,
+            din    => dinArray(fifo),
             -- Read Interface
-            rdClk => clk,
-            empty => empty(fifo),
-            rdEn  => rdEn(fifo),
-            dout  => doutArray(fifo));
+            rdClk  => clk,
+            empty  => empty(fifo),
+            rdEn   => rdEn(fifo),
+            fullRd => open,
+            dout   => doutArray(fifo));
 
       dataBus(fifo).data <= doutArray(fifo);
    end generate GEN_DATA_FIFO;

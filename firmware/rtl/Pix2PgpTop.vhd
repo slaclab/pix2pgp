@@ -35,13 +35,13 @@ entity Pix2PgpTop is
       DATAFIFO_FWFT_G          : boolean  := true;
       PIPELINE_BRIDGE_DATA_G   : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G : boolean  := false;
-      COLMANAGER_DEPTH_G       : integer  := 8;
+      COLMANAGER_DEPTH_G       : integer  := 4;
       PGPADAPTER_DEPTH_G       : integer  := 6;
-      DATAFIFO_PIPE_G          : positive := 2;
-      STATUSFIFO_PIPE_G        : positive := 2;
-      SUPER_FIFO_RD_DELAY_G    : positive := 3;
+      DATAFIFO_PIPE_G          : positive := 1;
+      STATUSFIFO_PIPE_G        : positive := 1;
+      SUPER_FIFO_RD_DELAY_G    : positive := 2;
       ARB_FIFO_RD_DELAY_G      : positive := 1;
-      ARB_DOUT_PIPE_G          : positive := 2);
+      ARB_DOUT_PIPE_G          : positive := 1);
    port(
       -- General Interface
       sparseClk    : in  sl;
@@ -92,6 +92,7 @@ architecture rtl of Pix2PgpTop is
    signal arbReady        : sl := '0';
    signal arbDout         : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    --
+   signal pgpReady        : sl := '0';
    signal pgpValid        : sl := '0';
    signal pgpData         : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
@@ -241,7 +242,7 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => '1', -- TO-DO: route me to Adapter
+         masterReady    => pgpReady,
          masterValid    => pgpValid,
          masterData     => pgpData);
 
@@ -263,8 +264,9 @@ begin
          -- Gearbox Interface
          pgpValid   => pgpValid,
          pgpData    => pgpData,
+         pgpReady   => pgpReady,
          -- Pgp4TxLite Interface
-         txReady    => txReady,
+         txReady    => txReady,  -- TO-DO: implement handling inside FSM
          txValid    => txValid,
          txData     => txData,
          txSof      => txSof,

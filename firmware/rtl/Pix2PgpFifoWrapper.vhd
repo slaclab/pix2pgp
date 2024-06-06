@@ -39,26 +39,27 @@ entity Pix2PgpFifoWrapper is
       SYNTHESIZE_G     : boolean := false);
    port(
       -- Resets
-      rst   : in  sl;
+      rst    : in  sl;
       -- Write Interface
-      wrClk : in  sl;
-      wrEn  : in  sl;
-      din   : in  slv(WR_DATA_WIDTH_G-1 downto 0);
-      full  : out sl := '0';
+      wrClk  : in  sl;
+      wrEn   : in  sl;
+      din    : in  slv(WR_DATA_WIDTH_G-1 downto 0);
+      fullWr : out sl := '0';
       -- Read Interface
-      rdClk : in  sl;
-      rdEn  : in  sl;
-      empty : out sl := '1';
-      dout  : out slv(RD_DATA_WIDTH_G-1 downto 0));
+      rdClk  : in  sl;
+      rdEn   : in  sl;
+      empty  : out sl := '1';
+      fullRd : out sl;
+      dout   : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
-      signal rstDwareFifo  : sl := '0';
-      signal wrEnDwareFifo : sl := '0';
-      signal rdEnDwareFifo : sl := '0';
+      signal rstDwareFifo   : sl := '0';
+      signal wrEnDwareFifo  : sl := '0';
+      signal rdEnDwareFifo  : sl := '0';
 
-      signal fullWrDomain  : sl := '0';
+      signal fullWrInferred : sl := '0';
 
    component DW_asymfifo_s2_sf is
       generic(
@@ -156,7 +157,7 @@ begin
                wr_clk => wrClk,
                wr_en  => wrEn,
                din    => din,
-               full   => fullWrDomain,
+               full   => fullWrInferred,
                -- Read Interface
                rd_clk => rdClk,
                rd_en  => rdEn,
@@ -183,7 +184,7 @@ begin
                wr_clk => wrClk,
                wr_en  => wrEn,
                din    => din,
-               full   => fullWrDomain,
+               full   => fullWrInferred,
                -- Read Interface
                rd_clk => rdClk,
                rd_en  => rdEn,
@@ -200,8 +201,10 @@ begin
          port map (
             clk     => rdClk,
             rst     => rst,
-            dataIn  => fullWrDomain,
-            dataOut => full);
+            dataIn  => fullWrInferred,
+            dataOut => fullRd);
+
+      fullWr <= fullWrInferred;
 
    end generate STANDALONE_FLOW_GEN;
 
@@ -223,20 +226,21 @@ begin
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
          U_designwareSynthFifo : DW_fifo_s2_sf
             generic map (
-               width => WR_DATA_WIDTH_G,
-               depth => DWARE_DEPTH_G)
+               width    => WR_DATA_WIDTH_G,
+               depth    => DWARE_DEPTH_G,
+               rst_mode => 2)
             port map (
                rst_n      => rstDwareFifo,
                -- Write Interface
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
-               --push_full  => full,
+               push_full  => fullWr,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
                pop_empty  => empty,
-               pop_full   => full,
+               pop_full   => fullRd,
                data_out   => dout);
       end generate SYMM_GEN;
 
@@ -245,7 +249,8 @@ begin
             generic map (
                data_in_width  => WR_DATA_WIDTH_G,
                data_out_width => RD_DATA_WIDTH_G,
-               depth          => DWARE_DEPTH_G)
+               depth          => DWARE_DEPTH_G,
+               rst_mode       => 2)
             port map (
                rst_n      => rstDwareFifo,
                flush_n    => rstDwareFifo,
@@ -253,12 +258,12 @@ begin
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
-               --push_full  => full,
+               push_full  => fullWr,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
                pop_empty  => empty,
-               pop_full   => full,
+               pop_full   => fullRd,
                data_out   => dout);
       end generate ASYMM_GEN;
    end generate ASIC_SYNTH_FLOW_GEN;

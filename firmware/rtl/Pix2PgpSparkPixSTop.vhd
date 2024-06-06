@@ -19,16 +19,16 @@ entity Pix2PgpSparkPixSTop is
       RST_POLARITY_G           : std_logic := '1';
       SYNTHESIZE_G             : boolean   := true;
       GHDL_SIM_G               : boolean   := false;
-      DATAFIFO_PIPE_G          : positive  := 2;
-      STATUSFIFO_PIPE_G        : positive  := 2;
+      DATAFIFO_PIPE_G          : positive  := 1;
+      STATUSFIFO_PIPE_G        : positive  := 1;
       DATAFIFO_FWFT_G          : boolean   := true;
       PIPELINE_BRIDGE_DATA_G   : boolean   := false;
       PIPELINE_BRIDGE_STATUS_G : boolean   := true;
-      COLMANAGER_DEPTH_G       : integer   := 8;
+      COLMANAGER_DEPTH_G       : integer   := 4;
       PGPADAPTER_DEPTH_G       : integer   := 6;
-      SUPER_FIFO_RD_DELAY_G    : natural   := 3;
+      SUPER_FIFO_RD_DELAY_G    : natural   := 2;
       ARB_FIFO_RD_DELAY_G      : natural   := 1;
-      ARB_DOUT_PIPE_G          : natural   := 2);
+      ARB_DOUT_PIPE_G          : natural   := 1);
    port(
       -- General Interface
       sparseClk : in  std_logic;

@@ -104,6 +104,7 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd ${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/ArbiterPkg.vhd                      ${SURF_PKG_DIR}/ArbiterPkg.vhd
 
+  ln -s ${SURF_SUBMODULE_DIR}/base/delay/rtl/SlvDelay.vhd                          ${SURF_DIR}/SlvDelay.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd                            ${SURF_DIR}/RstSync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd                       ${SURF_DIR}/Synchronizer.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerOneShot.vhd                ${SURF_DIR}/SynchronizerOneShot.vhd

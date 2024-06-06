@@ -32,7 +32,7 @@ entity Pix2PgpArbiter is
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
       FIFO_RD_DELAY_G : positive := 1;
-      DOUT_PIPE_G     : positive := 2;
+      DOUT_PIPE_G     : positive := 1;
       DATAFIFO_FWFT_G : boolean  := true);
    port(
       -- General Interface
@@ -268,29 +268,25 @@ begin
    end process seq;
 
    -- pipeline the data output to give some freedom in placement
-   U_PipelineValid : entity surf.Synchronizer
+   U_PipelineValid : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         STAGES_G       => DOUT_PIPE_G)
+         DELAY_G        => DOUT_PIPE_G)
       port map (
          clk     => pgpClk,
-         rst     => rst,
-         dataIn  => arbValidComb,
-         dataOut => arbValid);
+         din(0)  => arbValidComb,
+         dout(0) => arbValid);
 
-   U_PipelineDout : entity surf.SynchronizerVector
+   U_PipelineDout : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
          WIDTH_G        => DATABUS_DWIDTH_C,
-         STAGES_G       => DOUT_PIPE_G)
+         DELAY_G        => DOUT_PIPE_G)
       port map (
-         clk     => pgpClk,
-         rst     => rst,
-         dataIn  => arbDoutComb,
-         dataOut => arbDout);
+         clk  => pgpClk,
+         din  => arbDoutComb,
+         dout => arbDout);
 
 end rtl;

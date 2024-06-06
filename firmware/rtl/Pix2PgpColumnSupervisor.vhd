@@ -61,7 +61,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    type RegType is record
       -- i/o
-      statusBusGlbl    : Pix2PgpStatusBusArray;
       statusRd         : sl;
       arbiterBusy      : sl;
       arbiterStart     : sl;
@@ -82,7 +81,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      statusBusGlbl    => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       statusRd         => '0',
       arbiterBusy      => '0',
       arbiterStart     => '0',
@@ -120,17 +118,16 @@ begin
       v.statusRd := '0';
 
       -- Register inputs
-      v.statusBusGlbl := statusBusGlbl;
       v.arbiterBusy   := arbiterBusy;
 
       -- global monitoring of status bus
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- column is ready when its status FIFO has a word
-         v.dataReady(col) := not(r.statusBusGlbl(col).statusEmpty);
+         v.dataReady(col) := not(statusBusGlbl(col).statusEmpty);
 
          -- check Data Length from each column manager's status bus and set the colBitmask accordingly
          -- a high bit on the bitmask indicates that the associated column does have hits
-         if allBits(r.statusBusGlbl(col).dataLen, '0') then
+         if allBits(statusBusGlbl(col).dataLen, '0') then
             v.colBitmask(col) := '0';
          else
             v.colBitmask(col) := '1';
@@ -138,23 +135,23 @@ begin
 
          -- error-checking
          -- reference trigger number is associated with the first column
-         v.refTrgNum := r.statusBusGlbl(0).trgNum;
+         v.refTrgNum := statusBusGlbl(0).trgNum;
 
          -- check if all triggers are aligned with each other
-         if r.statusBusGlbl(col).trgNum = r.refTrgNum then
+         if statusBusGlbl(col).trgNum = r.refTrgNum then
             v.colTrgAlignErr(col) := '0';
          else
             v.colTrgAlignErr(col) := '1';
          end if;
 
          -- check for any over-occupancy errors
-         v.colOverOccErr(col) := r.statusBusGlbl(col).overOcc;
+         v.colOverOccErr(col) := statusBusGlbl(col).overOcc;
 
          -- check for any dataFull errors
-         v.colDataFullErr(col) := r.statusBusGlbl(col).dataFull;
+         v.colDataFullErr(col) := statusBusGlbl(col).dataFull;
 
          -- check for any dataFull errors
-         v.colStatusFullErr(col) := r.statusBusGlbl(col).statusFull;
+         v.colStatusFullErr(col) := statusBusGlbl(col).statusFull;
       end loop;
 
       -------------------------------------------------------------------------
@@ -163,7 +160,7 @@ begin
          -- stay here until *all* columns have data
          -- issue the rdEn pulse to the FIFO if all columns have data
          when MON_STATUS_S =>
-            if toBoolean(uAnd(r.dataReady)) then
+            if toBoolean(uAnd(v.dataReady)) then
                v.statusRd := '1';
                v.state    := WAIT_BUS_S;
             end if;
@@ -180,10 +177,10 @@ begin
          ----------------------------------------------------------------------
          -- register the status bits
          when REG_STATUS_S =>
-            v.statusFifoError := uOr(r.colStatusFullErr);
-            v.dataFifoError   := uOr(r.colDataFullErr);
-            v.overOccError    := uOr(r.colOverOccErr);
-            v.alignError      := uOr(r.colTrgAlignErr);
+            v.statusFifoError := uOr(v.colStatusFullErr);
+            v.dataFifoError   := uOr(v.colDataFullErr);
+            v.overOccError    := uOr(v.colOverOccErr);
+            v.alignError      := uOr(v.colTrgAlignErr);
 
             v.state := CHECK_ERROR_S;
 
@@ -192,11 +189,11 @@ begin
          -- overOcc is read-out normally, so don't change the bitmask
          when CHECK_ERROR_S =>
             if r.statusFifoError = '1' then
-               v.colBitmask := r.colStatusFullErr;
+               v.colBitmask := v.colStatusFullErr;
             elsif r.dataFifoError = '1' then
-               v.colBitmask := r.colDataFullErr;
+               v.colBitmask := v.colDataFullErr;
             elsif r.alignError = '1' then
-               v.colBitmask := r.colTrgAlignErr;
+               v.colBitmask := v.colTrgAlignErr;
             end if;
 
             v.arbiterStart := '1';
@@ -218,14 +215,15 @@ begin
       -------------------------------------------------------------------------
 
       -- Outputs
-      statusRd        <= r.statusRd;
+      statusRd        <= v.statusRd;
+      statusFifoError <= v.statusFifoError;
+      dataFifoError   <= v.dataFifoError;
+      overOccError    <= v.overOccError;
+      alignError      <= v.alignError;
+      colBitmask      <= v.colBitmask;
+      trgNum          <= v.refTrgNum;
+
       arbiterStart    <= r.arbiterStart;
-      statusFifoError <= r.statusFifoError;
-      dataFifoError   <= r.dataFifoError;
-      overOccError    <= r.overOccError;
-      alignError      <= r.alignError;
-      colBitmask      <= r.colBitmask;
-      trgNum          <= r.refTrgNum;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then

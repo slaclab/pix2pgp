@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- Description: Adapter; converts a stream of valid to SOF/EOF
 --              DRAFT! deploying to check resource utilization...
---
+--              TO-DO: txReady *NEEDS* to be implemented properly!
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -38,15 +38,16 @@ entity Pix2PgpAdapter is
       pgpClk   : in  sl;
       rst      : in  sl := not(RST_POLARITY_G);
       -- Gearbox Interface
-      pgpValid : in sl;
-      pgpData  : in slv(PGP_DWIDTH_C-1 downto 0);
+      pgpValid : in  sl;
+      pgpData  : in  slv(PGP_DWIDTH_C-1 downto 0);
+      pgpReady : out sl;
       -- Pgp4TxLite Interface
-      txReady  : in  sl;
-      txValid  : out sl;
-      txData   : out slv(PGP_DWIDTH_C-1 downto 0);
-      txSof    : out sl;
-      txEof    : out sl;
-      txEofe   : out sl);
+      txReady  : in   sl;
+      txValid  : out  sl;
+      txData   : out  slv(PGP_DWIDTH_C-1 downto 0);
+      txSof    : out  sl;
+      txEof    : out  sl;
+      txEofe   : out  sl);
 end Pix2PgpAdapter;
 
 architecture rtl of Pix2PgpAdapter is
@@ -89,8 +90,9 @@ architecture rtl of Pix2PgpAdapter is
       txValidInt => '0',
       wrEnCnt    => (others => '0'));
 
-   signal r   : RegType := REG_INIT_C;
-   signal rin : RegType;
+   signal pgpFull : sl := '0';
+   signal r       : RegType := REG_INIT_C;
+   signal rin     : RegType;
 
 begin
 
@@ -172,7 +174,6 @@ begin
          PULSE_WIDTH_G  => 5)
       port map (
          clk     => pgpClk,
-         rst     => rst,
          dataIn  => r.rdEnStrobe,
          dataOut => fifoRdEnInt);
 
@@ -184,7 +185,6 @@ begin
          PULSE_WIDTH_G  => 5)
       port map (
          clk     => pgpClk,
-         rst     => rst,
          dataIn  => r.rdEnStrobe,
          dataOut => txValidInt);
 
@@ -195,7 +195,6 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map (
          clk     => pgpClk,
-         rst     => rst,
          dataIn  => txValidInt,
          dataOut => txValid);
 
@@ -213,16 +212,19 @@ begin
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
          -- Resets
-         rst   => rst,
+         rst    => rst,
          -- Write Interface
-         wrClk => pgpClk,
-         wrEn  => pgpValid,
-         din   => pgpData,
-         full  => open,
+         wrClk  => pgpClk,
+         wrEn   => pgpValid,
+         din    => pgpData,
+         fullWr => pgpFull,
          -- Read Interface
-         rdClk => pgpClk,
-         rdEn  => fifoRdEn,
-         empty => fifoEmpty,
-         dout  => txData);
+         rdClk  => pgpClk,
+         rdEn   => fifoRdEn,
+         empty  => fifoEmpty,
+         fullRd => open,
+         dout   => txData);
+
+   pgpReady <= not(pgpFull);
 
 end rtl;
