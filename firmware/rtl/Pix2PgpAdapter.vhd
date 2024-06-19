@@ -52,54 +52,45 @@ end Pix2PgpAdapter;
 
 architecture rtl of Pix2PgpAdapter is
 
-   signal fifoEmpty  : sl := '0';
-   signal fifoRdEn   : sl := '0';
-   signal txValidInt : sl := '0';
-   signal fifoRdEnInt: sl := '0';
-   signal txSofInt   : sl := '0';
-   signal fifoDout   : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
+   type StateType is (
+      IDLE_S,
+      PARSE_DATA_S);
 
    type RegType is record
       -- i/o
-      pgpValid   : sl;
-      txReady    : sl;
-      txData     : slv(PGP_DWIDTH_C-1 downto 0);
-      txSof      : sl;
-      txEof      : sl;
-      txEofe     : sl;
+      txReady  : sl;
+      txValid  : sl;
+      txSof    : sl;
+      txEof    : sl;
       -- internal
-      fifoEmpty  : sl;
-      fifoRdEn   : sl;
-      rdEnStrobe : sl;
-      txValidInt : sl;
-      wrEnCnt    : slv(3 downto 0);
+      fifoRdEn : sl;
+      frameCnt : slv(2 downto 0);
+      state    : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      pgpValid   => '0',
-      txReady    => '0',
-      txData     => (others => '0'),
-      txSof      => '0',
-      txEof      => '0',
-      txEofe     => '0',
+      txReady  => '0',
+      txValid  => '0',
+      txSof    => '0',
+      txEof    => '0',
       -- internal
-      fifoEmpty  => '0',
-      fifoRdEn   => '0',
-      rdEnStrobe => '0',
-      txValidInt => '0',
-      wrEnCnt    => (others => '0'));
+      fifoRdEn => '0',
+      frameCnt => (others => '0'),
+      state    => IDLE_S);
 
-   signal pgpFull : sl := '0';
-   signal r       : RegType := REG_INIT_C;
-   signal rin     : RegType;
+   signal fifoEmpty : sl      := '0';
+   signal fifoRdEn  : sl      := '0';
+   signal pgpFull   : sl      := '0';
+   signal r         : RegType := REG_INIT_C;
+   signal rin       : RegType;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, rst, fifoEmpty, txReady, pgpValid, fifoRdEn, txValidInt, fifoRdEnInt) is
+   comb : process (r, rst, fifoEmpty, txReady) is
       variable v : RegType;
    begin
 
@@ -107,44 +98,53 @@ begin
       v := r;
 
       -- strobes
-      v.rdEnStrobe := '0';
-      v.txSof      := '0';
-      v.txEof      := '0';
+      v.txSof := '0';
+      v.txEof := '0';
 
-      -- Register inputs
-      v.fifoEmpty   := fifoEmpty;
-      v.txReady     := txReady;
-      v.pgpValid    := pgpValid;
-      v.fifoRdEn    := fifoRdEnInt;
-      v.txValidInt  := txValidInt;
-
-      -- wrEn counter management
-      if (r.pgpValid = '1') then
-         v.wrEnCnt := r.wrEnCnt + 1;
+      -- flow control check
+      v.fifoRdEn := '0';
+      if (txReady = '1') then
+         v.txValid := '0';
       end if;
 
-      if (r.wrEnCnt >= toSlv(5, r.wrEnCnt'length) and r.txReady = '1') then
-         v.wrEnCnt    := r.wrEnCnt - 5;
-         v.rdEnStrobe := '1';
-      end if;
 
-      -- rising-edge detection
-      if (v.txValidInt = '1' and r.txValidInt = '0') then
-         v.txSof := '1';
-      end if;
+      -------------------------------------------------------------------------
+      case r.state is
+      -------------------------------------------------------------------------
+         -- if fifo not empty, read first word
+         when IDLE_S =>
+            v.frameCnt := (others => '0');
 
-      -- falling-edge detection
-      if (v.txValidInt = '0' and r.txValidInt = '1') then
-         v.txEof := '1';
-      end if;
+            if fifoEmpty = '0' and v.txValid = '0' then
+               v.txValid  := '1';
+               v.fifoRdEn := '1';
+               v.txSof    := '1';
+               v.frameCnt := r.frameCnt + 1;
+               v.state    := PARSE_DATA_S;
+            end if;
 
-      v.txEofe := '0';
+         ----------------------------------------------------------------------
+         -- parse the data from the selected data bus
+         when PARSE_DATA_S =>
+            if fifoEmpty = '0' and v.txValid = '0' then
+               v.txValid  := '1';
+               v.fifoRdEn := '1';
+               v.frameCnt := r.frameCnt + 1;
+
+               if r.frameCnt = 4 then
+                  v.txEof := '1';
+                  v.state := IDLE_S;
+               end if;
+            end if;
+
+      end case;
 
       -- Outputs
-      txSofInt <= r.txSof;
-      txEof    <= r.txEof;
-      txEofe   <= r.txEofe;
-      fifoRdEn <= r.fifoRdEn;
+      fifoRdEn <= v.fifoRdEn;
+      txValid  <= v.txValid;
+      txSof    <= v.txSof;
+      txEof    <= v.txEof;
+      txEofe   <= '0';
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -161,42 +161,9 @@ begin
       if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
-         r     <= rin after TPD_G;
-         txSof <= txSofInt after TPD_G;
+         r <= rin after TPD_G;
       end if;
    end process seq;
-
-   U_rdEnStretch : entity surf.SynchronizerOneShot
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         PULSE_WIDTH_G  => 5)
-      port map (
-         clk     => pgpClk,
-         dataIn  => r.rdEnStrobe,
-         dataOut => fifoRdEnInt);
-
-   U_txValidInt : entity surf.SynchronizerOneShot
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         PULSE_WIDTH_G  => 5)
-      port map (
-         clk     => pgpClk,
-         dataIn  => r.rdEnStrobe,
-         dataOut => txValidInt);
-
-   U_txValid : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G)
-      port map (
-         clk     => pgpClk,
-         dataIn  => txValidInt,
-         dataOut => txValid);
 
    U_PgpBuffer : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (

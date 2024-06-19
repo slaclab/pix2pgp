@@ -266,7 +266,7 @@ begin
          pgpData    => pgpData,
          pgpReady   => pgpReady,
          -- Pgp4TxLite Interface
-         txReady    => txReady,  -- TO-DO: implement handling inside FSM
+         txReady    => txReady,
          txValid    => txValid,
          txData     => txData,
          txSof      => txSof,

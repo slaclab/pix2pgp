@@ -189,7 +189,7 @@ begin
                   v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1);
 
                   -- probably smaller footprint than '<'
-                  -- override the previous assertion to cover for the one-hit corner case
+                  -- override the previous assertion to cover the one-hit corner case
                   if dataLenSel = conv_std_logic_vector(1, dataLenSel'length) then
                      v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
                   end if;
