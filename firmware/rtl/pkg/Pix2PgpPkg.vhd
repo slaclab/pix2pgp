@@ -104,11 +104,11 @@ package Pix2PgpPkg is
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1;
-   constant DATA_FULL_FLAG_POS_C    : natural := HEADER_DWITDH_C-2;
-   constant STATUS_FULL_FLAG_POS_C  : natural := HEADER_DWITDH_C-3;
-   constant TRG_ALIGN_ERROR_POS_C   : natural := HEADER_DWITDH_C-4;
-   constant TIMEOUT_HEADER_POS_C    : natural := HEADER_DWITDH_C-5;
+   constant OVEROCC_FLAG_POS_C     : natural := HEADER_DWITDH_C-1;
+   constant DATA_FULL_FLAG_POS_C   : natural := HEADER_DWITDH_C-2;
+   constant STATUS_FULL_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
+   constant TRG_ALIGN_ERROR_POS_C  : natural := HEADER_DWITDH_C-4;
+   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
    -- reserved bits
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-6
                                               downto HEADER_DWITDH_C-8;

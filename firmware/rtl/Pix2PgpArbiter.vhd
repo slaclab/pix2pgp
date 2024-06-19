@@ -5,6 +5,9 @@
 --              Column Supervisor signals Arbiter that FIFO statuses are stable
 --              Then Arbiter Parses in the data accordingly
 --
+-- Important!   Note the wordCnt functionality and its relationship with
+--              the adapter logic
+--
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -71,14 +74,18 @@ architecture rtl of Pix2PgpArbiter is
 
    constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
 
-   signal fifoFull     : sl := '0';
-   signal arbValidComb : sl := '0';
-   signal arbDoutComb  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal fifoFull           : sl := '0';
+   signal arbValidComb       : sl := '0';
+   signal setWatchdog        : sl := '0';
+   signal timeoutWatchdog    : sl := '0';
+   signal timeoutWatchdogDly : sl := '0';
+   signal arbDoutComb        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
+      TX_DUMMY_S,
       DONE_S);
 
    type RegType is record
@@ -91,6 +98,10 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   : sl;
       headerOnly   : sl;
+      setWatchdog  : sl;
+      dummyHeader  : sl;
+      wordCnt      : slv(2 downto 0);
+      waitCnt      : slv(1 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -107,6 +118,10 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   => '0',
       headerOnly   => '0',
+      setWatchdog  => '0',
+      dummyHeader  => '0',
+      wordCnt      => (others => '0'),
+      waitCnt      => (others => '0'),
       dataHeader   => (others => '0'),
       dataRdCnt    => toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C),
       dataRdCycles => (others => '0'),
@@ -122,7 +137,7 @@ begin
    ------------------------------------------------
    comb : process (r, rst, dataLenSel, dataBusSel, arbStart, statusFifoError,
                    dataFifoError, overOccError, alignError, colBitmask, trgNum,
-                   arbReady) is
+                   arbReady, timeoutWatchdogDly) is
 
       variable v : RegType;
 
@@ -131,12 +146,24 @@ begin
       -- Latch the current value
       v := r;
 
-      v.eventEmpty := not(uOr(colBitmask));
+      v.eventEmpty  := not(uOr(colBitmask));
 
       -- flow control check
       v.dataRd := '0';
       if (arbReady = '1') then
          v.arbValid := '0';
+      end if;
+
+      -- watchdog control
+      v.setWatchdog := '0';
+
+      if (r.arbValid = '1') then
+         v.wordCnt := r.wordCnt + 1;
+      end if;
+
+      if (not(allBits(r.wordCnt, '0')) and
+          r.arbBusy = '0') then
+         v.setWatchdog := '1';
       end if;
 
 
@@ -146,13 +173,14 @@ begin
          -- supervisor signals a start of sequence
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
-            v.arbBusy  := '0';
-            v.arbValid := '0';
+            v.dummyHeader := '0';
+            v.arbBusy     := '0';
+            v.arbValid    := '0';
+            v.arbDout     := r.dataHeader;
 
             if arbStart = '1' and v.arbValid = '0' then
                v.arbBusy  := '1';
                v.arbValid := '1';
-               v.arbDout  := r.dataHeader;
 
                if statusFifoError = '1' or
                   dataFifoError   = '1' or
@@ -161,6 +189,30 @@ begin
                   v.state := DONE_S;
                else
                   v.state := CHECK_BITMASK_S;
+               end if;
+            end if;
+
+            -- dummy header corner-case
+            if timeoutWatchdogDly = '1' then
+               v.dummyHeader := '1';
+               v.arbBusy     := '1';
+               v.waitCnt     := r.waitCnt + 1;
+               v.state   := TX_DUMMY_S;
+               -- need to wait for the dummy header bit to be asserted properly
+               if allBits(r.waitCnt, '1') then
+                  v.waitCnt := (others => '0');
+                  v.state   := TX_DUMMY_S;
+               end if;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- stuffs the gearbox with dummy headers
+         -- essentially flushes out the last words written into the gearbox
+         when TX_DUMMY_S =>
+            if (v.arbValid = '0') then
+               v.arbValid := '1';
+               if allBits(r.wordCnt, '1') then
+                  v.state := DONE_S;
                end if;
             end if;
 
@@ -236,7 +288,7 @@ begin
       v.dataHeader(DATA_FULL_FLAG_POS_C)   := dataFifoError;
       v.dataHeader(STATUS_FULL_FLAG_POS_C) := statusFifoError;
       v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
-      v.dataHeader(TIMEOUT_HEADER_POS_C)   := '0'; -- assigned later on
+      v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := trgNum;
@@ -288,5 +340,44 @@ begin
          clk  => pgpClk,
          din  => arbDoutComb,
          dout => arbDout);
+
+   -----------
+   -- Watchdog
+   -----------
+   U_Watchdog: entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G           => TPD_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         CNT_WIDTH_G     => 8)
+      port map(
+         -- General Interface
+         clk     => pgpClk,
+         rst     => rst,
+         -- Control Interface
+         set     => setWatchdog,
+         timeout => timeoutWatchdog);
+
+   -- pipeline control signals to move counter away
+   U_PipelineSet : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 1)
+      port map (
+         clk     => pgpClk,
+         din(0)  => r.setWatchdog,
+         dout(0) => setWatchdog);
+
+   U_PipelineTimeout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 1)
+      port map (
+         clk     => pgpClk,
+         din(0)  => timeoutWatchdog,
+         dout(0) => timeoutWatchdogDly);
+
 
 end rtl;

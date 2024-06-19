@@ -62,7 +62,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type RegType is record
       -- i/o
       statusRd         : sl;
-      arbiterBusy      : sl;
+      arbiterBusyDly   : sl;
       arbiterStart     : sl;
       statusFifoError  : sl;
       dataFifoError    : sl;
@@ -82,7 +82,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    constant REG_INIT_C : RegType := (
       statusRd         => '0',
-      arbiterBusy      => '0',
+      arbiterBusyDly   => '0',
       arbiterStart     => '0',
       statusFifoError  => '0',
       dataFifoError    => '0',
@@ -99,15 +99,16 @@ architecture rtl of Pix2PgpColumnSupervisor is
       waitCnt          => (others => '0'),
       state            => MON_STATUS_S);
 
-   signal r   : RegType := REG_INIT_C;
-   signal rin : RegType;
+   signal arbiterBusyDly : sl;
+   signal r              : RegType := REG_INIT_C;
+   signal rin            : RegType;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, rst, statusBusGlbl, arbiterBusy) is
+   comb : process (r, rst, statusBusGlbl, arbiterBusyDly) is
       variable v : RegType;
    begin
 
@@ -118,7 +119,7 @@ begin
       v.statusRd := '0';
 
       -- Register inputs
-      v.arbiterBusy   := arbiterBusy;
+      v.arbiterBusyDly := arbiterBusyDly;
 
       -- global monitoring of status bus
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
@@ -197,7 +198,11 @@ begin
             end if;
 
             v.arbiterStart := '1';
-            if r.arbiterBusy = '1' then
+
+            -- rising-edge detection;
+            -- arbiter might also be TX'ing dummy headers;
+            -- need to account for this (can't just check `arbiterBusy = '1'`)
+            if v.arbiterBusyDly = '1' and r.arbiterBusyDly = '0' then
                v.state := WAIT_ARB_S;
             end if;
 
@@ -207,7 +212,7 @@ begin
             v.arbiterStart := '0';
             v.waitCnt      := (others => '0');
 
-            if r.arbiterBusy = '0' then
+            if r.arbiterBusyDly = '0' then
                v.state := MON_STATUS_S;
             end if;
 
@@ -243,5 +248,15 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   U_PipelineBusy : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 1)
+      port map (
+         clk     => pgpClk,
+         din(0)  => arbiterBusy,
+         dout(0) => arbiterBusyDly);
 
 end rtl;

@@ -35,13 +35,13 @@ def headerEval(header):
     _dataFull = (header >> np.uint8(37)) & np.uint8(0x01)
     _statusFull = (header >> np.uint8(36)) & np.uint8(0x01)
     _alignError = (header >> np.uint8(35)) & np.uint8(0x01)
-    _timeoutHeader = (header >> np.uint8(34)) & np.uint8(0x01)
+    _dummyHeader = (header >> np.uint8(34)) & np.uint8(0x01)
     # some reserved bits
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
-    _format = 'OverOcc={0:<%d} DataFull={1:<%d} StatusFull={2:<%d} AlignError={3:<%d} TimeoutHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
-    print(_format.format(_overOcc, _dataFull, _statusFull, _alignError, _timeoutHeader, hex(_bitmask).upper(), _trigger))
+    _format = 'OverOcc={0:<%d} DataFull={1:<%d} StatusFull={2:<%d} AlignError={3:<%d} dummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+    print(_format.format(_overOcc, _dataFull, _statusFull, _alignError, _dummyHeader, hex(_bitmask).upper(), _trigger))
 
     if not(_bitmask == 0):
         empty = False

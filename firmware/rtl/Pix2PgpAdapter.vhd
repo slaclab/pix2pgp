@@ -1,9 +1,18 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Adapter; converts a stream of valid to SOF/EOF
---              DRAFT! deploying to check resource utilization...
---              TO-DO: txReady *NEEDS* to be implemented properly!
+-- Description: Adapter for PGP. Temporarily stores data into a FIFO;
+--              checks the status of the 'txReady' from the PGP interface;
+--              asserts valid, sof, eof accordingly
+--
+-- Important!   The frame size is fixed to 5x64-bit words (320 bits);
+--              The arbiter monitors the amount of 40-bit words sent to the
+--              40:64 gearbox. 8x40-bit words (*also* 320 bits)
+--              should be written into the gearbox to keep things in check;
+--              if a smaller amount of 40-bit words is written and a timeout
+--              is reached, the arbiter stuffs the gearbox with dummy headers;
+--              this functionality allows for the last data to be TX'd
+--
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -88,7 +97,7 @@ architecture rtl of Pix2PgpAdapter is
 begin
 
    ------------------------------------------------
-   -- Column Supervisor FSM
+   -- Adapter FSM
    ------------------------------------------------
    comb : process (r, rst, fifoEmpty, txReady) is
       variable v : RegType;
