@@ -184,7 +184,7 @@ begin
          WR_DATA_WIDTH_G => PGP_DWIDTH_C,
          RD_DATA_WIDTH_G => PGP_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
-         ADDR_WIDTH_G    => 8,
+         ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
