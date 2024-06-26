@@ -17,6 +17,7 @@ entity Pix2PgpSparkPixSTop is
       TPD_G                    : time      := 1 ns;
       RST_ASYNC_G              : boolean   := true;
       RST_POLARITY_G           : std_logic := '1';
+      SERIALIZER_ID_G          : integer   := 0;
       SYNTHESIZE_G             : boolean   := true;
       GHDL_SIM_G               : boolean   := false;
       DATAFIFO_PIPE_G          : positive  := 1;
@@ -31,52 +32,55 @@ entity Pix2PgpSparkPixSTop is
       ARB_DOUT_PIPE_G          : natural   := 1);
    port(
       -- General Interface
-      sparseClk : in  std_logic;
-      pgpClk    : in  std_logic;
-      rst       : in  std_logic;
+      sparseClk    : in  std_logic;
+      pgpClk       : in  std_logic;
+      rst          : in  std_logic;
+      serSel       : in  std_logic_vector(3 downto 0);
+      columnEnable : in  std_logic_vector(23 downto 0);
       -- Column Manager Interface
       -- dataIn
-      din0      : in  std_logic_vector(19 downto 0);
-      din1      : in  std_logic_vector(19 downto 0);
-      din2      : in  std_logic_vector(19 downto 0);
-      din3      : in  std_logic_vector(19 downto 0);
-      din4      : in  std_logic_vector(19 downto 0);
-      din5      : in  std_logic_vector(19 downto 0);
-      din6      : in  std_logic_vector(19 downto 0);
-      din7      : in  std_logic_vector(19 downto 0);
-      din8      : in  std_logic_vector(19 downto 0);
-      din9      : in  std_logic_vector(19 downto 0);
-      din10     : in  std_logic_vector(19 downto 0);
-      din11     : in  std_logic_vector(19 downto 0);
-      din12     : in  std_logic_vector(19 downto 0);
-      din13     : in  std_logic_vector(19 downto 0);
-      din14     : in  std_logic_vector(19 downto 0);
-      din15     : in  std_logic_vector(19 downto 0);
-      din16     : in  std_logic_vector(19 downto 0);
-      din17     : in  std_logic_vector(19 downto 0);
-      din18     : in  std_logic_vector(19 downto 0);
-      din19     : in  std_logic_vector(19 downto 0);
-      din20     : in  std_logic_vector(19 downto 0);
-      din21     : in  std_logic_vector(19 downto 0);
-      din22     : in  std_logic_vector(19 downto 0);
-      din23     : in  std_logic_vector(19 downto 0);
+      din0         : in  std_logic_vector(19 downto 0);
+      din1         : in  std_logic_vector(19 downto 0);
+      din2         : in  std_logic_vector(19 downto 0);
+      din3         : in  std_logic_vector(19 downto 0);
+      din4         : in  std_logic_vector(19 downto 0);
+      din5         : in  std_logic_vector(19 downto 0);
+      din6         : in  std_logic_vector(19 downto 0);
+      din7         : in  std_logic_vector(19 downto 0);
+      din8         : in  std_logic_vector(19 downto 0);
+      din9         : in  std_logic_vector(19 downto 0);
+      din10        : in  std_logic_vector(19 downto 0);
+      din11        : in  std_logic_vector(19 downto 0);
+      din12        : in  std_logic_vector(19 downto 0);
+      din13        : in  std_logic_vector(19 downto 0);
+      din14        : in  std_logic_vector(19 downto 0);
+      din15        : in  std_logic_vector(19 downto 0);
+      din16        : in  std_logic_vector(19 downto 0);
+      din17        : in  std_logic_vector(19 downto 0);
+      din18        : in  std_logic_vector(19 downto 0);
+      din19        : in  std_logic_vector(19 downto 0);
+      din20        : in  std_logic_vector(19 downto 0);
+      din21        : in  std_logic_vector(19 downto 0);
+      din22        : in  std_logic_vector(19 downto 0);
+      din23        : in  std_logic_vector(19 downto 0);
       -- flags
-      tok       : in  std_logic_vector(23 downto 0);
-      tokFb     : in  std_logic_vector(23 downto 0);
-      ackN      : in  std_logic_vector(23 downto 0);
-      wrEn      : in  std_logic_vector(23 downto 0);
+      tok          : in  std_logic_vector(23 downto 0);
+      tokFb        : in  std_logic_vector(23 downto 0);
+      ackN         : in  std_logic_vector(23 downto 0);
+      wrEn         : in  std_logic_vector(23 downto 0);
       -- Pgp4TxLite Interface
-      txReady   : in  std_logic;
-      txValid   : out std_logic;
-      txData    : out std_logic_vector(63 downto 0);
-      txSof     : out std_logic;
-      txEof     : out std_logic;
-      txEofe    : out std_logic);
+      txReady      : in  std_logic;
+      txValid      : out std_logic;
+      txData       : out std_logic_vector(63 downto 0);
+      txSof        : out std_logic;
+      txEof        : out std_logic;
+      txEofe       : out std_logic);
 end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
 
-   signal din : Pix2PgpSparseDinArray := (others => (others => '0'));
+   signal din               : Pix2PgpSparseDinArray := (others => (others => '0'));
+   signal columnEnableMuxed : std_logic_vector(23 downto 0);
 
 begin
 
@@ -103,6 +107,7 @@ begin
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
          rst          => rst,
+         columnEnable => columnEnableMuxed,
          -- Column Manager Interface
          tok          => tok,
          tokFb        => tokFb,
@@ -146,5 +151,15 @@ begin
       din(21) <= din21;
       din(22) <= din22;
       din(23) <= din23;
+
+   -- Configurable Registers Management
+   process(pgpClk)
+   begin
+      if (rising_edge(pgpClk)) then
+         if serSel = conv_std_logic_vector(SERIALIZER_ID_G, serSel'length) then
+            columnEnableMuxed <= columnEnable;
+         end if;
+      end if;
+   end process;
 
 end architecture;

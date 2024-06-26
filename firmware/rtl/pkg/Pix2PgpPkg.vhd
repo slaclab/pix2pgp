@@ -23,11 +23,13 @@ use surf.StdRtlPkg.all;
 
 package Pix2PgpPkg is
 
-   -- pretty much fixed
+   -- ASIC-specific
    constant NUM_OF_COL_MANAGERS_C : natural := 24;
    constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C)-1;
+   constant NUM_OF_SERIALIZERS_C  : natural := 8;
+   constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C)-1;
 
-   -- sparse/matrix-related
+   -- sparse/matrix-related (also ASIC-specific)
    constant ADC_DWIDTH_C    : natural := 10;
    constant PIXADDR_WIDTH_C : natural := 10;
    constant SPARSE_DWIDTH_C : natural := ADC_DWIDTH_C + PIXADDR_WIDTH_C;

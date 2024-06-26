@@ -47,6 +47,7 @@ entity Pix2PgpTop is
       sparseClk    : in  sl;
       pgpClk       : in  sl;
       rst          : in  sl;
+      columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       tok          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       tokFb        : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);

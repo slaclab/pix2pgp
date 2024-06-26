@@ -36,6 +36,7 @@ architecture test of Pix2PgpTopTb is
 
    signal clk          : sl := '0';
    signal rst          : sl := '1';
+   signal columnEnable : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
 
    signal tok          : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal tokFb        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
@@ -116,6 +117,7 @@ begin
          sparseClk    => clk,
          pgpClk       => clk,
          rst          => rst,
+         columnEnable => columnEnable,
          -- Column Manager Interface
          tok          => tok,
          tokFb        => tokFb,
