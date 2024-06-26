@@ -55,7 +55,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type StateType is (
       MON_STATUS_S,
       WAIT_BUS_S,
-      REG_STATUS_S,
       CHECK_ERROR_S,
       WAIT_ARB_S);
 
@@ -169,21 +168,15 @@ begin
          ----------------------------------------------------------------------
          -- wait for the bus to stabilize first
          when WAIT_BUS_S =>
-            v.waitCnt := r.waitCnt + 1;
-
-            if r.waitCnt = FIFO_RD_DELAY_G then
-               v.state := REG_STATUS_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- register the status bits
-         when REG_STATUS_S =>
+            v.waitCnt         := r.waitCnt + 1;
             v.statusFifoError := uOr(v.colStatusFullErr);
             v.dataFifoError   := uOr(v.colDataFullErr);
             v.overOccError    := uOr(v.colOverOccErr);
             v.alignError      := uOr(v.colTrgAlignErr);
 
-            v.state := CHECK_ERROR_S;
+            if r.waitCnt = FIFO_RD_DELAY_G then
+               v.state := CHECK_ERROR_S;
+            end if;
 
          ----------------------------------------------------------------------
          -- change the column bitmask if an error is reported
