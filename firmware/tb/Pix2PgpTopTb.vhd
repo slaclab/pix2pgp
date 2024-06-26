@@ -136,41 +136,41 @@ begin
          frameSize    => frameSize);
 
     -- Instantiate the PGP4TxLiteWrapper
-    --U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
-    --  port map(
-    --    -- Clock and Reset
-    --    clk        => clk,
-    --    rst        => rst,
-    --    -- 64-bit Input Framing Interface
-    --    txReady    => txReady,
-    --    txValid    => txValid,
-    --    txData     => txData,
-    --    txSof      => txSof,
-    --    txEof      => txEof,
-    --    txEofe     => txEofe,
-    --    -- 66-bit Output Interface
-    --    phyTxValid => phyTxValid,
-    --    phyTxReady => phyTxReady,
-    --    phyTxData  => phyTxData);
+    U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
+      port map(
+        -- Clock and Reset
+        clk        => clk,
+        rst        => rst,
+        -- 64-bit Input Framing Interface
+        txReady    => txReady,
+        txValid    => txValid,
+        txData     => txData,
+        txSof      => txSof,
+        txEof      => txEof,
+        txEofe     => txEofe,
+        -- 66-bit Output Interface
+        phyTxValid => phyTxValid,
+        phyTxReady => phyTxReady,
+        phyTxData  => phyTxData);
 
-    --U_Serializer : entity surf.Gearbox
-    --  generic map (
-    --     TPD_G          => TPD_C,
-    --     RST_ASYNC_G    => RST_ASYNC_C,
-    --     SLAVE_WIDTH_G  => 66,
-    --     MASTER_WIDTH_G => 32)
-    --  port map (
-    --     -- Clock and Reset
-    --     clk            => clk,
-    --     rst            => rst,
-    --     -- Slave Interface
-    --     slaveValid     => phyTxValid,
-    --     slaveReady     => phyTxReady,
-    --     slaveData      => phyTxData,
-    --     slaveBitOrder  => '0',
-    --     -- Master Interface
-    --     masterBitOrder => '0',
-    --     masterData     => pgpData32b);
+    U_Serializer : entity surf.Gearbox
+      generic map (
+         TPD_G          => TPD_C,
+         RST_ASYNC_G    => RST_ASYNC_C,
+         SLAVE_WIDTH_G  => 66,
+         MASTER_WIDTH_G => 32)
+      port map (
+         -- Clock and Reset
+         clk            => clk,
+         rst            => rst,
+         -- Slave Interface
+         slaveValid     => phyTxValid,
+         slaveReady     => phyTxReady,
+         slaveData      => phyTxData,
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterData     => pgpData32b);
 
   -- Generate the test stimulus
   stimulus: process begin
