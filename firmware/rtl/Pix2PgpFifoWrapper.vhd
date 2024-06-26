@@ -34,6 +34,7 @@ entity Pix2PgpFifoWrapper is
       ADDR_WIDTH_G     : integer := 12;
       DWARE_DEPTH_G    : integer := 32;
       PIPE_STAGES_G    : natural := 0;
+      FWFT_EN_G        : boolean := false;
       GEN_SYNC_FIFO_G  : boolean := false;
       GHDL_SIM_G       : boolean := false;
       SYNTHESIZE_G     : boolean := false);
@@ -146,7 +147,7 @@ begin
                RST_ASYNC_G     => RST_ASYNC_G,
                RST_POLARITY_G  => RST_POLARITY_G,
                SYNTH_MODE_G    => "inferred",
-               FWFT_EN_G       => False,
+               FWFT_EN_G       => FWFT_EN_G,
                GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
                PIPE_STAGES_G   => PIPE_STAGES_G,
                DATA_WIDTH_G    => WR_DATA_WIDTH_G,
@@ -172,7 +173,7 @@ begin
                RST_ASYNC_G     => RST_ASYNC_G,
                RST_POLARITY_G  => RST_POLARITY_G,
                SYNTH_MODE_G    => "inferred",
-               FWFT_EN_G       => True, -- set to True since the data fifo is asymmetric
+               FWFT_EN_G       => FWFT_EN_G,
                GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
                PIPE_STAGES_G   => PIPE_STAGES_G,
                WR_DATA_WIDTH_G => WR_DATA_WIDTH_G,

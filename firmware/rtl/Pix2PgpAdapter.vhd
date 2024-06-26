@@ -150,9 +150,9 @@ begin
 
       -- Outputs
       fifoRdEn <= v.fifoRdEn;
-      txValid  <= v.txValid;
-      txSof    <= v.txSof;
-      txEof    <= v.txEof;
+      txValid  <= r.txValid;
+      txSof    <= r.txSof;
+      txEof    <= r.txEof;
       txEofe   <= '0';
 
       -- Reset
@@ -180,6 +180,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          GEN_SYNC_FIFO_G => false,
+         FWFT_EN_G       => false,
          WR_DATA_WIDTH_G => PGP_DWIDTH_C,
          RD_DATA_WIDTH_G => PGP_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,

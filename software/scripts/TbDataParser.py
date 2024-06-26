@@ -31,11 +31,11 @@ def headerEval(header):
     bitmask = []
     trigger = 0
 
-    _overOcc = (header >> np.uint8(38)) & np.uint8(0x01)
-    _dataFull = (header >> np.uint8(37)) & np.uint8(0x01)
-    _statusFull = (header >> np.uint8(36)) & np.uint8(0x01)
-    _alignError = (header >> np.uint8(35)) & np.uint8(0x01)
-    _dummyHeader = (header >> np.uint8(34)) & np.uint8(0x01)
+    _overOcc = (header >> np.uint8(39)) & np.uint8(0x01)
+    _dataFull = (header >> np.uint8(38)) & np.uint8(0x01)
+    _statusFull = (header >> np.uint8(37)) & np.uint8(0x01)
+    _alignError = (header >> np.uint8(36)) & np.uint8(0x01)
+    _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
     # some reserved bits
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
