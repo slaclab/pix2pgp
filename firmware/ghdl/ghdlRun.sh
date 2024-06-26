@@ -34,9 +34,17 @@ SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
 TB=${TB_DIR}/*Tb.vhd
 
-# note that the package has to be declared separately in order to be imported first
+# note that the packages hav to be declared separately in order to be imported first
+# the order of the packages *matter*.
 SURF_PKG_DIR=${SURF_DIR}/pkg
-SURF_PKG=${SURF_PKG_DIR}/*Pkg.vhd
+SURF_PKG_ALL=${SURF_PKG_DIR}/*Pkg.vhd
+SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
+          "${SURF_PKG_DIR}/CrcPkg.vhd"
+          "${SURF_PKG_DIR}/AxiStreamPkg.vhd"
+          "${SURF_PKG_DIR}/SsiPkg.vhd"
+          "${SURF_PKG_DIR}/Pgp4Pkg.vhd"
+          "${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd"
+          "${SURF_PKG_DIR}/ArbiterPkg.vhd")
 
 # stub dware files
 DWARE_DIR=${RTL_DIR}/dw
@@ -85,12 +93,12 @@ prepareSurf()
     rm ${SURF}
   fi
 
-  checkFileExists ${SURF_PKG}
+  checkFileExists ${SURF_PKG_ALL}
   surfPkg_exists=$?
 
   if [[ $surfPkg_exists -eq 1 ]]; then
-    echo "[INFO]: Surf packages found in ${SURF_PKG}. Cleaning up..."
-    rm ${SURF_PKG}
+    echo "[INFO]: Surf packages found in ${SURF_PKG_ALL}. Cleaning up..."
+    rm ${SURF_PKG_ALL}
   fi
 
   # add files here accordingly
@@ -221,7 +229,10 @@ ghdlClean()
   # surf import
   if [[ $surf_exists -eq 1 ]]; then
     echo "[INFO]: Surf libraries found in ${SURF}. Importing..."
-    ${GHDL_IMPORT_SURF} ${SURF_PKG}
+    for package in "${SURF_PKG[@]}"
+    do
+      ${GHDL_IMPORT_SURF} $package
+    done
     ${GHDL_IMPORT_SURF} ${SURF}
   else
     echo "[ERROR]: No surf files found..."
