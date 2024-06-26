@@ -118,6 +118,7 @@ begin
             sparseClk => sparseClk,
             pgpClk    => pgpClk,
             rst       => rst,
+            enable    => columnEnable(col),
             -- Sparse Logic Interface
             tok       => tok(col),
             tokFb     => tokFb(col),
@@ -145,6 +146,7 @@ begin
       port map(
          -- General Interface
          pgpClk        => pgpClk,
+         columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBusIn   => statusBus,
          dataBusIn     => dataBus,

@@ -29,6 +29,7 @@ architecture test of Pix2PgpArbiterTb is
    signal dataBusSel      : Pix2PgpDataBusType := DEFAULT_PIX2PGP_DATABUS_C;
    signal dataRd          : sl := '0';
    signal colSel          : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
+   signal columnEnable    : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '1');
 
    signal arbStart        : sl := '0';
    signal statusFifoError : sl := '0';
@@ -159,6 +160,7 @@ begin
       port map(
          -- General Interface
          pgpClk        => clk,
+         columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBusIn   => statusBus,
          dataBusIn     => dataBus,
