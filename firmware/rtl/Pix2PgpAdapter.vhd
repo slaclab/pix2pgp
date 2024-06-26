@@ -106,14 +106,13 @@ begin
       -- Latch the current value
       v := r;
 
-      -- strobes
-      v.txSof := '0';
-      v.txEof := '0';
+      v.fifoRdEn := '0';
 
       -- flow control check
-      v.fifoRdEn := '0';
       if (txReady = '1') then
          v.txValid := '0';
+         v.txSof   := '0';
+         v.txEof   := '0';
       end if;
 
 
