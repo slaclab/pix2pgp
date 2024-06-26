@@ -197,7 +197,6 @@ begin
                v.dummyHeader := '1';
                v.arbBusy     := '1';
                v.waitCnt     := r.waitCnt + 1;
-               v.state   := TX_DUMMY_S;
                -- need to wait for the dummy header bit to be asserted properly
                if allBits(r.waitCnt, '1') then
                   v.waitCnt := (others => '0');
@@ -211,7 +210,8 @@ begin
          when TX_DUMMY_S =>
             if (v.arbValid = '0') then
                v.arbValid := '1';
-               if allBits(r.wordCnt, '1') then
+               -- seize the process one count before overflow -> rolls-over to 0
+               if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
                   v.state := DONE_S;
                end if;
             end if;
@@ -288,7 +288,7 @@ begin
       v.dataHeader(DATA_FULL_FLAG_POS_C)   := dataFifoError;
       v.dataHeader(STATUS_FULL_FLAG_POS_C) := statusFifoError;
       v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
-      v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
+      v.dataHeader(DUMMY_HEADER_POS_C)     := r.dummyHeader;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := trgNum;

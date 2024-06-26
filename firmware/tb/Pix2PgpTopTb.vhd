@@ -242,7 +242,10 @@ begin
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
+
+    -- do not touch
     wait;
+    -- do not touch
 
   end process stimulus;
 
