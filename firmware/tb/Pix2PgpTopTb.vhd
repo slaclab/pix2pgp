@@ -64,7 +64,7 @@ architecture test of Pix2PgpTopTb is
    signal sro     : sl := '0';
 
    signal phyTxValid  : sl := '0';
-   signal phyTxReady  : sl := '0';
+   signal phyTxReady  : sl := '1';
    signal phyTxData   : slv(65 downto 0) := (others => '0');
 
    signal pgpData32b  : slv(31 downto 0) := (others => '0');
@@ -73,6 +73,28 @@ begin
   -- rst and clk
   clk <= not clk after CLK_PERIOD_C - TPD_C;
   rst <= '1', '0' after CLK_PERIOD_C*20;
+
+   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+      U_DummyPixel : entity pix2pgp.DummyPixel
+         generic map(
+            TPD_G        => TPD_C,
+            RST_ASYNC_G  => RST_ASYNC_C,
+            WAIT_FB_G    => 2,
+            WAIT_ACKN_G  => 1,
+            WAIT_WREN_G  => 1,
+            COL_ID_G     => col)
+         port map(
+            clk     => clk,
+            rst     => rst,
+            sro     => sro,
+            hitLen  => hitLen(col),
+            overOcc => overOcc,
+            tok     => tok(col),
+            tokFb   => tokFb(col),
+            ackN    => ackN(col),
+            wrEn    => wrEn(col),
+            dout    => din(col));
+   end generate GEN_DUMMY_PIXEL;
 
   -- Instantiate the design under test
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
@@ -149,28 +171,6 @@ begin
     --     -- Master Interface
     --     masterBitOrder => '0',
     --     masterData     => pgpData32b);
-
-   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      U_DummyPixel : entity pix2pgp.DummyPixel
-         generic map(
-            TPD_G        => TPD_C,
-            RST_ASYNC_G  => RST_ASYNC_C,
-            WAIT_FB_G    => 2,
-            WAIT_ACKN_G  => 1,
-            WAIT_WREN_G  => 1,
-            COL_ID_G     => col)
-         port map(
-            clk     => clk,
-            rst     => rst,
-            sro     => sro,
-            hitLen  => hitLen(col),
-            overOcc => overOcc,
-            tok     => tok(col),
-            tokFb   => tokFb(col),
-            ackN    => ackN(col),
-            wrEn    => wrEn(col),
-            dout    => din(col));
-   end generate GEN_DUMMY_PIXEL;
 
   -- Generate the test stimulus
   stimulus: process begin
