@@ -36,6 +36,7 @@ entity Pix2PgpColumnSupervisor is
       -- General Interface
       pgpClk          : in  sl;
       rst             : in  sl := not(RST_POLARITY_G);
+      columnEnable    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       statusBusGlbl   : in  Pix2PgpStatusBusArray;
       statusRd        : out sl;
@@ -67,6 +68,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       dataFifoError    : sl;
       overOccError     : sl;
       alignError       : sl;
+      columnIgnore     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colBitmask       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       dataReady        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -87,6 +89,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       dataFifoError    => '0',
       overOccError     => '0',
       alignError       => '0',
+      columnIgnore     => (others => '0'),
       colBitmask       => (others => '0'),
       -- internal
       dataReady        => (others => '0'),
@@ -107,7 +110,7 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, rst, statusBusGlbl, arbiterBusyDly) is
+   comb : process (r, rst, statusBusGlbl, arbiterBusyDly, columnEnable) is
       variable v : RegType;
    begin
 
@@ -119,15 +122,18 @@ begin
 
       -- Register inputs
       v.arbiterBusyDly := arbiterBusyDly;
+      v.columnIgnore   := not(columnEnable);
 
       -- global monitoring of status bus
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- column is ready when its status FIFO has a word
-         v.dataReady(col) := not(statusBusGlbl(col).statusEmpty);
+         v.dataReady(col) := not(statusBusGlbl(col).statusEmpty) or
+                                (r.columnIgnore(col));
 
          -- check Data Length from each column manager's status bus and set the colBitmask accordingly
          -- a high bit on the bitmask indicates that the associated column does have hits
-         if allBits(statusBusGlbl(col).dataLen, '0') then
+         if (allBits(statusBusGlbl(col).dataLen, '0'))
+         or  toBoolean(r.columnIgnore(col)) then
             v.colBitmask(col) := '0';
          else
             v.colBitmask(col) := '1';
@@ -138,7 +144,8 @@ begin
          v.refTrgNum := statusBusGlbl(0).trgNum;
 
          -- check if all triggers are aligned with each other
-         if statusBusGlbl(col).trgNum = r.refTrgNum then
+         if statusBusGlbl(col).trgNum = r.refTrgNum
+         or toBoolean(r.columnIgnore(col)) then
             v.colTrgAlignErr(col) := '0';
          else
             v.colTrgAlignErr(col) := '1';
@@ -157,10 +164,12 @@ begin
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
-         -- stay here until *all* columns have data
-         -- issue the rdEn pulse to the FIFO if all columns have data
+         -- stay here until *all* columns have data;
+         -- issue the rdEn pulse to the FIFO if all columns have data;
+         -- don't do anything if all columns are disabled
          when MON_STATUS_S =>
-            if toBoolean(uAnd(v.dataReady)) then
+            if toBoolean(uAnd(v.dataReady)) and
+               toBoolean(not(uAnd(r.columnIgnore))) then
                v.statusRd := '1';
                v.state    := WAIT_BUS_S;
             end if;

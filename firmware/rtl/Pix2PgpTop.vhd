@@ -174,6 +174,7 @@ begin
          -- General Interface
          pgpClk          => pgpClk,
          rst             => rst,
+         columnEnable    => columnEnable,
          -- Column Manager Interface
          statusBusGlbl   => statusBusGlbl,
          statusRd        => statusRd,
