@@ -63,10 +63,10 @@ FST=${GHDL_DIR}/*.fst
 OUT=${GHDL_DIR}/*.o
 
 #############################
-GHDL_CMD="ghdl-llvm"
+# GHDL_CMD="ghdl-llvm"
 # check if your ghdl version is < 1.0.0; if it is, you need to use a downloaded tarball from https://github.com/ghdl/ghdl/releases
 # example below...
-# GHDL_CMD="/home/cbakalis/Work/tools/ghdl/bin/ghdl"
+GHDL_CMD="/home/cbakalis/Work/tools/ghdl/bin/ghdl"
 #############################
 GHDL_GLBL_FLAGS="--ieee=standard -fexplicit -fsynopsys"
 GHDL_STD_FLAG="--std=93c"
@@ -125,15 +125,26 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoSync.vhd                  ${SURF_DIR}/FifoSync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoAsync.vhd                 ${SURF_DIR}/FifoAsync.vhd
 
-  # PGP4
+  # PGP4-related
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPipeline.vhd             ${SURF_DIR}/AxiStreamPipeline.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/Crc32Parallel.vhd                       ${SURF_DIR}/Crc32Parallel.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/Crc32.vhd                               ${SURF_DIR}/Crc32.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Gearbox.vhd                         ${SURF_DIR}/Gearbox.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Scrambler.vhd                       ${SURF_DIR}/Scrambler.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd  ${SURF_DIR}/AxiStreamDepacketizer2.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/DualPortRam.vhd                    ${SURF_DIR}/DualPortRam.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/LutRam.vhd                         ${SURF_DIR}/LutRam.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/TrueDualPortRam.vhd                ${SURF_DIR}/TrueDualPortRam.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerFifo.vhd                   ${SURF_DIR}/SynchronizerFifo.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd ${SURF_DIR}/Pgp3RxGearboxAligner.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd             ${SURF_DIR}/Pgp4RxEb.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd       ${SURF_DIR}/Pgp4RxProtocol.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd               ${SURF_DIR}/Pgp4Rx.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd           ${SURF_DIR}/Pgp4TxLite.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd   ${SURF_DIR}/Pgp4TxLiteProtocol.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd    ${SURF_DIR}/Pgp4TxLiteWrapper.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamMux.vhd                  ${SURF_DIR}/AxiStreamMux.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamDeMux.vhd                ${SURF_DIR}/AxiStreamDeMux.vhd
 
  }
 

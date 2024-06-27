@@ -1,19 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Thu Jun 27 21:07:38 2024
+[*] Thu Jun 27 22:25:59 2024
 [*]
 [dumpfile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Thu Jun 27 21:02:31 2024"
-[dumpfile_size] 2051285
+[dumpfile_mtime] "Thu Jun 27 22:23:59 2024"
+[dumpfile_size] 4057106
 [savefile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 1792500000
+[timestart] 0
 [size] 2490 1016
 [pos] 2629 26
-*-27.509474 2785400000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-31.509474 1460000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.
+[treeopen] top.pix2pgptoptb.u_pgprx.
+[treeopen] top.pix2pgptoptb.u_pgprx.pgprxout.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.databus.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
@@ -195,8 +196,43 @@ top.pix2pgptoptb.txvalid
 top.pix2pgptoptb.u_pix2pgptop.u_adapter.pgpready
 [color] 6
 top.pix2pgptoptb.txready
-@29
 [color] 6
 top.pix2pgptoptb.phytxready
+@200
+-PGP4RX
+@23
+[color] 1
+#{top.pix2pgptoptb.u_pgprx.phyrxdata[63:0]} top.pix2pgptoptb.u_pgprx.phyrxdata[63] top.pix2pgptoptb.u_pgprx.phyrxdata[62] top.pix2pgptoptb.u_pgprx.phyrxdata[61] top.pix2pgptoptb.u_pgprx.phyrxdata[60] top.pix2pgptoptb.u_pgprx.phyrxdata[59] top.pix2pgptoptb.u_pgprx.phyrxdata[58] top.pix2pgptoptb.u_pgprx.phyrxdata[57] top.pix2pgptoptb.u_pgprx.phyrxdata[56] top.pix2pgptoptb.u_pgprx.phyrxdata[55] top.pix2pgptoptb.u_pgprx.phyrxdata[54] top.pix2pgptoptb.u_pgprx.phyrxdata[53] top.pix2pgptoptb.u_pgprx.phyrxdata[52] top.pix2pgptoptb.u_pgprx.phyrxdata[51] top.pix2pgptoptb.u_pgprx.phyrxdata[50] top.pix2pgptoptb.u_pgprx.phyrxdata[49] top.pix2pgptoptb.u_pgprx.phyrxdata[48] top.pix2pgptoptb.u_pgprx.phyrxdata[47] top.pix2pgptoptb.u_pgprx.phyrxdata[46] top.pix2pgptoptb.u_pgprx.phyrxdata[45] top.pix2pgptoptb.u_pgprx.phyrxdata[44] top.pix2pgptoptb.u_pgprx.phyrxdata[43] top.pix2pgptoptb.u_pgprx.phyrxdata[42] top.pix2pgptoptb.u_pgprx.phyrxdata[41] top.pix2pgptoptb.u_pgprx.phyrxdata[40] top.pix2pgptoptb.u_pgprx.phyrxdata[39] top.pix2pgptoptb.u_pgprx.phyrxdata[38] top.pix2pgptoptb.u_pgprx.phyrxdata[37] top.pix2pgptoptb.u_pgprx.phyrxdata[36] top.pix2pgptoptb.u_pgprx.phyrxdata[35] top.pix2pgptoptb.u_pgprx.phyrxdata[34] top.pix2pgptoptb.u_pgprx.phyrxdata[33] top.pix2pgptoptb.u_pgprx.phyrxdata[32] top.pix2pgptoptb.u_pgprx.phyrxdata[31] top.pix2pgptoptb.u_pgprx.phyrxdata[30] top.pix2pgptoptb.u_pgprx.phyrxdata[29] top.pix2pgptoptb.u_pgprx.phyrxdata[28] top.pix2pgptoptb.u_pgprx.phyrxdata[27] top.pix2pgptoptb.u_pgprx.phyrxdata[26] top.pix2pgptoptb.u_pgprx.phyrxdata[25] top.pix2pgptoptb.u_pgprx.phyrxdata[24] top.pix2pgptoptb.u_pgprx.phyrxdata[23] top.pix2pgptoptb.u_pgprx.phyrxdata[22] top.pix2pgptoptb.u_pgprx.phyrxdata[21] top.pix2pgptoptb.u_pgprx.phyrxdata[20] top.pix2pgptoptb.u_pgprx.phyrxdata[19] top.pix2pgptoptb.u_pgprx.phyrxdata[18] top.pix2pgptoptb.u_pgprx.phyrxdata[17] top.pix2pgptoptb.u_pgprx.phyrxdata[16] top.pix2pgptoptb.u_pgprx.phyrxdata[15] top.pix2pgptoptb.u_pgprx.phyrxdata[14] top.pix2pgptoptb.u_pgprx.phyrxdata[13] top.pix2pgptoptb.u_pgprx.phyrxdata[12] top.pix2pgptoptb.u_pgprx.phyrxdata[11] top.pix2pgptoptb.u_pgprx.phyrxdata[10] top.pix2pgptoptb.u_pgprx.phyrxdata[9] top.pix2pgptoptb.u_pgprx.phyrxdata[8] top.pix2pgptoptb.u_pgprx.phyrxdata[7] top.pix2pgptoptb.u_pgprx.phyrxdata[6] top.pix2pgptoptb.u_pgprx.phyrxdata[5] top.pix2pgptoptb.u_pgprx.phyrxdata[4] top.pix2pgptoptb.u_pgprx.phyrxdata[3] top.pix2pgptoptb.u_pgprx.phyrxdata[2] top.pix2pgptoptb.u_pgprx.phyrxdata[1] top.pix2pgptoptb.u_pgprx.phyrxdata[0]
+@29
+[color] 1
+#{top.pix2pgptoptb.u_pgprx.phyrxheader[1:0]} top.pix2pgptoptb.u_pgprx.phyrxheader[1] top.pix2pgptoptb.u_pgprx.phyrxheader[0]
+[color] 1
+top.pix2pgptoptb.u_pgprx.pgprxmasters[0].tlast
+[color] 1
+top.pix2pgptoptb.u_pgprx.pgprxmasters[0].tvalid
+@28
+top.pix2pgptoptb.u_pgprx.pgprxout.celleofeerror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellcrcerror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellcrcmodeerror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellversionerror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellseqerror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellsoferror
+top.pix2pgptoptb.u_pgprx.pgprxout.cellerror
+top.pix2pgptoptb.u_pgprx.pgprxout.opcodeen
+top.pix2pgptoptb.u_pgprx.pgprxout.eboverflow
+top.pix2pgptoptb.u_pgprx.pgprxout.linkerror
+top.pix2pgptoptb.u_pgprx.pgprxout.linkdown
+top.pix2pgptoptb.u_pgprx.pgprxout.framerxerr
+top.pix2pgptoptb.u_pgprx.pgprxout.framerx
+top.pix2pgptoptb.u_pgprx.pgprxout.remrxlinkready
+top.pix2pgptoptb.u_pgprx.pgprxout.linkready
+top.pix2pgptoptb.u_pgprx.pgprxout.gearboxaligned
+top.pix2pgptoptb.u_pgprx.pgprxout.phyrxinit
+top.pix2pgptoptb.u_pgprx.pgprxout.phyrxactive
+@22
+#{top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[15:0]} top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[15] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[14] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[13] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[12] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[11] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[10] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[9] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[8] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[7] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[6] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[5] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[4] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[3] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[2] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[1] top.pix2pgptoptb.u_pgprx.pgprxout.remrxpause[0]
+#{top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[15:0]} top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[15] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[14] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[13] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[12] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[11] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[10] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[9] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[8] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[7] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[6] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[5] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[4] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[3] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[2] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[1] top.pix2pgptoptb.u_pgprx.pgprxout.remrxoverflow[0]
+#{top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[47:0]} top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[47] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[46] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[45] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[44] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[43] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[42] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[41] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[40] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[39] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[38] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[37] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[36] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[35] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[34] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[33] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[32] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[31] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[30] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[29] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[28] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[27] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[26] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[25] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[24] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[23] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[22] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[21] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[20] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[19] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[18] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[17] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[16] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[15] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[14] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[13] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[12] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[11] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[10] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[9] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[8] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[7] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[6] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[5] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[4] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[3] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[2] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[1] top.pix2pgptoptb.u_pgprx.pgprxout.remlinkdata[0]
+#{top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[47:0]} top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[47] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[46] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[45] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[44] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[43] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[42] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[41] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[40] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[39] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[38] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[37] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[36] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[35] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[34] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[33] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[32] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[31] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[30] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[29] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[28] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[27] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[26] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[25] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[24] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[23] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[22] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[21] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[20] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[19] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[18] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[17] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[16] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[15] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[14] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[13] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[12] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[11] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[10] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[9] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[8] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[7] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[6] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[5] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[4] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[3] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[2] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[1] top.pix2pgptoptb.u_pgprx.pgprxout.opcodedata[0]
 [pattern_trace] 1
 [pattern_trace] 0

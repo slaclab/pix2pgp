@@ -9,6 +9,10 @@ use ieee.std_logic_textio.all;
 
 library surf;
 use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
+use surf.Pgp4Pkg.all;
+use surf.AxiStreamPacketizer2Pkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -31,6 +35,7 @@ architecture test of Pix2PgpTopTb is
    constant SUPER_FIFO_RD_DELAY_C    : natural := 3;
    constant ARB_FIFO_RD_DELAY_C      : natural := 1;
    constant ARB_DOUT_PIPE_C          : natural := 2;
+   constant NUM_VC_C                 : natural := 1;
    --
    constant CLK_PERIOD_C             : time := 5.384 ns;
 
@@ -69,12 +74,20 @@ architecture test of Pix2PgpTopTb is
    signal phyTxData   : slv(65 downto 0) := (others => '0');
 
    signal pgpData32b  : slv(31 downto 0) := (others => '0');
+
+   signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
+   signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
+   signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
+
 begin
 
   -- rst and clk
   clk <= not clk after CLK_PERIOD_C - TPD_C;
   rst <= '1', '0' after CLK_PERIOD_C*20;
 
+   -------
+   -- ASIC
+   -------
    GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
       U_DummyPixel : entity pix2pgp.DummyPixel
          generic map(
@@ -173,6 +186,40 @@ begin
          -- Master Interface
          masterBitOrder => '0',
          masterData     => pgpData32b);
+
+     -------
+     -- FPGA
+     -------
+    U_PgpRx : entity surf.Pgp4Rx
+     generic map(
+        TPD_G              => TPD_C,
+        RST_ASYNC_G        => RST_ASYNC_C,
+        NUM_VC_G           => NUM_VC_C,
+        SKIP_EN_G          => true,
+        LITE_EN_G          => true)
+     port map(
+        -- User Transmit interface
+        pgpRxClk     => clk,
+        pgpRxRst     => rst,
+        pgpRxOut     => pgpRxOut,
+        pgpRxMasters => pgpRxMasters,
+        pgpRxCtrl    => pgpRxCtrl,
+
+        -- Status of local receive fifos
+        remRxFifoCtrl  => open,
+        remRxLinkReady => open,
+        locRxLinkReady => open,
+
+        -- PHY interface
+        phyRxClk      => clk,
+        phyRxRst      => rst,
+        phyRxInit     => open,
+        phyRxActive   => '1',
+        phyRxValid    => phyTxValid,
+        phyRxHeader   => phyTxData(65 downto 64),
+        phyRxData     => phyTxData(63 downto 0),
+        phyRxStartSeq => '0',
+        phyRxSlip     => open);
 
   -- Generate the test stimulus
   stimulus: process begin
