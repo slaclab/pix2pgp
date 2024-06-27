@@ -290,11 +290,11 @@ begin
       v.dataHeader(TRG_CNT_POS_C)          := trgNum;
 
       -- Outputs
-      arbBusy      <= v.arbBusy;
-      dataRd       <= v.dataRd;
-      colSel       <= v.colSel;
-      arbValidComb <= v.arbValid;
-      arbDoutComb  <= v.arbDout;
+      arbBusy  <= v.arbBusy;
+      dataRd   <= v.dataRd;
+      colSel   <= v.colSel;
+      arbValid <= r.arbValid;
+      arbDout  <= r.arbDout;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -314,28 +314,6 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
-
-   -- pipeline the data output to give some freedom in placement
-   U_PipelineValid : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => DOUT_PIPE_G)
-      port map (
-         clk     => pgpClk,
-         din(0)  => arbValidComb,
-         dout(0) => arbValid);
-
-   U_PipelineDout : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => DATABUS_DWIDTH_C,
-         DELAY_G        => DOUT_PIPE_G)
-      port map (
-         clk  => pgpClk,
-         din  => arbDoutComb,
-         dout => arbDout);
 
    -----------
    -- Watchdog

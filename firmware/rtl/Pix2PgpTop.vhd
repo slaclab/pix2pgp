@@ -215,7 +215,7 @@ begin
          trgNum        => trgNum,
          arbBusy       => arbBusy,
          -- Gearbox Interface
-         --arbReady      => arbReady,
+         arbReady      => arbReady,
          arbValid      => arbValid,
          arbDout       => arbDout);
 
