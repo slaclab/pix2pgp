@@ -74,6 +74,10 @@ architecture test of Pix2PgpTopTb is
    signal phyTxData   : slv(65 downto 0) := (others => '0');
 
    signal pgpData32b  : slv(31 downto 0) := (others => '0');
+   signal pgpData66b  : slv(65 downto 0) := (others => '0');
+   signal pgpData32bValid : sl := '0';
+   signal pgpData32bReady : sl := '0';
+   signal pgpData66bValid : sl := '0';
 
    signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
@@ -83,7 +87,7 @@ begin
 
   -- rst and clk
   clk <= not clk after CLK_PERIOD_C - TPD_C;
-  rst <= '1', '0' after CLK_PERIOD_C*20;
+  rst <= '1', '0' after CLK_PERIOD_C*200;
 
    -------
    -- ASIC
@@ -168,7 +172,7 @@ begin
         phyTxReady => phyTxReady,
         phyTxData  => phyTxData);
 
-    U_Serializer : entity surf.Gearbox
+    U_SerializerGearbox : entity surf.Gearbox
       generic map (
          TPD_G          => TPD_C,
          RST_ASYNC_G    => RST_ASYNC_C,
@@ -185,11 +189,37 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
+         masterReady    => pgpData32bReady,
+         masterValid    => pgpData32bValid,
          masterData     => pgpData32b);
 
      -------
      -- FPGA
      -------
+    U_SerializerReverseGearbox : entity surf.Gearbox
+      generic map (
+         TPD_G          => TPD_C,
+         RST_ASYNC_G    => RST_ASYNC_C,
+         SLAVE_WIDTH_G  => 32,
+         MASTER_WIDTH_G => 66)
+      port map (
+         -- Clock and Reset
+         clk            => clk,
+         rst            => rst,
+         -- Slave Interface
+         slaveValid     => pgpData32bValid,
+         slaveReady     => pgpData32bReady,
+         slaveData      => pgpData32b,
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterReady    => '1', -- always ready
+         masterValid    => pgpData66bValid,
+         masterData     => pgpData66b);
+
+
+
+
     U_PgpRx : entity surf.Pgp4Rx
      generic map(
         TPD_G              => TPD_C,
@@ -215,9 +245,9 @@ begin
         phyRxRst      => rst,
         phyRxInit     => open,
         phyRxActive   => '1',
-        phyRxValid    => phyTxValid,
-        phyRxHeader   => phyTxData(65 downto 64),
-        phyRxData     => phyTxData(63 downto 0),
+        phyRxValid    => pgpData66bValid,
+        phyRxHeader   => pgpData66b(65 downto 64),
+        phyRxData     => pgpData66b(63 downto 0),
         phyRxStartSeq => '0',
         phyRxSlip     => open);
 
@@ -231,7 +261,7 @@ begin
       hitLen(col) <= toSlv(0, hitLen(col)'length);
     end loop;
 
-    wait for CLK_PERIOD_C*300;
+    wait for CLK_PERIOD_C*4200; -- extend wait to align pgp protocol
       sro <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
