@@ -34,21 +34,20 @@ entity Pix2PgpColumnSupervisor is
       FIFO_RD_DELAY_G : positive := 3);
    port(
       -- General Interface
-      pgpClk          : in  sl;
-      rst             : in  sl := not(RST_POLARITY_G);
-      columnEnable    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pgpClk        : in  sl;
+      rst           : in  sl := not(RST_POLARITY_G);
+      columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
-      statusBusGlbl   : in  Pix2PgpStatusBusArray;
-      statusRd        : out sl;
+      statusBusGlbl : in  Pix2PgpStatusBusArray;
+      statusRd      : out sl;
       -- Arbiter Interface
-      arbiterBusy     : in  sl;
-      arbiterStart    : out sl;
-      statusFifoError : out sl;
-      dataFifoError   : out sl;
-      overOccError    : out sl;
-      alignError      : out sl;
-      colBitmask      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum          : out slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0));
+      arbiterBusy   : in  sl;
+      arbiterStart  : out sl;
+      colFifoError  : out sl;
+      overOccError  : out sl;
+      alignError    : out sl;
+      colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum        : out slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
@@ -61,56 +60,52 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    type RegType is record
       -- i/o
-      statusRd         : sl;
-      arbiterBusyDly   : sl;
-      arbiterStart     : sl;
-      statusFifoError  : sl;
-      dataFifoError    : sl;
-      overOccError     : sl;
-      alignError       : sl;
-      columnIgnore     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colBitmask       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      statusRd       : sl;
+      arbiterBusy    : sl;
+      arbiterStart   : sl;
+      colFifoError   : sl;
+      overOccError   : sl;
+      alignError     : sl;
+      colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
-      dataReady        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      refTrgNum        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
-      colTrgAlignErr   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colOverOccErr    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colDataFullErr   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colStatusFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt          : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
-      state            : StateType;
+      dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colTrgAlignErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
+      state          : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      statusRd         => '0',
-      arbiterBusyDly   => '0',
-      arbiterStart     => '0',
-      statusFifoError  => '0',
-      dataFifoError    => '0',
-      overOccError     => '0',
-      alignError       => '0',
-      columnIgnore     => (others => '0'),
-      colBitmask       => (others => '0'),
+      statusRd       => '0',
+      arbiterBusy    => '0',
+      arbiterStart   => '0',
+      colFifoError   => '0',
+      overOccError   => '0',
+      alignError     => '0',
+      colBitmask     => (others => '0'),
       -- internal
-      dataReady        => (others => '0'),
-      refTrgNum        => (others => '0'),
-      colTrgAlignErr   => (others => '0'),
-      colOverOccErr    => (others => '0'),
-      colDataFullErr   => (others => '0'),
-      colStatusFullErr => (others => '0'),
-      waitCnt          => (others => '0'),
-      state            => MON_STATUS_S);
+      dataReady      => (others => '0'),
+      colTrgAlignErr => (others => '0'),
+      colOverOccErr  => (others => '0'),
+      colFifoFullErr => (others => '0'),
+      waitCnt        => (others => '0'),
+      state          => MON_STATUS_S);
 
-   signal arbiterBusyDly : sl;
-   signal r              : RegType := REG_INIT_C;
-   signal rin            : RegType;
+   signal statusManagerDone : sl := '0';
+   signal columnIgnore      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
+   signal refTrgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
+
+   signal r   : RegType := REG_INIT_C;
+   signal rin : RegType;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, rst, statusBusGlbl, arbiterBusyDly, columnEnable) is
+   comb : process (r, rst, statusBusGlbl, arbiterBusy,
+                   columnIgnore, refTrgNum, statusManagerDone) is
       variable v : RegType;
    begin
 
@@ -121,44 +116,48 @@ begin
       v.statusRd := '0';
 
       -- Register inputs
-      v.arbiterBusyDly := arbiterBusyDly;
-      v.columnIgnore   := not(columnEnable);
+      v.arbiterBusy := arbiterBusy;
 
-      -- global monitoring of status bus
+      -- global loop of monitoring of status bus
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         -- column is ready when its status FIFO has a word
-         v.dataReady(col) := not(statusBusGlbl(col).statusEmpty) or
-                                (r.columnIgnore(col));
 
-         -- check Data Length from each column manager's status bus and set the colBitmask accordingly
+         -- column is ready when its status FIFO has a word
+         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) or
+                                (columnIgnore(col));
+
+         -- check Data Length from each column manager's status bus and set the colBitmask;
          -- a high bit on the bitmask indicates that the associated column does have hits
-         if (allBits(statusBusGlbl(col).dataLen, '0'))
-         or  toBoolean(r.columnIgnore(col)) then
+         if allBits(statusBusGlbl(col).dataLen, '0')
+         or toBoolean(columnIgnore(col)) then
             v.colBitmask(col) := '0';
          else
             v.colBitmask(col) := '1';
          end if;
 
-         -- error-checking
-         -- reference trigger number is associated with the first column
-         v.refTrgNum := statusBusGlbl(0).trgNum;
-
          -- check if all triggers are aligned with each other
-         if statusBusGlbl(col).trgNum = r.refTrgNum
-         or toBoolean(r.columnIgnore(col)) then
+         if statusBusGlbl(col).trgNum = refTrgNum
+         or toBoolean(columnIgnore(col)) then
             v.colTrgAlignErr(col) := '0';
          else
             v.colTrgAlignErr(col) := '1';
          end if;
 
          -- check for any over-occupancy errors
-         v.colOverOccErr(col) := statusBusGlbl(col).overOcc;
+         if     (toBoolean(statusBusGlbl(col).overOcc))
+         and not(toBoolean(columnIgnore(col))) then
+            v.colOverOccErr(col) := '1';
+         else
+            v.colOverOccErr(col) := '0';
+         end if;
 
-         -- check for any dataFull errors
-         v.colDataFullErr(col) := statusBusGlbl(col).dataFull;
+         -- check for any columnFull errors
+         if     (toBoolean(statusBusGlbl(col).columnFull))
+         and not(toBoolean(columnIgnore(col))) then
+            v.colFifoFullErr(col) := '1';
+         else
+            v.colFifoFullErr(col) := '0';
+         end if;
 
-         -- check for any dataFull errors
-         v.colStatusFullErr(col) := statusBusGlbl(col).statusFull;
       end loop;
 
       -------------------------------------------------------------------------
@@ -166,22 +165,21 @@ begin
       -------------------------------------------------------------------------
          -- stay here until *all* columns have data;
          -- issue the rdEn pulse to the FIFO if all columns have data;
-         -- don't do anything if all columns are disabled
+         -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
-            if toBoolean(uAnd(v.dataReady)) and
-               toBoolean(not(uAnd(r.columnIgnore))) then
+            if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.statusRd := '1';
                v.state    := WAIT_BUS_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- wait for the bus to stabilize first
+         -- wait for the bus to stabilize first;
+         -- evaluate the error flags
          when WAIT_BUS_S =>
-            v.waitCnt         := r.waitCnt + 1;
-            v.statusFifoError := uOr(v.colStatusFullErr);
-            v.dataFifoError   := uOr(v.colDataFullErr);
-            v.overOccError    := uOr(v.colOverOccErr);
-            v.alignError      := uOr(v.colTrgAlignErr);
+            v.waitCnt      := r.waitCnt + 1;
+            v.colFifoError := uOr(v.colFifoFullErr);
+            v.overOccError := uOr(v.colOverOccErr);
+            v.alignError   := uOr(v.colTrgAlignErr);
 
             if r.waitCnt = FIFO_RD_DELAY_G then
                v.state := CHECK_ERROR_S;
@@ -191,10 +189,8 @@ begin
          -- change the column bitmask if an error is reported
          -- overOcc is read-out normally, so don't change the bitmask
          when CHECK_ERROR_S =>
-            if r.statusFifoError = '1' then
-               v.colBitmask := v.colStatusFullErr;
-            elsif r.dataFifoError = '1' then
-               v.colBitmask := v.colDataFullErr;
+            if r.colFifoError = '1' then
+               v.colBitmask := v.colFifoFullErr;
             elsif r.alignError = '1' then
                v.colBitmask := v.colTrgAlignErr;
             end if;
@@ -204,7 +200,7 @@ begin
             -- rising-edge detection;
             -- arbiter might also be TX'ing dummy headers;
             -- need to account for this (can't just check `arbiterBusy = '1'`)
-            if v.arbiterBusyDly = '1' and r.arbiterBusyDly = '0' then
+            if v.arbiterBusy = '1' and r.arbiterBusy = '0' then
                v.state := WAIT_ARB_S;
             end if;
 
@@ -214,7 +210,7 @@ begin
             v.arbiterStart := '0';
             v.waitCnt      := (others => '0');
 
-            if r.arbiterBusyDly = '0' then
+            if r.arbiterBusy = '0' then
                v.state := MON_STATUS_S;
             end if;
 
@@ -222,15 +218,14 @@ begin
       -------------------------------------------------------------------------
 
       -- Outputs
-      statusRd        <= v.statusRd;
-      statusFifoError <= v.statusFifoError;
-      dataFifoError   <= v.dataFifoError;
-      overOccError    <= v.overOccError;
-      alignError      <= v.alignError;
-      colBitmask      <= v.colBitmask;
-      trgNum          <= v.refTrgNum;
+      statusRd     <= v.statusRd;
+      colFifoError <= v.colFifoError;
+      overOccError <= v.overOccError;
+      alignError   <= v.alignError;
+      colBitmask   <= v.colBitmask;
+      trgNum       <= refTrgNum;
 
-      arbiterStart    <= r.arbiterStart;
+      arbiterStart <= v.arbiterStart;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -251,14 +246,24 @@ begin
       end if;
    end process seq;
 
-   U_PipelineBusy : entity surf.SlvDelay
-      generic map (
+   ------------------------------------------------
+   -- Column Status sub-FSM
+   ------------------------------------------------
+   U_Pix2PgpColumnStatusManager: entity pix2pgp.Pix2PgpColumnStatusManager
+      generic map(
          TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 1)
-      port map (
-         clk     => pgpClk,
-         din(0)  => arbiterBusy,
-         dout(0) => arbiterBusyDly);
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map(
+         -- General Interface
+         clk           => pgpClk,
+         rst           => rst,
+         columnEnable  => columnEnable,
+         -- Column Manager Interface
+         statusBusGlbl => statusBusGlbl,
+         -- Column Supervisor Interface
+         done          => statusManagerDone,
+         columnIgnore  => columnIgnore,
+         refTrgNum     => refTrgNum);
 
 end rtl;

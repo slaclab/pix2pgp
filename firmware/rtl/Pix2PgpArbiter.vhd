@@ -39,26 +39,25 @@ entity Pix2PgpArbiter is
       DATAFIFO_FWFT_G : boolean  := true);
    port(
       -- General Interface
-      pgpClk          : in  sl;
-      rst             : in  sl := not(RST_POLARITY_G);
+      pgpClk       : in  sl;
+      rst          : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
-      dataLenSel      : in  slv(DATALEN_WIDTH_C-1 downto 0);
-      dataBusSel      : in  Pix2PgpDataBusType;
-      dataRd          : out sl;
-      colSel          : out slv(BITMAX_COL_MANAGERS_C downto 0);
+      dataLenSel   : in  slv(DATALEN_WIDTH_C-1 downto 0);
+      dataBusSel   : in  Pix2PgpDataBusType;
+      dataRd       : out sl;
+      colSel       : out slv(BITMAX_COL_MANAGERS_C downto 0);
       -- Column Supervisor Interface
-      arbStart        : in  sl;
-      statusFifoError : in  sl;
-      dataFifoError   : in  sl;
-      overOccError    : in  sl;
-      alignError      : in  sl;
-      colBitmask      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum          : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
-      arbBusy         : out sl;
+      arbStart     : in  sl;
+      colFifoError : in  sl;
+      overOccError : in  sl;
+      alignError   : in  sl;
+      colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum       : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
+      arbBusy      : out sl;
       -- Gearbox Interface
-      arbReady        : in  sl := '1';
-      arbValid        : out sl;
-      arbDout         : out slv(DATABUS_DWIDTH_C-1 downto 0));
+      arbReady     : in  sl := '1';
+      arbValid     : out sl;
+      arbDout      : out slv(DATABUS_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
@@ -74,7 +73,6 @@ architecture rtl of Pix2PgpArbiter is
 
    constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
 
-   signal fifoFull           : sl := '0';
    signal arbValidComb       : sl := '0';
    signal setWatchdog        : sl := '0';
    signal timeoutWatchdog    : sl := '0';
@@ -135,8 +133,8 @@ begin
    ------------------------------------------------
    -- Arbiter FSM
    ------------------------------------------------
-   comb : process (r, rst, dataLenSel, dataBusSel, arbStart, statusFifoError,
-                   dataFifoError, overOccError, alignError, colBitmask, trgNum,
+   comb : process (r, rst, dataLenSel, dataBusSel, arbStart, colFifoError,
+                   overOccError, alignError, colBitmask, trgNum,
                    arbReady, timeoutWatchdogDly) is
 
       variable v : RegType;
@@ -182,10 +180,9 @@ begin
                v.arbBusy  := '1';
                v.arbValid := '1';
 
-               if statusFifoError = '1' or
-                  dataFifoError   = '1' or
-                  alignError      = '1' or
-                  v.eventEmpty    = '1' then
+               if colFifoError = '1' or
+                  alignError   = '1' or
+                  v.eventEmpty = '1' then
                   v.state := DONE_S;
                else
                   v.state := CHECK_BITMASK_S;
@@ -285,8 +282,7 @@ begin
 
       -- header mapping
       v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError;
-      v.dataHeader(DATA_FULL_FLAG_POS_C)   := dataFifoError;
-      v.dataHeader(STATUS_FULL_FLAG_POS_C) := statusFifoError;
+      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError;
       v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := r.dummyHeader;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');

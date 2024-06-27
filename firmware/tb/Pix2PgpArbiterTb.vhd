@@ -32,8 +32,7 @@ architecture test of Pix2PgpArbiterTb is
    signal columnEnable    : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '1');
 
    signal arbStart        : sl := '0';
-   signal statusFifoError : sl := '0';
-   signal dataFifoError   : sl := '0';
+   signal colFifoError    : sl := '0';
    signal overOccError    : sl := '0';
    signal alignError      : sl := '0';
    signal colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
@@ -75,25 +74,24 @@ begin
          FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_C)
       port map (
          -- General Interface
-         pgpClk          => clk,
-         rst             => rst,
+         pgpClk        => clk,
+         rst           => rst,
          -- Column Manager Interface
-         dataLenSel      => statusBusSel.dataLen,
-         dataBusSel      => dataBusSel,
-         dataRd          => dataRd,
-         colSel          => colSel,
+         dataLenSel    => statusBusSel.dataLen,
+         dataBusSel    => dataBusSel,
+         dataRd        => dataRd,
+         colSel        => colSel,
          -- Column Supervisor Interface
-         arbStart        => arbStart,
-         statusFifoError => statusFifoError,
-         dataFifoError   => dataFifoError,
-         overOccError    => overOccError,
-         alignError      => alignError,
-         colBitmask      => colBitmask,
-         trgNum          => trgNum,
-         arbBusy         => arbBusy,
+         arbStart      => arbStart,
+         colFifoError  => colFifoError,
+         overOccError  => overOccError,
+         alignError    => alignError,
+         colBitmask    => colBitmask,
+         trgNum        => trgNum,
+         arbBusy       => arbBusy,
          -- Gearbox Interface
-         arbValid        => arbValid,
-         arbDout         => arbDout);
+         arbValid      => arbValid,
+         arbDout       => arbDout);
 
   -- Generate the test stimulus
   stimulus: process begin

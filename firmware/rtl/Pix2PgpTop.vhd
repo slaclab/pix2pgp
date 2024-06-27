@@ -70,32 +70,31 @@ end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
 
-   signal dataRd          : sl := '0';
-   signal statusRd        : sl := '0';
-   signal colSel          : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
-   signal dataRdSel       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal statusBusSel    : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;
-   signal dataBusSel      : Pix2PgpDataBusType    := DEFAULT_PIX2PGP_DATABUS_C;
-   signal statusBus       : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
-   signal statusBusGlbl   : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
-   signal dataBus         : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal statusRdFanOut  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal dataRd         : sl := '0';
+   signal statusRd       : sl := '0';
+   signal colSel         : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
+   signal dataRdSel      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal statusBusSel   : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;
+   signal dataBusSel     : Pix2PgpDataBusType    := DEFAULT_PIX2PGP_DATABUS_C;
+   signal statusBus      : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
+   signal statusBusGlbl  : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
+   signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
+   signal statusRdFanOut : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
-   signal arbStart        : sl := '0';
-   signal statusFifoError : sl := '0';
-   signal dataFifoError   : sl := '0';
-   signal overOccError    : sl := '0';
-   signal alignError      : sl := '0';
-   signal arbBusy         : sl := '0';
-   signal colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
-   signal trgNum          : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
-   signal arbValid        : sl := '0';
-   signal arbReady        : sl := '0';
-   signal arbDout         : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal arbStart       : sl := '0';
+   signal colFifoError   : sl := '0';
+   signal overOccError   : sl := '0';
+   signal alignError     : sl := '0';
+   signal arbBusy        : sl := '0';
+   signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
+   signal trgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
+   signal arbValid       : sl := '0';
+   signal arbReady       : sl := '0';
+   signal arbDout        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    --
-   signal pgpReady        : sl := '0';
-   signal pgpValid        : sl := '0';
-   signal pgpData         : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
+   signal pgpReady       : sl := '0';
+   signal pgpValid       : sl := '0';
+   signal pgpData        : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
 
@@ -172,21 +171,20 @@ begin
          FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G)
       port map(
          -- General Interface
-         pgpClk          => pgpClk,
-         rst             => rst,
-         columnEnable    => columnEnable,
+         pgpClk        => pgpClk,
+         rst           => rst,
+         columnEnable  => columnEnable,
          -- Column Manager Interface
-         statusBusGlbl   => statusBusGlbl,
-         statusRd        => statusRd,
+         statusBusGlbl => statusBusGlbl,
+         statusRd      => statusRd,
          -- Arbiter Interface
-         arbiterBusy     => arbBusy,
-         arbiterStart    => arbStart,
-         statusFifoError => statusFifoError,
-         dataFifoError   => dataFifoError,
-         overOccError    => overOccError,
-         alignError      => alignError,
-         colBitmask      => colBitmask,
-         trgNum          => trgNum);
+         arbiterBusy   => arbBusy,
+         arbiterStart  => arbStart,
+         colFifoError  => colFifoError,
+         overOccError  => overOccError,
+         alignError    => alignError,
+         colBitmask    => colBitmask,
+         trgNum        => trgNum);
 
    -----------------------------------------
    -- Arbiter
@@ -201,26 +199,25 @@ begin
          DATAFIFO_FWFT_G => DATAFIFO_FWFT_G)
       port map (
          -- General Interface
-         pgpClk          => pgpClk,
-         rst             => rst,
+         pgpClk        => pgpClk,
+         rst           => rst,
          -- Column Manager Interface
-         dataLenSel      => statusBusSel.dataLen,
-         dataBusSel      => dataBusSel,
-         dataRd          => dataRd,
-         colSel          => colSel,
+         dataLenSel    => statusBusSel.dataLen,
+         dataBusSel    => dataBusSel,
+         dataRd        => dataRd,
+         colSel        => colSel,
          -- Column Supervisor Interface
-         arbStart        => arbStart,
-         statusFifoError => statusFifoError,
-         dataFifoError   => dataFifoError,
-         overOccError    => overOccError,
-         alignError      => alignError,
-         colBitmask      => colBitmask,
-         trgNum          => trgNum,
-         arbBusy         => arbBusy,
+         arbStart      => arbStart,
+         colFifoError  => colFifoError,
+         overOccError  => overOccError,
+         alignError    => alignError,
+         colBitmask    => colBitmask,
+         trgNum        => trgNum,
+         arbBusy       => arbBusy,
          -- Gearbox Interface
-         --arbReady        => arbReady,
-         arbValid        => arbValid,
-         arbDout         => arbDout);
+         --arbReady      => arbReady,
+         arbValid      => arbValid,
+         arbDout       => arbDout);
 
    arbValidDbg <= arbValid;
    arbDataDbg  <= arbDout;

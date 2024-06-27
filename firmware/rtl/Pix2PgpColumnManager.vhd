@@ -55,14 +55,15 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   signal statusFifoDout : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal statusFifoFull : sl := '0';
-   signal dataFifoFull   : sl := '0';
+   signal statusFifoDout  : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal statusFifoEmpty : sl := '0';
+   signal statusFifoFull  : sl := '0';
+   signal dataFifoFull    : sl := '0';
 
-   signal statusWrEn     : sl := '0';
-   signal statusDin      : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal dataWrEn       : sl := '0';
-   signal dataDin        : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
+   signal statusWrEn      : sl := '0';
+   signal statusDin       : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataWrEn        : sl := '0';
+   signal dataDin         : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
@@ -265,13 +266,9 @@ begin
          -- Read Interface
          rdClk  => pgpClk,
          rdEn   => statusRd,
-         empty  => statusBus.statusEmpty,
-         fullRd => statusBus.statusFull,
+         empty  => statusFifoEmpty,
+         fullRd => statusFifoFull,
          dout   => statusFifoDout);
-
-   statusBus.overOcc <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
-   statusBus.trgNum  <= statusFifoDout(STATUSFIFO_TRG_POS_C);
-   statusBus.dataLen <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
 
    ------------------------------------------------
    -- Data FIFO
@@ -322,7 +319,15 @@ begin
          -- Read Interface
          rdClk  => pgpClk,
          rdEn   => dataRd,
-         fullRd => statusBus.dataFull,
+         empty  => open, -- empty status implied by status FIFO contents
+         fullRd => dataFifoFull,
          dout   => dataBus.data);
+
+   -- status bus assignments
+   statusBus.overOcc     <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
+   statusBus.trgNum      <= statusFifoDout(STATUSFIFO_TRG_POS_C);
+   statusBus.dataLen     <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
+   statusBus.columnFull  <= statusFifoFull or dataFifoFull;
+   statusBus.columnEmpty <= statusFifoEmpty;
 
 end rtl;
