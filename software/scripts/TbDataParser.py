@@ -13,7 +13,7 @@ parser.add_argument(
     "--dataFile",
     type     = str,
     required = False,
-    default  = '../firmware/ghdl/pix2pgpArbDataDump.dat',
+    default  = '../firmware/ghdl/pix2pgpRxDataDump.dat',
     help     = "Default data file",
 )
 

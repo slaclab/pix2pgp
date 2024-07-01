@@ -24,6 +24,7 @@
 firmware/ghdl/pix2pgpgearboxwrappertb
 firmware/ghdl/pix2pgptoptb
 firmware/ghdl/pix2pgparbitertb
+firmware/ghdl/pgptb
 
 # Matlab
 *.autosave

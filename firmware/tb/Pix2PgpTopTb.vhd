@@ -78,6 +78,8 @@ architecture test of Pix2PgpTopTb is
    signal pgpData32bValid : sl := '0';
    signal pgpData32bReady : sl := '0';
    signal pgpData66bValid : sl := '0';
+   signal pgpData40bValid  : sl := '0';
+   signal pgpData40bData :  slv(39 downto 0) := (others => '0');
 
    signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
@@ -217,16 +219,13 @@ begin
          masterValid    => pgpData66bValid,
          masterData     => pgpData66b);
 
-
-
-
     U_PgpRx : entity surf.Pgp4Rx
      generic map(
-        TPD_G              => TPD_C,
-        RST_ASYNC_G        => RST_ASYNC_C,
-        NUM_VC_G           => NUM_VC_C,
-        SKIP_EN_G          => true,
-        LITE_EN_G          => true)
+        TPD_G       => TPD_C,
+        RST_ASYNC_G => RST_ASYNC_C,
+        NUM_VC_G    => NUM_VC_C,
+        SKIP_EN_G   => true,
+        LITE_EN_G   => true)
      port map(
         -- User Transmit interface
         pgpRxClk     => clk,
@@ -250,6 +249,27 @@ begin
         phyRxData     => pgpData66b(63 downto 0),
         phyRxStartSeq => '0',
         phyRxSlip     => open);
+
+     U_FpgaGearbox : entity surf.Gearbox
+      generic map (
+         TPD_G          => TPD_C,
+         RST_ASYNC_G    => RST_ASYNC_C,
+         SLAVE_WIDTH_G  => 64,
+         MASTER_WIDTH_G => 40)
+      port map (
+         -- Clock and Reset
+         clk            => clk,
+         rst            => rst,
+         -- Slave Interface
+         slaveValid     => pgpRxMasters(0).tvalid,
+         slaveReady     => open,
+         slaveData      => pgpRxMasters(0).tData(63 downto 0),
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterReady    => '1',
+         masterValid    => pgpData40bValid,
+         masterData     => pgpData40bData);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -328,10 +348,10 @@ begin
 
   end process stimulus;
 
-  writeDataProcess: process(clk)
+  writeData1Process: process(clk)
 
     -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpArbDataDump.dat";
+    file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
     variable row : line;
 
   begin
@@ -339,16 +359,15 @@ begin
       -- first check if the rst is low
       if (rst = '0') then
         -- then check if the valid flag is high
-        if arbValidDbg = '1' then
+        if pgpData40bValid = '1' then
           -- syntax: write(row_variable,what_to_write,
           -- justification(right/left), trailing_whitespaces);
           -- writeline(file_variable, row_variable);
-          hwrite(row, arbDataDbg, right, 0);
+          hwrite(row, pgpData40bData, right, 0);
           writeline(myFile,row);
         end if;
       end if;
     end if;
   end process;
-
 
 end architecture;
