@@ -60,12 +60,7 @@ entity Pix2PgpTop is
       txData       : out slv(63 downto 0);
       txSof        : out sl;
       txEof        : out sl;
-      txEofe       : out sl;
-      -- Temporary Debugging Interface (TO-DO: remove me)
-      arbValidDbg  : out sl;
-      arbDataDbg   : out slv(DATABUS_DWIDTH_C-1 downto 0);
-      -- Configuration Register Interface (TO-DO: add more)
-      frameSize    : in  slv(5 downto 0)); --in multiples of 64-bit words
+      txEofe       : out sl);
 end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
@@ -218,9 +213,6 @@ begin
          arbReady      => arbReady,
          arbValid      => arbValid,
          arbDout       => arbDout);
-
-   arbValidDbg <= arbValid;
-   arbDataDbg  <= arbDout;
 
    -----------------------------------------
    -- Gearbox (40:64)

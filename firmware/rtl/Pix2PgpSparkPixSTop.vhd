@@ -120,12 +120,7 @@ begin
          txData       => txData,
          txSof        => txSof,
          txEof        => txEof,
-         txEofe       => txEofe,
-         -- Temporary Debugging Interface (TO-DO: remove me)
-         arbValidDbg  => open,
-         arbDataDbg   => open,
-         -- Configuration Register Interface (TO-DO: add more)
-         frameSize    => (others => '0'));
+         txEofe       => txEofe);
 
       din(0)  <= din0;
       din(1)  <= din1;

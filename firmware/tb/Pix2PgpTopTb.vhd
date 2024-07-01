@@ -56,11 +56,6 @@ architecture test of Pix2PgpTopTb is
    signal txEof        : sl := '0';
    signal txEofe       : sl := '0';
 
-   signal arbValidDbg  : sl := '0';
-   signal arbDataDbg   : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
-
-   signal frameSize    : slv(5 downto 0) := toSlv(2, 6);
-
    signal fillFifos    : sl := '0';
    signal fillCnt      : natural range 0 to 1023;
 
@@ -149,12 +144,7 @@ begin
          txData       => txData,
          txSof        => txSof,
          txEof        => txEof,
-         txEofe       => txEofe,
-         -- Temporary Debugging Interface (TO-DO: remove me)
-         arbValidDbg  => arbValidDbg,
-         arbDataDbg   => arbDataDbg,
-         -- Configuration Register Interface (TO-DO: add more)
-         frameSize    => frameSize);
+         txEofe       => txEofe);
 
     -- Instantiate the PGP4TxLiteWrapper
     U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
