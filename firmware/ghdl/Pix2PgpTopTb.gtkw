@@ -1,32 +1,31 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Mon Jul  1 02:49:07 2024
+[*] Mon Jul  1 04:46:22 2024
 [*]
 [dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Mon Jul  1 02:46:19 2024"
-[dumpfile_size] 7201711
+[dumpfile_mtime] "Mon Jul  1 04:38:01 2024"
+[dumpfile_size] 7042628
 [savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 0
+[timestart] 26570300000
 [size] 1850 1016
 [pos] 2629 26
-*-33.760174 39930000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-24.931988 26729248000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
 [treeopen] top.pix2pgptoptb.pgprxmasters.
 [treeopen] top.pix2pgptoptb.pgprxmasters.[0].
-[treeopen] top.pix2pgptoptb.u_pgprx.
 [treeopen] top.pix2pgptoptb.u_pgprx.pgprxout.
 [treeopen] top.pix2pgptoptb.u_pgprx.u_pgp4rxprotocol_1.
 [treeopen] top.pix2pgptoptb.u_pgprx.u_pgp4rxprotocol_1.r.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.databus.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_watchdog.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_watchdog.r.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.statusbusglbl.[0].
 [sst_width] 293
 [signals_width] 190
@@ -88,7 +87,10 @@ top.pix2pgptoptb.u_pix2pgptop.sparseclk
 @200
 -colmanager7
 @28
+top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.afulldata
 top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.datafifofull
+top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.statusbus.columnfull
+top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.statusbus.columnempty
 top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.statusfifofull
 top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.datard
 top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.statusrd
@@ -179,8 +181,10 @@ top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.datard
 @28
 [color] 2
 top.pix2pgptoptb.u_pix2pgptop.arbvalid
+@29
 [color] 2
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.arbready
+@28
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.arbbusy
 [color] 1
 top.pix2pgptoptb.u_pix2pgptop.u_adapter.pgpvalid

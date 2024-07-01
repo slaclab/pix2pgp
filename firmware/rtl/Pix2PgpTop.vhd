@@ -35,6 +35,7 @@ entity Pix2PgpTop is
       DATAFIFO_FWFT_G          : boolean  := true;
       PIPELINE_BRIDGE_DATA_G   : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G : boolean  := false;
+      COLMANAGER_FULL_LVL_G    : integer  := 3;
       COLMANAGER_DEPTH_G       : integer  := 4;
       PGPADAPTER_DEPTH_G       : integer  := 6;
       DATAFIFO_PIPE_G          : positive := 1;
@@ -105,6 +106,7 @@ begin
             DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
             STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
             DWARE_DEPTH_G     => COLMANAGER_DEPTH_G,
+            DWARE_AF_LVL_G    => COLMANAGER_FULL_LVL_G,
             GHDL_SIM_G        => GHDL_SIM_G,
             SYNTHESIZE_G      => SYNTHESIZE_G)
          port map(

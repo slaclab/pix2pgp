@@ -32,6 +32,7 @@ entity Pix2PgpColumnManager is
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
       DWARE_DEPTH_G     : integer  := 32;
+      DWARE_AF_LVL_G    : integer  := 3;
       GHDL_SIM_G        : boolean  := false;
       SYNTHESIZE_G      : boolean  := false);
    port(
@@ -64,6 +65,7 @@ architecture rtl of Pix2PgpColumnManager is
    signal statusDin       : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataWrEn        : sl := '0';
    signal dataDin         : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
+   signal aFullData       : sl := '0';
 
    type StateType is (
       IDLE_S,
@@ -252,7 +254,7 @@ begin
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
-         ADDR_WIDTH_G    => 8,
+         ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
@@ -305,23 +307,25 @@ begin
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
          RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
-         ADDR_WIDTH_G    => 12,
+         DWARE_AF_LVL_G  => DWARE_AF_LVL_G,
+         ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
          -- Resets
-         rst    => rst,
+         rst     => rst,
          -- Write Interface
-         wrClk  => sparseClk,
-         wrEn   => dataWrEn,
-         din    => dataDin,
-         fullWr => open,
+         wrClk   => sparseClk,
+         wrEn    => dataWrEn,
+         din     => dataDin,
+         fullWr  => open,
+         aFullWr => aFullData,
          -- Read Interface
-         rdClk  => pgpClk,
-         rdEn   => dataRd,
-         empty  => open, -- empty status implied by status FIFO contents
-         fullRd => dataFifoFull,
-         dout   => dataBus.data);
+         rdClk   => pgpClk,
+         rdEn    => dataRd,
+         empty   => open, -- empty status implied by status FIFO contents
+         fullRd  => dataFifoFull,
+         dout    => dataBus.data);
 
    -- status bus assignments
    statusBus.overOcc     <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
