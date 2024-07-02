@@ -58,6 +58,7 @@ end Pix2PgpColumnManager;
 architecture rtl of Pix2PgpColumnManager is
 
    signal statusFifoDout  : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataFifoEmpty   : sl := '0';
    signal statusFifoEmpty : sl := '0';
    signal statusFifoFull  : sl := '0';
    signal dataFifoFull    : sl := '0';
@@ -124,7 +125,8 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd, dataRd) is
+   comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd,
+                   dataRd, dataFifoEmpty, statusFifoEmpty, aFullData) is
       variable v : RegType;
    begin
 
@@ -266,18 +268,20 @@ begin
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
          -- Resets
-         rst    => rst,
+         rst     => rst,
+         enable  => enable,
          -- Write Interface
-         wrClk  => sparseClk,
-         wrEn   => statusWrEn,
-         din    => statusDin,
-         fullWr => open,
+         wrClk   => sparseClk,
+         wrEn    => statusWrEn,
+         din     => statusDin,
+         fullWr  => open,
+         emptyWr => statusFifoEmpty,
          -- Read Interface
-         rdClk  => pgpClk,
-         rdEn   => statusRd,
-         empty  => statusFifoEmpty,
-         fullRd => statusFifoFull,
-         dout   => statusFifoDout);
+         rdClk   => pgpClk,
+         rdEn    => statusRd,
+         emptyRd => statusBus.columnEmpty,
+         fullRd  => statusFifoFull,
+         dout    => statusFifoDout);
 
    ------------------------------------------------
    -- Data FIFO
@@ -321,16 +325,18 @@ begin
       port map (
          -- Resets
          rst     => rst,
+         enable  => enable,
          -- Write Interface
          wrClk   => sparseClk,
          wrEn    => dataWrEn,
          din     => dataDin,
          fullWr  => open,
          aFullWr => aFullData,
+         emptyWr => dataFifoEmpty,
          -- Read Interface
          rdClk   => pgpClk,
          rdEn    => dataRd,
-         empty   => open, -- empty status implied by status FIFO contents
+         emptyRd => open,
          fullRd  => dataFifoFull,
          dout    => dataBus.data);
 
@@ -339,6 +345,5 @@ begin
    statusBus.trgNum      <= statusFifoDout(STATUSFIFO_TRG_POS_C);
    statusBus.dataLen     <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
    statusBus.columnFull  <= statusFifoFull or dataFifoFull;
-   statusBus.columnEmpty <= statusFifoEmpty;
 
 end rtl;

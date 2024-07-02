@@ -191,17 +191,19 @@ begin
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
          -- Resets
-         rst    => rst,
+         rst     => rst,
+         enable  => '1',
          -- Writ e Interface
          wrClk   => pgpClk,
          wrEn    => pgpValid,
          din     => pgpData,
          aFullWr => pgpAFull,
          fullWr  => pgpFull,
+         emptyWr => open,
          -- Read Interface
          rdClk   => pgpClk,
          rdEn    => fifoRdEn,
-         empty   => fifoEmpty,
+         emptyRd => fifoEmpty,
          fullRd  => open,
          dout    => txData);
 

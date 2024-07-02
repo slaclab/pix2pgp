@@ -42,27 +42,29 @@ entity Pix2PgpFifoWrapper is
    port(
       -- Resets
       rst     : in  sl;
+      enable  : in  sl;
       -- Write Interface
       wrClk   : in  sl;
       wrEn    : in  sl;
       din     : in  slv(WR_DATA_WIDTH_G-1 downto 0);
       aFullWr : out sl;
       fullWr  : out sl := '0';
+      emptyWr : out sl := '0';
       -- Read Interface
       rdClk   : in  sl;
       rdEn    : in  sl;
-      empty   : out sl := '1';
+      emptyRd : out sl := '1';
       fullRd  : out sl;
       dout    : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
-      signal rstDwareFifo   : sl := '0';
-      signal wrEnDwareFifo  : sl := '0';
-      signal rdEnDwareFifo  : sl := '0';
-
-      signal fullWrInferred : sl := '0';
+      signal wrEnDwareFifo     : sl := '0';
+      signal rdEnDwareFifo     : sl := '0';
+      signal fullWrStandalone  : sl := '0';
+      signal emptyRdStandalone : sl := '0';
+      signal rstFifo           : sl := '0';
 
    component DW_asymfifo_s2_sf is
       generic(
@@ -140,6 +142,8 @@ end component;
 
 begin
 
+   rstFifo <= (rst and not(enable)) when RST_POLARITY_G = '1' else (not(rst) and not(enable));
+
    STANDALONE_FLOW_GEN : if (GHDL_SIM_G = true) generate
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
@@ -156,17 +160,17 @@ begin
                FULL_THRES_G    => DWARE_AF_LVL_G,
                ADDR_WIDTH_G    => ADDR_WIDTH_G)
             port map (
-               rst       => rst,
+               rst       => rstFifo,
                -- Write Interface
                wr_clk    => wrClk,
                wr_en     => wrEn,
                din       => din,
                prog_full => aFullWr,
-               full      => fullWrInferred,
+               full      => fullWrStandalone,
                -- Read Interface
                rd_clk    => rdClk,
                rd_en     => rdEn,
-               empty     => empty,
+               empty     => emptyRdStandalone,
                dout      => dout);
       end generate SYMM_GEN;
 
@@ -185,17 +189,17 @@ begin
                FULL_THRES_G    => DWARE_AF_LVL_G,
                ADDR_WIDTH_G    => ADDR_WIDTH_G)
             port map (
-               rst       => rst,
+               rst       => rstFifo,
                -- Write Interface
                wr_clk    => wrClk,
                wr_en     => wrEn,
                din       => din,
                prog_full => aFullWr,
-               full      => fullWrInferred,
+               full      => fullWrStandalone,
                -- Read Interface
                rd_clk    => rdClk,
                rd_en     => rdEn,
-               empty     => empty,
+               empty     => emptyRdStandalone,
                dout      => dout);
       end generate ASYMM_GEN;
 
@@ -208,10 +212,23 @@ begin
          port map (
             clk     => rdClk,
             rst     => rst,
-            dataIn  => fullWrInferred,
+            dataIn  => fullWrStandalone,
             dataOut => fullRd);
 
-      fullWr <= fullWrInferred;
+      U_syncEmpty : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            STAGES_G       => 2)
+         port map (
+            clk     => wrClk,
+            rst     => rst,
+            dataIn  => emptyRdStandalone,
+            dataOut => emptyWr);
+
+      fullWr  <= fullWrStandalone;
+      emptyRd <= emptyRdStandalone;
 
    end generate STANDALONE_FLOW_GEN;
 
@@ -226,7 +243,6 @@ begin
    end generate ASIC_SIM_FLOW_GEN;
 
    ASIC_SYNTH_FLOW_GEN : if (SYNTHESIZE_G = true) generate
-      rstDwareFifo  <= not(rst);
       wrEnDwareFifo <= not(wrEn);
       rdEnDwareFifo <= not(rdEn);
 
@@ -238,17 +254,18 @@ begin
                push_af_lvl => DWARE_AF_LVL_G,
                rst_mode    => 2)
             port map (
-               rst_n      => rstDwareFifo,
+               rst_n      => rstFifo,
                -- Write Interface
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
                push_af    => aFullWr,
                push_full  => fullWr,
+               push_empty => emptyWr,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
-               pop_empty  => empty,
+               pop_empty  => emptyRd,
                pop_full   => fullRd,
                data_out   => dout);
       end generate SYMM_GEN;
@@ -262,18 +279,19 @@ begin
                push_af_lvl    => DWARE_AF_LVL_G,
                rst_mode       => 2)
             port map (
-               rst_n      => rstDwareFifo,
-               flush_n    => rstDwareFifo,
+               rst_n      => rstFifo,
+               flush_n    => rstFifo,
                -- Write Interface
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
                data_in    => din,
                push_af    => aFullWr,
                push_full  => fullWr,
+               push_empty => emptyWr,
                -- Read Interface
                clk_pop    => rdClk,
                pop_req_n  => rdEnDwareFifo,
-               pop_empty  => empty,
+               pop_empty  => emptyRd,
                pop_full   => fullRd,
                data_out   => dout);
       end generate ASYMM_GEN;
