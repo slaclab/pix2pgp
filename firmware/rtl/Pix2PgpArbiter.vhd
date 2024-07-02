@@ -54,10 +54,10 @@ entity Pix2PgpArbiter is
       colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum       : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbBusy      : out sl;
-      -- Gearbox Interface
-      arbReady     : in  sl := '1';
-      arbValid     : out sl;
-      arbDout      : out slv(DATABUS_DWIDTH_C-1 downto 0));
+      -- Pgp Adapter Interface
+      pgpReady     : in  sl := '1';
+      pgpValid     : out sl;
+      pgpData      : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
@@ -73,7 +73,9 @@ architecture rtl of Pix2PgpArbiter is
 
    constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
 
-   signal arbValidComb       : sl := '0';
+   signal arbReady           : sl := '0';
+   signal arbValid           : sl := '0';
+   signal arbDout            : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    signal setWatchdog        : sl := '0';
    signal timeoutWatchdog    : sl := '0';
    signal timeoutWatchdogDly : sl := '0';
@@ -87,6 +89,9 @@ architecture rtl of Pix2PgpArbiter is
       DONE_S);
 
    type RegType is record
+      -- inputs
+      pgpReady     : sl;
+      arbReady     : sl;
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -107,6 +112,9 @@ architecture rtl of Pix2PgpArbiter is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
+      -- inputs
+      pgpReady     => '1',
+      arbReady     => '1',
       -- outputs
       dataRd       => '0',
       colSel       => (others => '0'),
@@ -135,7 +143,7 @@ begin
    ------------------------------------------------
    comb : process (r, rst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, alignError, colBitmask, trgNum,
-                   arbReady, timeoutWatchdogDly) is
+                   pgpReady, arbReady, timeoutWatchdogDly) is
 
       variable v : RegType;
 
@@ -144,7 +152,8 @@ begin
       -- Latch the current value
       v := r;
 
-      v.eventEmpty  := not(uOr(colBitmask));
+      v.eventEmpty := not(uOr(colBitmask));
+      v.pgpReady   := pgpReady;
 
       -- flow control check
       v.dataRd := '0';
@@ -155,7 +164,7 @@ begin
       -- watchdog control
       v.setWatchdog := '0';
 
-      if (r.arbValid = '1') then
+      if (r.arbValid = '1' and r.arbReady = '1') then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -176,7 +185,7 @@ begin
             v.arbValid    := '0';
             v.arbDout     := r.dataHeader;
 
-            if arbStart = '1' and v.arbValid = '0' then
+            if arbStart = '1' and v.arbValid = '0' and pgpReady = '1' then
                v.arbBusy  := '1';
                v.arbValid := '1';
 
@@ -205,7 +214,7 @@ begin
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
-            if (v.arbValid = '0') then
+            if (v.arbValid = '0' and pgpReady = '1') then
                v.arbValid := '1';
                -- seize the process one count before overflow -> rolls-over to 0
                if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
@@ -225,7 +234,7 @@ begin
                end if;
 
             else
-               if (v.arbValid = '0') then
+               if (v.arbValid = '0' and pgpReady = '1') then
                   v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
                   v.arbValid  := '1';
 
@@ -252,7 +261,7 @@ begin
          when PARSE_DATA_S =>
             v.arbDout := dataBusSel.data;
 
-            if v.arbValid = '0' then
+            if v.arbValid = '0' and pgpReady = '1' then
                if r.dataRdCnt /= r.dataRdCycles + FIFO_RD_DELAY_G then
                   v.arbValid  := '1';
                   v.dataRd    := '1';
@@ -314,6 +323,31 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   -----------------------------------------
+   -- Gearbox (40:64)
+   -----------------------------------------
+   U_Gearbox : entity surf.Gearbox
+      generic map (
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         SLAVE_WIDTH_G  => DATABUS_DWIDTH_C,
+         MASTER_WIDTH_G => PGP_DWIDTH_C)
+      port map (
+         -- Clock and Reset
+         clk            => pgpClk,
+         rst            => rst,
+         -- Slave Interface
+         slaveValid     => arbValid,
+         slaveData      => arbDout,
+         slaveReady     => arbReady,
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterReady    => '1', -- flow is controlled by adapter's FIFO progFull (pgpReady)
+         masterValid    => pgpValid,
+         masterData     => pgpData);
 
    -----------
    -- Watchdog

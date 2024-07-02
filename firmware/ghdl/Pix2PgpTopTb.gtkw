@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Mon Jul  1 04:46:22 2024
+[*] Tue Jul  2 07:03:03 2024
 [*]
 [dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Mon Jul  1 04:38:01 2024"
-[dumpfile_size] 7042628
+[dumpfile_mtime] "Tue Jul  2 07:01:12 2024"
+[dumpfile_size] 6534743
 [savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 26570300000
+[timestart] 0
 [size] 1850 1016
 [pos] 2629 26
-*-24.931988 26729248000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-32.931988 26729248000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
@@ -22,9 +22,9 @@
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.databus.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_adapter.r.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_watchdog.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_gearbox.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_watchdog.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.statusbusglbl.[0].
 [sst_width] 293
@@ -62,7 +62,6 @@ top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.clk
 @200
 -pix2pgptop
 @28
-top.pix2pgptoptb.u_pix2pgptop.arbvalid
 top.pix2pgptoptb.u_pix2pgptop.arbbusy
 top.pix2pgptoptb.u_pix2pgptop.alignerror
 top.pix2pgptoptb.u_pix2pgptop.overoccerror
@@ -170,21 +169,19 @@ top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.setwatchdog
 @28
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.headeronly
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.eventempty
+@421
+[color] 2
+top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_gearbox.r.writeindex
+@28
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.pgpclk
 [color] 6
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.datard
-@22
-[color] 2
-#{top.pix2pgptoptb.u_pix2pgptop.arbdout[39:0]} top.pix2pgptoptb.u_pix2pgptop.arbdout[39] top.pix2pgptoptb.u_pix2pgptop.arbdout[38] top.pix2pgptoptb.u_pix2pgptop.arbdout[37] top.pix2pgptoptb.u_pix2pgptop.arbdout[36] top.pix2pgptoptb.u_pix2pgptop.arbdout[35] top.pix2pgptoptb.u_pix2pgptop.arbdout[34] top.pix2pgptoptb.u_pix2pgptop.arbdout[33] top.pix2pgptoptb.u_pix2pgptop.arbdout[32] top.pix2pgptoptb.u_pix2pgptop.arbdout[31] top.pix2pgptoptb.u_pix2pgptop.arbdout[30] top.pix2pgptoptb.u_pix2pgptop.arbdout[29] top.pix2pgptoptb.u_pix2pgptop.arbdout[28] top.pix2pgptoptb.u_pix2pgptop.arbdout[27] top.pix2pgptoptb.u_pix2pgptop.arbdout[26] top.pix2pgptoptb.u_pix2pgptop.arbdout[25] top.pix2pgptoptb.u_pix2pgptop.arbdout[24] top.pix2pgptoptb.u_pix2pgptop.arbdout[23] top.pix2pgptoptb.u_pix2pgptop.arbdout[22] top.pix2pgptoptb.u_pix2pgptop.arbdout[21] top.pix2pgptoptb.u_pix2pgptop.arbdout[20] top.pix2pgptoptb.u_pix2pgptop.arbdout[19] top.pix2pgptoptb.u_pix2pgptop.arbdout[18] top.pix2pgptoptb.u_pix2pgptop.arbdout[17] top.pix2pgptoptb.u_pix2pgptop.arbdout[16] top.pix2pgptoptb.u_pix2pgptop.arbdout[15] top.pix2pgptoptb.u_pix2pgptop.arbdout[14] top.pix2pgptoptb.u_pix2pgptop.arbdout[13] top.pix2pgptoptb.u_pix2pgptop.arbdout[12] top.pix2pgptoptb.u_pix2pgptop.arbdout[11] top.pix2pgptoptb.u_pix2pgptop.arbdout[10] top.pix2pgptoptb.u_pix2pgptop.arbdout[9] top.pix2pgptoptb.u_pix2pgptop.arbdout[8] top.pix2pgptoptb.u_pix2pgptop.arbdout[7] top.pix2pgptoptb.u_pix2pgptop.arbdout[6] top.pix2pgptoptb.u_pix2pgptop.arbdout[5] top.pix2pgptoptb.u_pix2pgptop.arbdout[4] top.pix2pgptoptb.u_pix2pgptop.arbdout[3] top.pix2pgptoptb.u_pix2pgptop.arbdout[2] top.pix2pgptoptb.u_pix2pgptop.arbdout[1] top.pix2pgptoptb.u_pix2pgptop.arbdout[0]
 @24
+[color] 2
 #{top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.waitcnt[1:0]} top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.waitcnt[1] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.waitcnt[0]
 @28
 [color] 2
-top.pix2pgptoptb.u_pix2pgptop.arbvalid
-@29
-[color] 2
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.arbready
-@28
 top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.arbbusy
 [color] 1
 top.pix2pgptoptb.u_pix2pgptop.u_adapter.pgpvalid

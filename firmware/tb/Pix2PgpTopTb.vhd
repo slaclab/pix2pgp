@@ -33,6 +33,7 @@ architecture test of Pix2PgpTopTb is
    constant PIPELINE_BRIDGE_DATA_C   : boolean := False;
    constant PIPELINE_BRIDGE_STATUS_C : boolean := True;
    constant COLMANAGER_FULL_LVL_C    : natural := 3;
+   constant PGPADAPTER_FULL_LVL_C    : natural := 3;
    constant SUPER_FIFO_RD_DELAY_C    : natural := 3;
    constant ARB_FIFO_RD_DELAY_C      : natural := 1;
    constant ARB_DOUT_PIPE_C          : natural := 2;
@@ -124,6 +125,7 @@ begin
          PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_C,
          COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_C,
          DATAFIFO_PIPE_G          => DATAFIFO_PIPE_C,
+         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_C,
          STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_C,
          SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_C,
          ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_C,
@@ -340,7 +342,7 @@ begin
 
   end process stimulus;
 
-  writeData1Process: process(clk)
+  writeDataProcess: process(clk)
 
     -- variables for file-writing
     file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";

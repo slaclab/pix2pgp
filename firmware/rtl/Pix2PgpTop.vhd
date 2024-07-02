@@ -38,6 +38,7 @@ entity Pix2PgpTop is
       COLMANAGER_FULL_LVL_G    : integer  := 3;
       COLMANAGER_DEPTH_G       : integer  := 4;
       PGPADAPTER_DEPTH_G       : integer  := 6;
+      PGPADAPTER_FULL_LVL_G    : integer  := 3;
       DATAFIFO_PIPE_G          : positive := 1;
       STATUSFIFO_PIPE_G        : positive := 1;
       SUPER_FIFO_RD_DELAY_G    : positive := 2;
@@ -84,9 +85,6 @@ architecture rtl of Pix2PgpTop is
    signal arbBusy        : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
-   signal arbValid       : sl := '0';
-   signal arbReady       : sl := '0';
-   signal arbDout        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    --
    signal pgpReady       : sl := '0';
    signal pgpValid       : sl := '0';
@@ -196,50 +194,25 @@ begin
          DATAFIFO_FWFT_G => DATAFIFO_FWFT_G)
       port map (
          -- General Interface
-         pgpClk        => pgpClk,
-         rst           => rst,
+         pgpClk       => pgpClk,
+         rst          => rst,
          -- Column Manager Interface
-         dataLenSel    => statusBusSel.dataLen,
-         dataBusSel    => dataBusSel,
-         dataRd        => dataRd,
-         colSel        => colSel,
+         dataLenSel   => statusBusSel.dataLen,
+         dataBusSel   => dataBusSel,
+         dataRd       => dataRd,
+         colSel       => colSel,
          -- Column Supervisor Interface
-         arbStart      => arbStart,
-         colFifoError  => colFifoError,
-         overOccError  => overOccError,
-         alignError    => alignError,
-         colBitmask    => colBitmask,
-         trgNum        => trgNum,
-         arbBusy       => arbBusy,
-         -- Gearbox Interface
-         arbReady      => arbReady,
-         arbValid      => arbValid,
-         arbDout       => arbDout);
-
-   -----------------------------------------
-   -- Gearbox (40:64)
-   -----------------------------------------
-   U_Gearbox : entity surf.Gearbox
-      generic map (
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         SLAVE_WIDTH_G  => DATABUS_DWIDTH_C,
-         MASTER_WIDTH_G => PGP_DWIDTH_C)
-      port map (
-         -- Clock and Reset
-         clk            => pgpClk,
-         rst            => rst,
-         -- Slave Interface
-         slaveValid     => arbValid,
-         slaveData      => arbDout,
-         slaveReady     => arbReady,
-         slaveBitOrder  => '0',
-         -- Master Interface
-         masterBitOrder => '0',
-         masterReady    => pgpReady,
-         masterValid    => pgpValid,
-         masterData     => pgpData);
+         arbStart     => arbStart,
+         colFifoError => colFifoError,
+         overOccError => overOccError,
+         alignError   => alignError,
+         colBitmask   => colBitmask,
+         trgNum       => trgNum,
+         arbBusy      => arbBusy,
+         -- Pgp Adapter Interface
+         pgpReady     => pgpReady,
+         pgpValid     => pgpValid,
+         pgpData      => pgpData);
 
    -----------------------------------------
    -- PGP FIFO adapter
@@ -249,23 +222,24 @@ begin
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
+         DWARE_AF_LVL_G  => PGPADAPTER_FULL_LVL_G,
          DWARE_DEPTH_G   => PGPADAPTER_DEPTH_G,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map(
          -- General Interface
-         pgpClk     => pgpClk,
-         rst        => rst,
+         pgpClk   => pgpClk,
+         rst      => rst,
          -- Gearbox Interface
-         pgpValid   => pgpValid,
-         pgpData    => pgpData,
-         pgpReady   => pgpReady,
+         pgpValid => pgpValid,
+         pgpData  => pgpData,
+         pgpReady => pgpReady,
          -- Pgp4TxLite Interface
-         txReady    => txReady,
-         txValid    => txValid,
-         txData     => txData,
-         txSof      => txSof,
-         txEof      => txEof,
-         txEofe     => txEofe);
+         txReady  => txReady,
+         txValid  => txValid,
+         txData   => txData,
+         txSof    => txSof,
+         txEof    => txEof,
+         txEofe   => txEofe);
 
 end rtl;

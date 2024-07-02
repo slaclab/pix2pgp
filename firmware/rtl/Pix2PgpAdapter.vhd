@@ -40,6 +40,7 @@ entity Pix2PgpAdapter is
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
       DWARE_DEPTH_G   : integer  := 12;
+      DWARE_AF_LVL_G  : integer  := 3;
       GHDL_SIM_G      : boolean  := false;
       SYNTHESIZE_G    : boolean  := false);
    port(
@@ -91,6 +92,7 @@ architecture rtl of Pix2PgpAdapter is
    signal fifoEmpty : sl      := '0';
    signal fifoRdEn  : sl      := '0';
    signal pgpFull   : sl      := '0';
+   signal pgpAFull  : sl      := '0';
    signal r         : RegType := REG_INIT_C;
    signal rin       : RegType;
 
@@ -183,24 +185,26 @@ begin
          WR_DATA_WIDTH_G => PGP_DWIDTH_C,
          RD_DATA_WIDTH_G => PGP_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
+         DWARE_AF_LVL_G  => DWARE_AF_LVL_G,
          ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map (
          -- Resets
          rst    => rst,
-         -- Write Interface
-         wrClk  => pgpClk,
-         wrEn   => pgpValid,
-         din    => pgpData,
-         fullWr => pgpFull,
+         -- Writ e Interface
+         wrClk   => pgpClk,
+         wrEn    => pgpValid,
+         din     => pgpData,
+         aFullWr => pgpAFull,
+         fullWr  => pgpFull,
          -- Read Interface
-         rdClk  => pgpClk,
-         rdEn   => fifoRdEn,
-         empty  => fifoEmpty,
-         fullRd => open,
-         dout   => txData);
+         rdClk   => pgpClk,
+         rdEn    => fifoRdEn,
+         empty   => fifoEmpty,
+         fullRd  => open,
+         dout    => txData);
 
-   pgpReady <= not(pgpFull);
+   pgpReady <= not(pgpAFull); -- tie with almost-full
 
 end rtl;

@@ -28,6 +28,7 @@ entity Pix2PgpSparkPixSTop is
       COLMANAGER_DEPTH_G       : integer   := 4;
       COLMANAGER_FULL_LVL_G    : integer   := 3;
       PGPADAPTER_DEPTH_G       : integer   := 6;
+      PGPADAPTER_FULL_LVL_G    : integer   := 3;
       SUPER_FIFO_RD_DELAY_G    : natural   := 2;
       ARB_FIFO_RD_DELAY_G      : natural   := 1;
       ARB_DOUT_PIPE_G          : natural   := 1);
@@ -97,6 +98,7 @@ begin
          COLMANAGER_DEPTH_G       => COLMANAGER_DEPTH_G,
          COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
          PGPADAPTER_DEPTH_G       => PGPADAPTER_DEPTH_G,
+         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
          PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
          DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
