@@ -72,50 +72,54 @@ architecture rtl of Pix2PgpColumnManager is
    type StateType is (
       IDLE_S,
       MON_TOKFB_S,
-      CHK_WRCNT_S);
+      CHK_WRCNT_S,
+      WREN_STATUS_S,
+      PAUSE_S);
 
    type RegType is record
       -- i/o
-      tok            : sl;
-      tokFb          : sl;
-      ackN           : sl;
-      wrEn           : sl;
-      statusRd       : sl;
-      dataRd         : sl;
-      pause          : sl;
-      din            : slv(SPARSE_DWIDTH_C-1 downto 0);
-      statusBus      : Pix2PgpStatusBusType;
-      dataBus        : Pix2PgpDataBusType;
+      tok           : sl;
+      tokFb         : sl;
+      ackN          : sl;
+      statusRd      : sl;
+      dataRd        : sl;
+      pause         : sl;
+      din           : slv(SPARSE_DWIDTH_C-1 downto 0);
+      statusBus     : Pix2PgpStatusBusType;
+      dataBus       : Pix2PgpDataBusType;
       -- internal
-      overOcc        : sl;
-      statusFifoWrEn : sl;
-      statusFifoDin  : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-      ackCnt         : slv(DATALEN_WIDTH_C-1 downto 0);
-      wrEnCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
-      trgCnt         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
-      state          : StateType;
+      overOcc       : sl;
+      statusWr      : sl;
+      dataWr        : sl;
+      aFullData     : sl;
+      statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+      ackCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
+      wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
+      trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
+      state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      tok            => '0',
-      tokFb          => '0',
-      ackN           => '0',
-      wrEn           => '0',
-      statusRd       => '0',
-      dataRd         => '0',
-      pause          => '0',
-      din            => (others => '0'),
-      statusBus      => DEFAULT_PIX2PGP_STATUSBUS_C,
-      dataBus        => DEFAULT_PIX2PGP_DATABUS_C,
+      tok           => '0',
+      tokFb         => '0',
+      ackN          => '0',
+      statusRd      => '0',
+      dataRd        => '0',
+      pause         => '0',
+      din           => (others => '0'),
+      statusBus     => DEFAULT_PIX2PGP_STATUSBUS_C,
+      dataBus       => DEFAULT_PIX2PGP_DATABUS_C,
       -- internal
-      overOcc        => '0',
-      statusFifoWrEn => '0',
-      statusFifoDin  => (others => '0'),
-      ackCnt         => (others => '0'),
-      wrEnCnt        => (others => '0'),
-      trgCnt         => (others => '1'),
-      state          => IDLE_S);
+      overOcc       => '0',
+      statusWr      => '0',
+      dataWr        => '0',
+      aFullData     => '0',
+      statusFifoDin => (others => '0'),
+      ackCnt        => (others => '0'),
+      wrEnCnt       => (others => '0'),
+      trgCnt        => (others => '1'),
+      state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -134,13 +138,14 @@ begin
       v := r;
 
       -- Register inputs
-      v.tok      := tok;
-      v.tokFb    := tokFb;
-      v.ackN     := ackN;
-      v.wrEn     := wrEn;
-      v.din      := din;
-      v.statusRd := statusRd;
-      v.dataRd   := dataRd;
+      v.tok       := tok;
+      v.tokFb     := tokFb;
+      v.ackN      := ackN;
+      v.dataWr    := wrEn;
+      v.din       := din;
+      v.statusRd  := statusRd;
+      v.dataRd    := dataRd;
+      v.aFullData := aFullData;
 
       -- over-occupancy detection (received a token while busy)
       if (r.state /= IDLE_S and v.tok = '0' and r.tok = '1') then
@@ -152,8 +157,8 @@ begin
          v.ackCnt := r.ackCnt + 1;
       end if;
 
-      -- wrEn counter management (rising-edge detection)
-      if (r.state /= IDLE_S and v.wrEn = '1' and r.wrEn = '0') then
+      -- wrEn counter management
+      if (r.state /= IDLE_S and r.dataWr = '1') then
          v.wrEnCnt := r.wrEnCnt + 1;
       end if;
 
@@ -162,10 +167,11 @@ begin
       -------------------------------------------------------------------------
          -- wait for token; also reset the counters and flags
          when IDLE_S =>
-            v.overOcc        := '0';
-            v.statusFifoWrEn := '0';
-            v.wrEnCnt        := toSlv(0, DATALEN_WIDTH_C);
-            v.ackCnt         := toSlv(0, DATALEN_WIDTH_C);
+            v.overOcc  := '0';
+            v.pause    := '0';
+            v.statusWr := '0';
+            v.wrEnCnt  := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt   := toSlv(0, DATALEN_WIDTH_C);
 
             -- falling-edge detection
             if (v.tok = '0' and r.tok = '1') then
@@ -177,8 +183,12 @@ begin
          -- wait for token-feedback
          when MON_TOKFB_S =>
 
+            -- almost-full always takes precedence
+            if (r.aFullData = '1') then
+               v.pause := '1';
+               v.state := WREN_STATUS_S;
             -- rising-edge detection
-            if (v.tokFb = '1' and r.tokFb = '0') then
+            elsif (v.tokFb = '1' and r.tokFb = '0') then
                v.state := CHK_WRCNT_S;
             end if;
 
@@ -188,20 +198,35 @@ begin
 
             -- done; time to write into the status FIFO and go back to idle
             if (r.ackCnt = r.wrEnCnt) then
-
-               if r.wrEnCnt(0) = '1' then
-                  -- wrote odd number of hits? write a dummy word;
-                  -- hold for one clock cycle;
-                  -- wrEn will switch to input port by default on next cycle
-                  v.wrEn := '1';
-               end if;
-
-               v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
-               v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
-               v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
-               v.statusFifoWrEn := '1';
-               v.state          := IDLE_S;
+               v.state := WREN_STATUS_S;
             end if;
+
+         ----------------------------------------------------------------------
+         -- write into the status FIFO
+         when WREN_STATUS_S =>
+
+            if r.wrEnCnt(0) = '1' then
+               -- wrote odd number of hits? write a dummy word;
+               -- hold for one clock cycle;
+               -- wrEn will switch to input port by default on next cycle
+               v.dataWr := '1';
+            end if;
+
+            v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
+            v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
+            v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
+            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
+            v.statusWr := '1';
+            v.state    := IDLE_S;
+
+            if (r.pause = '1') then
+               v.state := PAUSE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- pause case
+         when PAUSE_S =>
+            v.state := PAUSE_S;
 
       end case;
       -------------------------------------------------------------------------
@@ -240,7 +265,7 @@ begin
          DELAY_G        => STATUSFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
-         din(0)  => r.statusFifoWrEn,
+         din(0)  => r.statusWr,
          dout(0) => statusWrEn);
 
    U_PipelineStatusDin : entity surf.SlvDelay
@@ -294,7 +319,7 @@ begin
          DELAY_G        => DATAFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
-         din(0)  => r.wrEn,
+         din(0)  => r.dataWr,
          dout(0) => dataWrEn);
 
    U_PipelineDataDin : entity surf.SlvDelay

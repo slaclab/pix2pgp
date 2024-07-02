@@ -241,6 +241,8 @@ begin
                   v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
                   v.arbDout(9 downto 0)                   := dataLenSel;
 
+                  --if (dataLenSel(0) = '1') then -- if odd
+                  --end if;
                   -- divide-by-2 (dumb, but asic synth tool will like it)
                   v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
                   v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1);
@@ -249,6 +251,8 @@ begin
                   -- override the previous assertion to cover the one-hit corner case
                   if dataLenSel = conv_std_logic_vector(1, dataLenSel'length) then
                      v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
+                  --elsif dataLenSel(0) = '1' then -- is it odd? add one.
+                  --   v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1) + 1;
                   end if;
 
                   v.state := PARSE_DATA_S;
@@ -290,6 +294,7 @@ begin
 
       -- header mapping
       v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError;
+      v.dataHeader(PAUSE_FLAG_POS_C)       := overOccError; -- TO-DO: change me to pause from super
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError;
       v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := r.dummyHeader;

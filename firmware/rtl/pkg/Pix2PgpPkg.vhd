@@ -49,11 +49,14 @@ package Pix2PgpPkg is
    -- *only* the overOcc flag, the trigger number and the dataLen are stored into the FIFO
    -- the other flags (columnFull/columnEmpty) run parallel the FIFO dout on the status bus
    constant STATUSFIFO_TRG_WIDTH_C   : natural := 8; -- this number is coupled with the overall PGP frame size
-   constant STATUSFIFO_DWIDTH_C      : natural := DATALEN_WIDTH_C + STATUSFIFO_TRG_WIDTH_C + 1;
+
+   -- status fifo data width is +2 because of the overoccupancy and pause flags
+   constant STATUSFIFO_DWIDTH_C      : natural := DATALEN_WIDTH_C + STATUSFIFO_TRG_WIDTH_C + 2;
 
    constant STATUSFIFO_OVEROCC_POS_C : natural := STATUSFIFO_DWIDTH_C-1;
+   constant STATUSFIFO_PAUSE_POS_C   : natural := STATUSFIFO_DWIDTH_C-2;
 
-   subtype STATUSFIFO_TRG_POS_C     is natural range STATUSFIFO_DWIDTH_C-2
+   subtype STATUSFIFO_TRG_POS_C     is natural range STATUSFIFO_DWIDTH_C-3
                                                downto DATALEN_WIDTH_C;
 
    subtype STATUSFIFO_DATALEN_POS_C is natural range DATALEN_WIDTH_C-1
@@ -62,6 +65,7 @@ package Pix2PgpPkg is
    type Pix2PgpStatusBusType is record
       -- flags begin
       overOcc     : sl;
+      pause       : sl;
       columnFull  : sl;
       columnEmpty : sl;
       -- flags end
@@ -72,6 +76,7 @@ package Pix2PgpPkg is
    constant DEFAULT_PIX2PGP_STATUSBUS_C : Pix2PgpStatusBusType := (
       -- flags begin
       overOcc     => '0',
+      pause       => '0',
       columnFull  => '0',
       columnEmpty => '1',
       -- flags end
@@ -105,11 +110,12 @@ package Pix2PgpPkg is
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
    constant OVEROCC_FLAG_POS_C     : natural := HEADER_DWITDH_C-1;
-   constant COLUMN_FULL_FLAG_POS_C : natural := HEADER_DWITDH_C-2;
-   constant TRG_ALIGN_ERROR_POS_C  : natural := HEADER_DWITDH_C-2;
-   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-3;
+   constant PAUSE_FLAG_POS_C       : natural := HEADER_DWITDH_C-2;
+   constant COLUMN_FULL_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
+   constant TRG_ALIGN_ERROR_POS_C  : natural := HEADER_DWITDH_C-4;
+   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
    -- reserved bits
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-4
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-6
                                               downto HEADER_DWITDH_C-8;
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9

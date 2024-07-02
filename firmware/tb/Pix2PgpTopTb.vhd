@@ -49,7 +49,7 @@ architecture test of Pix2PgpTopTb is
    signal tokFb        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal ackN         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal wrEn         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal pause        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0'); 
+   signal pause        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal din          : Pix2PgpSparseDinArray := (others => (others => '0'));
 
    signal txReady      : sl := '1';
@@ -98,8 +98,8 @@ begin
             TPD_G        => TPD_C,
             RST_ASYNC_G  => RST_ASYNC_C,
             WAIT_FB_G    => 2,
-            WAIT_ACKN_G  => 1,
-            WAIT_WREN_G  => 1,
+            WAIT_ACKN_G  => 2,
+            WAIT_WREN_G  => 2,
             COL_ID_G     => col)
          port map(
             clk     => clk,
@@ -290,7 +290,7 @@ begin
 
     wait for CLK_PERIOD_C*186;
       -- 24 hits in column=1
-      hitLen(7) <= toSlv(24, hitLen(1)'length);
+      hitLen(7) <= toSlv(5, hitLen(1)'length);
       sro       <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
