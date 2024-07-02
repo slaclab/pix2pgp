@@ -42,11 +42,12 @@ entity Pix2PgpColumnManager is
       rst       : in  sl := not(RST_POLARITY_G);
       enable    : in  sl;
       -- Sparse Logic Interface
+      din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
+      wrEn      : in  sl;
       tok       : in  sl;
       tokFb     : in  sl;
       ackN      : in  sl;
-      wrEn      : in  sl;
-      din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
+      pause     : out sl;
       -- Arbiter Interface
       statusRd  : in  sl;
       dataRd    : in  sl;
@@ -80,6 +81,7 @@ architecture rtl of Pix2PgpColumnManager is
       wrEn           : sl;
       statusRd       : sl;
       dataRd         : sl;
+      pause          : sl;
       din            : slv(SPARSE_DWIDTH_C-1 downto 0);
       statusBus      : Pix2PgpStatusBusType;
       dataBus        : Pix2PgpDataBusType;
@@ -101,6 +103,7 @@ architecture rtl of Pix2PgpColumnManager is
       wrEn           => '0',
       statusRd       => '0',
       dataRd         => '0',
+      pause          => '0',
       din            => (others => '0'),
       statusBus      => DEFAULT_PIX2PGP_STATUSBUS_C,
       dataBus        => DEFAULT_PIX2PGP_DATABUS_C,
@@ -187,7 +190,7 @@ begin
                if r.wrEnCnt(0) = '1' then
                   -- wrote odd number of hits? write a dummy word;
                   -- hold for one clock cycle;
-                  -- wrEn will switch to input port input by default on next cycle
+                  -- wrEn will switch to input port by default on next cycle
                   v.wrEn := '1';
                end if;
 
@@ -197,8 +200,12 @@ begin
                v.statusFifoWrEn := '1';
                v.state          := IDLE_S;
             end if;
+
       end case;
       -------------------------------------------------------------------------
+
+      -- Outputs
+      pause <= v.pause;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then

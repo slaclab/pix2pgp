@@ -49,6 +49,7 @@ architecture test of Pix2PgpTopTb is
    signal tokFb        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal ackN         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal wrEn         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal pause        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0'); 
    signal din          : Pix2PgpSparseDinArray := (others => (others => '0'));
 
    signal txReady      : sl := '1';
@@ -104,6 +105,7 @@ begin
             clk     => clk,
             rst     => rst,
             sro     => sro,
+            pause   => pause(col),
             hitLen  => hitLen(col),
             overOcc => overOcc,
             tok     => tok(col),
@@ -137,11 +139,12 @@ begin
          rst          => rst,
          columnEnable => columnEnable,
          -- Column Manager Interface
+         din          => din,
+         wrEn         => wrEn,
          tok          => tok,
          tokFb        => tokFb,
          ackN         => ackN,
-         wrEn         => wrEn,
-         din          => din,
+         pause        => pause,
          -- Pgp4TxLite Interface
          txReady      => txReady,
          txValid      => txValid,
@@ -286,55 +289,62 @@ begin
       sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(4, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
+      -- 24 hits in column=1
+      hitLen(7) <= toSlv(24, hitLen(1)'length);
+      sro       <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --     hitLen(col) <= toSlv(4, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --     hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      hitLen(0) <= toSlv(2, hitLen(0)'length);
-      hitLen(5) <= toSlv(2, hitLen(5)'length);
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-        hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0) <= toSlv(2, hitLen(0)'length);
+    --  hitLen(5) <= toSlv(2, hitLen(5)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
     -- do not touch
     wait;

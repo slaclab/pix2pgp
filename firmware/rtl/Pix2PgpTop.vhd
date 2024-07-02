@@ -51,11 +51,12 @@ entity Pix2PgpTop is
       rst          : in  sl;
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
+      din          : in  Pix2PgpSparseDinArray;
+      wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       tok          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       tokFb        : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       ackN         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      din          : in  Pix2PgpSparseDinArray;
+      pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
       txReady      : in  sl;
       txValid      : out sl;
@@ -114,11 +115,12 @@ begin
             rst       => rst,
             enable    => columnEnable(col),
             -- Sparse Logic Interface
+            din       => din(col),
+            wrEn      => wrEn(col),
             tok       => tok(col),
             tokFb     => tokFb(col),
             ackN      => ackN(col),
-            wrEn      => wrEn(col),
-            din       => din(col),
+            pause     => pause(col),
             -- Arbiter Interface
             statusRd  => statusRdFanOut(col),
             dataRd    => dataRdSel(col),

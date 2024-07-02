@@ -79,7 +79,6 @@ architecture rtl of Pix2PgpArbiter is
    signal setWatchdog        : sl := '0';
    signal timeoutWatchdog    : sl := '0';
    signal timeoutWatchdogDly : sl := '0';
-   signal arbDoutComb        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,

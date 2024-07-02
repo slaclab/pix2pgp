@@ -42,14 +42,14 @@ def headerEval(header):
     _format = 'OverOcc={0:<%d} ColumnFull={1:<%d} AlignError={2:<%d} dummyHeader={3:<%d} Bitmask={4:<%02x} Trigger={5:<%d}' % (1, 1, 1, 1, 8, 8)
     print(_format.format(_overOcc, _columnFull, _alignError, _dummyHeader, hex(_bitmask).upper(), _trigger))
 
-    if not(_bitmask == 0):
+    if not(_bitmask == 0) and not(_columnFull) and not(_alignError) and not(_dummyHeader):
         empty = False
         bitmask = _bitmask
         trigger = _trigger
 
     return empty, bitmask, trigger
 
-def _hitPrinter(hits, decode):
+def _hitPrinter(hits, decode, length):
     hit0 = (hits >> np.uint8(20)) & np.uint32(0xFFFFF)
     hit1 = (hits >> np.uint8(0)) & np.uint32(0xFFFFF)
 
@@ -59,10 +59,18 @@ def _hitPrinter(hits, decode):
         hitCnt1 = (hit1 >> np.uint8(0)) & np.uint8(0xFF)
         colId1  = (hit1 >> np.uint8(8)) & np.uint8(0xFF)
         _format = 'ColId0={0:<%d} HitCnt0={1:<%d} ColId1={2:<%d} HitCnt1={3:<%d}' % (4, 4, 4, 4)
-        print(_format.format(colId0, hitCnt0, colId1, hitCnt1))
+        if length == 1:
+            _format = 'ColId0={0:<%d} HitCnt0={1:<%d}' % (4, 4)
+            print(_format.format(colId0, hitCnt0))
+        else:
+            print(_format.format(colId0, hitCnt0, colId1, hitCnt1))
     else:
         _format = 'Hit={0:<%d} Hit={1:<%d}' % (10, 10)
-        print(_format.format(hit0, hit1))
+        if length == 1:
+            _format = 'Hit={0:<%d}' % (10)
+            print(_format.format(hit0))
+        else:
+            print(_format.format(hit0, hit1))
 
 
 def bitmaskCheck(bitmask, colSel):
@@ -123,7 +131,7 @@ if __name__ == "__main__":
             ########################################################################################
             case "hitDecode_s":
                 # time.sleep(0.2)
-                _hitPrinter(_lineArray[_line], args.hitDecode)
+                _hitPrinter(_lineArray[_line], args.hitDecode, _lenCnt)
                 _lenCnt = _lenCnt - 2
                 _line += 1
                 if _lenCnt <= 0:

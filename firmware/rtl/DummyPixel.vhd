@@ -38,6 +38,7 @@ entity DummyPixel is
       clk     : in  sl;
       rst     : in  sl;
       sro     : in  sl;
+      pause   : in  sl;
       hitLen  : in  slv(9 downto 0);
       overOcc : in  sl;
       tok     : out sl;
@@ -64,6 +65,7 @@ architecture rtl of DummyPixel is
       tokFb   : sl;
       ackN    : sl;
       wrEn    : sl;
+      pause   : sl;
       dout    : slv(SPARSE_DWIDTH_C-1 downto 0);
       --
       waitCnt : natural range 0 to 1023;
@@ -80,6 +82,7 @@ architecture rtl of DummyPixel is
       tokFb   => '0',
       ackN    => '1',
       wrEn    => '0',
+      pause   => '0',
       dout    => (others => '0'),
       --
       waitCnt => 0,
@@ -93,7 +96,7 @@ architecture rtl of DummyPixel is
 
 begin
 
-comb : process (rst, r, hitLen, overOcc, sro) is
+comb : process (rst, r, hitLen, overOcc, sro, pause) is
 
       variable v : RegType;
 
@@ -105,6 +108,7 @@ comb : process (rst, r, hitLen, overOcc, sro) is
       v.hitLen  := hitLen;
       v.overOcc := overOcc;
       v.sro     := sro;
+      v.pause   := pause;
 
       -- defaults
       v.tok  := '1';
@@ -132,28 +136,32 @@ comb : process (rst, r, hitLen, overOcc, sro) is
 
             ----------------------------------------------------------------------
             when ISSUE_ACKN_S =>
-               v.waitCnt := r.waitCnt + 1;
-               if (v.waitCnt = WAIT_ACKN_G) then
-                  v.ackN    := '0';
-                  v.waitCnt := 0;
-                  v.ackCnt  := r.ackCnt + 1;
-                  v.state   := ISSUE_WREN_S;
+               if (r.pause = '0') then
+                  v.waitCnt := r.waitCnt + 1;
+                  if (v.waitCnt = WAIT_ACKN_G) then
+                     v.ackN    := '0';
+                     v.waitCnt := 0;
+                     v.ackCnt  := r.ackCnt + 1;
+                     v.state   := ISSUE_WREN_S;
+                  end if;
                end if;
 
             ----------------------------------------------------------------------
             when ISSUE_WREN_S =>
-               v.waitCnt := r.waitCnt + 1;
-               if (v.waitCnt = WAIT_WREN_G) then
-                  v.wrEn               := '1';
-                  v.dout(7 downto 0)   := toSlv(r.hitCnt, v.dout(7 downto 0)'length);
-                  v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
-                  v.dout(19 downto 16) := x"0";
-                  v.waitCnt := 0;
-                  if (r.ackCnt = unsigned(r.hitLen)) then
-                     v.state := WAIT_ISSUE_FB_S;
-                  else
-                     v.hitCnt := r.hitCnt + 1;
-                     v.state  := ISSUE_ACKN_S;
+               if (r.pause = '0') then
+                  v.waitCnt := r.waitCnt + 1;
+                  if (v.waitCnt = WAIT_WREN_G) then
+                     v.wrEn               := '1';
+                     v.dout(7 downto 0)   := toSlv(r.hitCnt, v.dout(7 downto 0)'length);
+                     v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
+                     v.dout(19 downto 16) := x"0";
+                     v.waitCnt := 0;
+                     if (r.ackCnt = unsigned(r.hitLen)) then
+                        v.state := WAIT_ISSUE_FB_S;
+                     else
+                        v.hitCnt := r.hitCnt + 1;
+                        v.state  := ISSUE_ACKN_S;
+                     end if;
                   end if;
                end if;
 
