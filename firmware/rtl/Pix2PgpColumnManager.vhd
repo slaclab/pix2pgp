@@ -188,7 +188,7 @@ begin
                v.pause := '1';
                v.state := WREN_STATUS_S;
             -- rising-edge detection
-            elsif (v.tokFb = '1' and r.tokFb = '0') then
+            if (v.tokFb = '1' and r.tokFb = '0') then
                v.state := CHK_WRCNT_S;
             end if;
 

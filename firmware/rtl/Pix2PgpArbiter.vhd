@@ -62,6 +62,17 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
+   function rightShift (inSlv: slv; count: natural) return slv is
+      constant inSlvLen: integer := inSlv'LENGTH-1;
+      alias xarg: slv(inSlvLen downto 0) is inSlv;
+      variable result: slv(inSlvLen downto 0) := (others => '0');
+   begin
+      if count <= inSlvLen then
+         result(inSlvLen-count downto 0) := xarg(inSlvLen downto count);
+      end if;
+      return result;
+   end rightShift;
+
    function toInt (inVar : sl) return integer is
    begin
       if (inVar = '1') then
@@ -241,18 +252,12 @@ begin
                   v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
                   v.arbDout(9 downto 0)                   := dataLenSel;
 
-                  --if (dataLenSel(0) = '1') then -- if odd
-                  --end if;
-                  -- divide-by-2 (dumb, but asic synth tool will like it)
-                  v.dataRdCycles(DATALEN_WIDTH_C-1)          := '0';
-                  v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1);
-
-                  -- probably smaller footprint than '<'
-                  -- override the previous assertion to cover the one-hit corner case
-                  if dataLenSel = conv_std_logic_vector(1, dataLenSel'length) then
-                     v.dataRdCycles := toSlv(1, DATALEN_WIDTH_C);
-                  --elsif dataLenSel(0) = '1' then -- is it odd? add one.
-                  --   v.dataRdCycles(DATALEN_WIDTH_C-2 downto 0) := dataLenSel(DATALEN_WIDTH_C-1 downto 1) + 1;
+                  -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
+                  -- if odd, add 1 for a 'true' div-by-2
+                  if dataLenSel(0) = '1' then
+                     v.dataRdCycles := rightShift(dataLenSel, 1) + 1;
+                  else
+                     v.dataRdCycles := rightShift(dataLenSel, 1);
                   end if;
 
                   v.state := PARSE_DATA_S;
@@ -265,14 +270,20 @@ begin
             v.arbDout := dataBusSel.data;
 
             if v.arbValid = '0' and pgpReady = '1' then
-               if r.dataRdCnt /= r.dataRdCycles + FIFO_RD_DELAY_G then
-                  v.arbValid  := '1';
-                  v.dataRd    := '1';
-                  v.dataRdCnt := r.dataRdCnt + 1;
-               else
+               v.dataRdCnt := r.dataRdCnt + 1;
+               v.dataRd    := '1';
+               v.arbValid  := '1';
+
+               --if r.dataRdCnt = r.dataRdCycles then
+               --   v.dataRd := '0';
+               --end if;
+
+               if r.dataRdCnt = r.dataRdCycles + FIFO_RD_DELAY_G then
                   -- Done with column
-                  v.colSel := r.colSel + 1;
-                  v.state  := CHECK_BITMASK_S;
+                  v.dataRd   := '0';
+                  v.arbValid := '0';
+                  v.colSel   := r.colSel + 1;
+                  v.state    := CHECK_BITMASK_S;
                   -- Check if last column
                   if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                      v.state := DONE_S;
