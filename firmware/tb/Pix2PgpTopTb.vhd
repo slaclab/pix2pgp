@@ -283,79 +283,88 @@ begin
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(5) <= toSlv(3, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(1, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(2, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(5, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(4, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(5) <= toSlv(8, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(6, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(3, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(5, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(1, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --     hitLen(col) <= toSlv(5, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
-      hitLen(5) <= toSlv(3, hitLen(5)'length);
-      hitLen(6) <= toSlv(1, hitLen(6)'length);
-      hitLen(7) <= toSlv(2, hitLen(7)'length);
-      hitLen(8) <= toSlv(5, hitLen(8)'length);
-      hitLen(9) <= toSlv(4, hitLen(9)'length);
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_C*186;
+      hitLen(3) <= toSlv(24, hitLen(5)'length);
+      hitLen(4) <= toSlv(2, hitLen(5)'length);
       hitLen(5) <= toSlv(8, hitLen(5)'length);
       hitLen(6) <= toSlv(6, hitLen(6)'length);
-      hitLen(7) <= toSlv(3, hitLen(7)'length);
+      hitLen(7) <= toSlv(24, hitLen(7)'length);
       hitLen(8) <= toSlv(5, hitLen(8)'length);
       hitLen(9) <= toSlv(1, hitLen(9)'length);
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(5, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(24, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-        hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_C*186;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
     -- do not touch
     wait;

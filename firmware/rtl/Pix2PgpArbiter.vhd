@@ -51,6 +51,7 @@ entity Pix2PgpArbiter is
       colFifoError : in  sl;
       overOccError : in  sl;
       alignError   : in  sl;
+      colPause     : in  sl;
       colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum       : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbBusy      : out sl;
@@ -152,7 +153,7 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, rst, dataLenSel, dataBusSel, arbStart, colFifoError,
-                   overOccError, alignError, colBitmask, trgNum,
+                   overOccError, alignError, colBitmask, trgNum, colPause,
                    pgpReady, arbReady, timeoutWatchdogDly) is
 
       variable v : RegType;
@@ -305,7 +306,7 @@ begin
 
       -- header mapping
       v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError;
-      v.dataHeader(PAUSE_FLAG_POS_C)       := overOccError; -- TO-DO: change me to pause from super
+      v.dataHeader(PAUSE_FLAG_POS_C)       := colPause;
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError;
       v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := r.dummyHeader;

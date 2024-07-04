@@ -78,12 +78,14 @@ architecture rtl of Pix2PgpTop is
    signal statusBusGlbl  : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
    signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
    signal statusRdFanOut : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
    signal arbStart       : sl := '0';
    signal colFifoError   : sl := '0';
    signal overOccError   : sl := '0';
    signal alignError     : sl := '0';
    signal arbBusy        : sl := '0';
+   signal colPause       : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
    --
@@ -150,6 +152,7 @@ begin
          dataRdOut     => dataRdSel,
          -- Column Supervisor Interface
          statusRdIn    => statusRd,
+         columnPause   => columnPause,
          statusBusGlbl => statusBusGlbl,
          -- Arbiter Interface
          dataRdIn      => dataRd,
@@ -171,6 +174,7 @@ begin
          pgpClk        => pgpClk,
          rst           => rst,
          columnEnable  => columnEnable,
+         columnPause   => columnPause,
          -- Column Manager Interface
          statusBusGlbl => statusBusGlbl,
          statusRd      => statusRd,
@@ -180,6 +184,7 @@ begin
          colFifoError  => colFifoError,
          overOccError  => overOccError,
          alignError    => alignError,
+         colPauseArb   => colPause,
          colBitmask    => colBitmask,
          trgNum        => trgNum);
 
@@ -208,6 +213,7 @@ begin
          colFifoError => colFifoError,
          overOccError => overOccError,
          alignError   => alignError,
+         colPause     => colPause,
          colBitmask   => colBitmask,
          trgNum       => trgNum,
          arbBusy      => arbBusy,

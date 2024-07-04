@@ -37,6 +37,7 @@ entity Pix2PgpColumnSupervisor is
       pgpClk        : in  sl;
       rst           : in  sl := not(RST_POLARITY_G);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnPause   : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       statusBusGlbl : in  Pix2PgpStatusBusArray;
       statusRd      : out sl;
@@ -46,6 +47,7 @@ entity Pix2PgpColumnSupervisor is
       colFifoError  : out sl;
       overOccError  : out sl;
       alignError    : out sl;
+      colPauseArb   : out sl;
       colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : out slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
@@ -56,7 +58,8 @@ architecture rtl of Pix2PgpColumnSupervisor is
       MON_STATUS_S,
       WAIT_BUS_S,
       CHECK_ERROR_S,
-      WAIT_ARB_S);
+      WAIT_ARB_S,
+      PAUSE_S);
 
    type RegType is record
       -- i/o
@@ -72,6 +75,8 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colTrgAlignErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colPauseBridge : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
    end record RegType;
@@ -89,6 +94,8 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colTrgAlignErr => (others => '0'),
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
+      columnPause    => (others => '0'),
+      colPauseBridge => (others => '0'),
       waitCnt        => (others => '0'),
       state          => MON_STATUS_S);
 
@@ -143,19 +150,27 @@ begin
          end if;
 
          -- check for any over-occupancy errors
-         if     (toBoolean(statusBusGlbl(col).overOcc))
-         and not(toBoolean(columnIgnore(col))) then
+         if (toBoolean(statusBusGlbl(col).overOcc)) and
+         not(toBoolean(columnIgnore(col))) then
             v.colOverOccErr(col) := '1';
          else
             v.colOverOccErr(col) := '0';
          end if;
 
          -- check for any columnFull errors
-         if     (toBoolean(statusBusGlbl(col).columnFull))
-         and not(toBoolean(columnIgnore(col))) then
+         if (toBoolean(statusBusGlbl(col).columnFull)) and
+         not(toBoolean(columnIgnore(col))) then
             v.colFifoFullErr(col) := '1';
          else
             v.colFifoFullErr(col) := '0';
+         end if;
+
+         -- check if we are in pause mode
+         if (toBoolean(statusBusGlbl(col).pause)) and
+         not(toBoolean(columnIgnore(col))) then
+            v.columnPause(col) := '1';
+         else
+            v.columnPause(col) := '0';
          end if;
 
       end loop;
@@ -167,6 +182,8 @@ begin
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
+            v.colPauseBridge := (others => '0');
+
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.statusRd := '1';
                v.state    := WAIT_BUS_S;
@@ -212,7 +229,21 @@ begin
 
             if r.arbiterBusy = '0' then
                v.state := MON_STATUS_S;
+
+               -- pause mode. issue the mask to the bridge first
+               if not(allBits(r.columnPause, '0')) then
+                  v.colPauseBridge := r.columnPause;
+                  v.state          := PAUSE_S;
+               end if;
             end if;
+
+         ----------------------------------------------------------------------
+         -- wait for all paused columns to finish processing
+         when PAUSE_S =>
+         if r.dataReady = r.columnPause then
+            v.statusRd := '1';
+            v.state    := WAIT_BUS_S;
+         end if;
 
       end case;
       -------------------------------------------------------------------------
@@ -224,8 +255,9 @@ begin
       alignError   <= v.alignError;
       colBitmask   <= v.colBitmask;
       trgNum       <= refTrgNum;
-
+      columnPause  <= v.colPauseBridge;
       arbiterStart <= v.arbiterStart;
+      colPauseArb  <= uOr(v.columnPause);
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then

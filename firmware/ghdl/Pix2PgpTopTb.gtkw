@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Jul  3 21:38:02 2024
+[*] Wed Jul  3 23:44:09 2024
 [*]
 [dumpfile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Wed Jul  3 21:33:59 2024"
-[dumpfile_size] 5668223
+[dumpfile_mtime] "Wed Jul  3 23:42:16 2024"
+[dumpfile_size] 5783687
 [savefile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 0
+[timestart] 23297000000
 [size] 2490 1016
 [pos] 2629 26
-*-35.561596 20550000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-28.705263 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
@@ -25,16 +25,17 @@
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.statusbus.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl.
-[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_gearbox.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_gearbox.rin.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_arbiter.u_watchdog.r.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.
+[treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.r.
 [treeopen] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.statusbusglbl.[0].
 [sst_width] 293
 [signals_width] 360
 [sst_expanded] 1
-[sst_vpaned_height] 280
+[sst_vpaned_height] 271
 @28
 top.pix2pgptoptb.sro
 top.pix2pgptoptb.overocc
@@ -158,6 +159,9 @@ top.pix2pgptoptb.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.state
 -supervis
 @28
 top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.alignerror
+@23
+#{top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[23:0]} top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[23] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[22] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[21] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[20] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[19] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[18] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[17] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[16] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[15] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[14] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[13] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[12] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[11] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[10] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[9] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[8] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[7] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[6] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[5] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[4] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[3] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[2] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[1] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.columnpause[0]
+@28
 top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.statusmanagerdone
 @24
 #{top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[7:0]} top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[7] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[6] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[5] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[4] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[3] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[2] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[1] top.pix2pgptoptb.u_pix2pgptop.u_columnsupervisor.reftrgnum[0]
@@ -444,7 +448,7 @@ top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[5].pause
 @28
 top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].columnempty
 top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].columnfull
-@23
+@22
 #{top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[9:0]} top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[9] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[8] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[7] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[6] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[5] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[4] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[3] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[2] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[1] top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].datalen[0]
 @28
 top.pix2pgptoptb.u_pix2pgptop.statusbusglbl[6].overocc

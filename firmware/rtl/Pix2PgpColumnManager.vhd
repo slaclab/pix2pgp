@@ -57,17 +57,19 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   signal statusFifoDout  : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal dataFifoEmpty   : sl := '0';
-   signal statusFifoEmpty : sl := '0';
-   signal statusFifoFull  : sl := '0';
-   signal dataFifoFull    : sl := '0';
+   signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataFifoEmpty      : sl := '0';
+   signal statusFifoEmpty    : sl := '0';
+   signal dataFifoEmptyDly   : sl := '0';
+   signal statusFifoEmptyDly : sl := '0';
+   signal statusFifoFull     : sl := '0';
+   signal dataFifoFull       : sl := '0';
 
-   signal statusWrEn      : sl := '0';
-   signal statusDin       : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal dataWrEn        : sl := '0';
-   signal dataDin         : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
-   signal aFullData       : sl := '0';
+   signal statusWrEn         : sl := '0';
+   signal statusDin          : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataWrEn           : sl := '0';
+   signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
+   signal aFullData          : sl := '0';
 
    type StateType is (
       IDLE_S,
@@ -130,7 +132,7 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd,
-                   dataRd, dataFifoEmpty, statusFifoEmpty, aFullData) is
+                   dataRd, dataFifoEmptyDly, statusFifoEmptyDly, aFullData) is
       variable v : RegType;
    begin
 
@@ -146,6 +148,9 @@ begin
       v.statusRd  := statusRd;
       v.dataRd    := dataRd;
       v.aFullData := aFullData;
+
+      -- Strobes
+      v.statusWr := '0';
 
       -- over-occupancy detection (received a token while busy)
       if (r.state /= IDLE_S and v.tok = '0' and r.tok = '1') then
@@ -167,11 +172,10 @@ begin
       -------------------------------------------------------------------------
          -- wait for token; also reset the counters and flags
          when IDLE_S =>
-            v.overOcc  := '0';
-            v.pause    := '0';
-            v.statusWr := '0';
-            v.wrEnCnt  := toSlv(0, DATALEN_WIDTH_C);
-            v.ackCnt   := toSlv(0, DATALEN_WIDTH_C);
+            v.overOcc := '0';
+            v.pause   := '0';
+            v.wrEnCnt := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt  := toSlv(0, DATALEN_WIDTH_C);
 
             -- falling-edge detection
             if (v.tok = '0' and r.tok = '1') then
@@ -182,6 +186,7 @@ begin
          ----------------------------------------------------------------------
          -- wait for token-feedback
          when MON_TOKFB_S =>
+            v.pause := '0';
 
             -- almost-full always takes precedence
             if (r.aFullData = '1') then
@@ -197,7 +202,7 @@ begin
          when CHK_WRCNT_S =>
 
             -- done; time to write into the status FIFO and go back to idle
-            if (r.ackCnt = r.wrEnCnt) then
+            if (r.wrEnCnt >= r.ackCnt) then
                v.state := WREN_STATUS_S;
             end if;
 
@@ -226,7 +231,13 @@ begin
          ----------------------------------------------------------------------
          -- pause case
          when PAUSE_S =>
-            v.state := PAUSE_S;
+            v.wrEnCnt := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt  := toSlv(0, DATALEN_WIDTH_C);
+
+            -- if both FIFOs are empty, resume with the event
+            if (statusFifoEmptyDly = '1' and dataFifoEmptyDly = '1') then
+               v.state := MON_TOKFB_S;
+            end if;
 
       end case;
       -------------------------------------------------------------------------
@@ -257,7 +268,7 @@ begin
    ------------------------------------------------
    -- Status FIFO
    ------------------------------------------------
-   -- pipeline the status FIFO input signals to give some freedom in placement
+   -- pipeline the status FIFO i/o signals to give some freedom in placement
    U_PipelineStatusWrEn : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
@@ -278,6 +289,16 @@ begin
          clk  => sparseClk,
          din  => r.statusFifoDin,
          dout => statusDin);
+
+   U_PipelineStatusEmpty : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => STATUSFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         din(0)  => statusFifoEmpty,
+         dout(0) => statusFifoEmptyDly);
 
    U_StatusFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
@@ -333,6 +354,16 @@ begin
          din  => r.din,
          dout => dataDin);
 
+   U_PipelineDataEmpty : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => STATUSFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         din(0)  => dataFifoEmpty,
+         dout(0) => dataFifoEmptyDly);
+
    U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
          TPD_G           => TPD_G,
@@ -366,9 +397,10 @@ begin
          dout    => dataBus.data);
 
    -- status bus assignments
-   statusBus.overOcc     <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
-   statusBus.trgNum      <= statusFifoDout(STATUSFIFO_TRG_POS_C);
-   statusBus.dataLen     <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
-   statusBus.columnFull  <= statusFifoFull or dataFifoFull;
+   statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
+   statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
+   statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
+   statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
+   statusBus.columnFull <= statusFifoFull or dataFifoFull;
 
 end rtl;

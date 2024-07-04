@@ -41,6 +41,7 @@ entity Pix2PgpBridge is
       dataRdOut     : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Supervisor Interface
       statusRdIn    : in  sl;
+      columnPause   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusBusGlbl : out Pix2PgpStatusBusArray;
       -- Arbiter Interface
       dataRdIn      : in  sl;
@@ -54,12 +55,16 @@ architecture rtl of Pix2PgpBridge is
 begin
 
    GEN_NO_PIPELINE_STATUS : if (PIPELINE_STATUS_G = false) generate
-      process(statusBusIn, colSel, statusRdIn, columnEnable)
+      process(statusBusIn, colSel, statusRdIn, columnEnable, columnPause)
       begin
          statusBusGlbl <= statusBusIn;
          for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
             -- fan-out the statusFifo rdEn
-            statusRdOut(col) <= statusRdIn and columnEnable(col);
+            if (allBits(columnPause, '0')) then
+               statusRdOut(col) <= statusRdIn and columnEnable(col);
+            else
+               statusRdOut(col) <= statusRdIn and columnPause(col);
+            end if;
          end loop;
 
          if colSel <= NUM_OF_COL_MANAGERS_C-1 then
@@ -98,7 +103,11 @@ begin
             statusBusGlbl <= statusBusIn after TPD_G;
             for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
                -- fan-out the statusFifo rdEn
-               statusRdOut(col) <= statusRdIn and columnEnable(col) after TPD_G;
+               if (allBits(columnPause, '0')) then
+                  statusRdOut(col) <= statusRdIn and columnEnable(col) after TPD_G;
+               else
+                  statusRdOut(col) <= statusRdIn and columnPause(col) after TPD_G;
+               end if;
             end loop;
 
             if colSel <= NUM_OF_COL_MANAGERS_C-1 then
