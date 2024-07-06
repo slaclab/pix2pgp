@@ -57,7 +57,8 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type StateType is (
       MON_STATUS_S,
       WAIT_BUS_S,
-      CHECK_ERROR_S,
+      ASSERT_BMSK_S,
+      START_ARB_S,
       WAIT_ARB_S,
       PAUSE_S);
 
@@ -71,12 +72,14 @@ architecture rtl of Pix2PgpColumnSupervisor is
       alignError     : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
+      pause          : sl;
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colTrgAlignErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colPauseBridge : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colBitmaskOut  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
    end record RegType;
@@ -90,12 +93,14 @@ architecture rtl of Pix2PgpColumnSupervisor is
       alignError     => '0',
       colBitmask     => (others => '0'),
       -- internal
+      pause          => '0',
       dataReady      => (others => '0'),
       colTrgAlignErr => (others => '0'),
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
       columnPause    => (others => '0'),
       colPauseBridge => (others => '0'),
+      colBitmaskOut  => (others => '0'),
       waitCnt        => (others => '0'),
       state          => MON_STATUS_S);
 
@@ -182,7 +187,9 @@ begin
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
+            v.pause          := '0';
             v.colPauseBridge := (others => '0');
+            v.waitCnt        := (others => '0');
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.statusRd := '1';
@@ -199,23 +206,36 @@ begin
             v.alignError   := uOr(v.colTrgAlignErr);
 
             if r.waitCnt = FIFO_RD_DELAY_G then
-               v.state := CHECK_ERROR_S;
+               v.state := ASSERT_BMSK_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- change the column bitmask if an error is reported
+         -- bitmask assertion. separate state just for that;
+         -- allows for arbiter to register bitmask properly;
+         -- change the column bitmask if error is reported, or if in pause mode
          -- overOcc is read-out normally, so don't change the bitmask
-         when CHECK_ERROR_S =>
+         when ASSERT_BMSK_S =>
+            -- regular
+            v.colBitmaskOut := v.colBitmask;
+
+            -- override
             if r.colFifoError = '1' then
-               v.colBitmask := v.colFifoFullErr;
+               v.colBitmaskOut := v.colFifoFullErr;
             elsif r.alignError = '1' then
-               v.colBitmask := v.colTrgAlignErr;
+               v.colBitmaskOut := v.colTrgAlignErr;
+            elsif r.pause = '1' then
+               v.colBitmaskOut := v.columnPause;
             end if;
 
+            v.state := START_ARB_S;
+
+         ----------------------------------------------------------------------
+         -- ready to start arbiter
+         when START_ARB_S =>
             v.arbiterStart := '1';
 
             -- rising-edge detection;
-            -- arbiter might also be TX'ing dummy headers;
+            -- arbiter might be TX'ing dummy headers, so could already be busy;
             -- need to account for this (can't just check `arbiterBusy = '1'`)
             if v.arbiterBusy = '1' and r.arbiterBusy = '0' then
                v.state := WAIT_ARB_S;
@@ -230,9 +250,12 @@ begin
             if r.arbiterBusy = '0' then
                v.state := MON_STATUS_S;
 
-               -- pause mode. issue the mask to the bridge first
+               -- pause mode. issue the mask to the bridge first;
+               -- this will force status read-out on only the paused columns
+               -- later on, the column bitmask is changed too
                if not(allBits(r.columnPause, '0')) then
-                  v.colPauseBridge := r.columnPause;
+                  v.colPauseBridge := v.columnPause;
+                  v.pause          := '1';
                   v.state          := PAUSE_S;
                end if;
             end if;
@@ -240,10 +263,10 @@ begin
          ----------------------------------------------------------------------
          -- wait for all paused columns to finish processing
          when PAUSE_S =>
-         if r.dataReady = r.columnPause then
-            v.statusRd := '1';
-            v.state    := WAIT_BUS_S;
-         end if;
+            if r.dataReady = r.columnPause then
+               v.statusRd := '1';
+               v.state    := ASSERT_BMSK_S;
+            end if;
 
       end case;
       -------------------------------------------------------------------------
@@ -253,7 +276,7 @@ begin
       colFifoError <= v.colFifoError;
       overOccError <= v.overOccError;
       alignError   <= v.alignError;
-      colBitmask   <= v.colBitmask;
+      colBitmask   <= v.colBitmaskOut;
       trgNum       <= refTrgNum;
       columnPause  <= v.colPauseBridge;
       arbiterStart <= v.arbiterStart;
