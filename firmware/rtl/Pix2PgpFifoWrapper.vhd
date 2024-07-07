@@ -144,7 +144,7 @@ begin
 
    rstFifo <= (rst and not(enable)) when RST_POLARITY_G = '1' else (not(rst) and not(enable));
 
-   STANDALONE_FLOW_GEN : if (GHDL_SIM_G = true) generate
+   GHDL_SIM_FLOW_GEN : if (GHDL_SIM_G = true) generate
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
          U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
@@ -230,24 +230,14 @@ begin
       fullWr  <= fullWrStandalone;
       emptyRd <= emptyRdStandalone;
 
-   end generate STANDALONE_FLOW_GEN;
+   end generate GHDL_SIM_FLOW_GEN;
 
-   ASIC_SIM_FLOW_GEN : if (GHDL_SIM_G = false and SYNTHESIZE_G = false) generate
-
-      -- vendor proprietary fifo placeholder
-      -- remove this once you place the vendor FIFO
-      assert (GHDL_SIM_G = false and SYNTHESIZE_G = false)
-      report "[ERROR]: No vendor proprietary FIFO simulation behavioral model implemented yet!"
-      severity failure;
-
-   end generate ASIC_SIM_FLOW_GEN;
-
-   ASIC_SYNTH_FLOW_GEN : if (SYNTHESIZE_G = true) generate
+   ASIC_FLOW_GEN : if (SYNTHESIZE_G = true) or (GHDL_SIM_G = false) generate
       wrEnDwareFifo <= not(wrEn);
       rdEnDwareFifo <= not(rdEn);
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
-         U_designwareSynthFifo : DW_fifo_s2_sf
+         U_designwareFifo : DW_fifo_s2_sf
             generic map (
                width       => WR_DATA_WIDTH_G,
                depth       => DWARE_DEPTH_G,
@@ -271,7 +261,7 @@ begin
       end generate SYMM_GEN;
 
       ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
-         U_designwareSynthFifo : DW_asymfifo_s2_sf
+         U_designwareFifo : DW_asymfifo_s2_sf
             generic map (
                data_in_width  => WR_DATA_WIDTH_G,
                data_out_width => RD_DATA_WIDTH_G,
@@ -295,6 +285,7 @@ begin
                pop_full   => fullRd,
                data_out   => dout);
       end generate ASYMM_GEN;
-   end generate ASIC_SYNTH_FLOW_GEN;
+
+   end generate ASIC_FLOW_GEN;
 
 end rtl;
