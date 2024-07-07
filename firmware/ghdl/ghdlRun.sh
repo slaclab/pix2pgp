@@ -259,6 +259,7 @@ ghdlClean()
   if [[ $pix2pgp_exists -eq 1 ]]; then
     echo "[INFO]: Pix2pgp libraries found in ${RTL}. Importing..."
     ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
+    ${GHDL_IMPORT_PIX2PGP} ${TB}
     ${GHDL_IMPORT_PIX2PGP} ${RTL}
   else
     echo "[ERROR]: No pix2pgp files found..."

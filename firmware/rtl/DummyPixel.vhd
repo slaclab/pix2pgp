@@ -40,7 +40,6 @@ entity DummyPixel is
       sro     : in  sl;
       pause   : in  sl;
       hitLen  : in  slv(9 downto 0);
-      overOcc : in  sl;
       tok     : out sl;
       tokFb   : out sl;
       ackN    : out sl;
@@ -60,7 +59,6 @@ architecture rtl of DummyPixel is
    type RegType is record
       sro     : sl;
       hitLen  : slv(9 downto 0);
-      overOcc : sl;
       tok     : sl;
       tokFb   : sl;
       ackN    : sl;
@@ -77,7 +75,6 @@ architecture rtl of DummyPixel is
    constant REG_INIT_C : RegType := (
       sro     => '0',
       hitLen  => (others => '0'),
-      overOcc => '0',
       tok     => '1',
       tokFb   => '0',
       ackN    => '1',
@@ -96,7 +93,7 @@ architecture rtl of DummyPixel is
 
 begin
 
-comb : process (rst, r, hitLen, overOcc, sro, pause) is
+comb : process (rst, r, hitLen, sro, pause) is
 
       variable v : RegType;
 
@@ -106,7 +103,6 @@ comb : process (rst, r, hitLen, overOcc, sro, pause) is
 
       -- Get the inputs
       v.hitLen  := hitLen;
-      v.overOcc := overOcc;
       v.sro     := sro;
       v.pause   := pause;
 
