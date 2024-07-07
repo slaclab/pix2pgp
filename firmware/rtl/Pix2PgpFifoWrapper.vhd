@@ -60,6 +60,7 @@ end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
+      signal rstDwareFifo      : sl := '0';
       signal wrEnDwareFifo     : sl := '0';
       signal rdEnDwareFifo     : sl := '0';
       signal fullWrStandalone  : sl := '0';
@@ -142,7 +143,7 @@ end component;
 
 begin
 
-   rstFifo <= (rst and not(enable)) when RST_POLARITY_G = '1' else (not(rst) and not(enable));
+   rstFifo <= (rst or not(enable)) when RST_POLARITY_G = '1' else (not(rst) or enable);
 
    GHDL_SIM_FLOW_GEN : if (GHDL_SIM_G = true) generate
 
@@ -235,6 +236,7 @@ begin
    ASIC_FLOW_GEN : if (SYNTHESIZE_G = true) or (GHDL_SIM_G = false) generate
       wrEnDwareFifo <= not(wrEn);
       rdEnDwareFifo <= not(rdEn);
+      rstDwareFifo  <= not(rstFifo);
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
          U_designwareFifo : DW_fifo_s2_sf
@@ -244,7 +246,7 @@ begin
                push_af_lvl => DWARE_AF_LVL_G,
                rst_mode    => 2)
             port map (
-               rst_n      => rstFifo,
+               rst_n      => rstDwareFifo,
                -- Write Interface
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
@@ -269,8 +271,8 @@ begin
                push_af_lvl    => DWARE_AF_LVL_G,
                rst_mode       => 2)
             port map (
-               rst_n      => rstFifo,
-               flush_n    => rstFifo,
+               rst_n      => rstDwareFifo,
+               flush_n    => rstDwareFifo,
                -- Write Interface
                clk_push   => wrClk,
                push_req_n => wrEnDwareFifo,
