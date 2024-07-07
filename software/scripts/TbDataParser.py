@@ -101,41 +101,40 @@ if __name__ == "__main__":
     state    = "header_s"
 
     while _line < len(_lineArray):
-        match state:
-            ########################################################################################
-            case "header_s":
-                _colSel = 0
-                _isEmpty, _bitmask, _trigger = headerEval(_lineArray[_line])
-                _line += 1
-                if not(_isEmpty):
-                    state = "bitmaskCheck_s"
-            ########################################################################################
-            case "bitmaskCheck_s":
-                # time.sleep(0.2)
-                if _colSel < 24:
-                    if bitmaskCheck(_bitmask, _colSel):
-                        state = "lenParse_s"
-                    else:
-                        _colSel += 1
+        ########################################################################################
+        if state == "header_s":
+            _colSel = 0
+            _isEmpty, _bitmask, _trigger = headerEval(_lineArray[_line])
+            _line += 1
+            if not(_isEmpty):
+                state = "bitmaskCheck_s"
+        ########################################################################################
+        elif state == "bitmaskCheck_s":
+            # time.sleep(0.2)
+            if _colSel < 24:
+                if bitmaskCheck(_bitmask, _colSel):
+                    state = "lenParse_s"
                 else:
-                    print(f"Trigger = {_trigger} decoding Done. Next Event...")
-                    state = "header_s"
-            ########################################################################################
-            case "lenParse_s":
-                # time.sleep(0.2)
-                _len = _lineArray[_line]
-                print(f"================================================")
-                print(f"Length of Hits = {_len} for Col = {_colSel}")
-                _lenCnt = _len
-                state = "hitDecode_s"
-                _line += 1
-            ########################################################################################
-            case "hitDecode_s":
-                # time.sleep(0.2)
-                _hitPrinter(_lineArray[_line], args.hitDecode, _lenCnt)
-                _lenCnt = _lenCnt - 2
-                _line += 1
-                if _lenCnt <= 0:
                     _colSel += 1
-                    state = "bitmaskCheck_s"
-                    print(f"================================================")
+            else:
+                print(f"Trigger = {_trigger} decoding Done. Next Event...")
+                state = "header_s"
+        ########################################################################################
+        elif state == "lenParse_s":
+            # time.sleep(0.2)
+            _len = _lineArray[_line]
+            print(f"================================================")
+            print(f"Length of Hits = {_len} for Col = {_colSel}")
+            _lenCnt = _len
+            state = "hitDecode_s"
+            _line += 1
+        ########################################################################################
+        elif state == "hitDecode_s":
+            # time.sleep(0.2)
+            _hitPrinter(_lineArray[_line], args.hitDecode, _lenCnt)
+            _lenCnt = _lenCnt - 2
+            _line += 1
+            if _lenCnt <= 0:
+                _colSel += 1
+                state = "bitmaskCheck_s"
+                print(f"================================================")
