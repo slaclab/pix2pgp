@@ -17,29 +17,29 @@ use surf.AxiStreamPacketizer2Pkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-
 entity Pix2PgpTopTb is
+   generic(
+      TPD_G                    : time     := 1 ns;
+      RST_ASYNC_G              : boolean  := True;
+      RST_POLARITY_G           : sl       := '1';
+      GHDL_SIM_G               : boolean  := True;
+      DATAFIFO_PIPE_G          : positive := 2;
+      STATUSFIFO_PIPE_G        : positive := 2;
+      DATAFIFO_FWFT_G          : boolean  := True;
+      PIPELINE_BRIDGE_DATA_G   : boolean  := False;
+      PIPELINE_BRIDGE_STATUS_G : boolean  := True;
+      COLMANAGER_FULL_LVL_G    : natural  := 3;
+      PGPADAPTER_FULL_LVL_G    : natural  := 3;
+      SUPER_FIFO_RD_DELAY_G    : natural  := 3;
+      ARB_FIFO_RD_DELAY_G      : natural  := 1;
+      ARB_DOUT_PIPE_G          : natural  := 2;
+      NUM_VC_G                 : natural  := 1
+   );
 end entity Pix2PgpTopTb;
 
 architecture test of Pix2PgpTopTb is
 
-   constant TPD_C                    : time    := 1 ns;
-   constant RST_ASYNC_C              : boolean := True;
-   constant RST_POLARITY_C           : sl := '1';
-   constant GHDL_SIM_C               : boolean := True;
-   constant DATAFIFO_PIPE_C          : positive := 2;
-   constant STATUSFIFO_PIPE_C        : positive := 2;
-   constant DATAFIFO_FWFT_C          : boolean := True;
-   constant PIPELINE_BRIDGE_DATA_C   : boolean := False;
-   constant PIPELINE_BRIDGE_STATUS_C : boolean := True;
-   constant COLMANAGER_FULL_LVL_C    : natural := 3;
-   constant PGPADAPTER_FULL_LVL_C    : natural := 3;
-   constant SUPER_FIFO_RD_DELAY_C    : natural := 3;
-   constant ARB_FIFO_RD_DELAY_C      : natural := 1;
-   constant ARB_DOUT_PIPE_C          : natural := 2;
-   constant NUM_VC_C                 : natural := 1;
-   --
-   constant CLK_PERIOD_C             : time := 5.384 ns;
+   constant CLK_PERIOD_C : time := 5.384 ns;
 
    signal clk          : sl := '0';
    signal rst          : sl := '1';
@@ -79,14 +79,14 @@ architecture test of Pix2PgpTopTb is
    signal pgpData40bValid  : sl := '0';
    signal pgpData40bData :  slv(39 downto 0) := (others => '0');
 
-   signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
+   signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
-   signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_C-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
 
 begin
 
   -- rst and clk
-  clk <= not clk after CLK_PERIOD_C - TPD_C;
+  clk <= not clk after CLK_PERIOD_C - TPD_G;
   rst <= '1', '0' after CLK_PERIOD_C*200;
 
    -------
@@ -95,8 +95,8 @@ begin
    GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
       U_DummyPixel : entity pix2pgp.DummyPixel
          generic map(
-            TPD_G        => TPD_C,
-            RST_ASYNC_G  => RST_ASYNC_C,
+            TPD_G        => TPD_G,
+            RST_ASYNC_G  => RST_ASYNC_G,
             WAIT_FB_G    => 2,
             WAIT_ACKN_G  => 2,
             WAIT_WREN_G  => 2,
@@ -118,20 +118,20 @@ begin
   -- Instantiate the design under test
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
       generic map (
-         TPD_G                    => TPD_C,
-         RST_ASYNC_G              => RST_ASYNC_C,
-         RST_POLARITY_G           => RST_POLARITY_C,
-         GHDL_SIM_G               => GHDL_SIM_C,
-         DATAFIFO_FWFT_G          => DATAFIFO_FWFT_C,
-         PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_C,
-         PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_C,
-         COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_C,
-         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_C,
-         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_C,
-         STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_C,
-         SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_C,
-         ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_C,
-         ARB_DOUT_PIPE_G          => ARB_DOUT_PIPE_C)
+         TPD_G                    => TPD_G,
+         RST_ASYNC_G              => RST_ASYNC_G,
+         RST_POLARITY_G           => RST_POLARITY_G,
+         GHDL_SIM_G               => GHDL_SIM_G,
+         DATAFIFO_FWFT_G          => DATAFIFO_FWFT_G,
+         PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
+         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
+         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
+         STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_G,
+         SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_G,
+         ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G          => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
          sparseClk    => clk,
@@ -173,8 +173,8 @@ begin
 
     U_SerializerGearbox : entity surf.Gearbox
       generic map (
-         TPD_G          => TPD_C,
-         RST_ASYNC_G    => RST_ASYNC_C,
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 66,
          MASTER_WIDTH_G => 32)
       port map (
@@ -197,8 +197,8 @@ begin
      -------
     U_SerializerReverseGearbox : entity surf.Gearbox
       generic map (
-         TPD_G          => TPD_C,
-         RST_ASYNC_G    => RST_ASYNC_C,
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 32,
          MASTER_WIDTH_G => 66)
       port map (
@@ -218,9 +218,9 @@ begin
 
     U_PgpRx : entity surf.Pgp4Rx
      generic map(
-        TPD_G       => TPD_C,
-        RST_ASYNC_G => RST_ASYNC_C,
-        NUM_VC_G    => NUM_VC_C,
+        TPD_G       => TPD_G,
+        RST_ASYNC_G => RST_ASYNC_G,
+        NUM_VC_G    => NUM_VC_G,
         SKIP_EN_G   => true,
         LITE_EN_G   => true)
      port map(
@@ -249,8 +249,8 @@ begin
 
      U_FpgaGearbox : entity surf.Gearbox
       generic map (
-         TPD_G          => TPD_C,
-         RST_ASYNC_G    => RST_ASYNC_C,
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 64,
          MASTER_WIDTH_G => 40)
       port map (
