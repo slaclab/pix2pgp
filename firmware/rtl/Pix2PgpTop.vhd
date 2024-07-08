@@ -35,10 +35,10 @@ entity Pix2PgpTop is
       DATAFIFO_FWFT_G          : boolean  := true;
       PIPELINE_BRIDGE_DATA_G   : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G : boolean  := false;
-      COLMANAGER_FULL_LVL_G    : integer  := 3;
-      COLMANAGER_DEPTH_G       : integer  := 4;
+      COLMANAGER_DEPTH_G       : integer  := 6;
+      COLMANAGER_FULL_LVL_G    : integer  := 5;
       PGPADAPTER_DEPTH_G       : integer  := 6;
-      PGPADAPTER_FULL_LVL_G    : integer  := 3;
+      PGPADAPTER_FULL_LVL_G    : integer  := 5;
       DATAFIFO_PIPE_G          : positive := 1;
       STATUSFIFO_PIPE_G        : positive := 1;
       SUPER_FIFO_RD_DELAY_G    : positive := 2;

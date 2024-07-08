@@ -28,8 +28,10 @@ entity Pix2PgpTb is
       DATAFIFO_FWFT_G          : boolean  := True;
       PIPELINE_BRIDGE_DATA_G   : boolean  := False;
       PIPELINE_BRIDGE_STATUS_G : boolean  := True;
-      COLMANAGER_FULL_LVL_G    : natural  := 3;
-      PGPADAPTER_FULL_LVL_G    : natural  := 3;
+      COLMANAGER_DEPTH_G       : integer  := 6;
+      COLMANAGER_FULL_LVL_G    : integer  := 5;
+      PGPADAPTER_DEPTH_G       : integer  := 6;
+      PGPADAPTER_FULL_LVL_G    : integer  := 5;
       SUPER_FIFO_RD_DELAY_G    : natural  := 3;
       ARB_FIFO_RD_DELAY_G      : natural  := 1;
       ARB_DOUT_PIPE_G          : natural  := 2;
@@ -92,9 +94,11 @@ begin
          DATAFIFO_FWFT_G          => DATAFIFO_FWFT_G,
          PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DEPTH_G       => COLMANAGER_DEPTH_G,
          COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
-         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
+         PGPADAPTER_DEPTH_G       => PGPADAPTER_DEPTH_G,
          PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
+         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_G,
          SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_G,
          ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_G,

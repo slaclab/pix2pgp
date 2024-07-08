@@ -28,8 +28,10 @@ entity Pix2PgpTopTb is
       DATAFIFO_FWFT_G          : boolean  := True;
       PIPELINE_BRIDGE_DATA_G   : boolean  := False;
       PIPELINE_BRIDGE_STATUS_G : boolean  := True;
-      COLMANAGER_FULL_LVL_G    : natural  := 3;
-      PGPADAPTER_FULL_LVL_G    : natural  := 3;
+      COLMANAGER_DEPTH_G       : integer  := 6;
+      COLMANAGER_FULL_LVL_G    : integer  := 5;
+      PGPADAPTER_DEPTH_G       : integer  := 6;
+      PGPADAPTER_FULL_LVL_G    : integer  := 5;
       SUPER_FIFO_RD_DELAY_G    : natural  := 3;
       ARB_FIFO_RD_DELAY_G      : natural  := 1;
       ARB_DOUT_PIPE_G          : natural  := 2;
@@ -105,30 +107,30 @@ begin
     --wait for CLK_PERIOD_C*2;
     --  sro  <= '0';
 
-    --wait for CLK_PERIOD_C*186;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --     hitLen(col) <= toSlv(5, hitLen(col)'length);
-    --  end loop;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_C*186;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --  sro  <= '0';
-
     wait for CLK_PERIOD_C*186;
-      hitLen(3) <= toSlv(24, hitLen(5)'length);
-      hitLen(4) <= toSlv(2, hitLen(5)'length);
-      hitLen(5) <= toSlv(8, hitLen(5)'length);
-      hitLen(6) <= toSlv(6, hitLen(6)'length);
-      hitLen(7) <= toSlv(24, hitLen(7)'length);
-      hitLen(8) <= toSlv(5, hitLen(8)'length);
-      hitLen(9) <= toSlv(1, hitLen(9)'length);
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(3) <= toSlv(24, hitLen(5)'length);
+    --  hitLen(4) <= toSlv(2, hitLen(5)'length);
+    --  hitLen(5) <= toSlv(8, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(6, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(24, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(5, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(1, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
     --wait for CLK_PERIOD_C*186;
     --  sro  <= '1';
@@ -230,7 +232,9 @@ begin
          DATAFIFO_FWFT_G          => DATAFIFO_FWFT_G,
          PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DEPTH_G       => COLMANAGER_DEPTH_G,
          COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
+         PGPADAPTER_DEPTH_G       => PGPADAPTER_DEPTH_G,
          PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
          SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_G,
          ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_G,
