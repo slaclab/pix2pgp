@@ -50,9 +50,7 @@ SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
 DWARE_DIR=${RTL_DIR}/dw
 DWARE=${DWARE_DIR}/*.vhd
 DWARE_PKG_DIR=${DWARE_DIR}/pkg
-DWARE_PKG=${DWARE_PKG_DIR}/DWpackages.vhd
-# actual file; test if exists
-DWARE_TEST_FILE="/afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf.vhd"
+DWARE_PKG=${DWARE_PKG_DIR}/dw06_components.vhd
 
 CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
@@ -66,7 +64,7 @@ OUT=${GHDL_DIR}/*.o
 GHDL_CMD="ghdl-llvm"
 # check if your ghdl version is < 1.0.0; if it is, you need to use a downloaded tarball from https://github.com/ghdl/ghdl/releases
 # example below...
-# GHDL_CMD="/home/cbakalis/Work/tools/ghdl/bin/ghdl"
+# GHDL_CMD="/home/cb/Work/tools/ghdl/bin/ghdl"
 #############################
 GHDL_GLBL_FLAGS="--ieee=standard -fexplicit -fsynopsys"
 GHDL_STD_FLAG="--std=93c"
@@ -74,7 +72,7 @@ GHDL_STD_FLAG="--std=93c"
 GHDL_ANALYZE="${GHDL_CMD} -s ${GHDL_GLBL_FLAGS} ${GHDL_STD_FLAG}"
 GHDL_IMPORT_SURF="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=surf"
 GHDL_IMPORT_PIX2PGP="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=pix2pgp"
-GHDL_IMPORT_DWARE="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=dware"
+GHDL_IMPORT_DWARE="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=dw06"
 GHDL_IMPORT_WORK="${GHDL_CMD} -i ${GHDL_GLBL_FLAGS} --work=work"
 GHDL_MAKE="${GHDL_CMD} -m  -g -Psurf -Ppix2pgp -Pdware -Pwork --warn-unused ${GHDL_GLBL_FLAGS}"
 GHDL_RUN="${GHDL_CMD} --elab-run ${GHDL_GLBL_FLAGS}"
@@ -150,20 +148,7 @@ prepareSurf()
 
  prepareDWare()
  {
-    checkFileExists ${DWARE_TEST_FILE}
-    dwareExists=$?
-
-    if [[ $dwareExists -eq 1 ]]; then
-      echo "[INFO]: DWare Libraries found! Importing..."
-      # first clean up the local stub files
-      rm ${DWARE}
-      rm ${DWARE_PKG}
-      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/packages/dware/src/DWpackages.vhd ${DWARE_PKG_DIR}/DWpackages.vhd
-      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_asymfifo_s2_sf.vhd ${DWARE_DIR}/DW_asymfifo_s2_sf.vhd
-      ln -s /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf.vhd ${DWARE_DIR}/DW_fifo_s2_sf.vhd
-    else
-      echo "[WARNING]: DWare Libraries NOT found! Importing the stub files instead..."
-    fi
+    echo "[WARNING]: DWare Libraries NOT needed for GHDL simulation! Importing the local stub files instead..."
 
     ${GHDL_IMPORT_DWARE} ${DWARE_PKG}
     ${GHDL_IMPORT_DWARE} ${DWARE}
