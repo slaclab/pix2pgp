@@ -31,8 +31,10 @@ entity Pix2PgpColumnManager is
       RST_POLARITY_G    : sl       := '1';
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
-      DWARE_DEPTH_G     : integer  := 32;
-      DWARE_AF_LVL_G    : integer  := 3;
+      DATA_DEPTH_G      : integer  := 32;
+      DATA_AF_LVL_G     : integer  := 30;
+      STATUS_DEPTH_G    : integer  := 32;
+      STATUS_AF_LVL_G   : integer  := 30;
       GHDL_SIM_G        : boolean  := false;
       SYNTHESIZE_G      : boolean  := false);
    port(
@@ -308,7 +310,8 @@ begin
          GEN_SYNC_FIFO_G => true,
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
-         DWARE_DEPTH_G   => DWARE_DEPTH_G,
+         DWARE_DEPTH_G   => STATUS_DEPTH_G,
+         DWARE_AF_LVL_G  => STATUS_AF_LVL_G,
          ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
@@ -373,8 +376,8 @@ begin
          FWFT_EN_G       => true,
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
          RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
-         DWARE_DEPTH_G   => DWARE_DEPTH_G,
-         DWARE_AF_LVL_G  => DWARE_AF_LVL_G,
+         DWARE_DEPTH_G   => DATA_DEPTH_G,
+         DWARE_AF_LVL_G  => DATA_AF_LVL_G,
          ADDR_WIDTH_G    => 4,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)

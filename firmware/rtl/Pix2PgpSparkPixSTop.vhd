@@ -14,24 +14,26 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpSparkPixSTop is
    generic(
-      TPD_G                    : time      := 1 ns;
-      RST_ASYNC_G              : boolean   := true;
-      RST_POLARITY_G           : std_logic := '1';
-      SERIALIZER_ID_G          : integer   := 0;
-      SYNTHESIZE_G             : boolean   := true;
-      GHDL_SIM_G               : boolean   := false;
-      DATAFIFO_PIPE_G          : positive  := 1;
-      STATUSFIFO_PIPE_G        : positive  := 1;
-      DATAFIFO_FWFT_G          : boolean   := true;
-      PIPELINE_BRIDGE_DATA_G   : boolean   := false;
-      PIPELINE_BRIDGE_STATUS_G : boolean   := true;
-      COLMANAGER_DEPTH_G       : integer   := 6;
-      COLMANAGER_FULL_LVL_G    : integer   := 5;
-      PGPADAPTER_DEPTH_G       : integer   := 6;
-      PGPADAPTER_FULL_LVL_G    : integer   := 5;
-      SUPER_FIFO_RD_DELAY_G    : natural   := 2;
-      ARB_FIFO_RD_DELAY_G      : natural   := 1;
-      ARB_DOUT_PIPE_G          : natural   := 1);
+      TPD_G                      : time      := 1 ns;
+      RST_ASYNC_G                : boolean   := true;
+      RST_POLARITY_G             : std_logic := '1';
+      SERIALIZER_ID_G            : integer   := 0;
+      SYNTHESIZE_G               : boolean   := true;
+      GHDL_SIM_G                 : boolean   := false;
+      DATAFIFO_PIPE_G            : positive  := 1;
+      STATUSFIFO_PIPE_G          : positive  := 1;
+      DATAFIFO_FWFT_G            : boolean   := true;
+      PIPELINE_BRIDGE_DATA_G     : boolean   := false;
+      PIPELINE_BRIDGE_STATUS_G   : boolean   := true;
+      COLMANAGER_DATA_DEPTH_G    : integer   := 6;
+      COLMANAGER_DATA_AF_LVL_G   : integer   := 5;
+      COLMANAGER_STATUS_DEPTH_G  : integer   := 4;
+      COLMANAGER_STATUS_AF_LVL_G : integer   := 3;
+      PGPADAPTER_DEPTH_G         : integer   := 6;
+      PGPADAPTER_FULL_LVL_G      : integer   := 5;
+      SUPER_FIFO_RD_DELAY_G      : natural   := 2;
+      ARB_FIFO_RD_DELAY_G        : natural   := 1;
+      ARB_DOUT_PIPE_G            : natural   := 1);
    port(
       -- General Interface
       sparseClk    : in  std_logic;
@@ -89,23 +91,25 @@ begin
    -- Top Level
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
       generic map (
-         TPD_G                    => TPD_G,
-         RST_ASYNC_G              => RST_ASYNC_G,
-         RST_POLARITY_G           => RST_POLARITY_G,
-         GHDL_SIM_G               => GHDL_SIM_G,
-         SYNTHESIZE_G             => SYNTHESIZE_G,
-         DATAFIFO_FWFT_G          => DATAFIFO_FWFT_G,
-         COLMANAGER_DEPTH_G       => COLMANAGER_DEPTH_G,
-         COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
-         PGPADAPTER_DEPTH_G       => PGPADAPTER_DEPTH_G,
-         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
-         PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
-         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_G,
-         SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_G,
-         ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G          => ARB_DOUT_PIPE_G)
+         TPD_G                      => TPD_G,
+         RST_ASYNC_G                => RST_ASYNC_G,
+         RST_POLARITY_G             => RST_POLARITY_G,
+         GHDL_SIM_G                 => GHDL_SIM_G,
+         SYNTHESIZE_G               => SYNTHESIZE_G,
+         DATAFIFO_FWFT_G            => DATAFIFO_FWFT_G,
+         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
+         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
+         COLMANAGER_STATUS_AF_LVL_G => COLMANAGER_STATUS_AF_LVL_G,
+         PGPADAPTER_DEPTH_G         => PGPADAPTER_DEPTH_G,
+         PGPADAPTER_FULL_LVL_G      => PGPADAPTER_FULL_LVL_G,
+         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
+         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
+         ARB_FIFO_RD_DELAY_G        => ARB_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
          sparseClk    => sparseClk,

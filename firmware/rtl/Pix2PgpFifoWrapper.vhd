@@ -24,6 +24,9 @@ use surf.StdRtlPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
+library dw06;
+use dw06.dw06_components.all;
+
 entity Pix2PgpFifoWrapper is
    generic(
       TPD_G            : time    := 1 ns;
@@ -60,86 +63,12 @@ end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
-      signal rstDwareFifo      : sl := '0';
-      signal wrEnDwareFifo     : sl := '0';
-      signal rdEnDwareFifo     : sl := '0';
-      signal fullWrStandalone  : sl := '0';
-      signal emptyRdStandalone : sl := '0';
-      signal rstFifo           : sl := '0';
-
-   component DW_asymfifo_s2_sf is
-      generic(
-         data_in_width  : INTEGER  ;
-         data_out_width : INTEGER  ;
-         depth : INTEGER  := 8;
-         push_ae_lvl : INTEGER  := 2;
-         push_af_lvl : INTEGER  := 2;
-         pop_ae_lvl : INTEGER  := 2;
-         pop_af_lvl : INTEGER  := 2;
-         err_mode : INTEGER  := 0;
-         push_sync : INTEGER  := 2;
-         pop_sync : INTEGER  := 2;
-         rst_mode : INTEGER  := 1;
-         byte_order : INTEGER  := 0);
-      port(
-         clk_push : in std_logic;
-         clk_pop : in std_logic;
-         rst_n : in std_logic;
-         push_req_n : in std_logic;
-         flush_n : in std_logic;
-         pop_req_n : in std_logic;
-         data_in : in std_logic_vector(data_in_width-1 downto 0);
-         push_empty : out std_logic;
-         push_ae : out std_logic;
-         push_hf : out std_logic;
-         push_af : out std_logic;
-         push_full : out std_logic;
-         ram_full : out std_logic;
-         part_wd : out std_logic;
-         push_error : out std_logic;
-         pop_empty : out std_logic;
-         pop_ae : out std_logic;
-         pop_hf : out std_logic;
-         pop_af : out std_logic;
-         pop_full : out std_logic;
-         pop_error : out std_logic;
-         data_out : out std_logic_vector(data_out_width-1 downto 0 )
-      );
-   end component;
-
-   component DW_fifo_s2_sf
-      generic (
-         width : INTEGER  := 8;
-         depth : INTEGER  := 8;
-         push_ae_lvl : INTEGER  := 2;
-         push_af_lvl : INTEGER  := 2;
-         pop_ae_lvl : INTEGER  := 2;
-         pop_af_lvl : INTEGER  := 2;
-         err_mode : INTEGER  := 0;
-         push_sync : INTEGER  := 2;
-         pop_sync : INTEGER  := 2;
-         rst_mode : INTEGER  := 0);
-      port(
-         clk_push : in std_logic;
-         clk_pop : in std_logic;
-         rst_n : in std_logic;
-         push_req_n : in std_logic;
-         pop_req_n : in std_logic;
-         data_in : in std_logic_vector(width-1 downto 0);
-         push_empty : out std_logic;
-         push_ae : out std_logic;
-         push_hf : out std_logic;
-         push_af : out std_logic;
-         push_full : out std_logic;
-         push_error : out std_logic;
-         pop_empty : out std_logic;
-         pop_ae : out std_logic;
-         pop_hf : out std_logic;
-         pop_af : out std_logic;
-         pop_full : out std_logic;
-         pop_error : out std_logic;
-         data_out : out std_logic_vector( width-1 downto 0 ));
-end component;
+   signal rstDwareFifo      : sl := '0';
+   signal wrEnDwareFifo     : sl := '0';
+   signal rdEnDwareFifo     : sl := '0';
+   signal fullWrStandalone  : sl := '0';
+   signal emptyRdStandalone : sl := '0';
+   signal rstFifo           : sl := '0';
 
 begin
 
@@ -233,17 +162,18 @@ begin
 
    end generate GHDL_SIM_FLOW_GEN;
 
-   ASIC_FLOW_GEN : if (SYNTHESIZE_G = true) or (GHDL_SIM_G = false) generate
+   ASIC_FLOW_GEN : if (GHDL_SIM_G = false) generate
       wrEnDwareFifo <= not(wrEn);
       rdEnDwareFifo <= not(rdEn);
       rstDwareFifo  <= not(rstFifo);
 
       SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
-         U_designwareFifo : DW_fifo_s2_sf
+         U_designwareFifo : entity dw06.DW_fifo_s2_sf
             generic map (
                width       => WR_DATA_WIDTH_G,
                depth       => DWARE_DEPTH_G,
                push_af_lvl => DWARE_AF_LVL_G,
+               pop_af_lvl  => DWARE_AF_LVL_G,
                rst_mode    => 2)
             port map (
                rst_n      => rstDwareFifo,
@@ -263,12 +193,13 @@ begin
       end generate SYMM_GEN;
 
       ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
-         U_designwareFifo : DW_asymfifo_s2_sf
+         U_designwareFifo : entity dw06.DW_asymfifo_s2_sf
             generic map (
                data_in_width  => WR_DATA_WIDTH_G,
                data_out_width => RD_DATA_WIDTH_G,
                depth          => DWARE_DEPTH_G,
                push_af_lvl    => DWARE_AF_LVL_G,
+               pop_af_lvl     => DWARE_AF_LVL_G,
                rst_mode       => 2)
             port map (
                rst_n      => rstDwareFifo,

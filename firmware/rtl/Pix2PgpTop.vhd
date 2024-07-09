@@ -27,23 +27,25 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is
    generic(
-      TPD_G                    : time     := 1 ns;
-      RST_ASYNC_G              : boolean  := true;
-      RST_POLARITY_G           : sl       := '1';
-      GHDL_SIM_G               : boolean  := true;
-      SYNTHESIZE_G             : boolean  := false;
-      DATAFIFO_FWFT_G          : boolean  := true;
-      PIPELINE_BRIDGE_DATA_G   : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G : boolean  := false;
-      COLMANAGER_DEPTH_G       : integer  := 6;
-      COLMANAGER_FULL_LVL_G    : integer  := 5;
-      PGPADAPTER_DEPTH_G       : integer  := 6;
-      PGPADAPTER_FULL_LVL_G    : integer  := 5;
-      DATAFIFO_PIPE_G          : positive := 1;
-      STATUSFIFO_PIPE_G        : positive := 1;
-      SUPER_FIFO_RD_DELAY_G    : positive := 2;
-      ARB_FIFO_RD_DELAY_G      : positive := 1;
-      ARB_DOUT_PIPE_G          : positive := 1);
+      TPD_G                      : time     := 1 ns;
+      RST_ASYNC_G                : boolean  := true;
+      RST_POLARITY_G             : sl       := '1';
+      GHDL_SIM_G                 : boolean  := true;
+      SYNTHESIZE_G               : boolean  := false;
+      DATAFIFO_FWFT_G            : boolean  := true;
+      PIPELINE_BRIDGE_DATA_G     : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := false;
+      COLMANAGER_DATA_DEPTH_G    : integer  := 32;
+      COLMANAGER_DATA_AF_LVL_G   : integer  := 30;
+      COLMANAGER_STATUS_DEPTH_G  : integer  := 32;
+      COLMANAGER_STATUS_AF_LVL_G : integer  := 30;
+      PGPADAPTER_DEPTH_G         : integer  := 6;
+      PGPADAPTER_FULL_LVL_G      : integer  := 5;
+      DATAFIFO_PIPE_G            : positive := 1;
+      STATUSFIFO_PIPE_G          : positive := 1;
+      SUPER_FIFO_RD_DELAY_G      : positive := 2;
+      ARB_FIFO_RD_DELAY_G        : positive := 1;
+      ARB_DOUT_PIPE_G            : positive := 1);
    port(
       -- General Interface
       sparseClk    : in  sl;
@@ -106,8 +108,10 @@ begin
             RST_POLARITY_G    => RST_POLARITY_G,
             DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
             STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
-            DWARE_DEPTH_G     => COLMANAGER_DEPTH_G,
-            DWARE_AF_LVL_G    => COLMANAGER_FULL_LVL_G,
+            DATA_DEPTH_G      => COLMANAGER_DATA_DEPTH_G,
+            DATA_AF_LVL_G     => COLMANAGER_DATA_AF_LVL_G,
+            STATUS_DEPTH_G    => COLMANAGER_STATUS_DEPTH_G,
+            STATUS_AF_LVL_G   => COLMANAGER_STATUS_AF_LVL_G,
             GHDL_SIM_G        => GHDL_SIM_G,
             SYNTHESIZE_G      => SYNTHESIZE_G)
          port map(

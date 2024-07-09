@@ -19,23 +19,25 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTopTb is
    generic(
-      TPD_G                    : time     := 1 ns;
-      RST_ASYNC_G              : boolean  := True;
-      RST_POLARITY_G           : sl       := '1';
-      GHDL_SIM_G               : boolean  := True;
-      DATAFIFO_PIPE_G          : positive := 2;
-      STATUSFIFO_PIPE_G        : positive := 2;
-      DATAFIFO_FWFT_G          : boolean  := True;
-      PIPELINE_BRIDGE_DATA_G   : boolean  := False;
-      PIPELINE_BRIDGE_STATUS_G : boolean  := True;
-      COLMANAGER_DEPTH_G       : integer  := 6;
-      COLMANAGER_FULL_LVL_G    : integer  := 5;
-      PGPADAPTER_DEPTH_G       : integer  := 6;
-      PGPADAPTER_FULL_LVL_G    : integer  := 5;
-      SUPER_FIFO_RD_DELAY_G    : natural  := 3;
-      ARB_FIFO_RD_DELAY_G      : natural  := 1;
-      ARB_DOUT_PIPE_G          : natural  := 2;
-      NUM_VC_G                 : natural  := 1
+      TPD_G                      : time     := 1 ns;
+      RST_ASYNC_G                : boolean  := True;
+      RST_POLARITY_G             : sl       := '1';
+      GHDL_SIM_G                 : boolean  := True;
+      DATAFIFO_PIPE_G            : positive := 2;
+      STATUSFIFO_PIPE_G          : positive := 2;
+      DATAFIFO_FWFT_G            : boolean  := True;
+      PIPELINE_BRIDGE_DATA_G     : boolean  := False;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
+      COLMANAGER_DATA_DEPTH_G    : integer  := 6;
+      COLMANAGER_DATA_AF_LVL_G   : integer  := 5;
+      COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
+      COLMANAGER_STATUS_AF_LVL_G : integer  := 3;
+      PGPADAPTER_DEPTH_G         : integer  := 6;
+      PGPADAPTER_FULL_LVL_G      : integer  := 5;
+      SUPER_FIFO_RD_DELAY_G      : natural  := 3;
+      ARB_FIFO_RD_DELAY_G        : natural  := 1;
+      ARB_DOUT_PIPE_G            : natural  := 2;
+      NUM_VC_G                   : natural  := 1
    );
 end entity Pix2PgpTopTb;
 
@@ -223,23 +225,25 @@ begin
    ------
    U_Uut : entity pix2pgp.Pix2PgpTb
       generic map(
-         TPD_G                    => TPD_G,
-         RST_ASYNC_G              => RST_ASYNC_G,
-         RST_POLARITY_G           => RST_POLARITY_G,
-         GHDL_SIM_G               => GHDL_SIM_G,
-         DATAFIFO_PIPE_G          => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G        => STATUSFIFO_PIPE_G,
-         DATAFIFO_FWFT_G          => DATAFIFO_FWFT_G,
-         PIPELINE_BRIDGE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G => PIPELINE_BRIDGE_STATUS_G,
-         COLMANAGER_DEPTH_G       => COLMANAGER_DEPTH_G,
-         COLMANAGER_FULL_LVL_G    => COLMANAGER_FULL_LVL_G,
-         PGPADAPTER_DEPTH_G       => PGPADAPTER_DEPTH_G,
-         PGPADAPTER_FULL_LVL_G    => PGPADAPTER_FULL_LVL_G,
-         SUPER_FIFO_RD_DELAY_G    => SUPER_FIFO_RD_DELAY_G,
-         ARB_FIFO_RD_DELAY_G      => ARB_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G          => ARB_DOUT_PIPE_G,
-         NUM_VC_G                 => NUM_VC_G)
+         TPD_G                      => TPD_G,
+         RST_ASYNC_G                => RST_ASYNC_G,
+         RST_POLARITY_G             => RST_POLARITY_G,
+         GHDL_SIM_G                 => GHDL_SIM_G,
+         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+         DATAFIFO_FWFT_G            => DATAFIFO_FWFT_G,
+         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
+         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
+         COLMANAGER_STATUS_AF_LVL_G => COLMANAGER_STATUS_AF_LVL_G,
+         PGPADAPTER_DEPTH_G         => PGPADAPTER_DEPTH_G,
+         PGPADAPTER_FULL_LVL_G      => PGPADAPTER_FULL_LVL_G,
+         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
+         ARB_FIFO_RD_DELAY_G        => ARB_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G,
+         NUM_VC_G                   => NUM_VC_G)
       port map(
          clk      => clk,
          rst      => rst,
