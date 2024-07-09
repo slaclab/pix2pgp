@@ -36,11 +36,11 @@ entity Pix2PgpTop is
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := false;
       COLMANAGER_DATA_DEPTH_G    : integer  := 32;
-      COLMANAGER_DATA_AF_LVL_G   : integer  := 30;
+      COLMANAGER_DATA_AF_LVL_G   : integer  := 2;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 32;
-      COLMANAGER_STATUS_AF_LVL_G : integer  := 30;
-      PGPADAPTER_DEPTH_G         : integer  := 6;
-      PGPADAPTER_FULL_LVL_G      : integer  := 5;
+      COLMANAGER_STATUS_AF_LVL_G : integer  := 2;
+      ADAPTER_DEPTH_G            : integer  := 32;
+      ADAPTER_AF_LVL_G           : integer  := 2;
       DATAFIFO_PIPE_G            : positive := 1;
       STATUSFIFO_PIPE_G          : positive := 1;
       SUPER_FIFO_RD_DELAY_G      : positive := 2;
@@ -234,8 +234,8 @@ begin
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
-         DWARE_AF_LVL_G  => PGPADAPTER_FULL_LVL_G,
-         DWARE_DEPTH_G   => PGPADAPTER_DEPTH_G,
+         DWARE_AF_LVL_G  => ADAPTER_AF_LVL_G,
+         DWARE_DEPTH_G   => ADAPTER_DEPTH_G,
          GHDL_SIM_G      => GHDL_SIM_G,
          SYNTHESIZE_G    => SYNTHESIZE_G)
       port map(

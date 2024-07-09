@@ -36,7 +36,7 @@ entity Pix2PgpFifoWrapper is
       RD_DATA_WIDTH_G  : integer := 20;
       ADDR_WIDTH_G     : integer := 12;
       DWARE_DEPTH_G    : integer := 32;
-      DWARE_AF_LVL_G   : integer := 10;
+      DWARE_AF_LVL_G   : integer := 2;
       PIPE_STAGES_G    : natural := 0;
       FWFT_EN_G        : boolean := false;
       GEN_SYNC_FIFO_G  : boolean := false;
