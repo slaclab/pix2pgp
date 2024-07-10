@@ -68,7 +68,8 @@ architecture rtl of DummyPixel is
       --
       waitCnt : natural range 0 to 1023;
       ackCnt  : natural range 0 to 1023;
-      hitCnt  : natural range 0 to 255;
+      hitCnt  : slv(7 downto 0);
+      trgCnt  : slv(3 downto 0);
       state   : StateType;
    end record RegType;
 
@@ -84,7 +85,8 @@ architecture rtl of DummyPixel is
       --
       waitCnt => 0,
       ackCnt  => 0,
-      hitCnt  => 1,
+      hitCnt  => toSlv(1, 8),
+      trgCnt  => (others => '1'), -- so that it rolls-over to zero on first trigger
       state   => IDLE_S
    );
 
@@ -117,12 +119,13 @@ comb : process (rst, r, hitLen, sro, pause) is
          when IDLE_S =>
             v.tokFb   := '1';
             v.waitCnt := 0;
-            v.hitCnt  := 1;
+            v.hitCnt  := toSlv(1, 8);
             v.ackCnt  := 0;
 
             if (r.sro = '1') then
-               v.tok   := '0';
-               v.tokFb := '0';
+               v.tok    := '0';
+               v.tokFb  := '0';
+               v.trgCnt := r.trgCnt + 1;
                if (r.hitLen > 0) then
                   v.state := ISSUE_ACKN_S;
                else
@@ -148,9 +151,9 @@ comb : process (rst, r, hitLen, sro, pause) is
                   v.waitCnt := r.waitCnt + 1;
                   if (v.waitCnt = WAIT_WREN_G) then
                      v.wrEn               := '1';
-                     v.dout(7 downto 0)   := toSlv(r.hitCnt, v.dout(7 downto 0)'length);
+                     v.dout(7 downto 0)   := r.hitCnt;
                      v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
-                     v.dout(19 downto 16) := x"0";
+                     v.dout(19 downto 16) := r.trgCnt;
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
                         v.state := WAIT_ISSUE_FB_S;

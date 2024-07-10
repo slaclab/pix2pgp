@@ -67,8 +67,9 @@ architecture rtl of Pix2PgpFifoWrapper is
    signal wrEnDwareFifo     : sl := '0';
    signal rdEnDwareFifo     : sl := '0';
    signal fullWrStandalone  : sl := '0';
-   signal emptyRdStandalone : sl := '0';
+   signal validRdStandalone : sl := '0';
    signal rstFifo           : sl := '0';
+   signal validWr           : sl := '0';
 
 begin
 
@@ -100,7 +101,7 @@ begin
                -- Read Interface
                rd_clk    => rdClk,
                rd_en     => rdEn,
-               empty     => emptyRdStandalone,
+               valid     => validRdStandalone,
                dout      => dout);
       end generate SYMM_GEN;
 
@@ -129,7 +130,7 @@ begin
                -- Read Interface
                rd_clk    => rdClk,
                rd_en     => rdEn,
-               empty     => emptyRdStandalone,
+               valid     => validRdStandalone,
                dout      => dout);
       end generate ASYMM_GEN;
 
@@ -154,11 +155,12 @@ begin
          port map (
             clk     => wrClk,
             rst     => rst,
-            dataIn  => emptyRdStandalone,
-            dataOut => emptyWr);
+            dataIn  => validRdStandalone,
+            dataOut => validWr);
 
+      emptyWr <= not(validWr);
+      emptyRd <= not(validRdStandalone);
       fullWr  <= fullWrStandalone;
-      emptyRd <= emptyRdStandalone;
 
    end generate GHDL_SIM_FLOW_GEN;
 

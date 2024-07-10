@@ -55,16 +55,18 @@ def _hitPrinter(hits, decode, length):
     hit1 = (hits >> np.uint8(0)) & np.uint32(0xFFFFF)
 
     if decode:
-        hitCnt0 = (hit0 >> np.uint8(0)) & np.uint8(0xFF)
-        colId0  = (hit0 >> np.uint8(8)) & np.uint8(0xFF)
-        hitCnt1 = (hit1 >> np.uint8(0)) & np.uint8(0xFF)
-        colId1  = (hit1 >> np.uint8(8)) & np.uint8(0xFF)
-        _format = 'ColId0={0:<%d} HitCnt0={1:<%d} ColId1={2:<%d} HitCnt1={3:<%d}' % (4, 4, 4, 4)
+        hitCnt0 = (hit0 >> np.uint8(0))  & np.uint8(0xFF)
+        colId0  = (hit0 >> np.uint8(8))  & np.uint8(0xFF)
+        hitTrg0 = (hit0 >> np.uint8(16)) & np.uint8(0x0F)
+        hitCnt1 = (hit1 >> np.uint8(0))  & np.uint8(0xFF)
+        colId1  = (hit1 >> np.uint8(8))  & np.uint8(0xFF)
+        hitTrg1 = (hit1 >> np.uint8(16)) & np.uint8(0x0F)
+        _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d} ColId1={3:<%d} HitCnt1={4:<%d} hitTrg1={5:<%d}' % (4, 4, 4, 4, 4, 4)
         if length == 1:
-            _format = 'ColId0={0:<%d} HitCnt0={1:<%d}' % (4, 4)
-            print(_format.format(colId0, hitCnt0))
+            _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d}' % (4, 4, 4)
+            print(_format.format(colId0, hitCnt0, hitTrg0))
         else:
-            print(_format.format(colId0, hitCnt0, colId1, hitCnt1))
+            print(_format.format(colId0, hitCnt0, hitTrg0, colId1, hitCnt1, hitTrg1))
     else:
         _format = 'Hit={0:<%d} Hit={1:<%d}' % (10, 10)
         if length == 1:
@@ -123,7 +125,7 @@ if __name__ == "__main__":
         elif state == "lenParse_s":
             # time.sleep(0.2)
             _len = _lineArray[_line]
-            print(f"================================================")
+            print(f"=========================================================================")
             print(f"Length of Hits = {_len} for Col = {_colSel}")
             _lenCnt = _len
             state = "hitDecode_s"
@@ -137,4 +139,4 @@ if __name__ == "__main__":
             if _lenCnt <= 0:
                 _colSel += 1
                 state = "bitmaskCheck_s"
-                print(f"================================================")
+                print(f"=========================================================================")

@@ -127,9 +127,9 @@ begin
 
             if fifoEmpty = '0' and v.txValid = '0' then
                v.txValid  := '1';
-               v.fifoRdEn := '1';
+               --v.fifoRdEn := '1'; -- fifo is fwft
                v.txSof    := '1';
-               v.frameCnt := r.frameCnt + 1;
+               --v.frameCnt := r.frameCnt + 1;
                v.state    := PARSE_DATA_S;
             end if;
 
@@ -181,7 +181,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          GEN_SYNC_FIFO_G => false,
-         FWFT_EN_G       => false,
+         FWFT_EN_G       => true,
          WR_DATA_WIDTH_G => PGP_DWIDTH_C,
          RD_DATA_WIDTH_G => PGP_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
