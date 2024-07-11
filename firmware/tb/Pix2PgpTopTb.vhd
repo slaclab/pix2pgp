@@ -126,6 +126,10 @@ begin
     --  sro  <= '0';
 
     wait for CLK_PERIOD_C*186;
+      for col in 0 to 4 loop
+        -- only even number of events please
+        hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
       hitLen(5) <= toSlv(3, hitLen(5)'length);
       hitLen(6) <= toSlv(1, hitLen(6)'length);
       hitLen(7) <= toSlv(2, hitLen(7)'length);

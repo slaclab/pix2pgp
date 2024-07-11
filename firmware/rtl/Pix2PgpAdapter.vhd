@@ -62,10 +62,6 @@ end Pix2PgpAdapter;
 
 architecture rtl of Pix2PgpAdapter is
 
-   type StateType is (
-      IDLE_S,
-      PARSE_DATA_S);
-
    type RegType is record
       -- i/o
       txReady  : sl;
@@ -75,7 +71,6 @@ architecture rtl of Pix2PgpAdapter is
       -- internal
       fifoRdEn : sl;
       frameCnt : slv(2 downto 0);
-      state    : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -86,8 +81,7 @@ architecture rtl of Pix2PgpAdapter is
       txEof    => '0',
       -- internal
       fifoRdEn => '0',
-      frameCnt => (others => '0'),
-      state    => IDLE_S);
+      frameCnt => (others => '0'));
 
    signal fifoEmpty : sl      := '0';
    signal fifoRdEn  : sl      := '0';
@@ -117,41 +111,29 @@ begin
          v.txEof   := '0';
       end if;
 
+      if fifoEmpty = '0' and v.txValid = '0' then
+         v.fifoRdEn := '1';
+         v.txValid  := '1';
+         v.frameCnt := r.frameCnt + 1;
 
-      -------------------------------------------------------------------------
-      case r.state is
-      -------------------------------------------------------------------------
-         -- if fifo not empty, read first word
-         when IDLE_S =>
+         if r.frameCnt = 0 then
+            v.fifoRdEn := '0'; -- fwft; first word is pre-read
+            v.txSof    := '1';
+         end if;
+
+         if r.frameCnt = 4 then
+            v.txEof    := '1';
+         end if;
+
+         if r.frameCnt = 5 then
             v.frameCnt := (others => '0');
+         end if;
 
-            if fifoEmpty = '0' and v.txValid = '0' then
-               v.txValid  := '1';
-               --v.fifoRdEn := '1'; -- fifo is fwft
-               v.txSof    := '1';
-               --v.frameCnt := r.frameCnt + 1;
-               v.state    := PARSE_DATA_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- parse the data from the selected data bus
-         when PARSE_DATA_S =>
-            if fifoEmpty = '0' and v.txValid = '0' then
-               v.txValid  := '1';
-               v.fifoRdEn := '1';
-               v.frameCnt := r.frameCnt + 1;
-
-               if r.frameCnt = 4 then
-                  v.txEof := '1';
-                  v.state := IDLE_S;
-               end if;
-            end if;
-
-      end case;
+      end if;
 
       -- Outputs
       fifoRdEn <= v.fifoRdEn;
-      txValid  <= r.txValid;
+      txValid  <= not(fifoEmpty);
       txSof    <= r.txSof;
       txEof    <= r.txEof;
       txEofe   <= '0';
