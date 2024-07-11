@@ -170,12 +170,15 @@ begin
             v.colFifoFullErr(col) := '0';
          end if;
 
-         -- check if we are in pause mode
-         if (toBoolean(statusBusGlbl(col).pause)) and
-         not(toBoolean(columnIgnore(col))) then
-            v.columnPause(col) := '1';
-         else
-            v.columnPause(col) := '0';
+         -- check if we are in pause mode;
+         -- freeze the state of the register if in pause mode
+         if (r.pause = '0') then
+            if (toBoolean(statusBusGlbl(col).pause)) and
+            not(toBoolean(columnIgnore(col))) then
+               v.columnPause(col) := '1';
+            else
+               v.columnPause(col) := '0';
+            end if;
          end if;
 
       end loop;
@@ -222,6 +225,7 @@ begin
          ----------------------------------------------------------------------
          -- ready to start arbiter
          when START_ARB_S =>
+            v.pause        := '0';
             v.arbiterStart := '1';
 
             -- rising-edge detection;
@@ -244,26 +248,29 @@ begin
                -- this will force status read-out on only the paused columns
                -- later on, the column bitmask is changed too
                if not(allBits(r.columnPause, '0')) then
-                  v.colPauseBridge := r.columnPause;
-                  v.pause          := '1';
-                  v.state          := PAUSE_S;
+                  v.pause := '1';
                end if;
             end if;
 
          ----------------------------------------------------------------------
          -- wait for all paused columns to finish processing
          when PAUSE_S =>
+            v.colPauseBridge := r.columnPause;
             if r.dataReady = r.columnPause then
                v.state := ASSERT_BMSK_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- wait before re-evaluating the empty signals
+         -- wait before re-evaluating the dataReady
          when DONE_S =>
             v.waitCnt := r.waitCnt + 1;
 
             if (r.waitCnt = FIFO_RD_DELAY_G) then
                v.state := MON_STATUS_S;
+
+               if r.pause = '1' then
+                  v.state := PAUSE_S;
+               end if;
             end if;
 
       end case;

@@ -104,7 +104,6 @@ comb : process (rst, r, hitLen, sro, pause) is
       v := r;
 
       -- Get the inputs
-      v.hitLen  := hitLen;
       v.sro     := sro;
       v.pause   := pause;
 
@@ -117,6 +116,8 @@ comb : process (rst, r, hitLen, sro, pause) is
 
          ----------------------------------------------------------------------
          when IDLE_S =>
+            -- only register the hitLen if idle
+            v.hitLen  := hitLen;
             v.tokFb   := '1';
             v.waitCnt := 0;
             v.hitCnt  := toSlv(1, 8);
