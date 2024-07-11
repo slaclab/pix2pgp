@@ -22,7 +22,6 @@ entity Pix2PgpSparkPixSTop is
       GHDL_SIM_G                 : boolean   := false;
       DATAFIFO_PIPE_G            : positive  := 1;
       STATUSFIFO_PIPE_G          : positive  := 1;
-      DATAFIFO_FWFT_G            : boolean   := true;
       PIPELINE_BRIDGE_DATA_G     : boolean   := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean   := true;
       COLMANAGER_DATA_DEPTH_G    : integer   := 6;
@@ -32,7 +31,6 @@ entity Pix2PgpSparkPixSTop is
       ADAPTER_DEPTH_G            : integer   := 6;
       ADAPTER_AF_LVL_G           : integer   := 1;
       SUPER_FIFO_RD_DELAY_G      : natural   := 2;
-      ARB_FIFO_RD_DELAY_G        : natural   := 1;
       ARB_DOUT_PIPE_G            : natural   := 1);
    port(
       -- General Interface
@@ -96,7 +94,6 @@ begin
          RST_POLARITY_G             => RST_POLARITY_G,
          GHDL_SIM_G                 => GHDL_SIM_G,
          SYNTHESIZE_G               => SYNTHESIZE_G,
-         DATAFIFO_FWFT_G            => DATAFIFO_FWFT_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
          COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
@@ -108,7 +105,6 @@ begin
          DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
          SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_FIFO_RD_DELAY_G        => ARB_FIFO_RD_DELAY_G,
          ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface

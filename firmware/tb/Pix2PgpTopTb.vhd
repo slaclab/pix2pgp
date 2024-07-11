@@ -25,7 +25,6 @@ entity Pix2PgpTopTb is
       GHDL_SIM_G                 : boolean  := True;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
-      DATAFIFO_FWFT_G            : boolean  := True;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
@@ -35,7 +34,6 @@ entity Pix2PgpTopTb is
       ADAPTER_DEPTH_G            : integer  := 6;
       ADAPTER_AF_LVL_G           : integer  := 1;
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
-      ARB_FIFO_RD_DELAY_G        : natural  := 1;
       ARB_DOUT_PIPE_G            : natural  := 2;
       NUM_VC_G                   : natural  := 1
    );
@@ -271,7 +269,6 @@ begin
          GHDL_SIM_G                 => GHDL_SIM_G,
          DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         DATAFIFO_FWFT_G            => DATAFIFO_FWFT_G,
          PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
@@ -281,7 +278,6 @@ begin
          ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
          ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
          SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_FIFO_RD_DELAY_G        => ARB_FIFO_RD_DELAY_G,
          ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G,
          NUM_VC_G                   => NUM_VC_G)
       port map(

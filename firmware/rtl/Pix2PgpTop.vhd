@@ -32,7 +32,6 @@ entity Pix2PgpTop is
       RST_POLARITY_G             : sl       := '1';
       GHDL_SIM_G                 : boolean  := true;
       SYNTHESIZE_G               : boolean  := false;
-      DATAFIFO_FWFT_G            : boolean  := true;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := false;
       COLMANAGER_DATA_DEPTH_G    : integer  := 32;
@@ -44,7 +43,6 @@ entity Pix2PgpTop is
       DATAFIFO_PIPE_G            : positive := 1;
       STATUSFIFO_PIPE_G          : positive := 1;
       SUPER_FIFO_RD_DELAY_G      : positive := 2;
-      ARB_FIFO_RD_DELAY_G        : positive := 1;
       ARB_DOUT_PIPE_G            : positive := 1);
    port(
       -- General Interface
@@ -200,9 +198,7 @@ begin
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
-         FIFO_RD_DELAY_G => ARB_FIFO_RD_DELAY_G,
-         DOUT_PIPE_G     => ARB_DOUT_PIPE_G,
-         DATAFIFO_FWFT_G => DATAFIFO_FWFT_G)
+         DOUT_PIPE_G     => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
          pgpClk       => pgpClk,

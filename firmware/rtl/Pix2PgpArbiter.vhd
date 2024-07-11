@@ -34,7 +34,6 @@ entity Pix2PgpArbiter is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 1;
       DOUT_PIPE_G     : positive := 1;
       DATAFIFO_FWFT_G : boolean  := true);
    port(
@@ -82,8 +81,6 @@ architecture rtl of Pix2PgpArbiter is
          return 0;
       end if;
    end function toInt;
-
-   constant DATARD_CNT_INIT_C : integer := toInt(toSl(DATAFIFO_FWFT_G));
 
    signal arbReady           : sl := '0';
    signal arbValid           : sl := '0';
@@ -140,7 +137,7 @@ architecture rtl of Pix2PgpArbiter is
       wordCnt      => (others => '0'),
       waitCnt      => (others => '0'),
       dataHeader   => (others => '0'),
-      dataRdCnt    => toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C),
+      dataRdCnt    => toSlv(0, DATALEN_WIDTH_C),
       dataRdCycles => (others => '0'),
       state        => IDLE_S);
 
@@ -246,7 +243,7 @@ begin
 
             else
                if (v.arbValid = '0' and pgpReady = '1') then
-                  v.dataRdCnt := toSlv(DATARD_CNT_INIT_C, DATALEN_WIDTH_C);
+                  v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
                   v.arbValid  := '1';
 
                   -- TX the dataLength and start reading the data fifo
@@ -275,11 +272,7 @@ begin
                v.dataRd    := '1';
                v.arbValid  := '1';
 
-               --if r.dataRdCnt = r.dataRdCycles then
-               --   v.dataRd := '0';
-               --end if;
-
-               if r.dataRdCnt = r.dataRdCycles + FIFO_RD_DELAY_G then
+               if r.dataRdCnt = r.dataRdCycles then
                   -- Done with column
                   v.dataRd   := '0';
                   v.arbValid := '0';
