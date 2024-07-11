@@ -100,6 +100,12 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       pgpReady     : sl;
       arbReady     : sl;
+      colFifoError : sl;
+      overOccError : sl;
+      alignError   : sl;
+      colPause     : sl;
+      colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum       : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -123,6 +129,12 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       pgpReady     => '1',
       arbReady     => '1',
+      colFifoError => '0',
+      overOccError => '0',
+      alignError   => '0',
+      colPause     => '0',
+      colBitmask   => (others => '0'),
+      trgNum       => (others => '0'),
       -- outputs
       dataRd       => '0',
       colSel       => (others => '0'),
@@ -181,6 +193,19 @@ begin
          v.setWatchdog := '1';
       end if;
 
+      -- override header elements if in dummy-header-TX mode
+      --
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         v.colBitmask(col) := colBitmask(col) and not(r.dummyHeader);
+      end loop;
+      for trgBit in 0 to STATUSFIFO_TRG_WIDTH_C-1 loop
+         v.trgNum(trgBit)  := trgNum(trgBit)  and not(r.dummyHeader);
+      end loop;
+      --
+      v.overOccError       := overOccError    and not(r.dummyHeader);
+      v.colPause           := colPause        and not(r.dummyHeader);
+      v.colFifoError       := colFifoError    and not(r.dummyHeader);
+      v.alignError         := colFifoError    and not(r.dummyHeader);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -211,7 +236,7 @@ begin
                v.dummyHeader := '1';
                v.arbBusy     := '1';
                v.waitCnt     := r.waitCnt + 1;
-               -- need to wait for the dummy header bit to be asserted properly
+               -- need to wait for the header bits to be updated properly
                if allBits(r.waitCnt, '1') then
                   v.waitCnt := (others => '0');
                   v.state   := TX_DUMMY_S;
@@ -298,14 +323,14 @@ begin
       -----------------------------------------------------------------------
 
       -- header mapping
-      v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError;
-      v.dataHeader(PAUSE_FLAG_POS_C)       := colPause;
-      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError;
-      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := alignError;
-      v.dataHeader(DUMMY_HEADER_POS_C)     := r.dummyHeader;
+      v.dataHeader(OVEROCC_FLAG_POS_C)     := v.overOccError;
+      v.dataHeader(PAUSE_FLAG_POS_C)       := v.colPause;
+      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
+      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := v.alignError;
+      v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
-      v.dataHeader(COL_BITMASK_POS_C)      := colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)          := trgNum;
+      v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
+      v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;
 
       -- Outputs
       arbBusy  <= v.arbBusy;

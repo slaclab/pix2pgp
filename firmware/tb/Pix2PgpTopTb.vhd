@@ -131,7 +131,7 @@ begin
       hitLen(5) <= toSlv(3, hitLen(5)'length);
       hitLen(6) <= toSlv(1, hitLen(6)'length);
       hitLen(7) <= toSlv(2, hitLen(7)'length);
-      hitLen(8) <= toSlv(5, hitLen(8)'length);
+      hitLen(8) <= toSlv(3, hitLen(8)'length);
       hitLen(9) <= toSlv(4, hitLen(9)'length);
       sro  <= '1';
     wait for CLK_PERIOD_C*2;
