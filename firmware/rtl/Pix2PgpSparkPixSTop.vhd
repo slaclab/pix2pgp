@@ -30,7 +30,7 @@ entity Pix2PgpSparkPixSTop is
       COLMANAGER_STATUS_AF_LVL_G : integer   := 1;
       ADAPTER_DEPTH_G            : integer   := 6;
       ADAPTER_AF_LVL_G           : integer   := 1;
-      SUPER_FIFO_RD_DELAY_G      : natural   := 2;
+      SUPER_FIFO_RD_DELAY_G      : natural   := 3;
       ARB_DOUT_PIPE_G            : natural   := 1);
    port(
       -- General Interface

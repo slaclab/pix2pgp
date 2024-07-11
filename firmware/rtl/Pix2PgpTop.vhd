@@ -42,7 +42,7 @@ entity Pix2PgpTop is
       ADAPTER_AF_LVL_G           : integer  := 2;
       DATAFIFO_PIPE_G            : positive := 1;
       STATUSFIFO_PIPE_G          : positive := 1;
-      SUPER_FIFO_RD_DELAY_G      : positive := 2;
+      SUPER_FIFO_RD_DELAY_G      : positive := 3;
       ARB_DOUT_PIPE_G            : positive := 1);
    port(
       -- General Interface

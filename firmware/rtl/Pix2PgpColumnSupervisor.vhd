@@ -56,11 +56,11 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    type StateType is (
       MON_STATUS_S,
-      WAIT_BUS_S,
       ASSERT_BMSK_S,
       START_ARB_S,
       WAIT_ARB_S,
-      PAUSE_S);
+      PAUSE_S,
+      DONE_S);
 
    type RegType is record
       -- i/o
@@ -180,6 +180,10 @@ begin
 
       end loop;
 
+      v.colFifoError := uOr(v.colFifoFullErr);
+      v.overOccError := uOr(v.colOverOccErr);
+      v.alignError   := uOr(v.colTrgAlignErr);
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -192,20 +196,6 @@ begin
             v.waitCnt        := (others => '0');
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
-               v.statusRd := '1';
-               v.state    := WAIT_BUS_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- wait for the bus to stabilize first;
-         -- evaluate the error flags
-         when WAIT_BUS_S =>
-            v.waitCnt      := r.waitCnt + 1;
-            v.colFifoError := uOr(v.colFifoFullErr);
-            v.overOccError := uOr(v.colOverOccErr);
-            v.alignError   := uOr(v.colTrgAlignErr);
-
-            if r.waitCnt = FIFO_RD_DELAY_G then
                v.state := ASSERT_BMSK_S;
             end if;
 
@@ -245,16 +235,16 @@ begin
          -- wait for the arbiter to finish parsing the data
          when WAIT_ARB_S =>
             v.arbiterStart := '0';
-            v.waitCnt      := (others => '0');
 
             if r.arbiterBusy = '0' then
-               v.state := MON_STATUS_S;
+               v.statusRd := '1';
+               v.state    := DONE_S;
 
                -- pause mode. issue the mask to the bridge first;
                -- this will force status read-out on only the paused columns
                -- later on, the column bitmask is changed too
                if not(allBits(r.columnPause, '0')) then
-                  v.colPauseBridge := v.columnPause;
+                  v.colPauseBridge := r.columnPause;
                   v.pause          := '1';
                   v.state          := PAUSE_S;
                end if;
@@ -264,8 +254,16 @@ begin
          -- wait for all paused columns to finish processing
          when PAUSE_S =>
             if r.dataReady = r.columnPause then
-               v.statusRd := '1';
-               v.state    := ASSERT_BMSK_S;
+               v.state := ASSERT_BMSK_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- wait before re-evaluating the empty signals
+         when DONE_S =>
+            v.waitCnt := r.waitCnt + 1;
+
+            if (r.waitCnt = FIFO_RD_DELAY_G) then
+               v.state := MON_STATUS_S;
             end if;
 
       end case;
