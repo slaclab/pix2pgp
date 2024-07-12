@@ -147,11 +147,14 @@ begin
          end if;
 
          -- check if all triggers are aligned with each other
+         -- ignore columns that are in pause
          if statusBusGlbl(col).trgNum = refTrgNum
          or toBoolean(columnIgnore(col)) then
             v.colTrgAlignErr(col) := '0';
          else
-            v.colTrgAlignErr(col) := '1';
+            if v.columnPause(col) = '0' then
+               v.colTrgAlignErr(col) := '1';
+            end if;
          end if;
 
          -- check for any over-occupancy errors
@@ -256,7 +259,8 @@ begin
          -- wait for all paused columns to finish processing
          when PAUSE_S =>
             v.colPauseBridge := r.columnPause;
-            if r.dataReady = r.columnPause then
+            if r.dataReady = r.columnPause or
+               toBoolean(uAnd(v.dataReady)) then
                v.state := ASSERT_BMSK_S;
             end if;
 

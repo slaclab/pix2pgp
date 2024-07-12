@@ -133,8 +133,9 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd,
-                   dataRd, dataFifoEmptyDly, statusFifoEmptyDly, aFullData) is
+   comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd, statusFifoDout,
+                   dataRd, dataFifoEmptyDly, statusFifoEmptyDly, aFullData,
+                   statusFifoFull, dataFifoFull) is
       variable v : RegType;
    begin
 
@@ -236,8 +237,8 @@ begin
             v.wrEnCnt := toSlv(0, DATALEN_WIDTH_C);
             v.ackCnt  := toSlv(0, DATALEN_WIDTH_C);
 
-            -- if both FIFOs are empty, resume with the event
-            if (statusFifoEmptyDly = '1' and dataFifoEmptyDly = '1') then
+            -- if data FIFO is empty, resume with the event
+            if (dataFifoEmptyDly = '1') then
                v.state := MON_TOKFB_S;
             end if;
 
@@ -246,6 +247,19 @@ begin
 
       -- Outputs
       pause <= v.pause;
+      -- status bus assignments
+      statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
+      statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
+      statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
+      statusBus.columnFull <= statusFifoFull or dataFifoFull;
+
+      -- override the regular overocc flag that comes out of the FIFO if in pause;
+      -- this allows the overocc flag to propagate, as the status word was already written
+      if r.pause = '0' then
+         statusBus.overOcc <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
+      else
+         statusBus.overOcc <= r.overOcc; -- registered value
+      end if;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -399,12 +413,5 @@ begin
          emptyRd => open,
          fullRd  => dataFifoFull,
          dout    => dataBus.data);
-
-   -- status bus assignments
-   statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
-   statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
-   statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
-   statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
-   statusBus.columnFull <= statusFifoFull or dataFifoFull;
 
 end rtl;

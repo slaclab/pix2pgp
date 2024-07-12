@@ -112,6 +112,10 @@ comb : process (rst, r, hitLen, sro, pause) is
       v.ackN := '1';
       v.wrEn := '0';
 
+      if (r.sro = '1') then
+         v.tok := '0';
+      end if;
+
       case r.state is
 
          ----------------------------------------------------------------------
@@ -124,7 +128,6 @@ comb : process (rst, r, hitLen, sro, pause) is
             v.ackCnt  := 0;
 
             if (r.sro = '1') then
-               v.tok    := '0';
                v.tokFb  := '0';
                v.trgCnt := r.trgCnt + 1;
                if (r.hitLen > 0) then
