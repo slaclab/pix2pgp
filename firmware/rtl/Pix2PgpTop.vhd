@@ -163,7 +163,7 @@ begin
    ---------------------------------------
    -- Column Supervisor
    ---------------------------------------
-   U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisorV2
+   U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
       generic map(
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
