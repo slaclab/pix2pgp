@@ -28,16 +28,22 @@ entity Pix2PgpTopTb is
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
-      COLMANAGER_DATA_AF_LVL_G   : integer  := 1;
+      COLMANAGER_DATA_AF_LVL_G   : integer  := 5; -- *
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
-      COLMANAGER_STATUS_AF_LVL_G : integer  := 1;
-      ADAPTER_DEPTH_G            : integer  := 6;
-      ADAPTER_AF_LVL_G           : integer  := 1;
+      COLMANAGER_STATUS_AF_LVL_G : integer  := 5; -- *
+      ADAPTER_DEPTH_G            : integer  := 16;
+      ADAPTER_AF_LVL_G           : integer  := 5; -- *
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
       ARB_DOUT_PIPE_G            : natural  := 2;
       NUM_VC_G                   : natural  := 1
    );
 end entity Pix2PgpTopTb;
+
+-- * about the AF_LVL_G flags:
+-- the surf-based fifos issue their almost-full/prog-full when wr_index = AF_LVL_G;
+-- the synopsys fifos raise their flag when wr_index = DEPTH_G-AF_LVL_G;
+-- i.e. for the synopsys fifos, the AF_LVL_G denotes the amount of empty memory spaces before
+-- the almost-full flag is asserted
 
 architecture test of Pix2PgpTopTb is
 
@@ -73,7 +79,7 @@ begin
     -- Wait for the rst to be released before
     wait until (rst = '0');
     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-      -- only even number of events please
+
       hitLen(col) <= toSlv(0, hitLen(col)'length);
     end loop;
 
@@ -82,27 +88,27 @@ begin
     wait for CLK_PERIOD_C*2;
       sro  <= '0';
 
-    --wait for CLK_PERIOD_C*186;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    -- only even number of events please
-    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --    sro  <= '0';
+    wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-    --wait for CLK_PERIOD_C*186;
-    --  for col in 0 to 4 loop
-    --    -- only even number of events please
-    --    hitLen(col) <= toSlv(2, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --    sro  <= '0';
+        hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_C*2;
+        sro  <= '0';
+
+    wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+
+        hitLen(col) <= toSlv(2, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_C*2;
+        sro  <= '0';
 
     --wait for CLK_PERIOD_C*186;
     --  for col in 12 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    -- only even number of events please
+    --
     --    hitLen(col) <= toSlv(3, hitLen(col)'length);
     --  end loop;
     --    sro <= '1';
@@ -111,7 +117,7 @@ begin
 
     --wait for CLK_PERIOD_C*186;
     --  for col in 14 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    -- only even number of events please
+    --
     --    hitLen(col) <= toSlv(4, hitLen(col)'length);
     --  end loop;
     --    sro <= '1';
@@ -125,7 +131,7 @@ begin
 
     --wait for CLK_PERIOD_C*186;
     --  for col in 0 to 4 loop
-    --    -- only even number of events please
+    --
     --    hitLen(col) <= toSlv(0, hitLen(col)'length);
     --  end loop;
     --  hitLen(5) <= toSlv(3, hitLen(5)'length);
@@ -160,67 +166,67 @@ begin
     --wait for CLK_PERIOD_C*2;
     --  sro  <= '0';
 
-    --wait for CLK_PERIOD_C*186;
-    --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(1)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(4)  <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(5)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(13, hitLen(7)'length);
-    --  hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-    --  hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(10) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(11) <= toSlv(7,  hitLen(5)'length);
-    --  hitLen(12) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(13) <= toSlv(5,  hitLen(5)'length);
-    --  hitLen(14) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(15) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(16) <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(17) <= toSlv(0,  hitLen(7)'length);
-    --  hitLen(18) <= toSlv(1,  hitLen(8)'length);
-    --  hitLen(19) <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(20) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(21) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(22) <= toSlv(5,  hitLen(5)'length);
-    --  hitLen(23) <= toSlv(0,  hitLen(5)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_C*186;
+      hitLen(0)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(1)  <= toSlv(2,  hitLen(5)'length);
+      hitLen(2)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(3)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(4)  <= toSlv(4,  hitLen(5)'length);
+      hitLen(5)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(6)  <= toSlv(0,  hitLen(6)'length);
+      hitLen(7)  <= toSlv(1,  hitLen(7)'length);
+      hitLen(8)  <= toSlv(0,  hitLen(8)'length);
+      hitLen(9)  <= toSlv(0,  hitLen(9)'length);
+      hitLen(10) <= toSlv(4,  hitLen(5)'length);
+      hitLen(11) <= toSlv(2,  hitLen(5)'length);
+      hitLen(12) <= toSlv(0,  hitLen(5)'length);
+      hitLen(13) <= toSlv(3,  hitLen(5)'length);
+      hitLen(14) <= toSlv(0,  hitLen(5)'length);
+      hitLen(15) <= toSlv(2,  hitLen(5)'length);
+      hitLen(16) <= toSlv(0,  hitLen(6)'length);
+      hitLen(17) <= toSlv(0,  hitLen(7)'length);
+      hitLen(18) <= toSlv(1,  hitLen(8)'length);
+      hitLen(19) <= toSlv(0,  hitLen(9)'length);
+      hitLen(20) <= toSlv(3,  hitLen(5)'length);
+      hitLen(21) <= toSlv(0,  hitLen(5)'length);
+      hitLen(22) <= toSlv(4,  hitLen(5)'length);
+      hitLen(23) <= toSlv(0,  hitLen(5)'length);
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
 
-    --wait for CLK_PERIOD_C*186*4; -- x4 otherwise OverOcc
-    --  hitLen(0)  <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(1)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(4)  <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(5)  <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(6)  <= toSlv(3,  hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(0,  hitLen(7)'length);
-    --  hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-    --  hitLen(9)  <= toSlv(3,  hitLen(9)'length);
-    --  hitLen(10) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(11) <= toSlv(22, hitLen(5)'length);
-    --  hitLen(12) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(13) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(14) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(15) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(16) <= toSlv(4,  hitLen(6)'length);
-    --  hitLen(17) <= toSlv(0,  hitLen(7)'length);
-    --  hitLen(18) <= toSlv(1,  hitLen(8)'length);
-    --  hitLen(19) <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(20) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(21) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(22) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(23) <= toSlv(0,  hitLen(5)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_C*186;
+      hitLen(0)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(1)  <= toSlv(4,  hitLen(5)'length);
+      hitLen(2)  <= toSlv(3,  hitLen(5)'length);
+      hitLen(3)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(4)  <= toSlv(1,  hitLen(5)'length);
+      hitLen(5)  <= toSlv(2,  hitLen(5)'length);
+      hitLen(6)  <= toSlv(0,  hitLen(6)'length);
+      hitLen(7)  <= toSlv(1,  hitLen(7)'length);
+      hitLen(8)  <= toSlv(0,  hitLen(8)'length);
+      hitLen(9)  <= toSlv(0,  hitLen(9)'length);
+      hitLen(10) <= toSlv(4,  hitLen(5)'length);
+      hitLen(11) <= toSlv(2,  hitLen(5)'length);
+      hitLen(12) <= toSlv(0,  hitLen(5)'length);
+      hitLen(13) <= toSlv(2,  hitLen(5)'length);
+      hitLen(14) <= toSlv(0,  hitLen(5)'length);
+      hitLen(15) <= toSlv(3,  hitLen(5)'length);
+      hitLen(16) <= toSlv(0,  hitLen(6)'length);
+      hitLen(17) <= toSlv(2,  hitLen(7)'length);
+      hitLen(18) <= toSlv(1,  hitLen(8)'length);
+      hitLen(19) <= toSlv(2,  hitLen(9)'length);
+      hitLen(20) <= toSlv(4,  hitLen(5)'length);
+      hitLen(21) <= toSlv(2,  hitLen(5)'length);
+      hitLen(22) <= toSlv(1,  hitLen(5)'length);
+      hitLen(23) <= toSlv(2,  hitLen(5)'length);
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
 
     --wait for CLK_PERIOD_C*186*4; -- x4 otherwise OverOcc
     --for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  -- only even number of events please
+    --
     --  hitLen(col) <= toSlv(0, hitLen(col)'length);
     --end loop;
 
@@ -234,44 +240,53 @@ begin
     --wait for CLK_PERIOD_C*2;
     --  sro  <= '0';
 
+    wait for CLK_PERIOD_C*186;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+        hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
+      sro  <= '1';
+    wait for CLK_PERIOD_C*2;
+      sro  <= '0';
+
+    -- overocc test
     --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
+    --  hitLen(4)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(7)  <= toSlv(25, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(2, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(4, hitLen(6)'length);
+    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
+    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(4, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
+
+    --wait for CLK_PERIOD_C*186*4;
     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --     hitLen(col) <= toSlv(0, hitLen(col)'length);
     --  end loop;
     --  sro  <= '1';
     --wait for CLK_PERIOD_C*2;
     --  sro  <= '0';
 
-    -- overocc test
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(3, hitLen(5)'length);
-      hitLen(2)  <= toSlv(1, hitLen(6)'length);
-      hitLen(4)  <= toSlv(2, hitLen(7)'length);
-      hitLen(7)  <= toSlv(25, hitLen(8)'length);
-      hitLen(20) <= toSlv(3, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(2, hitLen(5)'length);
-      hitLen(2)  <= toSlv(4, hitLen(6)'length);
-      hitLen(7)  <= toSlv(2, hitLen(7)'length);
-      hitLen(12) <= toSlv(2, hitLen(8)'length);
-      hitLen(20) <= toSlv(3, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(3, hitLen(5)'length);
-      hitLen(2)  <= toSlv(1, hitLen(6)'length);
-      hitLen(7)  <= toSlv(2, hitLen(7)'length);
-      hitLen(12) <= toSlv(2, hitLen(8)'length);
-      hitLen(20) <= toSlv(4, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
     -- do not touch
     wait;
     -- do not touch

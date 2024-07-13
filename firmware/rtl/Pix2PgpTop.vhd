@@ -77,8 +77,8 @@ architecture rtl of Pix2PgpTop is
    signal statusBus      : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
    signal statusBusGlbl  : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
    signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal statusRdFanOut : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal statusRdSuper  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal statusRdCol    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
    signal arbStart       : sl := '0';
    signal colFifoError   : sl := '0';
@@ -126,7 +126,7 @@ begin
             ackN      => ackN(col),
             pause     => pause(col),
             -- Arbiter Interface
-            statusRd  => statusRdFanOut(col),
+            statusRd  => statusRdCol(col),
             dataRd    => dataRdSel(col),
             statusBus => statusBus(col),
             dataBus   => dataBus(col));
@@ -146,15 +146,13 @@ begin
       port map(
          -- General Interface
          pgpClk        => pgpClk,
-         columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBusIn   => statusBus,
          dataBusIn     => dataBus,
-         statusRdOut   => statusRdFanOut,
+         statusRdOut   => statusRdCol,
          dataRdOut     => dataRdSel,
          -- Column Supervisor Interface
-         statusRdIn    => statusRd,
-         columnPause   => columnPause,
+         statusRdIn    => statusRdSuper,
          statusBusGlbl => statusBusGlbl,
          -- Arbiter Interface
          dataRdIn      => dataRd,
@@ -165,7 +163,7 @@ begin
    ---------------------------------------
    -- Column Supervisor
    ---------------------------------------
-   U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
+   U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisorV2
       generic map(
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
@@ -176,17 +174,16 @@ begin
          pgpClk        => pgpClk,
          rst           => rst,
          columnEnable  => columnEnable,
-         columnPause   => columnPause,
-         -- Column Manager Interface
+         -- Column Manager Interface (via Bridge)
          statusBusGlbl => statusBusGlbl,
-         statusRd      => statusRd,
+         statusRd      => statusRdSuper,
          -- Arbiter Interface
          arbiterBusy   => arbBusy,
          arbiterStart  => arbStart,
          colFifoError  => colFifoError,
          overOccError  => overOccError,
          alignError    => alignError,
-         colPauseArb   => colPause,
+         colPause      => colPause,
          colBitmask    => colBitmask,
          trgNum        => trgNum);
 
