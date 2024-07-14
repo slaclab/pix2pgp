@@ -122,7 +122,7 @@ architecture rtl of Pix2PgpColumnManager is
       statusFifoDin => (others => '0'),
       ackCnt        => (others => '0'),
       wrEnCnt       => (others => '0'),
-      trgCnt        => (others => '1'),
+      trgCnt        => (others => '0'),
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -155,6 +155,11 @@ begin
       -- Strobes
       v.statusWr := '0';
 
+      -- increment the trigger with every token toggle to low;
+      if (v.tok = '0' and r.tok = '1') then
+         v.trgCnt := r.trgCnt + 1;
+      end if;
+
       -- over-occupancy detection (received a token while busy)
       if (r.state /= IDLE_S and v.tok = '0' and r.tok = '1') then
          v.overOcc := '1';
@@ -182,7 +187,7 @@ begin
 
             -- falling-edge detection
             if (v.tok = '0' and r.tok = '1') then
-               v.trgCnt := r.trgCnt + 1;
+               v.statusFifoDin(STATUSFIFO_TRG_POS_C) := r.trgCnt;
                v.state  := MON_TOKFB_S;
             end if;
 
@@ -222,7 +227,7 @@ begin
 
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
             v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
-            v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
+            --v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt; -- get this earlier
             v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
             v.statusWr := '1';
             v.state    := IDLE_S;

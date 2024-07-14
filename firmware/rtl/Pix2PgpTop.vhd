@@ -69,7 +69,6 @@ end Pix2PgpTop;
 architecture rtl of Pix2PgpTop is
 
    signal dataRd         : sl := '0';
-   signal statusRd       : sl := '0';
    signal colSel         : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
    signal dataRdSel      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal statusBusSel   : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;

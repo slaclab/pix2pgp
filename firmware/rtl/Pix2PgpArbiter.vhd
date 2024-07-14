@@ -62,6 +62,7 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
+   -- stolen from numberic_std
    function rightShift (inSlv: slv; count: natural) return slv is
       constant inSlvLen: integer := inSlv'LENGTH-1;
       alias xarg: slv(inSlvLen downto 0) is inSlv;
@@ -72,15 +73,6 @@ architecture rtl of Pix2PgpArbiter is
       end if;
       return result;
    end rightShift;
-
-   function toInt (inVar : sl) return integer is
-   begin
-      if (inVar = '1') then
-         return 1;
-      else
-         return 0;
-      end if;
-   end function toInt;
 
    signal arbReady           : sl := '0';
    signal arbValid           : sl := '0';
@@ -202,10 +194,10 @@ begin
          v.trgNum(trgBit)  := trgNum(trgBit)  and not(r.dummyHeader);
       end loop;
       --
-      v.overOccError       := overOccError    and not(r.dummyHeader);
-      v.colPause           := colPause        and not(r.dummyHeader);
-      v.colFifoError       := colFifoError    and not(r.dummyHeader);
-      v.alignError         := colFifoError    and not(r.dummyHeader);
+      v.overOccError := overOccError and not(r.dummyHeader);
+      v.colPause     := colPause     and not(r.dummyHeader);
+      v.colFifoError := colFifoError and not(r.dummyHeader);
+      v.alignError   := alignError   and not(r.dummyHeader);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -221,18 +213,16 @@ begin
             if arbStart = '1' and v.arbValid = '0' and pgpReady = '1' then
                v.arbBusy  := '1';
                v.arbValid := '1';
+               v.state    := CHECK_BITMASK_S;
 
-               if colFifoError = '1' or
-                  alignError   = '1' or
-                  v.eventEmpty = '1' then
+               if v.eventEmpty = '1' then
                   v.state := DONE_S;
-               else
-                  v.state := CHECK_BITMASK_S;
                end if;
+
             end if;
 
             -- dummy header corner-case
-            if timeoutWatchdogDly = '1' then
+            if timeoutWatchdogDly = '1' and arbStart = '0' then
                v.dummyHeader := '1';
                v.arbBusy     := '1';
                v.waitCnt     := r.waitCnt + 1;

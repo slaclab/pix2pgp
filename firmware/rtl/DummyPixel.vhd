@@ -112,8 +112,9 @@ comb : process (rst, r, hitLen, sro, pause) is
       v.ackN := '1';
       v.wrEn := '0';
 
-      if (r.sro = '1') then
-         v.tok := '0';
+      if (v.sro = '1') then
+         v.tok    := '0';
+         v.trgCnt := r.trgCnt + 1;
       end if;
 
       case r.state is
@@ -128,8 +129,8 @@ comb : process (rst, r, hitLen, sro, pause) is
             v.ackCnt  := 0;
 
             if (r.sro = '1') then
-               v.tokFb  := '0';
-               v.trgCnt := r.trgCnt + 1;
+               v.tokFb := '0';
+               v.dout(19 downto 16) := r.trgCnt;
                if (r.hitLen > 0) then
                   v.state := ISSUE_ACKN_S;
                else
@@ -157,7 +158,7 @@ comb : process (rst, r, hitLen, sro, pause) is
                      v.wrEn               := '1';
                      v.dout(7 downto 0)   := r.hitCnt;
                      v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
-                     v.dout(19 downto 16) := r.trgCnt;
+                     --v.dout(19 downto 16) := r.trgCnt;
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
                         v.state := WAIT_ISSUE_FB_S;

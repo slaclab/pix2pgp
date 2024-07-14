@@ -55,7 +55,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    type StateType is (
       MON_STATUS_S,
-      EVAL_FLAGS_S,
+      UPDATE_FLAGS_S,
       START_ARB_S,
       WAIT_ARB_S,
       PAUSE_S,
@@ -66,6 +66,10 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRd       : sl;
       arbiterBusy    : sl;
       arbiterStart   : sl;
+      colFifoError   : sl;
+      overOccError   : sl;
+      alignError     : sl;
+      colPause       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -75,9 +79,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colBitmaskOut  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colBitmaskArb  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseReadBmsk  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNumOut      : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
+      trgNumArb      : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
    end record RegType;
@@ -86,6 +90,10 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRd       => '0',
       arbiterBusy    => '0',
       arbiterStart   => '0',
+      colFifoError   => '0',
+      overOccError   => '0',
+      alignError     => '0',
+      colPause       => '0',
       colBitmask     => (others => '0'),
       -- internal
       pause          => '0',
@@ -95,9 +103,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
       columnPause    => (others => '0'),
-      colBitmaskOut  => (others => '0'),
+      colBitmaskArb  => (others => '0'),
       pauseReadBmsk  => (others => '0'),
-      trgNumOut      => (others => '0'),
+      trgNumArb      => (others => '0'),
       waitCnt        => (others => '0'),
       state          => MON_STATUS_S);
 
@@ -202,18 +210,22 @@ begin
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.evalFlags := '1';
-               v.state     := EVAL_FLAGS_S;
+               v.state     := UPDATE_FLAGS_S;
             end if;
 
          ----------------------------------------------------------------------
          -- update the arbiter status bits before starting the readout process
-         when EVAL_FLAGS_S =>
+         when UPDATE_FLAGS_S =>
             v.evalFlags     := '0';
-            v.trgNumOut     := refTrgNum;
-            v.colBitmaskOut := v.colBitmask;
+            v.colFifoError  := uOr(v.colFifoFullErr);
+            v.overOccError  := uOr(v.colOverOccErr);
+            v.alignError    := uOr(v.colTrgAlignErr);
+            v.colPause      := uOr(v.columnPause);
+            v.trgNumArb     := refTrgNum;
+            v.colBitmaskArb := v.colBitmask;
 
             if r.pause = '1' then
-               v.colBitmaskOut := v.pauseReadBmsk;
+               v.colBitmaskArb := v.pauseReadBmsk;
             end if;
 
             v.state := START_ARB_S;
@@ -279,12 +291,12 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      colFifoError <= uOr(v.colFifoFullErr);
-      overOccError <= uOr(v.colOverOccErr);
-      alignError   <= uOr(v.colTrgAlignErr);
-      colPause     <= uOr(v.columnPause);
-      colBitmask   <= v.colBitmaskOut;
-      trgNum       <= v.trgNumOut;
+      colFifoError <= v.colFifoError;
+      overOccError <= v.overOccError;
+      alignError   <= v.alignError;
+      colPause     <= v.colPause;
+      colBitmask   <= v.colBitmaskArb;
+      trgNum       <= v.trgNumArb;
       arbiterStart <= v.arbiterStart;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop

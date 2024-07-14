@@ -42,8 +42,10 @@ def headerEval(header):
 
     _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnFull={2:<%d} AlignError={3:<%d} dummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
     print(_format.format(_overOcc, _pause, _columnFull, _alignError, _dummyHeader, hex(_bitmask).upper(), _trigger))
+    if _dummyHeader == 0:
+        print(f"/////////////////////////////////////////////////////////////////////////")
 
-    if not(_bitmask == 0) and not(_columnFull) and not(_alignError) and not(_dummyHeader):
+    if not(_bitmask == 0) and not(_dummyHeader):
         empty = False
         bitmask = _bitmask
         trigger = _trigger
@@ -75,7 +77,6 @@ def _hitPrinter(hits, decode, length):
         else:
             print(_format.format(hit0, hit1))
 
-
 def bitmaskCheck(bitmask, colSel):
     hasData = False
     if bitmask >> np.uint8(colSel) & np.uint8(0x01) == 1:
@@ -102,6 +103,7 @@ if __name__ == "__main__":
     _trigger = 0
     state    = "header_s"
 
+    print(f"/////////////////////////////////////////////////////////////////////////")
     while _line < len(_lineArray):
         ########################################################################################
         if state == "header_s":
@@ -119,7 +121,9 @@ if __name__ == "__main__":
                 else:
                     _colSel += 1
             else:
+                print(f"/////////////////////////////////////////////////////////////////////////")
                 print(f"Trigger = {_trigger} decoding Done. Next Event...")
+                print(f"/////////////////////////////////////////////////////////////////////////")
                 state = "header_s"
         ########################################################################################
         elif state == "lenParse_s":
