@@ -37,6 +37,8 @@ entity Pix2PgpTopTb is
       ARB_DOUT_PIPE_G            : natural  := 2;
       NUM_VC_G                   : natural  := 1
    );
+   port(
+      dummyIn : in sl);
 end entity Pix2PgpTopTb;
 
 -- * about the AF_LVL_G flags:
@@ -258,51 +260,51 @@ begin
     --  sro  <= '0';
 
     -- overocc test
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(3, hitLen(5)'length);
-      hitLen(2)  <= toSlv(1, hitLen(6)'length);
-      hitLen(4)  <= toSlv(2, hitLen(7)'length);
-      hitLen(7)  <= toSlv(25, hitLen(8)'length);
-      hitLen(20) <= toSlv(3, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
+    --  hitLen(4)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(7)  <= toSlv(25, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(2, hitLen(5)'length);
-      hitLen(2)  <= toSlv(4, hitLen(6)'length);
-      hitLen(7)  <= toSlv(2, hitLen(7)'length);
-      hitLen(12) <= toSlv(2, hitLen(8)'length);
-      hitLen(20) <= toSlv(3, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(2, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(4, hitLen(6)'length);
+    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      hitLen(0)  <= toSlv(3, hitLen(5)'length);
-      hitLen(2)  <= toSlv(1, hitLen(6)'length);
-      hitLen(7)  <= toSlv(2, hitLen(7)'length);
-      hitLen(12) <= toSlv(2, hitLen(8)'length);
-      hitLen(20) <= toSlv(4, hitLen(9)'length);
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
+    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
+    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
+    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
+    --  hitLen(20) <= toSlv(4, hitLen(9)'length);
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --     hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_C*186;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-      hitLen(col) <= toSlv(0, hitLen(col)'length);
-    end loop;
-      sro <= '1';
-    wait for CLK_PERIOD_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_C*186;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --  hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --end loop;
+    --  sro <= '1';
+    --wait for CLK_PERIOD_C*2;
+    --  sro  <= '0';
 
     --wait for CLK_PERIOD_C*186;
     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop

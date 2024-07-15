@@ -1,0 +1,92 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_arith.all;
+
+-- required for writing/reading std_logic etc.
+use std.textio.all;
+use ieee.std_logic_textio.all;
+
+library surf;
+use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
+use surf.Pgp4Pkg.all;
+use surf.AxiStreamPacketizer2Pkg.all;
+
+library pix2pgp;
+use pix2pgp.Pix2PgpPkg.all;
+
+entity Pix2PgpEmuTb is
+   generic(
+      TPD_G                      : time     := 1 ns;
+      RST_ASYNC_G                : boolean  := True;
+      RST_POLARITY_G             : sl       := '1';
+      GHDL_SIM_G                 : boolean  := False;
+      DATAFIFO_PIPE_G            : positive := 2;
+      STATUSFIFO_PIPE_G          : positive := 2;
+      PIPELINE_BRIDGE_DATA_G     : boolean  := False;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
+      COLMANAGER_DATA_DEPTH_G    : integer  := 6;
+      COLMANAGER_DATA_AF_LVL_G   : integer  := 1;
+      COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
+      COLMANAGER_STATUS_AF_LVL_G : integer  := 1;
+      ADAPTER_DEPTH_G            : integer  := 6;
+      ADAPTER_AF_LVL_G           : integer  := 1;
+      SUPER_FIFO_RD_DELAY_G      : natural  := 3;
+      ARB_DOUT_PIPE_G            : natural  := 2;
+      NUM_VC_G                   : natural  := 1
+   );
+end entity Pix2PgpEmuTb;
+
+architecture test of Pix2PgpEmuTb is
+
+   component DummyModule
+      port(
+         clk     : in std_logic;
+         rst     : in std_logic;
+         inPort  : in std_logic;
+         outPort : out std_logic);
+   end component;
+
+   constant CLK_PERIOD_C : time := 2 ns;
+
+   signal clk   : sl := '0';
+   signal rst   : sl := '1';
+
+   begin
+
+   ------
+   -- UUT
+   ------
+   U_Uut : entity pix2pgp.Pix2PgpTopTb
+      generic map(
+         TPD_G                      => TPD_G,
+         RST_ASYNC_G                => RST_ASYNC_G,
+         RST_POLARITY_G             => RST_POLARITY_G,
+         GHDL_SIM_G                 => GHDL_SIM_G,
+         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
+         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
+         COLMANAGER_STATUS_AF_LVL_G => COLMANAGER_STATUS_AF_LVL_G,
+         ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
+         ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
+         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G,
+         NUM_VC_G                   => NUM_VC_G)
+      port map(
+         dummyIn => clk);
+
+   -- dummy module for vcs (it has to be vhdl+verilog)
+   Dummy_inst: DummyModule
+      port map(
+         clk     => clk,
+         rst     => rst,
+         inPort  => '0',
+         outPort => open);
+
+end architecture;

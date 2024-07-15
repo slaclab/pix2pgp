@@ -18,8 +18,8 @@
 
 ROOT_DIR=${PWD}/../../
 
-RTL_DIR=${ROOT_DIR}/firmware/rtl
-TB_DIR=${ROOT_DIR}/firmware/tb
+RTL_DIR=${ROOT_DIR}/firmware/core/rtl
+TB_DIR=${ROOT_DIR}/firmware/core/tb
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 RTL=${RTL_DIR}/*.vhd
