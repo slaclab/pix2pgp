@@ -70,6 +70,7 @@ entity Pix2PgpSparkPixSTop is
       tokFb        : in  std_logic_vector(23 downto 0);
       ackN         : in  std_logic_vector(23 downto 0);
       wrEn         : in  std_logic_vector(23 downto 0);
+      pause        : out std_logic_vector(23 downto 0);
       -- Pgp4TxLite Interface
       txReady      : in  std_logic;
       txValid      : out std_logic;
@@ -118,6 +119,7 @@ begin
          ackN         => ackN,
          wrEn         => wrEn,
          din          => din,
+         pause        => pause,
          -- Pgp4TxLite Interface
          txReady      => txReady,
          txValid      => txValid,
