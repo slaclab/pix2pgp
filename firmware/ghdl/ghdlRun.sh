@@ -47,7 +47,7 @@ SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
           "${SURF_PKG_DIR}/ArbiterPkg.vhd")
 
 # stub dware files
-DWARE_DIR=${RTL_DIR}/dw
+DWARE_DIR=${TB_DIR}/dw
 DWARE=${DWARE_DIR}/*.vhd
 DWARE_PKG_DIR=${DWARE_DIR}/pkg
 DWARE_PKG=${DWARE_PKG_DIR}/dw06_components.vhd
@@ -148,7 +148,8 @@ prepareSurf()
 
  prepareDWare()
  {
-    echo "[WARNING]: DWare Libraries NOT needed for GHDL simulation! Importing the local stub files instead..."
+    echo "[INFO]: Importing the dware stub files..."
+    echo "The real dware libraries have to be imported separately if you are not using GHDL simulation (e.g. VCS does it)"
 
     ${GHDL_IMPORT_DWARE} ${DWARE_PKG}
     ${GHDL_IMPORT_DWARE} ${DWARE}
