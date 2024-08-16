@@ -23,6 +23,7 @@ entity Pix2PgpTopTb is
       RST_ASYNC_G                : boolean  := True;
       RST_POLARITY_G             : sl       := '1';
       GHDL_SIM_G                 : boolean  := True;
+      FPGA_SYNTH_G               : boolean  := False;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
@@ -37,8 +38,10 @@ entity Pix2PgpTopTb is
       ARB_DOUT_PIPE_G            : natural  := 2;
       NUM_VC_G                   : natural  := 1
    );
-   port(
-      dummyIn : in sl);
+   port (
+    dummyIn : in sl
+  );
+
 end entity Pix2PgpTopTb;
 
 -- * about the AF_LVL_G flags:
@@ -66,6 +69,10 @@ architecture test of Pix2PgpTopTb is
    type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
    signal hitLen  : hitLenArray := (others => (others => '0'));
    signal overOcc : sl := '0';
+
+   signal pgpDout      : slv(31 downto 0) := (others => '0');
+   signal pgpDoutValid : sl;
+   signal pgpDoutReady : sl;
 
    signal pgpValid  : sl := '0';
    signal pgpData   : slv(39 downto 0) := (others => '0');
@@ -322,8 +329,6 @@ begin
     --wait for CLK_PERIOD_C*2;
     --  sro  <= '0';
 
-
-
     -- do not touch
     wait;
     -- do not touch
@@ -408,19 +413,42 @@ begin
          ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
          ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
          SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G,
-         NUM_VC_G                   => NUM_VC_G)
+         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
       port map(
-         clk      => clk,
-         rst      => rst,
-         sro      => sroFinal,
-         pause    => pause,
-         tok      => tok,
-         tokFb    => tokFb,
-         ackN     => ackN,
-         wrEn     => wrEn,
-         din      => din,
-         pgpValid => pgpValid,
-         pgpData  => pgpData);
+         clk          => clk,
+         rst          => rst,
+         sro          => sroFinal,
+         pause        => pause,
+         tok          => tok,
+         tokFb        => tokFb,
+         ackN         => ackN,
+         wrEn         => wrEn,
+         din          => din,
+         pgpDout      => pgpDout,
+         pgpDoutValid => pgpDoutValid,
+         pgpDoutReady => pgpDoutReady);
+
+   -------
+   -- FPGA
+   -------
+   U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
+    generic map(
+       TPD_G          => TPD_G,
+       RST_ASYNC_G    => RST_ASYNC_G,
+       RST_POLARITY_G => RST_POLARITY_G,
+       GHDL_SIM_G     => GHDL_SIM_G,
+       FPGA_SYNTH_G   => FPGA_SYNTH_G,
+       NUM_VC_G       => NUM_VC_G)
+    port map(
+       -- General Interface
+       clk         => clk,
+       rst         => rst,
+       -- Pix2Pgp Interface
+       pgpDin      => pgpDout,
+       pgpDinValid => pgpDoutValid,
+       pgpDinReady => pgpDoutReady,
+       -- FPGA RX Interface
+       pgpValid    => pgpValid,
+       pgpData     => pgpData);
 
 end architecture;

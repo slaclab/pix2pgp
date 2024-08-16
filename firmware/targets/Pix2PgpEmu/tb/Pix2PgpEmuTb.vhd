@@ -1,28 +1,20 @@
+-- simple wrapper for the TopTb testbench;
+-- includes a dummy verilog module in order to comply with some vcs versions...
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 
--- required for writing/reading std_logic etc.
-use std.textio.all;
-use ieee.std_logic_textio.all;
-
-library surf;
-use surf.StdRtlPkg.all;
-use surf.AxiStreamPkg.all;
-use surf.SsiPkg.all;
-use surf.Pgp4Pkg.all;
-use surf.AxiStreamPacketizer2Pkg.all;
-
 library pix2pgp;
-use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpEmuTb is
    generic(
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := True;
-      RST_POLARITY_G             : sl       := '1';
+      RST_POLARITY_G             : std_logic:= '1';
       GHDL_SIM_G                 : boolean  := False;
+      FPGA_SYNTH_G               : boolean  := False;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
@@ -41,6 +33,7 @@ end entity Pix2PgpEmuTb;
 
 architecture test of Pix2PgpEmuTb is
 
+   -- dummy verilog module for vcs (testbench has to be vhdl+verilog)
    component DummyModule
       port(
          clk     : in std_logic;
@@ -51,8 +44,8 @@ architecture test of Pix2PgpEmuTb is
 
    constant CLK_PERIOD_C : time := 2 ns;
 
-   signal clk   : sl := '0';
-   signal rst   : sl := '1';
+   signal clk   : std_logic := '0';
+   signal rst   : std_logic := '1';
 
    begin
 
@@ -65,6 +58,7 @@ architecture test of Pix2PgpEmuTb is
          RST_ASYNC_G                => RST_ASYNC_G,
          RST_POLARITY_G             => RST_POLARITY_G,
          GHDL_SIM_G                 => GHDL_SIM_G,
+         FPGA_SYNTH_G               => FPGA_SYNTH_G,
          DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
          PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
