@@ -5,7 +5,7 @@ source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 loadRuckusTcl $::env(TOP_DIR)/submodules/surf
 loadRuckusTcl $::env(TOP_DIR)/submodules/epix-hr-core
 loadRuckusTcl $::env(TOP_DIR)/core
-loadRuckusTcl $::env(TOP_DIR)/emu
+loadRuckusTcl $::env(TOP_DIR)/fpga
 
 # the paths below contain the proprietary Synopsys stuff that are instantiated by pix2pgp
 # It is assumed that the user has access to the said dirs when invoking this .tcl script
