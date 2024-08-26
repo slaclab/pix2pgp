@@ -23,8 +23,8 @@ entity Pix2PgpEmuTb is
       COLMANAGER_DATA_AF_LVL_G   : integer  := 1;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
       COLMANAGER_STATUS_AF_LVL_G : integer  := 1;
-      ADAPTER_DEPTH_G            : integer  := 6;
-      ADAPTER_AF_LVL_G           : integer  := 1;
+      ADAPTER_DEPTH_G            : integer  := 16;
+      ADAPTER_AF_LVL_G           : integer  := 2;
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
       ARB_DOUT_PIPE_G            : natural  := 2;
       NUM_VC_G                   : natural  := 1

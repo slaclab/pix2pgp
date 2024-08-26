@@ -32,7 +32,7 @@ entity Pix2PgpTopTb is
       COLMANAGER_DATA_AF_LVL_G   : integer  := 5; -- *
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
       COLMANAGER_STATUS_AF_LVL_G : integer  := 5; -- *
-      ADAPTER_DEPTH_G            : integer  := 16;
+      ADAPTER_DEPTH_G            : integer  := 6;
       ADAPTER_AF_LVL_G           : integer  := 5; -- *
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
       ARB_DOUT_PIPE_G            : natural  := 2;
