@@ -13,7 +13,6 @@ entity Pix2PgpEmuTb is
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := True;
       RST_POLARITY_G             : std_logic:= '1';
-      GHDL_SIM_G                 : boolean  := False;
       FPGA_SYNTH_G               : boolean  := False;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
@@ -57,7 +56,6 @@ architecture test of Pix2PgpEmuTb is
          TPD_G                      => TPD_G,
          RST_ASYNC_G                => RST_ASYNC_G,
          RST_POLARITY_G             => RST_POLARITY_G,
-         GHDL_SIM_G                 => GHDL_SIM_G,
          FPGA_SYNTH_G               => FPGA_SYNTH_G,
          DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,

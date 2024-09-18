@@ -19,10 +19,12 @@
 ROOT_DIR=${PWD}/../../
 
 RTL_DIR=${ROOT_DIR}/firmware/core/rtl
+FIFO_DIR=${ROOT_DIR}/firmware/core/ghdlFifo
 TB_DIR=${ROOT_DIR}/firmware/core/tb
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 RTL=${RTL_DIR}/*.vhd
+FIFO=${FIFO_DIR}/*.vhd
 
 # note that the package has to be declared separately in order to be imported first
 PIX2PGP_PKG_DIR=${RTL_DIR}/pkg
@@ -45,12 +47,6 @@ SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
           "${SURF_PKG_DIR}/Pgp4Pkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd"
           "${SURF_PKG_DIR}/ArbiterPkg.vhd")
-
-# stub dware files
-DWARE_DIR=${TB_DIR}/dw
-DWARE=${DWARE_DIR}/*.vhd
-DWARE_PKG_DIR=${DWARE_DIR}/pkg
-DWARE_PKG=${DWARE_PKG_DIR}/dw06_components.vhd
 
 CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
@@ -146,16 +142,6 @@ prepareSurf()
 
  }
 
- prepareDWare()
- {
-    echo "[INFO]: Importing the dware stub files..."
-    echo "The real dware libraries have to be imported separately if you are not using GHDL simulation (e.g. VCS does it)"
-
-    ${GHDL_IMPORT_DWARE} ${DWARE_PKG}
-    ${GHDL_IMPORT_DWARE} ${DWARE}
-
- }
-
 printHelp()
 {
   if [ "$1" == "--help" ]; then
@@ -236,8 +222,6 @@ ghdlClean()
     exit 1
   fi
 
-  prepareDWare
-
   checkFileExists ${RTL}
   pix2pgp_exists=$?
 
@@ -246,6 +230,7 @@ ghdlClean()
     echo "[INFO]: Pix2pgp libraries found in ${RTL}. Importing..."
     ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
     ${GHDL_IMPORT_PIX2PGP} ${TB}
+    ${GHDL_IMPORT_PIX2PGP} ${FIFO}
     ${GHDL_IMPORT_PIX2PGP} ${RTL}
   else
     echo "[ERROR]: No pix2pgp files found..."

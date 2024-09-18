@@ -30,8 +30,6 @@ entity Pix2PgpTop is
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := true;
       RST_POLARITY_G             : sl       := '1';
-      GHDL_SIM_G                 : boolean  := true;
-      SYNTHESIZE_G               : boolean  := false;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := false;
       COLMANAGER_DATA_DEPTH_G    : integer  := 32;
@@ -110,9 +108,7 @@ begin
             DATA_DEPTH_G      => COLMANAGER_DATA_DEPTH_G,
             DATA_AF_LVL_G     => COLMANAGER_DATA_AF_LVL_G,
             STATUS_DEPTH_G    => COLMANAGER_STATUS_DEPTH_G,
-            STATUS_AF_LVL_G   => COLMANAGER_STATUS_AF_LVL_G,
-            GHDL_SIM_G        => GHDL_SIM_G,
-            SYNTHESIZE_G      => SYNTHESIZE_G)
+            STATUS_AF_LVL_G   => COLMANAGER_STATUS_AF_LVL_G)
          port map(
             -- General Interface
             sparseClk => sparseClk,
@@ -231,9 +227,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          DWARE_AF_LVL_G  => ADAPTER_AF_LVL_G,
-         DWARE_DEPTH_G   => ADAPTER_DEPTH_G,
-         GHDL_SIM_G      => GHDL_SIM_G,
-         SYNTHESIZE_G    => SYNTHESIZE_G)
+         DWARE_DEPTH_G   => ADAPTER_DEPTH_G)
       port map(
          -- General Interface
          pgpClk   => pgpClk,

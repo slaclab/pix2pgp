@@ -22,7 +22,6 @@ entity Pix2PgpTopTb is
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := True;
       RST_POLARITY_G             : sl       := '1';
-      GHDL_SIM_G                 : boolean  := True;
       FPGA_SYNTH_G               : boolean  := False;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
@@ -3935,7 +3934,6 @@ begin
          TPD_G                      => TPD_G,
          RST_ASYNC_G                => RST_ASYNC_G,
          RST_POLARITY_G             => RST_POLARITY_G,
-         GHDL_SIM_G                 => GHDL_SIM_G,
          DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
          PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
@@ -3973,7 +3971,6 @@ begin
        TPD_G          => TPD_G,
        RST_ASYNC_G    => RST_ASYNC_G,
        RST_POLARITY_G => RST_POLARITY_G,
-       GHDL_SIM_G     => GHDL_SIM_G,
        FPGA_SYNTH_G   => FPGA_SYNTH_G,
        NUM_VC_G       => NUM_VC_G)
     port map(

@@ -22,7 +22,6 @@ entity Pix2PgpTb is
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := True;
       RST_POLARITY_G             : sl       := '1';
-      GHDL_SIM_G                 : boolean  := True;
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
@@ -85,7 +84,6 @@ begin
          TPD_G                      => TPD_G,
          RST_ASYNC_G                => RST_ASYNC_G,
          RST_POLARITY_G             => RST_POLARITY_G,
-         GHDL_SIM_G                 => GHDL_SIM_G,
          PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,

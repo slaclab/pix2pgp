@@ -22,7 +22,6 @@ entity Pix2PgpFpgaTb is
       TPD_G          : time     := 1 ns;
       RST_ASYNC_G    : boolean  := True;
       RST_POLARITY_G : sl       := '1';
-      GHDL_SIM_G     : boolean  := True;
       FPGA_SYNTH_G   : boolean  := True;
       NUM_VC_G       : natural  := 1
    );

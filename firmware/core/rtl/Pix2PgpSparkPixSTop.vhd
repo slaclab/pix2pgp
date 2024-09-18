@@ -18,8 +18,6 @@ entity Pix2PgpSparkPixSTop is
       RST_ASYNC_G                : boolean   := true;
       RST_POLARITY_G             : std_logic := '1';
       SERIALIZER_ID_G            : integer   := 0;
-      SYNTHESIZE_G               : boolean   := true;
-      GHDL_SIM_G                 : boolean   := false;
       DATAFIFO_PIPE_G            : positive  := 1;
       STATUSFIFO_PIPE_G          : positive  := 1;
       PIPELINE_BRIDGE_DATA_G     : boolean   := false;
@@ -95,8 +93,6 @@ begin
          TPD_G                      => TPD_G,
          RST_ASYNC_G                => RST_ASYNC_G,
          RST_POLARITY_G             => RST_POLARITY_G,
-         GHDL_SIM_G                 => GHDL_SIM_G,
-         SYNTHESIZE_G               => SYNTHESIZE_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
          COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
