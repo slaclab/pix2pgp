@@ -123,11 +123,28 @@ begin
     wait for CLK_PERIOD_SPARSE_C*93;
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-        hitLen(col) <= toSlv(2, hitLen(col)'length);
+        hitLen(col) <= toSlv(3, hitLen(col)'length);
       end loop;
         sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
         sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+
+        hitLen(col) <= toSlv(1, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+      hitLen(col) <= toSlv(2, hitLen(col)'length);
+    end loop;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
     wait for CLK_PERIOD_SPARSE_C*93;
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop

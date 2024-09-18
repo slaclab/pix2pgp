@@ -161,10 +161,7 @@ comb : process (rst, r, hitLen, sro, pause, busy) is
                if (r.pause = '0') then
                   v.waitCnt := r.waitCnt + 1;
                   if (v.waitCnt = WAIT_WREN_G) then
-                     v.wrEn               := '1';
-                     v.dout(7 downto 0)   := r.hitCnt;
-                     v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
-                     --v.dout(19 downto 16) := r.trgCnt;
+                     v.wrEn    := '1';
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
                         v.state := WAIT_ISSUE_EOF_S;
@@ -191,6 +188,10 @@ comb : process (rst, r, hitLen, sro, pause, busy) is
       wrEn    <= r.wrEn;
       dout    <= r.dout;
       overOcc <= r.overOcc;
+
+      v.dout(7 downto 0)   := r.hitCnt;
+      v.dout(15 downto 8)  := toSlv(COL_ID_G, v.dout(15 downto 8)'length);
+      v.dout(19 downto 16) := r.trgCnt;
 
       ----------------------------------------------------------------------
 
