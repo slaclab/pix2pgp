@@ -35,7 +35,7 @@ entity Pix2PgpSparkPixSTop is
       sparseClk    : in  std_logic;
       pgpClk       : in  std_logic;
       rst          : in  std_logic;
-      serSel       : in  std_logic_vector(3 downto 0);
+      sel          : in  std_logic;
       columnEnable : in  std_logic_vector(23 downto 0);
       -- Column Manager Interface
       -- dataIn
@@ -157,7 +157,7 @@ begin
    process(pgpClk)
    begin
       if (rising_edge(pgpClk)) then
-         if serSel = conv_std_logic_vector(SERIALIZER_ID_G, serSel'length) then
+         if sel = '1' then
             columnEnableMuxed <= columnEnable;
          end if;
       end if;
