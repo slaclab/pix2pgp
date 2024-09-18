@@ -75,94 +75,94 @@ begin
 
    rstFifo <= (rst or not(enable)) when RST_POLARITY_G = '1' else (not(rst) or enable);
 
-   --GHDL_SIM_FLOW_GEN : if (GHDL_SIM_G = true) generate
+   GHDL_SIM_FLOW_GEN : if (GHDL_SIM_G = true) generate
 
-   --   SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
-   --      U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
-   --         generic map (
-   --            TPD_G           => TPD_G,
-   --            RST_ASYNC_G     => RST_ASYNC_G,
-   --            RST_POLARITY_G  => RST_POLARITY_G,
-   --            SYNTH_MODE_G    => "inferred",
-   --            FWFT_EN_G       => FWFT_EN_G,
-   --            GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
-   --            PIPE_STAGES_G   => PIPE_STAGES_G,
-   --            DATA_WIDTH_G    => WR_DATA_WIDTH_G,
-   --            FULL_THRES_G    => DWARE_AF_LVL_G,
-   --            ADDR_WIDTH_G    => ADDR_WIDTH_G)
-   --         port map (
-   --            rst       => rstFifo,
-   --            -- Write Interface
-   --            wr_clk    => wrClk,
-   --            wr_en     => wrEn,
-   --            din       => din,
-   --            prog_full => aFullWr,
-   --            full      => fullWrStandalone,
-   --            -- Read Interface
-   --            rd_clk    => rdClk,
-   --            rd_en     => rdEn,
-   --            valid     => validRdStandalone,
-   --            dout      => dout);
-   --   end generate SYMM_GEN;
+      SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
+         U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
+            generic map (
+               TPD_G           => TPD_G,
+               RST_ASYNC_G     => RST_ASYNC_G,
+               RST_POLARITY_G  => RST_POLARITY_G,
+               SYNTH_MODE_G    => "inferred",
+               FWFT_EN_G       => FWFT_EN_G,
+               GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
+               PIPE_STAGES_G   => PIPE_STAGES_G,
+               DATA_WIDTH_G    => WR_DATA_WIDTH_G,
+               FULL_THRES_G    => DWARE_AF_LVL_G,
+               ADDR_WIDTH_G    => ADDR_WIDTH_G)
+            port map (
+               rst       => rstFifo,
+               -- Write Interface
+               wr_clk    => wrClk,
+               wr_en     => wrEn,
+               din       => din,
+               prog_full => aFullWr,
+               full      => fullWrStandalone,
+               -- Read Interface
+               rd_clk    => rdClk,
+               rd_en     => rdEn,
+               valid     => validRdStandalone,
+               dout      => dout);
+      end generate SYMM_GEN;
 
-   --   ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
-   --      U_StandaloneFifo : entity pix2pgp.Pix2PgpFifoMux
-   --         generic map (
-   --            TPD_G           => TPD_G,
-   --            RST_ASYNC_G     => RST_ASYNC_G,
-   --            RST_POLARITY_G  => RST_POLARITY_G,
-   --            SYNTH_MODE_G    => "inferred",
-   --            FWFT_EN_G       => FWFT_EN_G,
-   --            GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
-   --            PIPE_STAGES_G   => PIPE_STAGES_G,
-   --            WR_DATA_WIDTH_G => WR_DATA_WIDTH_G,
-   --            RD_DATA_WIDTH_G => RD_DATA_WIDTH_G,
-   --            FULL_THRES_G    => DWARE_AF_LVL_G,
-   --            ADDR_WIDTH_G    => ADDR_WIDTH_G)
-   --         port map (
-   --            rst       => rstFifo,
-   --            -- Write Interface
-   --            wr_clk    => wrClk,
-   --            wr_en     => wrEn,
-   --            din       => din,
-   --            prog_full => aFullWr,
-   --            full      => fullWrStandalone,
-   --            -- Read Interface
-   --            rd_clk    => rdClk,
-   --            rd_en     => rdEn,
-   --            valid     => validRdStandalone,
-   --            dout      => dout);
-   --   end generate ASYMM_GEN;
+      ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
+         U_StandaloneFifo : entity pix2pgp.Pix2PgpFifoMux
+            generic map (
+               TPD_G           => TPD_G,
+               RST_ASYNC_G     => RST_ASYNC_G,
+               RST_POLARITY_G  => RST_POLARITY_G,
+               SYNTH_MODE_G    => "inferred",
+               FWFT_EN_G       => FWFT_EN_G,
+               GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
+               PIPE_STAGES_G   => PIPE_STAGES_G,
+               WR_DATA_WIDTH_G => WR_DATA_WIDTH_G,
+               RD_DATA_WIDTH_G => RD_DATA_WIDTH_G,
+               FULL_THRES_G    => DWARE_AF_LVL_G,
+               ADDR_WIDTH_G    => ADDR_WIDTH_G)
+            port map (
+               rst       => rstFifo,
+               -- Write Interface
+               wr_clk    => wrClk,
+               wr_en     => wrEn,
+               din       => din,
+               prog_full => aFullWr,
+               full      => fullWrStandalone,
+               -- Read Interface
+               rd_clk    => rdClk,
+               rd_en     => rdEn,
+               valid     => validRdStandalone,
+               dout      => dout);
+      end generate ASYMM_GEN;
 
-   --   U_syncFull : entity surf.Synchronizer
-   --      generic map (
-   --         TPD_G          => TPD_G,
-   --         RST_ASYNC_G    => RST_ASYNC_G,
-   --         RST_POLARITY_G => RST_POLARITY_G,
-   --         STAGES_G       => 2)
-   --      port map (
-   --         clk     => rdClk,
-   --         rst     => rst,
-   --         dataIn  => fullWrStandalone,
-   --         dataOut => fullRd);
+      U_syncFull : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            STAGES_G       => 2)
+         port map (
+            clk     => rdClk,
+            rst     => rst,
+            dataIn  => fullWrStandalone,
+            dataOut => fullRd);
 
-   --   U_syncEmpty : entity surf.Synchronizer
-   --      generic map (
-   --         TPD_G          => TPD_G,
-   --         RST_ASYNC_G    => RST_ASYNC_G,
-   --         RST_POLARITY_G => RST_POLARITY_G,
-   --         STAGES_G       => 2)
-   --      port map (
-   --         clk     => wrClk,
-   --         rst     => rst,
-   --         dataIn  => validRdStandalone,
-   --         dataOut => validWr);
+      U_syncEmpty : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            STAGES_G       => 2)
+         port map (
+            clk     => wrClk,
+            rst     => rst,
+            dataIn  => validRdStandalone,
+            dataOut => validWr);
 
-   --   emptyWr <= not(validWr);
-   --   emptyRd <= not(validRdStandalone);
-   --   fullWr  <= fullWrStandalone;
+      emptyWr <= not(validWr);
+      emptyRd <= not(validRdStandalone);
+      fullWr  <= fullWrStandalone;
 
-   --end generate GHDL_SIM_FLOW_GEN;
+   end generate GHDL_SIM_FLOW_GEN;
 
    ASIC_FLOW_GEN : if (GHDL_SIM_G = false) generate
       wrEnDwareFifo <= not(wrEn);

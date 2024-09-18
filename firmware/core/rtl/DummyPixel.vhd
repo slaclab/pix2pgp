@@ -39,9 +39,11 @@ entity DummyPixel is
       rst     : in  sl;
       sro     : in  sl;
       pause   : in  sl;
+      busy    : in  sl;
       hitLen  : in  slv(9 downto 0);
-      tok     : out sl;
-      tokFb   : out sl;
+      sof     : out sl;
+      eof     : out sl;
+      overOcc : out sl;
       ackN    : out sl;
       wrEn    : out sl;
       dout    : out slv(SPARSE_DWIDTH_C-1 downto 0));
@@ -52,18 +54,20 @@ architecture rtl of DummyPixel is
    type StateType is (
       IDLE_S,
       ISSUE_ACKN_S,
-      WAIT_ISSUE_FB_S,
+      WAIT_ISSUE_EOF_S,
       ISSUE_WREN_S
    );
 
    type RegType is record
       sro     : sl;
       hitLen  : slv(9 downto 0);
-      tok     : sl;
-      tokFb   : sl;
+      sof     : sl;
+      eof     : sl;
       ackN    : sl;
       wrEn    : sl;
+      overOcc : sl;
       pause   : sl;
+      busy    : sl;
       dout    : slv(SPARSE_DWIDTH_C-1 downto 0);
       --
       waitCnt : natural range 0 to 1023;
@@ -76,11 +80,13 @@ architecture rtl of DummyPixel is
    constant REG_INIT_C : RegType := (
       sro     => '0',
       hitLen  => (others => '0'),
-      tok     => '1',
-      tokFb   => '0',
+      sof     => '0',
+      eof     => '0',
       ackN    => '1',
       wrEn    => '0',
       pause   => '0',
+      overOcc => '0',
+      busy    => '0',
       dout    => (others => '0'),
       --
       waitCnt => 0,
@@ -95,7 +101,7 @@ architecture rtl of DummyPixel is
 
 begin
 
-comb : process (rst, r, hitLen, sro, pause) is
+comb : process (rst, r, hitLen, sro, pause, busy) is
 
       variable v : RegType;
 
@@ -104,16 +110,17 @@ comb : process (rst, r, hitLen, sro, pause) is
       v := r;
 
       -- Get the inputs
-      v.sro     := sro;
-      v.pause   := pause;
+      v.sro   := sro;
+      v.pause := pause;
+      v.busy  := busy;
 
       -- defaults
-      v.tok  := '1';
+      v.sof  := '0';
+      v.eof  := '0';
       v.ackN := '1';
       v.wrEn := '0';
 
       if (v.sro = '1') then
-         v.tok    := '0';
          v.trgCnt := r.trgCnt + 1;
       end if;
 
@@ -123,18 +130,17 @@ comb : process (rst, r, hitLen, sro, pause) is
          when IDLE_S =>
             -- only register the hitLen if idle
             v.hitLen  := hitLen;
-            v.tokFb   := '1';
             v.waitCnt := 0;
             v.hitCnt  := toSlv(1, 8);
             v.ackCnt  := 0;
 
             if (r.sro = '1') then
-               v.tokFb := '0';
                v.dout(19 downto 16) := r.trgCnt;
+               v.sof                := '1';
                if (r.hitLen > 0) then
                   v.state := ISSUE_ACKN_S;
                else
-                  v.state := WAIT_ISSUE_FB_S;
+                  v.state := WAIT_ISSUE_EOF_S;
                end if;
             end if;
 
@@ -161,7 +167,7 @@ comb : process (rst, r, hitLen, sro, pause) is
                      --v.dout(19 downto 16) := r.trgCnt;
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
-                        v.state := WAIT_ISSUE_FB_S;
+                        v.state := WAIT_ISSUE_EOF_S;
                      else
                         v.hitCnt := r.hitCnt + 1;
                         v.state  := ISSUE_ACKN_S;
@@ -170,20 +176,21 @@ comb : process (rst, r, hitLen, sro, pause) is
                end if;
 
             ----------------------------------------------------------------------
-            when WAIT_ISSUE_FB_S =>
+            when WAIT_ISSUE_EOF_S =>
                v.waitCnt := r.waitCnt + 1;
-               v.tokFb   := '1';
                if (r.waitCnt = WAIT_FB_G) then
+                  v.eof   := '1';
                   v.state := IDLE_S;
                end if;
       end case;
 
       -- General Outputs
-      tok    <= r.tok;
-      tokFb  <= r.tokFb;
-      ackN   <= r.ackN;
-      wrEn   <= r.wrEn;
-      dout   <= r.dout;
+      sof     <= r.sof;
+      eof     <= r.eof;
+      ackN    <= r.ackN;
+      wrEn    <= r.wrEn;
+      dout    <= r.dout;
+      overOcc <= r.overOcc;
 
       ----------------------------------------------------------------------
 

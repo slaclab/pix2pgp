@@ -305,9 +305,7 @@ begin
          when DONE_S =>
             v.arbBusy := '0';
             v.colSel  := (others => '0');
-            if arbStart = '0' then
-               v.state := IDLE_S;
-            end if;
+            v.state   := IDLE_S;
 
       end case;
       -----------------------------------------------------------------------

@@ -66,10 +66,12 @@ entity Pix2PgpSparkPixSTop is
       din22        : in  std_logic_vector(19 downto 0);
       din23        : in  std_logic_vector(19 downto 0);
       -- flags
-      tok          : in  std_logic_vector(23 downto 0);
-      tokFb        : in  std_logic_vector(23 downto 0);
+      sof          : in  std_logic_vector(23 downto 0);
+      eof          : in  std_logic_vector(23 downto 0);
+      overOcc      : in  std_logic_vector(23 downto 0);
       ackN         : in  std_logic_vector(23 downto 0);
       wrEn         : in  std_logic_vector(23 downto 0);
+      busy         : out std_logic_vector(23 downto 0);
       pause        : out std_logic_vector(23 downto 0);
       -- Pgp4TxLite Interface
       txReady      : in  std_logic;
@@ -114,11 +116,13 @@ begin
          rst          => rst,
          columnEnable => columnEnableMuxed,
          -- Column Manager Interface
-         tok          => tok,
-         tokFb        => tokFb,
+         sof          => sof,
+         eof          => eof,
+         overOcc      => overOcc,
          ackN         => ackN,
          wrEn         => wrEn,
          din          => din,
+         busy         => busy,
          pause        => pause,
          -- Pgp4TxLite Interface
          txReady      => txReady,

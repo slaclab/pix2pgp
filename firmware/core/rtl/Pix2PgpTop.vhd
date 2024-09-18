@@ -53,9 +53,11 @@ entity Pix2PgpTop is
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
       wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      tok          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      tokFb        : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      eof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       ackN         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
       txReady      : in  sl;
@@ -120,9 +122,11 @@ begin
             -- Sparse Logic Interface
             din       => din(col),
             wrEn      => wrEn(col),
-            tok       => tok(col),
-            tokFb     => tokFb(col),
+            sof       => sof(col),
+            eof       => eof(col),
+            overOcc   => overOcc(col),
             ackN      => ackN(col),
+            busy      => busy(col),
             pause     => pause(col),
             -- Arbiter Interface
             statusRd  => statusRdCol(col),

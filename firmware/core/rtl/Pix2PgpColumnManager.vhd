@@ -46,9 +46,11 @@ entity Pix2PgpColumnManager is
       -- Sparse Logic Interface
       din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
       wrEn      : in  sl;
-      tok       : in  sl;
-      tokFb     : in  sl;
+      sof       : in  sl;
+      eof       : in  sl;
+      overOcc   : in  sl;
       ackN      : in  sl;
+      busy      : out sl;
       pause     : out sl;
       -- Arbiter Interface
       statusRd  : in  sl;
@@ -75,54 +77,53 @@ architecture rtl of Pix2PgpColumnManager is
 
    type StateType is (
       IDLE_S,
-      MON_TOKFB_S,
-      CHK_WRCNT_S,
+      IN_FRAME_S,
       WREN_STATUS_S,
       PAUSE_S);
 
    type RegType is record
       -- i/o
-      tok           : sl;
-      tokFb         : sl;
+      sof           : sl;
+      eof           : sl;
+      overOcc       : sl;
       ackN          : sl;
       statusRd      : sl;
       dataRd        : sl;
       pause         : sl;
+      busy          : sl;
       din           : slv(SPARSE_DWIDTH_C-1 downto 0);
       statusBus     : Pix2PgpStatusBusType;
       dataBus       : Pix2PgpDataBusType;
       -- internal
-      overOcc       : sl;
       statusWr      : sl;
       dataWr        : sl;
       aFullData     : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       ackCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
-      wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      tok           => '0',
-      tokFb         => '0',
+      sof           => '0',
+      eof           => '0',
+      overOcc       => '0',
       ackN          => '0',
       statusRd      => '0',
       dataRd        => '0',
       pause         => '0',
+      busy          => '0',
       din           => (others => '0'),
       statusBus     => DEFAULT_PIX2PGP_STATUSBUS_C,
       dataBus       => DEFAULT_PIX2PGP_DATABUS_C,
       -- internal
-      overOcc       => '0',
       statusWr      => '0',
       dataWr        => '0',
       aFullData     => '0',
       statusFifoDin => (others => '0'),
       ackCnt        => (others => '0'),
-      wrEnCnt       => (others => '0'),
-      trgCnt        => (others => '0'),
+      trgCnt        => (others => '1'), -- so that it rolls-over to zero on first trigger
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -133,9 +134,9 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, rst, tok, tokFb, ackN, wrEn, din, statusRd, statusFifoDout,
+   comb : process (r, rst, sof, eof, ackN, wrEn, din, statusRd, statusFifoDout,
                    dataRd, dataFifoEmptyDly, statusFifoEmptyDly, aFullData,
-                   statusFifoFull, dataFifoFull) is
+                   statusFifoFull, dataFifoFull, overOcc) is
       variable v : RegType;
    begin
 
@@ -143,8 +144,9 @@ begin
       v := r;
 
       -- Register inputs
-      v.tok       := tok;
-      v.tokFb     := tokFb;
+      v.sof       := sof;
+      v.eof       := eof;
+      v.overOcc   := overOcc;
       v.ackN      := ackN;
       v.dataWr    := wrEn;
       v.din       := din;
@@ -155,24 +157,9 @@ begin
       -- Strobes
       v.statusWr := '0';
 
-      -- increment the trigger with every token toggle to low;
-      if (v.tok = '0' and r.tok = '1') then
-         v.trgCnt := r.trgCnt + 1;
-      end if;
-
-      -- over-occupancy detection (received a token while busy)
-      if (r.state /= IDLE_S and v.tok = '0' and r.tok = '1') then
-         v.overOcc := '1';
-      end if;
-
       -- ackN counter management (falling-edge detection)
       if (r.state /= IDLE_S and v.ackN = '0' and r.ackN = '1') then
          v.ackCnt := r.ackCnt + 1;
-      end if;
-
-      -- wrEn counter management
-      if (r.state /= IDLE_S and r.dataWr = '1') then
-         v.wrEnCnt := r.wrEnCnt + 1;
       end if;
 
       -------------------------------------------------------------------------
@@ -180,37 +167,22 @@ begin
       -------------------------------------------------------------------------
          -- wait for token; also reset the counters and flags
          when IDLE_S =>
-            v.overOcc := '0';
+            v.busy    := '0';
             v.pause   := '0';
-            v.wrEnCnt := toSlv(0, DATALEN_WIDTH_C);
-            v.ackCnt  := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt  := (others => '0');
 
-            -- falling-edge detection
-            if (v.tok = '0' and r.tok = '1') then
-               v.statusFifoDin(STATUSFIFO_TRG_POS_C) := r.trgCnt;
-               v.state  := MON_TOKFB_S;
+            -- start-of-frame detection
+            if (v.sof = '1') then
+               v.busy   := '1';
+               v.trgCnt := r.trgCnt + 1;
+               v.state  := IN_FRAME_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- wait for token-feedback
-         when MON_TOKFB_S =>
-            v.pause := '0';
-
-            -- almost-full always takes precedence
-            if (r.aFullData = '1') then
-               v.pause := '1';
-               v.state := WREN_STATUS_S;
-            -- rising-edge detection
-            elsif (v.tokFb = '1' and r.tokFb = '0') then
-               v.state := CHK_WRCNT_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- check that all data have been written
-         when CHK_WRCNT_S =>
-
-            -- done; time to write into the status FIFO and go back to idle
-            if (r.wrEnCnt >= r.ackCnt) then
+         -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
+         when IN_FRAME_S =>
+            if (v.aFullData = '1' or v.eof = '1' or v.overOcc = '1') then
+               v.pause := v.aFullData;
                v.state := WREN_STATUS_S;
             end if;
 
@@ -218,8 +190,8 @@ begin
          -- write into the status FIFO
          when WREN_STATUS_S =>
 
-            if r.wrEnCnt(0) = '1' then
-               -- wrote odd number of hits? write a dummy word;
+            if r.ackCnt(0) = '1' then
+               -- wrote odd number of hits? write an extra dummy word;
                -- hold for one clock cycle;
                -- wrEn will switch to input port by default on next cycle
                v.dataWr := '1';
@@ -227,24 +199,30 @@ begin
 
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
             v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
-            --v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt; -- get this earlier
-            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
+            v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
+            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.ackCnt;
             v.statusWr := '1';
             v.state    := IDLE_S;
 
+            -- override if in pause mode; pause takes precedence
+            -- over-occupancy overrides too
             if (r.pause = '1') then
                v.state := PAUSE_S;
+            elsif (r.overOcc = '1') then
+               v.trgCnt := r.trgCnt + 1;
+               v.ackCnt := (others => '0');
+               v.state  := IN_FRAME_S;
             end if;
 
          ----------------------------------------------------------------------
          -- pause case
          when PAUSE_S =>
-            v.wrEnCnt := toSlv(0, DATALEN_WIDTH_C);
-            v.ackCnt  := toSlv(0, DATALEN_WIDTH_C);
+            v.ackCnt := (others => '0');
 
-            -- if data FIFO is empty, resume with the event
+            -- if data FIFO is empty, release the pause signal and proceed
             if (dataFifoEmptyDly = '1') then
-               v.state := MON_TOKFB_S;
+               v.pause := '0';
+               v.state := IN_FRAME_S;
             end if;
 
       end case;
@@ -252,6 +230,7 @@ begin
 
       -- Outputs
       pause <= v.pause;
+      busy  <= v.busy;
       -- status bus assignments
       statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
       statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);

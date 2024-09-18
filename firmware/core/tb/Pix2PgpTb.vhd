@@ -39,15 +39,18 @@ entity Pix2PgpTb is
    );
    port(
       -- General Interface
-      clk          : in  sl;
+      sparseClk    : in  sl;
+      pgpClk       : in  sl;
       rst          : in  sl;
       sro          : in  sl;
       -- Pixel Interface
-      tok          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      tokFb        : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      eof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       ackN         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       din          : in  Pix2PgpSparseDinArray;
+      busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- FPGA Interface
       pgpDout      : out slv(31 downto 0);
@@ -97,16 +100,18 @@ begin
          ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
-         sparseClk    => clk,
-         pgpClk       => clk,
+         sparseClk    => sparseClk,
+         pgpClk       => pgpClk,
          rst          => rst,
          columnEnable => columnEnable,
          -- Column Manager Interface
          din          => din,
          wrEn         => wrEn,
-         tok          => tok,
-         tokFb        => tokFb,
+         sof          => sof,
+         eof          => eof,
+         overOcc      => overOcc,
          ackN         => ackN,
+         busy         => busy,
          pause        => pause,
          -- Pgp4TxLite Interface
          txReady      => txReady,
@@ -120,7 +125,7 @@ begin
     U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
       port map(
         -- Clock and Reset
-        clk        => clk,
+        clk        => pgpClk,
         rst        => rst,
         -- 64-bit Input Framing Interface
         txReady    => txReady,
@@ -142,7 +147,7 @@ begin
          MASTER_WIDTH_G => 32)
       port map (
          -- Clock and Reset
-         clk            => clk,
+         clk            => pgpClk,
          rst            => rst,
          -- Slave Interface
          slaveValid     => phyTxValid,
