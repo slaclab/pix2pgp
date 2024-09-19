@@ -78,8 +78,7 @@ architecture rtl of Pix2PgpColumnManager is
    type StateType is (
       IDLE_S,
       IN_FRAME_S,
-      WREN_STATUS_S,
-      PAUSE_S);
+      WREN_STATUS_S);
 
    type RegType is record
       -- i/o
@@ -146,7 +145,6 @@ begin
       -- Register inputs
       v.sof       := sof;
       v.eof       := eof;
-      v.overOcc   := overOcc;
       v.ackN      := ackN;
       v.dataWr    := wrEn;
       v.din       := din;
@@ -180,15 +178,31 @@ begin
 
          ----------------------------------------------------------------------
          -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
+         -- also handle pause case
          when IN_FRAME_S =>
-            if (v.aFullData = '1' or v.eof = '1' or v.overOcc = '1') then
+
+            -- only proceed to next state if *not already* in pause mode
+            if ((v.aFullData = '1' or v.eof = '1' or r.overOcc = '1')
+            and v.pause = '0') then
                v.pause := v.aFullData;
                v.state := WREN_STATUS_S;
+            end if;
+
+            -- reset pause flag if data got empty;
+            -- can now proceed to next state if above conditions are met
+            if (v.pause = '1' and dataFifoEmptyDly = '1') then
+               v.pause := '0';
+            end if;
+
+            -- have to latch the over-occupancy flag here
+            if (v.overOcc = '0') then
+               v.overOcc := overOcc;
             end if;
 
          ----------------------------------------------------------------------
          -- write into the status FIFO
          when WREN_STATUS_S =>
+            v.overOcc := '0'; -- clear (registered value still gets written)
 
             if r.ackCnt(0) = '1' then
                -- wrote odd number of hits? write an extra dummy word;
@@ -207,22 +221,12 @@ begin
             -- override if in pause mode; pause takes precedence
             -- over-occupancy overrides too
             if (r.pause = '1') then
-               v.state := PAUSE_S;
+               v.ackCnt := (others => '0');
+               v.state  := IN_FRAME_S;
             elsif (r.overOcc = '1') then
                v.trgCnt := r.trgCnt + 1;
                v.ackCnt := (others => '0');
                v.state  := IN_FRAME_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- pause case
-         when PAUSE_S =>
-            v.ackCnt := (others => '0');
-
-            -- if data FIFO is empty, release the pause signal and proceed
-            if (dataFifoEmptyDly = '1') then
-               v.pause := '0';
-               v.state := IN_FRAME_S;
             end if;
 
       end case;
@@ -235,15 +239,8 @@ begin
       statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
       statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
       statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
+      statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
       statusBus.columnFull <= statusFifoFull or dataFifoFull;
-
-      -- override the regular overocc flag that comes out of the FIFO if in pause;
-      -- this allows the overocc flag to propagate, as the status word was already written
-      if r.pause = '0' then
-         statusBus.overOcc <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
-      else
-         statusBus.overOcc <= r.overOcc; -- registered value
-      end if;
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then

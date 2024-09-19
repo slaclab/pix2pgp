@@ -18,10 +18,11 @@
 
 ROOT_DIR=${PWD}/../../
 
-RTL_DIR=${ROOT_DIR}/firmware/core/rtl
-FIFO_DIR=${ROOT_DIR}/firmware/core/ghdlFifo
-TB_DIR=${ROOT_DIR}/firmware/core/tb
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
+
+RTL_DIR=${ROOT_DIR}/firmware/core/rtl
+TB_DIR=${ROOT_DIR}/firmware/core/tb
+FIFO_DIR=${GHDL_DIR}/ghdlFifo
 
 RTL=${RTL_DIR}/*.vhd
 FIFO=${FIFO_DIR}/*.vhd
@@ -52,7 +53,7 @@ CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
 GHW=${GHDL_DIR}/*.ghw
 VCD=${GHDL_DIR}/*.vcd
-TB=${TB_DIR}/*Tb.vhd
+TB=${TB_DIR}/*.vhd
 FST=${GHDL_DIR}/*.fst
 OUT=${GHDL_DIR}/*.o
 

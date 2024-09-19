@@ -120,8 +120,8 @@ comb : process (rst, r, hitLen, sro, pause, busy) is
       v.ackN := '1';
       v.wrEn := '0';
 
-      if (v.sro = '1') then
-         v.trgCnt := r.trgCnt + 1;
+      if (v.state /= IDLE_S and (v.sro = '1' or r.sro = '1')) then
+         v.overOcc := '1';
       end if;
 
       case r.state is
