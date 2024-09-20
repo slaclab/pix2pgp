@@ -16,10 +16,7 @@ entity Pix2PgpSparkPixSTop is
    generic(
       TPD_G                      : time      := 1 ns;
       RST_ASYNC_G                : boolean   := true;
-      RST_POLARITY_G             : std_logic := '1';
-      SERIALIZER_ID_G            : integer   := 0;
-      DATAFIFO_PIPE_G            : positive  := 1;
-      STATUSFIFO_PIPE_G          : positive  := 1;
+      RST_POLARITY_G             : std_logic := '0';
       PIPELINE_BRIDGE_DATA_G     : boolean   := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean   := true;
       COLMANAGER_DATA_DEPTH_G    : integer   := 6;
@@ -27,8 +24,10 @@ entity Pix2PgpSparkPixSTop is
       COLMANAGER_STATUS_DEPTH_G  : integer   := 4;
       COLMANAGER_STATUS_AF_LVL_G : integer   := 1;
       ADAPTER_DEPTH_G            : integer   := 16; --6; Default is 6. Test for 16 (Aug 21 2024)
-      ADAPTER_AF_LVL_G           : integer   := 1;
+      ADAPTER_AF_LVL_G           : integer   := 2;
       SUPER_FIFO_RD_DELAY_G      : natural   := 3;
+      DATAFIFO_PIPE_G            : positive  := 1;
+      STATUSFIFO_PIPE_G          : positive  := 1;
       ARB_DOUT_PIPE_G            : natural   := 1);
    port(
       -- General Interface

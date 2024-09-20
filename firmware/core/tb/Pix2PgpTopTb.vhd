@@ -20,13 +20,11 @@ use pix2pgp.Pix2PgpPkg.all;
 entity Pix2PgpTopTb is
    generic(
       TPD_G                      : time     := 1 ns;
-      RST_ASYNC_G                : boolean  := True;
+      RST_ASYNC_G                : boolean  := true;
       RST_POLARITY_G             : sl       := '1';
-      FPGA_SYNTH_G               : boolean  := False;
-      DATAFIFO_PIPE_G            : positive := 2;
-      STATUSFIFO_PIPE_G          : positive := 2;
-      PIPELINE_BRIDGE_DATA_G     : boolean  := False;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
+      FPGA_SYNTH_G               : boolean  := false;
+      PIPELINE_BRIDGE_DATA_G     : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
       COLMANAGER_DATA_AF_LVL_G   : integer  := 5; -- *
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
@@ -34,7 +32,9 @@ entity Pix2PgpTopTb is
       ADAPTER_DEPTH_G            : integer  := 6;
       ADAPTER_AF_LVL_G           : integer  := 5; -- *
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
-      ARB_DOUT_PIPE_G            : natural  := 2;
+      DATAFIFO_PIPE_G            : positive := 1;
+      STATUSFIFO_PIPE_G          : positive := 1;
+      ARB_DOUT_PIPE_G            : natural  := 1;
       NUM_VC_G                   : natural  := 1
    );
    port (
@@ -110,48 +110,48 @@ begin
     -- regular stimuli
     ----------------------------------------------
     ----------------------------------------------
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
+        hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-    --    hitLen(col) <= toSlv(3, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
+        hitLen(col) <= toSlv(3, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-    --    hitLen(col) <= toSlv(1, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
+        hitLen(col) <= toSlv(1, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  hitLen(col) <= toSlv(2, hitLen(col)'length);
-    --end loop;
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+      hitLen(col) <= toSlv(2, hitLen(col)'length);
+    end loop;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  hitLen(col) <= toSlv(0, hitLen(col)'length);
-    --end loop;
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+      hitLen(col) <= toSlv(0, hitLen(col)'length);
+    end loop;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
     ----------------------------------------------
     ----------------------------------------------
 
@@ -178,42 +178,42 @@ begin
     --wait for CLK_PERIOD_SPARSE_C*2;
     --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to 4 loop
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to 4 loop
 
-        hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
-      hitLen(5) <= toSlv(3, hitLen(5)'length);
-      hitLen(6) <= toSlv(1, hitLen(6)'length);
-      hitLen(7) <= toSlv(2, hitLen(7)'length);
-      hitLen(8) <= toSlv(3, hitLen(8)'length);
-      hitLen(9) <= toSlv(4, hitLen(9)'length);
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --  end loop;
+    --  hitLen(5) <= toSlv(3, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(1, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(2, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(3, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(4, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      hitLen(5) <= toSlv(8, hitLen(5)'length);
-      hitLen(6) <= toSlv(6, hitLen(6)'length);
-      hitLen(7) <= toSlv(3, hitLen(7)'length);
-      hitLen(8) <= toSlv(5, hitLen(8)'length);
-      hitLen(9) <= toSlv(1, hitLen(9)'length);
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  hitLen(5) <= toSlv(8, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(6, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(3, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(5, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(1, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(34, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --     hitLen(col) <= toSlv(34, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
     --wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);

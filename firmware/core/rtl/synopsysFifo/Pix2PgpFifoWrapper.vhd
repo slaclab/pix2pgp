@@ -57,6 +57,13 @@ end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
+   -- notes about the DW FIFOs:
+   -- rst mode:
+   -- 0 = Asynchronous reset including memory
+   -- 1 = Synchronous reset including memory
+   -- 2 = Asynchronous reset excluding memory
+   -- 3 = Synchronous reset excluding memory
+
    component DW_asymfifo_s2_sf is
       generic(
          data_in_width  : integer;
@@ -152,7 +159,7 @@ begin
             depth       => DWARE_DEPTH_G,
             push_af_lvl => DWARE_AF_LVL_G,
             pop_af_lvl  => DWARE_AF_LVL_G,
-            rst_mode    => 2)
+            rst_mode    => 0)
          port map (
             rst_n      => rstDwareFifo,
             -- Write Interface
@@ -178,7 +185,7 @@ begin
             depth          => DWARE_DEPTH_G,
             push_af_lvl    => DWARE_AF_LVL_G,
             pop_af_lvl     => DWARE_AF_LVL_G,
-            rst_mode       => 2)
+            rst_mode       => 0)
          port map (
             rst_n      => rstDwareFifo,
             flush_n    => rstDwareFifo,

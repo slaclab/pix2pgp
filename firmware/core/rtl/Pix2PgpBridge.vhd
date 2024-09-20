@@ -59,9 +59,9 @@ begin
          statusRdOut   <= statusRdIn;
 
          if colSel <= NUM_OF_COL_MANAGERS_C-1 then
-            statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen;
+            statusBusSel <= statusBusIn(conv_integer(unsigned(colSel)));
          else
-            statusBusSel.dataLen <= (others => '0');
+            statusBusSel <= DEFAULT_PIX2PGP_STATUSBUS_C;
          end if;
       end process;
    end generate GEN_NO_PIPELINE_STATUS;
@@ -95,7 +95,7 @@ begin
             statusRdOut   <= statusRdIn  after TPD_G;
 
             if colSel <= NUM_OF_COL_MANAGERS_C-1 then
-               statusBusSel.dataLen <= statusBusIn(conv_integer(unsigned(colSel))).dataLen after TPD_G;
+               statusBusSel <= statusBusIn(conv_integer(unsigned(colSel))) after TPD_G;
             end if;
          end if;
       end process;
