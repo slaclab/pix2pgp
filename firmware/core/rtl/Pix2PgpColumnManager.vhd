@@ -32,11 +32,7 @@ entity Pix2PgpColumnManager is
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
       DATA_DEPTH_G      : integer  := 32;
-      DATA_AF_LVL_G     : integer  := 30;
-      STATUS_DEPTH_G    : integer  := 32;
-      STATUS_AF_LVL_G   : integer  := 30;
-      GHDL_SIM_G        : boolean  := false;
-      SYNTHESIZE_G      : boolean  := false);
+      STATUS_DEPTH_G    : integer  := 32);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -63,17 +59,16 @@ architecture rtl of Pix2PgpColumnManager is
 
    signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataFifoEmpty      : sl := '0';
-   signal statusFifoEmpty    : sl := '0';
    signal dataFifoEmptyDly   : sl := '0';
-   signal statusFifoEmptyDly : sl := '0';
    signal statusFifoFull     : sl := '0';
+   signal statusFifoFullDly  : sl := '0';
    signal dataFifoFull       : sl := '0';
+   signal dataFifoFullDly    : sl := '0';
 
    signal statusWrEn         : sl := '0';
    signal statusDin          : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataWrEn           : sl := '0';
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
-   signal aFullData          : sl := '0';
 
    type StateType is (
       IDLE_S,
@@ -91,12 +86,10 @@ architecture rtl of Pix2PgpColumnManager is
       pause         : sl;
       busy          : sl;
       din           : slv(SPARSE_DWIDTH_C-1 downto 0);
-      statusBus     : Pix2PgpStatusBusType;
-      dataBus       : Pix2PgpDataBusType;
       -- internal
       statusWr      : sl;
       dataWr        : sl;
-      aFullData     : sl;
+      fullData      : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       ackCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
       trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
@@ -114,12 +107,10 @@ architecture rtl of Pix2PgpColumnManager is
       pause         => '0',
       busy          => '0',
       din           => (others => '0'),
-      statusBus     => DEFAULT_PIX2PGP_STATUSBUS_C,
-      dataBus       => DEFAULT_PIX2PGP_DATABUS_C,
       -- internal
       statusWr      => '0',
       dataWr        => '0',
-      aFullData     => '0',
+      fullData      => '0',
       statusFifoDin => (others => '0'),
       ackCnt        => (others => '0'),
       trgCnt        => (others => '1'), -- so that it rolls-over to zero on first trigger
@@ -134,8 +125,8 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, rst, sof, eof, ackN, wrEn, din, statusRd, statusFifoDout,
-                   dataRd, dataFifoEmptyDly, statusFifoEmptyDly, aFullData,
-                   statusFifoFull, dataFifoFull, overOcc) is
+                   dataRd, dataFifoEmptyDly, dataFifoFullDly,
+                   statusFifoFullDly, overOcc) is
       variable v : RegType;
    begin
 
@@ -143,14 +134,14 @@ begin
       v := r;
 
       -- Register inputs
-      v.sof       := sof;
-      v.eof       := eof;
-      v.ackN      := ackN;
-      v.dataWr    := wrEn;
-      v.din       := din;
-      v.statusRd  := statusRd;
-      v.dataRd    := dataRd;
-      v.aFullData := aFullData;
+      v.sof      := sof;
+      v.eof      := eof;
+      v.ackN     := ackN;
+      v.dataWr   := wrEn;
+      v.din      := din;
+      v.statusRd := statusRd;
+      v.dataRd   := dataRd;
+      v.fullData := dataFifoFullDly;
 
       -- Strobes
       v.statusWr := '0';
@@ -182,9 +173,9 @@ begin
          when IN_FRAME_S =>
 
             -- only proceed to next state if *not already* in pause mode
-            if ((v.aFullData = '1' or v.eof = '1' or r.overOcc = '1')
+            if ((v.fullData = '1' or v.eof = '1' or r.overOcc = '1')
             and v.pause = '0') then
-               v.pause := v.aFullData;
+               v.pause := v.fullData;
                v.state := WREN_STATUS_S;
             end if;
 
@@ -235,12 +226,12 @@ begin
       -- Outputs
       pause <= v.pause;
       busy  <= v.busy;
-      -- status bus assignments
+      -- status bus assignments (in pgpClk domain)
       statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
       statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
       statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
       statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
-      statusBus.columnFull <= statusFifoFull or dataFifoFull;
+      statusBus.columnFull <= statusFifoFullDly; -- dataFifo pauses the logic and shouldn't get full
 
       -- Reset
       if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
@@ -287,15 +278,15 @@ begin
          din  => r.statusFifoDin,
          dout => statusDin);
 
-   U_PipelineStatusEmpty : entity surf.SlvDelay
+   U_PipelineStatusFull : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => STATUSFIFO_PIPE_G)
       port map (
-         clk     => sparseClk,
-         din(0)  => statusFifoEmpty,
-         dout(0) => statusFifoEmptyDly);
+         clk     => pgpClk,
+         din(0)  => statusFifoFull,
+         dout(0) => statusFifoFullDly);
 
    U_StatusFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
@@ -306,10 +297,7 @@ begin
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          DWARE_DEPTH_G   => STATUS_DEPTH_G,
-         DWARE_AF_LVL_G  => STATUS_AF_LVL_G,
-         ADDR_WIDTH_G    => 4,
-         GHDL_SIM_G      => GHDL_SIM_G,
-         SYNTHESIZE_G    => SYNTHESIZE_G)
+         ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
          rst     => rst,
@@ -319,7 +307,7 @@ begin
          wrEn    => statusWrEn,
          din     => statusDin,
          fullWr  => open,
-         emptyWr => statusFifoEmpty,
+         emptyWr => open,
          -- Read Interface
          rdClk   => pgpClk,
          rdEn    => statusRd,
@@ -362,6 +350,16 @@ begin
          din(0)  => dataFifoEmpty,
          dout(0) => dataFifoEmptyDly);
 
+   U_PipelineDataFull : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => STATUSFIFO_PIPE_G)
+      port map (
+         clk     => sparseClk,
+         din(0)  => dataFifoFull,
+         dout(0) => dataFifoFullDly);
+
    U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
          TPD_G           => TPD_G,
@@ -371,10 +369,7 @@ begin
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
          RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DATA_DEPTH_G,
-         DWARE_AF_LVL_G  => DATA_AF_LVL_G,
-         ADDR_WIDTH_G    => 4,
-         GHDL_SIM_G      => GHDL_SIM_G,
-         SYNTHESIZE_G    => SYNTHESIZE_G)
+         ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
          rst     => rst,
@@ -383,14 +378,14 @@ begin
          wrClk   => sparseClk,
          wrEn    => dataWrEn,
          din     => dataDin,
-         fullWr  => open,
-         aFullWr => aFullData,
+         fullWr  => dataFifoFull,
+         aFullWr => open,
          emptyWr => dataFifoEmpty,
          -- Read Interface
          rdClk   => pgpClk,
          rdEn    => dataRd,
          emptyRd => open,
-         fullRd  => dataFifoFull,
+         fullRd  => open,
          dout    => dataBus.data);
 
 end rtl;

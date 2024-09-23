@@ -26,9 +26,7 @@ entity Pix2PgpTopTb is
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
-      COLMANAGER_DATA_AF_LVL_G   : integer  := 5; -- *
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
-      COLMANAGER_STATUS_AF_LVL_G : integer  := 5; -- *
       ADAPTER_DEPTH_G            : integer  := 6;
       ADAPTER_AF_LVL_G           : integer  := 5; -- *
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
@@ -111,48 +109,48 @@ begin
     -- regular stimuli
     ----------------------------------------------
     ----------------------------------------------
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-        hitLen(col) <= toSlv(4, hitLen(col)'length);
-      end loop;
-        sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-        sro  <= '0';
+    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
+    --  end loop;
+    --    sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --    sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-        hitLen(col) <= toSlv(3, hitLen(col)'length);
-      end loop;
-        sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-        sro  <= '0';
+    --    hitLen(col) <= toSlv(3, hitLen(col)'length);
+    --  end loop;
+    --    sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --    sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-        hitLen(col) <= toSlv(1, hitLen(col)'length);
-      end loop;
-        sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-        sro  <= '0';
+    --    hitLen(col) <= toSlv(1, hitLen(col)'length);
+    --  end loop;
+    --    sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --    sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-      hitLen(col) <= toSlv(2, hitLen(col)'length);
-    end loop;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --  hitLen(col) <= toSlv(2, hitLen(col)'length);
+    --end loop;
+    --  sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-      hitLen(col) <= toSlv(0, hitLen(col)'length);
-    end loop;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --  hitLen(col) <= toSlv(0, hitLen(col)'length);
+    --end loop;
+    --  sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
     ----------------------------------------------
     ----------------------------------------------
 
@@ -179,37 +177,37 @@ begin
     --wait for CLK_PERIOD_SPARSE_C*2;
     --  sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to 4 loop
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to 4 loop
 
-    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
-    --  end loop;
-    --  hitLen(5) <= toSlv(3, hitLen(5)'length);
-    --  hitLen(6) <= toSlv(1, hitLen(6)'length);
-    --  hitLen(7) <= toSlv(2, hitLen(7)'length);
-    --  hitLen(8) <= toSlv(3, hitLen(8)'length);
-    --  hitLen(9) <= toSlv(4, hitLen(9)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+        hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
+      hitLen(5) <= toSlv(3, hitLen(5)'length);
+      hitLen(6) <= toSlv(1, hitLen(6)'length);
+      hitLen(7) <= toSlv(2, hitLen(7)'length);
+      hitLen(8) <= toSlv(3, hitLen(8)'length);
+      hitLen(9) <= toSlv(4, hitLen(9)'length);
+      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(5) <= toSlv(8, hitLen(5)'length);
-    --  hitLen(6) <= toSlv(6, hitLen(6)'length);
-    --  hitLen(7) <= toSlv(3, hitLen(7)'length);
-    --  hitLen(8) <= toSlv(5, hitLen(8)'length);
-    --  hitLen(9) <= toSlv(1, hitLen(9)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      hitLen(5) <= toSlv(8, hitLen(5)'length);
+      hitLen(6) <= toSlv(6, hitLen(6)'length);
+      hitLen(7) <= toSlv(3, hitLen(7)'length);
+      hitLen(8) <= toSlv(5, hitLen(8)'length);
+      hitLen(9) <= toSlv(1, hitLen(9)'length);
+      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --     hitLen(col) <= toSlv(34, hitLen(col)'length);
-    --  end loop;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(34, hitLen(col)'length);
+      end loop;
+      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
     --wait for CLK_PERIOD_SPARSE_C*93;
     --  sro  <= '1';
@@ -3954,9 +3952,7 @@ begin
          PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
          PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_DATA_AF_LVL_G   => COLMANAGER_DATA_AF_LVL_G,
          COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         COLMANAGER_STATUS_AF_LVL_G => COLMANAGER_STATUS_AF_LVL_G,
          ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
          ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
          SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,

@@ -40,9 +40,7 @@ entity Pix2PgpAdapter is
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
       DWARE_DEPTH_G   : integer  := 12;
-      DWARE_AF_LVL_G  : integer  := 3;
-      GHDL_SIM_G      : boolean  := false;
-      SYNTHESIZE_G    : boolean  := false);
+      DWARE_AF_LVL_G  : integer  := 3);
    port(
       -- General Interface
       pgpClk   : in  sl;
@@ -168,9 +166,7 @@ begin
          RD_DATA_WIDTH_G => PGP_DWIDTH_C,
          DWARE_DEPTH_G   => DWARE_DEPTH_G,
          DWARE_AF_LVL_G  => DWARE_AF_LVL_G,
-         ADDR_WIDTH_G    => 4,
-         GHDL_SIM_G      => GHDL_SIM_G,
-         SYNTHESIZE_G    => SYNTHESIZE_G)
+         ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
          rst     => rst,

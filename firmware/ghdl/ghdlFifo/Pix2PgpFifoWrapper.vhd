@@ -37,8 +37,7 @@ entity Pix2PgpFifoWrapper is
       PIPE_STAGES_G    : natural := 0;
       FWFT_EN_G        : boolean := false;
       GEN_SYNC_FIFO_G  : boolean := false; -- 'false' generates a Clock-Domain-Crossing FIFO
-      GHDL_SIM_G       : boolean := false;
-      SYNTHESIZE_G     : boolean := false);
+      GHDL_SIM_G       : boolean := false);
    port(
       -- Resets
       rst     : in  sl;

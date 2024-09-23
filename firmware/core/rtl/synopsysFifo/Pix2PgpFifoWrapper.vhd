@@ -33,9 +33,7 @@ entity Pix2PgpFifoWrapper is
       DWARE_AF_LVL_G   : integer := 2;
       PIPE_STAGES_G    : natural := 0;
       FWFT_EN_G        : boolean := false;
-      GEN_SYNC_FIFO_G  : boolean := false;
-      GHDL_SIM_G       : boolean := false;
-      SYNTHESIZE_G     : boolean := false);
+      GEN_SYNC_FIFO_G  : boolean := false);
    port(
       -- Resets
       rst     : in  sl;
