@@ -1,23 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Sep 18 19:24:30 2024
+[*] Mon Sep 23 18:37:51 2024
 [*]
-[dumpfile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Wed Sep 18 19:19:38 2024"
-[dumpfile_size] 4877579
-[savefile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 0
-[size] 2490 1016
+[dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
+[dumpfile_mtime] "Mon Sep 23 18:36:06 2024"
+[dumpfile_size] 6047183
+[savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
+[timestart] 22622000000
+[size] 1850 1016
 [pos] -1 -1
-*-33.342766 25343904000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-30.524853 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].
+[treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[20].u_dummypixel.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.
-[treeopen] top.pix2pgptoptb.u_uut.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.databus.
@@ -42,8 +41,6 @@
 @200
 -pixel0
 @28
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.sof
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.eof
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.ackn
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[19:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[19] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[18] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[17] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[16] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[15] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[14] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[13] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[12] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[11] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[10] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[9] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[8] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.dout[0]
@@ -52,24 +49,22 @@ top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.wren
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.trgcnt[3:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.trgcnt[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.trgcnt[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.trgcnt[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.trgcnt[0]
 @28
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.busy
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.clk
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.eof
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[7:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitcnt[0]
 @28
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.overocc
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.pause
 @420
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.ackcnt
 @28
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.ackn
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.busy
+top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.tokfb
+@421
+top.pix2pgptoptb.gen_dummy_pixel[0].u_dummyflowctrl.state
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[19:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[19] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[18] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[17] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[16] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[15] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[14] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[13] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[12] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[11] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[10] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[9] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[8] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.dout[0]
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[9:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[9] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[8] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.hitlen[0]
 @28
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.overocc
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.pause
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.sro
 @420
@@ -78,16 +73,11 @@ top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.waitcnt
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.ackcnt
 @28
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.ackn
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.busy
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.eof
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[7:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitcnt[0]
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[9:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[9] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[8] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[7] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[6] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[5] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[4] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.hitlen[0]
 @28
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.overocc
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.pause
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.sof
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.sro
 @22
 #{top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.trgcnt[3:0]} top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.trgcnt[3] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.trgcnt[2] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.trgcnt[1] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.trgcnt[0]
 @420
@@ -95,11 +85,8 @@ top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.waitcnt
 @28
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rin.wren
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.rst
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.sof
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.sro
 top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.wren
-top.pix2pgptoptb.sro
-top.pix2pgptoptb.overocc[0]
 top.pix2pgptoptb.rst
 @200
 -colManager0
@@ -164,7 +151,6 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.u_datafif
 top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.u_datafifo.wrclk
 [color] 7
 top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.u_datafifo.rdclk
-@29
 [color] 7
 top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[0].u_columnmanager.u_datafifo.rden
 @22
@@ -184,13 +170,7 @@ top.pix2pgptoptb.sro
 #{top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[7:0]} top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[7] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[6] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[5] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[4] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[3] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[2] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[1] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.hitcnt[0]
 #{top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[19:0]} top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[19] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[18] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[17] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[16] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[15] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[14] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[13] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[12] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[11] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[10] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[9] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[8] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[7] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[6] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[5] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[4] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[3] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[2] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[1] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.dout[0]
 @28
-top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.overocc
 [color] 2
-top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.sof
-[color] 2
-top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.eof
-[color] 2
-top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.busy
 top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.pause
 top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.rst
 @200

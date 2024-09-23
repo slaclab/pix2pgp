@@ -60,6 +60,7 @@ architecture test of Pix2PgpTopTb is
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
 
+   signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal sof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal eof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal overOcc   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
@@ -3917,13 +3918,27 @@ begin
             sro     => sroFinal,
             pause   => pause(col),
             hitLen  => hitLen(col),
-            sof     => sof(col),
-            eof     => eof(col),
-            busy    => busy(col),
-            overOcc => overOcc(col),
+            tok     => open,
+            tokFb   => tokFb(col),
             ackN    => ackN(col),
             wrEn    => wrEn(col),
             dout    => din(col));
+
+      U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
+        generic map(
+          TPD_G          => TPD_G,
+          RST_ASYNC_G    => RST_ASYNC_G,
+          RST_POLARITY_G => RST_POLARITY_G)
+        port map(
+            clk           => sparseClk,
+            rst           => rst,
+            sro           => sroFinal,
+            tokFb         => tokFb(col),
+            sparseItfBusy => '0',
+            pix2pgpBusy   => busy(col),
+            sof           => sof(col),
+            eof           => eof(col),
+            overOcc       => overOcc(col));
    end generate GEN_DUMMY_PIXEL;
 
    ------
