@@ -85,6 +85,138 @@ begin
   pgpClk    <= not pgpClk    after CLK_PERIOD_PGP_C    - TPD_G;
   rst <= '1', '0' after CLK_PERIOD_SPARSE_C*100;
 
+
+    writeDataProcess: process(pgpClk)
+
+    -- variables for file-writing
+    file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
+    variable row : line;
+
+  begin
+    if (rising_edge(pgpClk)) then
+      -- first check if the rst is low
+      if (rst = '0') then
+        -- then check if the valid flag is high
+        if pgpValid = '1' then
+          -- syntax: write(row_variable,what_to_write,
+          -- justification(right/left), trailing_whitespaces);
+          -- writeline(file_variable, row_variable);
+          hwrite(row, pgpData, right, 0);
+          writeline(myFile,row);
+        end if;
+      end if;
+    end if;
+  end process;
+
+  issueSroProcess: process(sparseClk)
+  begin
+    if (rising_edge(sparseClk)) then
+      if sro = '1' and sroFinal = '0' then
+        sroFinal <= sro;
+      else
+        sroFinal <= '0';
+      end if;
+    end if;
+  end process;
+
+   --------
+   -- Pixel
+   --------
+   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+      U_DummyPixel : entity pix2pgp.DummyPixel
+         generic map(
+            TPD_G        => TPD_G,
+            RST_ASYNC_G  => RST_ASYNC_G,
+            WAIT_FB_G    => 1,
+            WAIT_ACKN_G  => 2, -- 14 as per Hyunjoon (so 7+7=14)
+            WAIT_WREN_G  => 2, -- 14 as per Hyunjoon
+            COL_ID_G     => col)
+         port map(
+            clk     => sparseClk,
+            rst     => rst,
+            sro     => sroFinal,
+            pause   => pause(col),
+            hitLen  => hitLen(col),
+            tok     => open,
+            tokFb   => tokFb(col),
+            ackN    => ackN(col),
+            wrEn    => wrEn(col),
+            dout    => din(col));
+
+      U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
+        generic map(
+          TPD_G          => TPD_G,
+          RST_ASYNC_G    => RST_ASYNC_G,
+          RST_POLARITY_G => RST_POLARITY_G)
+        port map(
+            clk           => sparseClk,
+            rst           => rst,
+            sro           => sroFinal,
+            tokFb         => tokFb(col),
+            sparseItfBusy => '0',
+            pix2pgpBusy   => busy(col),
+            sof           => sof(col),
+            eof           => eof(col),
+            overOcc       => overOcc(col));
+   end generate GEN_DUMMY_PIXEL;
+
+   ------
+   -- UUT
+   ------
+   U_Uut : entity pix2pgp.Pix2PgpTb
+      generic map(
+         TPD_G                      => TPD_G,
+         RST_ASYNC_G                => RST_ASYNC_G,
+         RST_POLARITY_G             => RST_POLARITY_G,
+         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
+         ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
+         ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
+         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
+         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
+      port map(
+         sparseClk    => sparseClk,
+         pgpClk       => pgpClk,
+         rst          => rst,
+         sro          => sroFinal,
+         pause        => pause,
+         sof          => sof,
+         eof          => eof,
+         busy         => busy,
+         overOcc      => overOcc,
+         ackN         => ackN,
+         wrEn         => wrEn,
+         din          => din,
+         pgpDout      => pgpDout,
+         pgpDoutValid => pgpDoutValid,
+         pgpDoutReady => pgpDoutReady);
+
+   -------
+   -- FPGA
+   -------
+   U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
+    generic map(
+       TPD_G          => TPD_G,
+       RST_ASYNC_G    => RST_ASYNC_G,
+       RST_POLARITY_G => RST_POLARITY_G,
+       FPGA_SYNTH_G   => FPGA_SYNTH_G,
+       NUM_VC_G       => NUM_VC_G)
+    port map(
+       -- General Interface
+       clk         => pgpClk,
+       rst         => rst,
+       -- Pix2Pgp Interface
+       pgpDin      => pgpDout,
+       pgpDinValid => pgpDoutValid,
+       pgpDinReady => pgpDoutReady,
+       -- FPGA RX Interface
+       pgpValid    => pgpValid,
+       pgpData     => pgpData);
+
   -- Generate the test stimulus
   stimulus: process begin
 
@@ -178,10 +310,6 @@ begin
     --  sro  <= '0';
 
     wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to 4 loop
-
-        hitLen(col) <= toSlv(0, hitLen(col)'length);
-      end loop;
       hitLen(5) <= toSlv(3, hitLen(5)'length);
       hitLen(6) <= toSlv(1, hitLen(6)'length);
       hitLen(7) <= toSlv(2, hitLen(7)'length);
@@ -3864,136 +3992,5 @@ begin
     -- do not touch end
 
   end process stimulus;
-
-  writeDataProcess: process(pgpClk)
-
-    -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
-    variable row : line;
-
-  begin
-    if (rising_edge(pgpClk)) then
-      -- first check if the rst is low
-      if (rst = '0') then
-        -- then check if the valid flag is high
-        if pgpValid = '1' then
-          -- syntax: write(row_variable,what_to_write,
-          -- justification(right/left), trailing_whitespaces);
-          -- writeline(file_variable, row_variable);
-          hwrite(row, pgpData, right, 0);
-          writeline(myFile,row);
-        end if;
-      end if;
-    end if;
-  end process;
-
-  issueSroProcess: process(sparseClk)
-  begin
-    if (rising_edge(sparseClk)) then
-      if sro = '1' and sroFinal = '0' then
-        sroFinal <= sro;
-      else
-        sroFinal <= '0';
-      end if;
-    end if;
-  end process;
-
-   --------
-   -- Pixel
-   --------
-   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      U_DummyPixel : entity pix2pgp.DummyPixel
-         generic map(
-            TPD_G        => TPD_G,
-            RST_ASYNC_G  => RST_ASYNC_G,
-            WAIT_FB_G    => 2,
-            WAIT_ACKN_G  => 2,
-            WAIT_WREN_G  => 2,
-            COL_ID_G     => col)
-         port map(
-            clk     => sparseClk,
-            rst     => rst,
-            sro     => sroFinal,
-            pause   => pause(col),
-            hitLen  => hitLen(col),
-            tok     => open,
-            tokFb   => tokFb(col),
-            ackN    => ackN(col),
-            wrEn    => wrEn(col),
-            dout    => din(col));
-
-      U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
-        generic map(
-          TPD_G          => TPD_G,
-          RST_ASYNC_G    => RST_ASYNC_G,
-          RST_POLARITY_G => RST_POLARITY_G)
-        port map(
-            clk           => sparseClk,
-            rst           => rst,
-            sro           => sroFinal,
-            tokFb         => tokFb(col),
-            sparseItfBusy => '0',
-            pix2pgpBusy   => busy(col),
-            sof           => sof(col),
-            eof           => eof(col),
-            overOcc       => overOcc(col));
-   end generate GEN_DUMMY_PIXEL;
-
-   ------
-   -- UUT
-   ------
-   U_Uut : entity pix2pgp.Pix2PgpTb
-      generic map(
-         TPD_G                      => TPD_G,
-         RST_ASYNC_G                => RST_ASYNC_G,
-         RST_POLARITY_G             => RST_POLARITY_G,
-         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
-         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
-         ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
-         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
-      port map(
-         sparseClk    => sparseClk,
-         pgpClk       => pgpClk,
-         rst          => rst,
-         sro          => sroFinal,
-         pause        => pause,
-         sof          => sof,
-         eof          => eof,
-         busy         => busy,
-         overOcc      => overOcc,
-         ackN         => ackN,
-         wrEn         => wrEn,
-         din          => din,
-         pgpDout      => pgpDout,
-         pgpDoutValid => pgpDoutValid,
-         pgpDoutReady => pgpDoutReady);
-
-   -------
-   -- FPGA
-   -------
-   U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
-    generic map(
-       TPD_G          => TPD_G,
-       RST_ASYNC_G    => RST_ASYNC_G,
-       RST_POLARITY_G => RST_POLARITY_G,
-       FPGA_SYNTH_G   => FPGA_SYNTH_G,
-       NUM_VC_G       => NUM_VC_G)
-    port map(
-       -- General Interface
-       clk         => pgpClk,
-       rst         => rst,
-       -- Pix2Pgp Interface
-       pgpDin      => pgpDout,
-       pgpDinValid => pgpDoutValid,
-       pgpDinReady => pgpDoutReady,
-       -- FPGA RX Interface
-       pgpValid    => pgpValid,
-       pgpData     => pgpData);
 
 end architecture;
