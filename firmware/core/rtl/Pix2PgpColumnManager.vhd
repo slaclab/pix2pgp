@@ -45,7 +45,6 @@ entity Pix2PgpColumnManager is
       sof       : in  sl;
       eof       : in  sl;
       overOcc   : in  sl;
-      ackN      : in  sl;
       busy      : out sl;
       pause     : out sl;
       -- Arbiter Interface
@@ -80,7 +79,6 @@ architecture rtl of Pix2PgpColumnManager is
       sof           : sl;
       eof           : sl;
       overOcc       : sl;
-      ackN          : sl;
       statusRd      : sl;
       dataRd        : sl;
       pause         : sl;
@@ -91,7 +89,7 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        : sl;
       fullData      : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-      ackCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
+      wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       state         : StateType;
    end record RegType;
@@ -101,7 +99,6 @@ architecture rtl of Pix2PgpColumnManager is
       sof           => '0',
       eof           => '0',
       overOcc       => '0',
-      ackN          => '0',
       statusRd      => '0',
       dataRd        => '0',
       pause         => '0',
@@ -112,7 +109,7 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        => '0',
       fullData      => '0',
       statusFifoDin => (others => '0'),
-      ackCnt        => (others => '0'),
+      wrEnCnt       => (others => '0'),
       trgCnt        => (others => '1'), -- so that it rolls-over to zero on first trigger
       state         => IDLE_S);
 
@@ -124,7 +121,7 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, rst, sof, eof, ackN, wrEn, din, statusRd, statusFifoDout,
+   comb : process (r, rst, sof, eof, wrEn, din, statusRd, statusFifoDout,
                    dataRd, dataFifoEmptyDly, dataFifoFullDly,
                    statusFifoFullDly, overOcc) is
       variable v : RegType;
@@ -136,7 +133,6 @@ begin
       -- Register inputs
       v.sof      := sof;
       v.eof      := eof;
-      v.ackN     := ackN;
       v.dataWr   := wrEn;
       v.din      := din;
       v.statusRd := statusRd;
@@ -146,9 +142,9 @@ begin
       -- Strobes
       v.statusWr := '0';
 
-      -- ackN counter management (falling-edge detection)
-      if (r.state /= IDLE_S and v.ackN = '0' and r.ackN = '1') then
-         v.ackCnt := r.ackCnt + 1;
+      -- wrEn counter management (rising-edge detection)
+      if (r.state /= IDLE_S and v.dataWr = '1' and r.dataWr = '0') then
+         v.wrEnCnt := r.wrEnCnt + 1;
       end if;
 
       -------------------------------------------------------------------------
@@ -158,7 +154,7 @@ begin
          when IDLE_S =>
             v.busy    := '0';
             v.pause   := '0';
-            v.ackCnt  := (others => '0');
+            v.wrEnCnt := (others => '0');
 
             -- start-of-frame detection
             if (v.sof = '1') then
@@ -195,7 +191,7 @@ begin
          when WREN_STATUS_S =>
             v.overOcc := '0'; -- clear (registered value still gets written)
 
-            if r.ackCnt(0) = '1' then
+            if r.wrEnCnt(0) = '1' then
                -- wrote odd number of hits? write an extra dummy word;
                -- hold for one clock cycle;
                -- wrEn will switch to input port by default on next cycle
@@ -205,19 +201,19 @@ begin
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
             v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
             v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
-            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.ackCnt;
+            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
             v.statusWr := '1';
             v.state    := IDLE_S;
 
             -- override if in pause mode; pause takes precedence
             -- over-occupancy overrides too
             if (r.pause = '1') then
-               v.ackCnt := (others => '0');
-               v.state  := IN_FRAME_S;
+               v.wrEnCnt := (others => '0');
+               v.state   := IN_FRAME_S;
             elsif (r.overOcc = '1') then
-               v.trgCnt := r.trgCnt + 1;
-               v.ackCnt := (others => '0');
-               v.state  := IN_FRAME_S;
+               v.trgCnt  := r.trgCnt + 1;
+               v.wrEnCnt := (others => '0');
+               v.state   := IN_FRAME_S;
             end if;
 
       end case;

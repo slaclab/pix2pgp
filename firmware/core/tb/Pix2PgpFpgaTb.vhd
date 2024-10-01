@@ -75,7 +75,7 @@ begin
         TPD_G       => TPD_G,
         RST_ASYNC_G => RST_ASYNC_G,
         NUM_VC_G    => NUM_VC_G,
-        SKIP_EN_G   => true,
+        SKIP_EN_G   => false, -- set to false to skip the elastic buffer (we dont care in sim)
         LITE_EN_G   => true)
      port map(
         -- User Transmit interface

@@ -44,7 +44,6 @@ entity Pix2PgpTb is
       sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       eof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      ackN         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       din          : in  Pix2PgpSparseDinArray;
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -106,7 +105,6 @@ begin
          sof          => sof,
          eof          => eof,
          overOcc      => overOcc,
-         ackN         => ackN,
          busy         => busy,
          pause        => pause,
          -- Pgp4TxLite Interface

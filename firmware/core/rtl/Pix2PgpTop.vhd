@@ -52,7 +52,6 @@ entity Pix2PgpTop is
       sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       eof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      ackN         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
@@ -117,7 +116,6 @@ begin
             sof       => sof(col),
             eof       => eof(col),
             overOcc   => overOcc(col),
-            ackN      => ackN(col),
             busy      => busy(col),
             pause     => pause(col),
             -- Arbiter Interface

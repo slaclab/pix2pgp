@@ -183,7 +183,6 @@ begin
          eof          => eof,
          busy         => busy,
          overOcc      => overOcc,
-         ackN         => ackN,
          wrEn         => wrEn,
          din          => din,
          pgpDout      => pgpDout,
