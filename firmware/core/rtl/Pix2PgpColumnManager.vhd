@@ -73,7 +73,6 @@ architecture rtl of Pix2PgpColumnManager is
    type StateType is (
       IDLE_S,
       IN_FRAME_S,
-      CHK_WRCNT_S,
       WREN_STATUS_S);
 
    type RegType is record
@@ -93,7 +92,6 @@ architecture rtl of Pix2PgpColumnManager is
       fullData      : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       ackCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
-      wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       state         : StateType;
    end record RegType;
@@ -115,7 +113,6 @@ architecture rtl of Pix2PgpColumnManager is
       fullData      => '0',
       statusFifoDin => (others => '0'),
       ackCnt        => (others => '0'),
-      wrEnCnt       => (others => '0'),
       trgCnt        => (others => '1'), -- so that it rolls-over to zero on first trigger
       state         => IDLE_S);
 
@@ -154,11 +151,6 @@ begin
          v.ackCnt := r.ackCnt + 1;
       end if;
 
-      -- wrEn counter management (dataWr is always one-cycle long)
-      if (r.state /= IDLE_S and r.dataWr = '1') then
-         v.wrEnCnt := r.wrEnCnt + 1;
-      end if;
-
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -167,7 +159,6 @@ begin
             v.busy    := '0';
             v.pause   := '0';
             v.ackCnt  := (others => '0');
-            v.wrEnCnt := (others => '0');
 
             -- start-of-frame detection
             if (v.sof = '1') then
@@ -185,7 +176,7 @@ begin
             if ((v.fullData = '1' or v.eof = '1' or r.overOcc = '1')
             and v.pause = '0') then
                v.pause := v.fullData;
-               v.state := CHK_WRCNT_S;
+               v.state := WREN_STATUS_S;
             end if;
 
             -- reset pause flag if data got empty;
@@ -200,20 +191,11 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- check that all data have been written
-         when CHK_WRCNT_S =>
-
-            -- done; time to write into the status FIFO and go back to idle
-            if (r.wrEnCnt >= r.ackCnt) then
-               v.state := WREN_STATUS_S;
-            end if;
-
-         ----------------------------------------------------------------------
          -- write into the status FIFO
          when WREN_STATUS_S =>
             v.overOcc := '0'; -- clear (registered value still gets written)
 
-            if r.wrEnCnt(0) = '1' then
+            if r.ackCnt(0) = '1' then
                -- wrote odd number of hits? write an extra dummy word;
                -- hold for one clock cycle;
                -- wrEn will switch to input port by default on next cycle
@@ -223,21 +205,19 @@ begin
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
             v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
             v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
-            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
+            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.ackCnt;
             v.statusWr := '1';
             v.state    := IDLE_S;
 
             -- override if in pause mode; pause takes precedence
             -- over-occupancy overrides too
             if (r.pause = '1') then
-               v.ackCnt  := (others => '0');
-               v.wrEnCnt := (others => '0');
-               v.state   := IN_FRAME_S;
+               v.ackCnt := (others => '0');
+               v.state  := IN_FRAME_S;
             elsif (r.overOcc = '1') then
-               v.trgCnt  := r.trgCnt + 1;
-               v.ackCnt  := (others => '0');
-               v.wrEnCnt := (others => '0');
-               v.state   := IN_FRAME_S;
+               v.trgCnt := r.trgCnt + 1;
+               v.ackCnt := (others => '0');
+               v.state  := IN_FRAME_S;
             end if;
 
       end case;

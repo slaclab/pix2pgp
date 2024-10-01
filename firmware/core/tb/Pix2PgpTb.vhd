@@ -21,7 +21,7 @@ entity Pix2PgpTb is
    generic(
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := True;
-      RST_POLARITY_G             : sl       := '1';
+      RST_POLARITY_G             : sl       := '0';
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
@@ -70,6 +70,8 @@ architecture test of Pix2PgpTb is
    signal fillFifos    : sl := '0';
    signal fillCnt      : natural range 0 to 1023;
 
+   signal notRst       : sl := '0';
+
    signal phyTxValid  : sl := '0';
    signal phyTxReady  : sl := '1';
    signal phyTxData   : slv(65 downto 0) := (others => '0');
@@ -115,12 +117,18 @@ begin
          txEof        => txEof,
          txEofe       => txEofe);
 
+      notRst <= not(rst); -- No RST_POLARITY_G!!!
+                          -- To-Do: Address this!
+
     -- Instantiate the PGP4TxLiteWrapper
     U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
+      generic map (
+         TPD_G       => TPD_G,
+         RST_ASYNC_G => RST_ASYNC_G)
       port map(
         -- Clock and Reset
         clk        => pgpClk,
-        rst        => rst,
+        rst        => notRst,
         -- 64-bit Input Framing Interface
         txReady    => txReady,
         txValid    => txValid,
@@ -137,6 +145,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
          SLAVE_WIDTH_G  => 66,
          MASTER_WIDTH_G => 32)
       port map (

@@ -12,7 +12,7 @@ entity Pix2PgpEmuTb is
    generic(
       TPD_G                      : time     := 1 ns;
       RST_ASYNC_G                : boolean  := true;
-      RST_POLARITY_G             : std_logic:= '1';
+      RST_POLARITY_G             : std_logic:= '0';
       FPGA_SYNTH_G               : boolean  := false;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;

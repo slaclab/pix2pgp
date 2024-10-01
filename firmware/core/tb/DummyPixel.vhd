@@ -30,6 +30,7 @@ entity DummyPixel is
    generic (
       TPD_G        : time    := 1 ns;
       RST_ASYNC_G  : boolean := false;
+      RST_POLARITY_G : sl    := '0';
       WAIT_FB_G    : natural := 2; -- 2 cycles
       WAIT_ACKN_G  : natural := 2;
       WAIT_WREN_G  : natural := 3;
@@ -188,7 +189,7 @@ comb : process (rst, r, hitLen, sro, pause) is
       ----------------------------------------------------------------------
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -199,7 +200,7 @@ comb : process (rst, r, hitLen, sro, pause) is
 
    seq : process (clk, rst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif (rising_edge(clk)) then
          r <= rin after TPD_G;
