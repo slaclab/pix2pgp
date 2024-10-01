@@ -157,7 +157,7 @@ begin
             depth       => DWARE_DEPTH_G,
             push_af_lvl => DWARE_AF_LVL_G,
             pop_af_lvl  => DWARE_AF_LVL_G,
-            rst_mode    => 0)
+            rst_mode    => 2)
          port map (
             rst_n      => rstDwareFifo,
             -- Write Interface
@@ -183,7 +183,7 @@ begin
             depth          => DWARE_DEPTH_G,
             push_af_lvl    => DWARE_AF_LVL_G,
             pop_af_lvl     => DWARE_AF_LVL_G,
-            rst_mode       => 0)
+            rst_mode       => 2)
          port map (
             rst_n      => rstDwareFifo,
             flush_n    => rstDwareFifo,
