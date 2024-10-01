@@ -1,3 +1,5 @@
+-- only for simulation
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -10,6 +12,7 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity AsicFlowCtrl is
     generic (
+        RST_POLARITY_G      : sl      := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
         TIMEOUT_CNT_WIDTH   : integer := 4;  -- in bit-size
         TIMEOUT_CNT_LIMIT   : integer := 15; -- in decimal counts
         USE_PIX2PGP_BUSY    : boolean := true; -- use pix2pgp state in FSM
@@ -17,7 +20,7 @@ entity AsicFlowCtrl is
     );
     port (
         clk                : in std_logic;       -- global clk of the whole digital (including balcony)
-        df_reset_n        : in std_logic;       -- separate reset signal for adc_sampl dff (x4): active LOW
+        df_reset_n        : in  std_logic := not RST_POLARITY_G;     -- separate reset signal for adc_sampl dff (x4): active LOW
         sro                : in std_logic;       -- start of frame signal (SRO_sync)
         tok_fb             : in std_logic;       -- end of frame signal   (tok_fb_sync)
         sparse_itf_busy    : in std_logic;       -- sparse interface block busy
@@ -66,7 +69,7 @@ begin
     -- FSM process
     process(clk, df_reset_n)
     begin
-        if df_reset_n = '0' then
+        if df_reset_n = RST_POLARITY_G then
             state <= IDLE;
             sof <= '0';
             eof <= '0';
@@ -120,10 +123,10 @@ begin
     -- Instantiate the watchdog component
     U_Pix2PgpWatchdog : entity pix2pgp.Pix2PgpWatchdog
         generic map (
-            TPD_G       => 1 ns,
-            RST_ASYNC_G => true,
-            CNT_WIDTH_G => TIMEOUT_CNT_WIDTH,
-            RST_POLARITY_G => '0')
+            TPD_G          => 1 ns,
+            RST_ASYNC_G    => true,
+            CNT_WIDTH_G    => TIMEOUT_CNT_WIDTH,
+            RST_POLARITY_G => RST_POLARITY_G)
         port map (
             clk => clk,
             rst => df_reset_n,

@@ -66,7 +66,7 @@ architecture rtl of Pix2PgpFifoWrapper is
 
 begin
 
-   rstFifo <= (rst or not(enable)) when RST_POLARITY_G = '1' else (not(rst) or enable);
+   rstFifo <= (rst and not(enable)) when RST_POLARITY_G = '1' else (rst and enable);
 
    SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
       U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo

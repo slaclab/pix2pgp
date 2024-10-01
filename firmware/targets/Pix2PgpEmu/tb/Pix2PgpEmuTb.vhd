@@ -42,7 +42,7 @@ architecture test of Pix2PgpEmuTb is
    constant CLK_PERIOD_C : time := 2 ns;
 
    signal clk   : std_logic := '0';
-   signal rst   : std_logic := '1';
+   signal rst   : std_logic := '0';
 
    begin
 

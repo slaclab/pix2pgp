@@ -54,10 +54,9 @@ architecture test of Pix2PgpTopTb is
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
-   signal rst       : sl := '1';
+   signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
-   signal rstFpga   : sl := '0';
 
    signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal sof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
@@ -84,7 +83,7 @@ begin
   -- rst and clk
   sparseClk <= not sparseClk after CLK_PERIOD_SPARSE_C - TPD_G;
   pgpClk    <= not pgpClk    after CLK_PERIOD_PGP_C    - TPD_G;
-  rst       <= '0', '1' after CLK_PERIOD_SPARSE_C*100;
+  rst       <= RST_POLARITY_G, not(RST_POLARITY_G) after CLK_PERIOD_SPARSE_C*100;
 
 
     writeDataProcess: process(pgpClk)
@@ -143,6 +142,8 @@ begin
             dout    => din(col));
 
       U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
+        generic map(
+          RST_POLARITY_G => RST_POLARITY_G)
         port map(
             clk             => sparseClk,
             df_reset_n      => rst,
@@ -192,7 +193,6 @@ begin
    -------
    -- FPGA
    -------
-   rstFpga <= not(rst);
 
    U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
     generic map(
@@ -204,7 +204,7 @@ begin
     port map(
        -- General Interface
        clk         => pgpClk,
-       rst         => rstFpga,
+       rst         => rst,
        -- Pix2Pgp Interface
        pgpDin      => pgpDout,
        pgpDinValid => pgpDoutValid,
@@ -220,7 +220,7 @@ begin
     ----------------------------------------------
     ----------------------------------------------
     -- Wait for the rst to be released before
-    wait until (rst = '0');
+    wait until (rst = not(RST_POLARITY_G));
     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
       hitLen(col) <= toSlv(0, hitLen(col)'length);

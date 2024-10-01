@@ -144,11 +144,10 @@ architecture rtl of Pix2PgpFifoWrapper is
 
 begin
 
-   rstFifo <= (rst or not(enable)) when RST_POLARITY_G = '1' else (not(rst) or enable);
-
+   -- dware FIFOs *always* have an active-LOW reset (i.e. enable/rstN)
+   rstDwareFifo  <= (not(rst) and enable) when RST_POLARITY_G = '1' else (rst and enable);
    wrEnDwareFifo <= not(wrEn);
    rdEnDwareFifo <= not(rdEn);
-   rstDwareFifo  <= not(rstFifo);
 
    SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
       U_designwareFifo : DW_fifo_s2_sf

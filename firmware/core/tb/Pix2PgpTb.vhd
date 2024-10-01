@@ -38,7 +38,7 @@ entity Pix2PgpTb is
       -- General Interface
       sparseClk    : in  sl;
       pgpClk       : in  sl;
-      rst          : in  sl;
+      rst          : in  sl := not RST_POLARITY_G;
       sro          : in  sl;
       -- Pixel Interface
       sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -68,8 +68,6 @@ architecture test of Pix2PgpTb is
 
    signal fillFifos    : sl := '0';
    signal fillCnt      : natural range 0 to 1023;
-
-   signal notRst       : sl := '0';
 
    signal phyTxValid  : sl := '0';
    signal phyTxReady  : sl := '1';
@@ -115,18 +113,16 @@ begin
          txEof        => txEof,
          txEofe       => txEofe);
 
-      notRst <= not(rst); -- No RST_POLARITY_G!!!
-                          -- To-Do: Address this!
-
     -- Instantiate the PGP4TxLiteWrapper
     U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
       generic map (
-         TPD_G       => TPD_G,
-         RST_ASYNC_G => RST_ASYNC_G)
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
       port map(
         -- Clock and Reset
         clk        => pgpClk,
-        rst        => notRst,
+        rst        => rst,
         -- 64-bit Input Framing Interface
         txReady    => txReady,
         txValid    => txValid,

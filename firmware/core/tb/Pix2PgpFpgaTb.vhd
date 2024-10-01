@@ -28,7 +28,7 @@ entity Pix2PgpFpgaTb is
    port(
       -- General Interface
       clk         : in  sl;
-      rst         : in  sl;
+      rst         : in  sl := not RST_POLARITY_G;
       -- Pix2Pgp Interface
       pgpDin      : in  slv(31 downto 0);
       pgpDinValid : in  sl;
@@ -52,6 +52,7 @@ begin
     U_SerializerReverseGearbox : entity surf.Gearbox
       generic map (
          TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 32,
          MASTER_WIDTH_G => 66)
@@ -72,11 +73,12 @@ begin
 
     U_PgpRx : entity surf.Pgp4Rx
      generic map(
-        TPD_G       => TPD_G,
-        RST_ASYNC_G => RST_ASYNC_G,
-        NUM_VC_G    => NUM_VC_G,
-        SKIP_EN_G   => false, -- set to false to skip the elastic buffer (we dont care in sim)
-        LITE_EN_G   => true)
+        TPD_G          => TPD_G,
+        RST_POLARITY_G => RST_POLARITY_G,
+        RST_ASYNC_G    => RST_ASYNC_G,
+        NUM_VC_G       => NUM_VC_G,
+        SIMULATION_G   => true,
+        LITE_EN_G      => true)
      port map(
         -- User Transmit interface
         pgpRxClk     => clk,
@@ -104,6 +106,7 @@ begin
      U_FpgaGearbox : entity surf.Gearbox
       generic map (
          TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 64,
          MASTER_WIDTH_G => 40)

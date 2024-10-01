@@ -28,16 +28,16 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity DummyPixel is
    generic (
-      TPD_G        : time    := 1 ns;
-      RST_ASYNC_G  : boolean := false;
-      RST_POLARITY_G : sl    := '0';
-      WAIT_FB_G    : natural := 2; -- 2 cycles
-      WAIT_ACKN_G  : natural := 2;
-      WAIT_WREN_G  : natural := 3;
-      COL_ID_G     : natural := 0);
+      TPD_G          : time    := 1 ns;
+      RST_ASYNC_G    : boolean := false;
+      RST_POLARITY_G : sl       := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
+      WAIT_FB_G      : natural := 2; -- 2 cycles
+      WAIT_ACKN_G    : natural := 2;
+      WAIT_WREN_G    : natural := 3;
+      COL_ID_G       : natural := 0);
    port (
       clk     : in  sl;
-      rst     : in  sl;
+      rst     : in  sl := not RST_POLARITY_G;
       sro     : in  sl;
       pause   : in  sl;
       hitLen  : in  slv(9 downto 0);
