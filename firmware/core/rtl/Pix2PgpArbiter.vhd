@@ -39,7 +39,7 @@ entity Pix2PgpArbiter is
    port(
       -- General Interface
       pgpClk       : in  sl;
-      rst          : in  sl := not(RST_POLARITY_G);
+      pgpRst       : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
       dataLenSel   : in  slv(DATALEN_WIDTH_C-1 downto 0);
       dataBusSel   : in  Pix2PgpDataBusType;
@@ -153,7 +153,7 @@ begin
    ------------------------------------------------
    -- Arbiter FSM
    ------------------------------------------------
-   comb : process (r, rst, dataLenSel, dataBusSel, arbStart, colFifoError,
+   comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, alignError, colBitmask, trgNum, colPause,
                    pgpReady, arbReady, timeoutWatchdogDly) is
 
@@ -328,7 +328,7 @@ begin
       arbDout  <= r.arbDout;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -337,9 +337,9 @@ begin
 
    end process comb;
 
-   seq : process (pgpClk, rst) is
+   seq : process (pgpClk, pgpRst) is
    begin
-      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -359,7 +359,7 @@ begin
       port map (
          -- Clock and Reset
          clk            => pgpClk,
-         rst            => rst,
+         rst            => pgpRst,
          -- Slave Interface
          slaveValid     => arbValid,
          slaveData      => arbDout,
@@ -383,7 +383,7 @@ begin
       port map(
          -- General Interface
          clk     => pgpClk,
-         rst     => rst,
+         rst     => pgpRst,
          -- Control Interface
          set     => setWatchdog,
          timeout => timeoutWatchdog);

@@ -44,7 +44,7 @@ entity Pix2PgpAdapter is
    port(
       -- General Interface
       pgpClk   : in  sl;
-      rst      : in  sl := not(RST_POLARITY_G);
+      pgpRst   : in  sl := not(RST_POLARITY_G);
       -- Gearbox Interface
       pgpValid : in  sl;
       pgpData  : in  slv(PGP_DWIDTH_C-1 downto 0);
@@ -93,7 +93,7 @@ begin
    ------------------------------------------------
    -- Adapter FSM
    ------------------------------------------------
-   comb : process (r, rst, fifoEmpty, txReady) is
+   comb : process (r, pgpRst, fifoEmpty, txReady) is
       variable v : RegType;
    begin
 
@@ -137,7 +137,7 @@ begin
       txEofe   <= '0';
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -146,9 +146,9 @@ begin
 
    end process comb;
 
-   seq : process (pgpClk, rst) is
+   seq : process (pgpClk, pgpRst) is
    begin
-      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -169,7 +169,7 @@ begin
          ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
-         rst     => rst,
+         rst     => pgpRst,
          enable  => '1',
          -- Writ e Interface
          wrClk   => pgpClk,

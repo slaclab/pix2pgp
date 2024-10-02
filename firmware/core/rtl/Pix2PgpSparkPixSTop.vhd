@@ -31,7 +31,8 @@ entity Pix2PgpSparkPixSTop is
       -- General Interface
       sparseClk    : in  std_logic;
       pgpClk       : in  std_logic;
-      rst          : in  std_logic;
+      sparseRst    : in  std_logic;
+      pgpRst       : in  std_logic;
       sel          : in  std_logic;
       columnEnable : in  std_logic_vector(23 downto 0);
       -- Column Manager Interface
@@ -103,7 +104,8 @@ begin
          -- General Interface
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
-         rst          => rst,
+         sparseRst    => sparseRst,
+         pgpRst       => pgpRst,
          columnEnable => columnEnableMuxed,
          -- Column Manager Interface
          sof          => sof,
