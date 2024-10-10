@@ -55,12 +55,19 @@ end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
 
-   -- notes about the DW FIFOs:
+   -- notes about the DW FIFOs (from datasheets):
    -- rst mode:
    -- 0 = Asynchronous reset including memory
    -- 1 = Synchronous reset including memory
    -- 2 = Asynchronous reset excluding memory
    -- 3 = Synchronous reset excluding memory
+
+   -- To avoid metastability upon reset:
+   -- assert rst_n (low) for at least three cycles of the slower of the two clock inputs,
+   -- clk_push and clk_pop. During the assertion of rst_n and for at least one cycle of clk_push
+   -- after rst_n goes high, push_req_n must be inactive (high).
+   -- In addition, it is recommended that the pop_req_n signal also be held inactive
+   -- for at least one clock cycle of clk_pop after the release of rst_n.
 
    component DW_asymfifo_s2_sf is
       generic(

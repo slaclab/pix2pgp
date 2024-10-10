@@ -44,7 +44,8 @@ entity Pix2PgpTop is
       -- General Interface
       sparseClk    : in  sl;
       pgpClk       : in  sl;
-      rst          : in  sl;
+      sparseRst    : in  sl := not(RST_POLARITY_G);
+      pgpRst       : in  sl := not(RST_POLARITY_G);
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
@@ -108,7 +109,7 @@ begin
             -- General Interface
             sparseClk => sparseClk,
             pgpClk    => pgpClk,
-            rst       => rst,
+            sparseRst => sparseRst,
             enable    => columnEnable(col),
             -- Sparse Logic Interface
             din       => din(col),
@@ -165,7 +166,7 @@ begin
       port map(
          -- General Interface
          pgpClk        => pgpClk,
-         rst           => rst,
+         pgpRst        => pgpRst,
          columnEnable  => columnEnable,
          -- Column Manager Interface (via Bridge)
          statusBusGlbl => statusBusGlbl,
@@ -192,7 +193,7 @@ begin
       port map (
          -- General Interface
          pgpClk       => pgpClk,
-         rst          => rst,
+         pgpRst       => pgpRst,
          -- Column Manager Interface
          dataLenSel   => statusBusSel.dataLen,
          dataBusSel   => dataBusSel,
@@ -225,7 +226,7 @@ begin
       port map(
          -- General Interface
          pgpClk   => pgpClk,
-         rst      => rst,
+         pgpRst   => pgpRst,
          -- Gearbox Interface
          pgpValid => pgpValid,
          pgpData  => pgpData,

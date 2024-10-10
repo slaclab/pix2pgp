@@ -77,7 +77,7 @@ begin
         RST_POLARITY_G => RST_POLARITY_G,
         RST_ASYNC_G    => RST_ASYNC_G,
         NUM_VC_G       => NUM_VC_G,
-        SIMULATION_G   => true,
+        SKIP_EN_G      => false,
         LITE_EN_G      => true)
      port map(
         -- User Transmit interface

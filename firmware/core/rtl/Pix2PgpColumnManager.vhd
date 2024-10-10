@@ -37,7 +37,7 @@ entity Pix2PgpColumnManager is
       -- General Interface
       sparseClk : in  sl;
       pgpClk    : in  sl;
-      rst       : in  sl := not(RST_POLARITY_G);
+      sparseRst : in  sl := not(RST_POLARITY_G);
       enable    : in  sl;
       -- Sparse Logic Interface
       din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
@@ -121,9 +121,9 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, rst, sof, eof, wrEn, din, statusRd, statusFifoDout,
+   comb : process (r, sparseRst, sof, eof, wrEn, din, statusRd,
                    dataRd, dataFifoEmptyDly, dataFifoFullDly,
-                   statusFifoFullDly, overOcc) is
+                   statusFifoDout, statusFifoFullDly, overOcc) is
       variable v : RegType;
    begin
 
@@ -230,7 +230,7 @@ begin
       statusBus.columnFull <= statusFifoFullDly; -- dataFifo pauses the logic and shouldn't get full
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and sparseRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -239,9 +239,9 @@ begin
 
    end process comb;
 
-   seq : process (sparseClk, rst, enable) is
+   seq : process (sparseClk, sparseRst, enable) is
    begin
-      if ((RST_ASYNC_G and rst = RST_POLARITY_G)
+      if ((RST_ASYNC_G and sparseRst = RST_POLARITY_G)
       or  enable = '0') then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(sparseClk) then
@@ -296,7 +296,7 @@ begin
          ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
-         rst     => rst,
+         rst     => sparseRst,
          enable  => enable,
          -- Write Interface
          wrClk   => sparseClk,
@@ -368,7 +368,7 @@ begin
          ADDR_WIDTH_G    => 4)
       port map (
          -- Resets
-         rst     => rst,
+         rst     => sparseRst,
          enable  => enable,
          -- Write Interface
          wrClk   => sparseClk,

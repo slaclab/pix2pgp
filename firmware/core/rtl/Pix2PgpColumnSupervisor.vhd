@@ -35,7 +35,7 @@ entity Pix2PgpColumnSupervisor is
    port(
       -- General Interface
       pgpClk        : in  sl;
-      rst           : in  sl := not(RST_POLARITY_G);
+      pgpRst        : in  sl := not(RST_POLARITY_G);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface (via Bridge)
       statusBusGlbl : in  Pix2PgpStatusBusArray;
@@ -121,7 +121,7 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, rst, statusBusGlbl, arbiterBusy,
+   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy,
                    columnIgnore, refTrgNum, statusManagerDone) is
       variable v : RegType;
    begin
@@ -310,7 +310,7 @@ begin
       end loop;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -319,9 +319,9 @@ begin
 
    end process comb;
 
-   seq : process (pgpClk, rst) is
+   seq : process (pgpClk, pgpRst) is
    begin
-      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -338,8 +338,8 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         clk           => pgpClk,
-         rst           => rst,
+         pgpClk        => pgpClk,
+         pgpRst        => pgpRst,
          columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBusGlbl => statusBusGlbl,

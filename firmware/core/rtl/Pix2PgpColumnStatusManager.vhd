@@ -32,8 +32,8 @@ entity Pix2PgpColumnStatusManager is
       RST_POLARITY_G : sl      := '1');
    port(
       -- General Interface
-      clk           : in  sl;
-      rst           : in  sl := not(RST_POLARITY_G);
+      pgpClk        : in  sl;
+      pgpRst        : in  sl := not(RST_POLARITY_G);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       statusBusGlbl : in  Pix2PgpStatusBusArray;
@@ -75,7 +75,7 @@ architecture rtl of Pix2PgpColumnStatusManager is
 
 begin
 
-   comb : process (r, rst, statusBusGlbl, columnEnable) is
+   comb : process (r, pgpRst, statusBusGlbl, columnEnable) is
       variable v : RegType;
    begin
 
@@ -126,7 +126,7 @@ begin
       refTrgNum    <= statusBusGlbl(conv_integer(unsigned(r.colSel))).trgNum;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -135,11 +135,11 @@ begin
 
    end process comb;
 
-   seq : process (clk, rst) is
+   seq : process (pgpClk, pgpRst) is
    begin
-      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(clk) then
+      elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;

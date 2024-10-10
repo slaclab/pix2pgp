@@ -95,7 +95,8 @@ begin
          -- General Interface
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
-         rst          => rst,
+         sparseRst    => rst, -- does not matter for behavioral sim
+         pgpRst       => rst, -- does not matter for behavioral sim
          columnEnable => columnEnable,
          -- Column Manager Interface
          din          => din,
