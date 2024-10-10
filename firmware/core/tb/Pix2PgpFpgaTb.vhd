@@ -19,11 +19,11 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpFpgaTb is
    generic(
-      TPD_G          : time     := 1 ns;
-      RST_ASYNC_G    : boolean  := True;
-      RST_POLARITY_G : sl       := '1';
-      FPGA_SYNTH_G   : boolean  := True;
-      NUM_VC_G       : natural  := 1
+      TPD_G          : time      := 1 ns;
+      RST_ASYNC_G    : boolean   := True;
+      RST_POLARITY_G : std_logic := '1';
+      FPGA_SYNTH_G   : boolean   := True;
+      NUM_VC_G       : natural   := 1
    );
    port(
       -- General Interface
