@@ -83,8 +83,6 @@ begin
   -- rst and clk
   sparseClk <= not sparseClk after CLK_PERIOD_SPARSE_C - TPD_G;
   pgpClk    <= not pgpClk    after CLK_PERIOD_PGP_C    - TPD_G;
-  rst       <= RST_POLARITY_G, not(RST_POLARITY_G) after CLK_PERIOD_SPARSE_C*100;
-
 
     writeDataProcess: process(pgpClk)
 
@@ -219,10 +217,15 @@ begin
     -- do not touch begin
     ----------------------------------------------
     ----------------------------------------------
-    -- Wait for the rst to be released before
+    -- issue reset here
+    wait for CLK_PERIOD_SPARSE_C;
+      rst <= RST_POLARITY_G;
+    wait for CLK_PERIOD_SPARSE_C*100;
+      rst  <= not(RST_POLARITY_G);
+
+    -- Wait for the rst to be released before doing anything else
     wait until (rst = not(RST_POLARITY_G));
     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-
       hitLen(col) <= toSlv(0, hitLen(col)'length);
     end loop;
 
@@ -244,6 +247,22 @@ begin
         sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
         sro  <= '0';
+
+    -----------------------------------------------------------------------------
+    -- reset test begin
+    -----------------------------------------------------------------------------
+    --wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to make sure data are tx'd
+    --  rst <= RST_POLARITY_G;
+    --wait for CLK_PERIOD_SPARSE_C*100;
+    --  rst  <= not(RST_POLARITY_G);
+
+    --wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+    --  sro <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro <= '0';
+    -----------------------------------------------------------------------------
+    -- reset test end
+    -----------------------------------------------------------------------------
 
     wait for CLK_PERIOD_SPARSE_C*93;
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
