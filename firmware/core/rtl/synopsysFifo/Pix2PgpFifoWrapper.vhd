@@ -28,6 +28,7 @@ entity Pix2PgpFifoWrapper is
       RST_POLARITY_G   : sl      := '1';
       WR_DATA_WIDTH_G  : integer := 20;
       RD_DATA_WIDTH_G  : integer := 20;
+      FULL_THRES_G     : integer := 6;
       ADDR_WIDTH_G     : integer := 12;
       DWARE_DEPTH_G    : integer := 32;
       DWARE_AF_LVL_G   : integer := 2;

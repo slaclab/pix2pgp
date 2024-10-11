@@ -293,7 +293,8 @@ begin
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          DWARE_DEPTH_G   => STATUS_DEPTH_G,
-         ADDR_WIDTH_G    => 4)
+         FULL_THRES_G    => 6, -- only for ghdl sim
+         ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
          rst     => sparseRst,
@@ -362,10 +363,12 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          FWFT_EN_G       => true,
+         DWARE_AF_LVL_G  => 1,
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
          RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DATA_DEPTH_G,
-         ADDR_WIDTH_G    => 4)
+         FULL_THRES_G    => 6, -- only for ghdl sim
+         ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
          rst     => sparseRst,
@@ -374,8 +377,8 @@ begin
          wrClk   => sparseClk,
          wrEn    => dataWrEn,
          din     => dataDin,
-         fullWr  => dataFifoFull,
-         aFullWr => open,
+         fullWr  => open,
+         aFullWr => dataFifoFull,
          emptyWr => dataFifoEmpty,
          -- Read Interface
          rdClk   => pgpClk,

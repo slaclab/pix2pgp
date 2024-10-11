@@ -31,13 +31,13 @@ entity Pix2PgpFifoWrapper is
       RST_POLARITY_G   : sl      := '1';
       WR_DATA_WIDTH_G  : integer := 20;
       RD_DATA_WIDTH_G  : integer := 20;
+      FULL_THRES_G     : integer := 6;
       ADDR_WIDTH_G     : integer := 12;
       DWARE_DEPTH_G    : integer := 32;
       DWARE_AF_LVL_G   : integer := 2;
       PIPE_STAGES_G    : natural := 0;
       FWFT_EN_G        : boolean := false;
-      GEN_SYNC_FIFO_G  : boolean := false; -- 'false' generates a Clock-Domain-Crossing FIFO
-      GHDL_SIM_G       : boolean := false);
+      GEN_SYNC_FIFO_G  : boolean := false); -- 'false' generates a Clock-Domain-Crossing FIFO
    port(
       -- Resets
       rst     : in  sl;
@@ -79,7 +79,7 @@ begin
             GEN_SYNC_FIFO_G => GEN_SYNC_FIFO_G,
             PIPE_STAGES_G   => PIPE_STAGES_G,
             DATA_WIDTH_G    => WR_DATA_WIDTH_G,
-            FULL_THRES_G    => DWARE_AF_LVL_G,
+            FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
             rst       => rstFifo,
@@ -108,7 +108,7 @@ begin
             PIPE_STAGES_G   => PIPE_STAGES_G,
             WR_DATA_WIDTH_G => WR_DATA_WIDTH_G,
             RD_DATA_WIDTH_G => RD_DATA_WIDTH_G,
-            FULL_THRES_G    => DWARE_AF_LVL_G,
+            FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
             rst       => rstFifo,

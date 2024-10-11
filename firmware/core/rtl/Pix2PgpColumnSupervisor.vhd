@@ -3,7 +3,6 @@
 -------------------------------------------------------------------------------
 -- Description: Column Supervisor
 --              Oversees the general status of all column managers;
---              Also increments trigger counter
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -155,14 +154,11 @@ begin
          if r.evalFlags = '1' then
 
             -- check if all triggers are aligned with each other
-            -- ignore columns that are in pause
             if statusBusGlbl(col).trgNum = refTrgNum
             or toBoolean(columnIgnore(col)) then
                v.colTrgAlignErr(col) := '0';
             else
-               if v.columnPause(col) = '0' then
-                  v.colTrgAlignErr(col) := '1';
-               end if;
+               v.colTrgAlignErr(col) := '1';
             end if;
 
             -- check for any over-occupancy errors
@@ -188,13 +184,6 @@ begin
                v.columnPause(col) := '0';
             end if;
 
-         else
-
-            v.colTrgAlignErr := (others => '0');
-            v.colOverOccErr  := (others => '0');
-            v.colFifoFullErr := (others => '0');
-            v.columnPause    := (others => '0');
-
          end if;
 
       end loop;
@@ -219,13 +208,23 @@ begin
             v.evalFlags     := '0';
             v.colFifoError  := uOr(v.colFifoFullErr);
             v.overOccError  := uOr(v.colOverOccErr);
-            v.alignError    := uOr(v.colTrgAlignErr);
             v.colPause      := uOr(v.columnPause);
-            v.trgNumArb     := refTrgNum;
             v.colBitmaskArb := v.colBitmask;
 
+            -- override if in pause;
+            -- forces status readout on paused cols only
+            -- suppress alignment errors if in true pause mode
             if r.pause = '1' then
+               v.alignError    := '0';
                v.colBitmaskArb := v.pauseReadBmsk;
+            end if;
+
+            -- only grab the trgNum if not in pause
+            -- if in pause, keep the same trigger number
+            -- same for alignment errors; ignore them while in pause
+            if r.pause = '0' then
+               v.trgNumArb  := refTrgNum;
+               v.alignError := uOr(v.colTrgAlignErr);
             end if;
 
             v.state := START_ARB_S;
@@ -250,11 +249,6 @@ begin
             if r.arbiterBusy = '0' then
                v.statusRd := '1'; -- pop the status word
                v.state    := DONE_S;
-
-               -- the event that was just read was a paused event
-               if not(allBits(r.columnPause, '0')) then
-                  v.state := PAUSE_S;
-               end if;
             end if;
 
          ----------------------------------------------------------------------
@@ -262,29 +256,38 @@ begin
          -- wait for the paused columns to resume and close-out their event
          -- (or pause themselves again);
          when PAUSE_S =>
-            -- pause flag controls the way columns are read-out
+            -- this internally-used pause flag controls the way columns are read-out
             v.pause := '1';
 
             if (v.columnPause = v.dataReady) then
+               v.evalFlags     := '1';
                v.pauseReadBmsk := v.columnPause;
-               v.state         := MON_STATUS_S;
+               v.state         := UPDATE_FLAGS_S;
             end if;
 
             -- corner-case: another SRO came and now everyone has data again
             -- i.e. pause flag is dropped and normal operation is resumed
-            -- (probably an over-occupancy though)
+            -- (probably an over-occupancy/trigger misalignment though)
             if (toBoolean(uAnd(v.dataReady))) then
-               v.pause := '0';
-               v.state := MON_STATUS_S;
+               v.evalFlags := '1';
+               v.pause     := '0';
+               v.state     := UPDATE_FLAGS_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- wait before re-evaluating the dataReady
+         -- always wait before re-evaluating the status bus empty signal;
+         -- reading the status word on one cycle may not force the empty signal
+         -- to go high on the next if there are no more status words in the FIFO
          when DONE_S =>
             v.pause   := '0';
             v.waitCnt := r.waitCnt + 1;
             if (r.waitCnt = FIFO_RD_DELAY_G) then
                v.state := MON_STATUS_S;
+
+               -- override; the event that was just read was a paused event
+               if (r.colPause = '1') then
+                  v.state := PAUSE_S;
+               end if;
             end if;
 
       end case;
