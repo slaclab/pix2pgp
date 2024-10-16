@@ -41,6 +41,8 @@ def headerEval(header):
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
     _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnFull={2:<%d} AlignError={3:<%d} dummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+    if _dummyHeader == 0:
+        print(f"/////////////////////////////////////////////////////////////////////////")
     print(_format.format(_overOcc, _pause, _columnFull, _alignError, _dummyHeader, hex(_bitmask).upper(), _trigger))
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
@@ -121,9 +123,9 @@ if __name__ == "__main__":
                 else:
                     _colSel += 1
             else:
-                print(f"/////////////////////////////////////////////////////////////////////////")
+                print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                 print(f"Trigger = {_trigger} decoding Done. Next Event...")
-                print(f"/////////////////////////////////////////////////////////////////////////")
+                print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                 state = "header_s"
         ########################################################################################
         elif state == "lenParse_s":

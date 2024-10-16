@@ -77,15 +77,13 @@ architecture rtl of Pix2PgpArbiter is
    signal arbReady           : sl := '0';
    signal arbValid           : sl := '0';
    signal arbDout            : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
-   signal setWatchdog        : sl := '0';
-   signal timeoutWatchdog    : sl := '0';
-   signal timeoutWatchdogDly : sl := '0';
 
    type StateType is (
       IDLE_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
-      TX_DUMMY_S);
+      TX_DUMMY_S,
+      DONE_S);
 
    type RegType is record
       -- inputs
@@ -106,7 +104,6 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   : sl;
       headerOnly   : sl;
-      setWatchdog  : sl;
       dummyHeader  : sl;
       wordCnt      : slv(2 downto 0);
       waitCnt      : slv(1 downto 0);
@@ -135,7 +132,6 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   => '0',
       headerOnly   => '0',
-      setWatchdog  => '0',
       dummyHeader  => '0',
       wordCnt      => (others => '0'),
       waitCnt      => (others => '0'),
@@ -154,7 +150,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, alignError, colBitmask, trgNum, colPause,
-                   pgpReady, arbReady, timeoutWatchdogDly) is
+                   pgpReady, arbReady) is
 
       variable v : RegType;
 
@@ -172,16 +168,10 @@ begin
          v.arbValid := '0';
       end if;
 
-      -- watchdog control
-      v.setWatchdog := '0';
-
+      -- keeps track of the words written into the gearbox;
+      -- important for the final state after done TXing the data
       if (r.arbValid = '1' and r.arbReady = '1') then
          v.wordCnt := r.wordCnt + 1;
-      end if;
-
-      if (not(allBits(r.wordCnt, '0')) and
-          r.arbBusy = '0') then
-         v.setWatchdog := '1';
       end if;
 
       -- override header elements if in dummy-header-TX mode
@@ -206,7 +196,6 @@ begin
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
             v.dummyHeader := '0';
-            v.arbBusy     := '0';
             v.arbValid    := '0';
             v.colSel      := (others => '0');
             v.arbDout     := r.dataHeader;
@@ -217,32 +206,7 @@ begin
                v.state    := CHECK_BITMASK_S;
 
                if v.eventEmpty = '1' then
-                  v.state := IDLE_S;
-               end if;
-
-            end if;
-
-            -- dummy header corner-case
-            if timeoutWatchdogDly = '1' and arbStart = '0' then
-               v.dummyHeader := '1';
-               v.arbBusy     := '1';
-               v.waitCnt     := r.waitCnt + 1;
-               -- need to wait for the header bits to be updated properly
-               if allBits(r.waitCnt, '1') then
-                  v.waitCnt := (others => '0');
-                  v.state   := TX_DUMMY_S;
-               end if;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- stuffs the gearbox with dummy headers
-         -- essentially flushes out the last words written into the gearbox
-         when TX_DUMMY_S =>
-            if (v.arbValid = '0' and pgpReady = '1') then
-               v.arbValid := '1';
-               -- seize the process one count before overflow -> rolls-over to 0
-               if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
-                  v.state := IDLE_S;
+                  v.state := DONE_S;
                end if;
             end if;
 
@@ -253,7 +217,7 @@ begin
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                  v.state := IDLE_S;
+                  v.state := DONE_S;
                end if;
 
             else
@@ -295,8 +259,48 @@ begin
                   v.state    := CHECK_BITMASK_S;
                   -- Check if last column
                   if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                     v.state := IDLE_S;
+                     v.state := DONE_S;
                   end if;
+               end if;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- done transmitting meaningful data
+         -- check if gearbox needs to be flushed
+         when DONE_S =>
+            v.arbValid := '0';
+            v.arbDout  := r.dataHeader;
+
+            -- wait for the word counter to be updated first;
+            -- happens after valid signal has been released
+            if (r.arbValid = '0') then
+               -- gearbox *not flushed* and we are *not in pause*
+               if not(allBits(r.wordCnt, '0')) and (r.colPause) = '0' then
+                  v.dummyHeader := '1';
+                  v.waitCnt     := r.waitCnt + 1;
+                  -- need to wait for the header bits to be updated properly
+                  if allBits(r.waitCnt, '1') then
+                     v.waitCnt := (others => '0');
+                     v.state   := TX_DUMMY_S;
+                  end if;
+               -- got lucky. gearbox is empty; back to IDLE_S
+               -- OR we are in pause, so we need to hurry to empty the FIFOs
+               else
+                  v.arbBusy := '0';
+                  v.state   := IDLE_S;
+               end if;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- stuffs the gearbox with dummy headers
+         -- essentially flushes out the last words written into the gearbox
+         when TX_DUMMY_S =>
+            if (v.arbValid = '0' and pgpReady = '1') then
+               v.arbValid := '1';
+               -- seize the process one count before overflow -> rolls-over to 0
+               if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
+                  v.arbBusy := '0';
+                  v.state   := IDLE_S;
                end if;
             end if;
 
@@ -363,44 +367,5 @@ begin
          masterReady    => '1', -- flow is controlled by adapter's FIFO progFull (pgpReady)
          masterValid    => pgpValid,
          masterData     => pgpData);
-
-   -----------
-   -- Watchdog
-   -----------
-   U_Watchdog: entity pix2pgp.Pix2PgpWatchdog
-      generic map(
-         TPD_G           => TPD_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         CNT_WIDTH_G     => 8)
-      port map(
-         -- General Interface
-         clk     => pgpClk,
-         rst     => pgpRst,
-         -- Control Interface
-         set     => setWatchdog,
-         timeout => timeoutWatchdog);
-
-   -- pipeline control signals to move counter away
-   U_PipelineSet : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 1)
-      port map (
-         clk     => pgpClk,
-         din(0)  => r.setWatchdog,
-         dout(0) => setWatchdog);
-
-   U_PipelineTimeout : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 1)
-      port map (
-         clk     => pgpClk,
-         din(0)  => timeoutWatchdog,
-         dout(0) => timeoutWatchdogDly);
-
 
 end rtl;

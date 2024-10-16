@@ -299,26 +299,29 @@ begin
     ----------------------------------------------
     -- regular stimuli end
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 12 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(3, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 12 to NUM_OF_COL_MANAGERS_C-1 loop
+        hitLen(col) <= toSlv(3, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 14 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 14 to NUM_OF_COL_MANAGERS_C-1 loop
+        hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
+        sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+        sro  <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+        hitLen(col) <= toSlv(0, hitLen(col)'length);
+      end loop;
+      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
 
     wait for CLK_PERIOD_SPARSE_C*93;
       hitLen(5) <= toSlv(3, hitLen(5)'length);
@@ -330,25 +333,25 @@ begin
     wait for CLK_PERIOD_SPARSE_C*2;
       sro  <= '0';
 
-     -- will force pause
+    --  will force pause
     wait for CLK_PERIOD_SPARSE_C*93;
      hitLen(5) <= toSlv(13, hitLen(5)'length);
-     hitLen(6) <= toSlv(6, hitLen(6)'length);
-     hitLen(7) <= toSlv(3, hitLen(7)'length);
+     hitLen(6) <= toSlv(6,  hitLen(6)'length);
+     hitLen(7) <= toSlv(3,  hitLen(7)'length);
      hitLen(8) <= toSlv(15, hitLen(8)'length);
-     hitLen(9) <= toSlv(1, hitLen(9)'length);
+     hitLen(9) <= toSlv(1,  hitLen(9)'length);
      sro  <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
      sro  <= '0';
 
      -- will force pause
-    wait for CLK_PERIOD_SPARSE_C*293;
-     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-        hitLen(col) <= toSlv(34, hitLen(col)'length);
-     end loop;
-     sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-     sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*293;
+    -- for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --    hitLen(col) <= toSlv(34, hitLen(col)'length);
+    -- end loop;
+    -- sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    -- sro  <= '0';
 
     -- !!!! note the *493
     --wait for CLK_PERIOD_SPARSE_C*493;
