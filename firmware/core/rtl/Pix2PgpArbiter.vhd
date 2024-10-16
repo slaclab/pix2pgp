@@ -189,6 +189,7 @@ begin
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          v.colBitmask(col) := colBitmask(col) and not(r.dummyHeader);
       end loop;
+      --
       for trgBit in 0 to STATUSFIFO_TRG_WIDTH_C-1 loop
          v.trgNum(trgBit)  := trgNum(trgBit)  and not(r.dummyHeader);
       end loop;
@@ -249,7 +250,6 @@ begin
          -- check the bitmask value of the selected column
          -- if non-zero, write the length and start reading immediately
          when CHECK_BITMASK_S =>
-
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
