@@ -85,8 +85,7 @@ architecture rtl of Pix2PgpArbiter is
       IDLE_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
-      TX_DUMMY_S,
-      DONE_S);
+      TX_DUMMY_S);
 
    type RegType is record
       -- inputs
@@ -208,6 +207,7 @@ begin
             v.dummyHeader := '0';
             v.arbBusy     := '0';
             v.arbValid    := '0';
+            v.colSel      := (others => '0');
             v.arbDout     := r.dataHeader;
 
             if arbStart = '1' and v.arbValid = '0' and pgpReady = '1' then
@@ -216,7 +216,7 @@ begin
                v.state    := CHECK_BITMASK_S;
 
                if v.eventEmpty = '1' then
-                  v.state := DONE_S;
+                  v.state := IDLE_S;
                end if;
 
             end if;
@@ -241,7 +241,7 @@ begin
                v.arbValid := '1';
                -- seize the process one count before overflow -> rolls-over to 0
                if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
-                  v.state := DONE_S;
+                  v.state := IDLE_S;
                end if;
             end if;
 
@@ -253,7 +253,7 @@ begin
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                  v.state := DONE_S;
+                  v.state := IDLE_S;
                end if;
 
             else
@@ -295,17 +295,10 @@ begin
                   v.state    := CHECK_BITMASK_S;
                   -- Check if last column
                   if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                     v.state := DONE_S;
+                     v.state := IDLE_S;
                   end if;
                end if;
             end if;
-
-         ----------------------------------------------------------------------
-         -- last state
-         when DONE_S =>
-            v.arbBusy := '0';
-            v.colSel  := (others => '0');
-            v.state   := IDLE_S;
 
       end case;
       -----------------------------------------------------------------------
