@@ -198,8 +198,12 @@ begin
             v.statusWr := '1';
             v.wrEnCnt  := (others => '0');
 
-            if r.pause = '1' then
+            -- state switching
+            if (r.pause = '1') then
                v.state := EVAL_PAUSE_S;
+            elsif (r.overOcc = '1') then
+               v.trgCnt := r.trgCnt + 1;
+               v.state  := IN_FRAME_S;
             else
                v.state := IDLE_S;
             end if;
@@ -208,16 +212,16 @@ begin
          -- done; determine what to do after pause
          when EVAL_PAUSE_S =>
 
+         -- over-occupancy while in pause; write the status now
+         -- this retains the pause flag;
+         -- overOcc always takes precedence
+         if (r.overOcc = '1') then
+            v.trgCnt := r.trgCnt + 1;
+            v.state  := WREN_STATUS_S;
          -- wait for the FIFO to get empty
-         if (dataFifoEmptyDly = '1') then
+         elsif (dataFifoEmptyDly = '1') then
             v.pause := '0';
             v.state := IN_FRAME_S;
-         end if;
-
-         -- over-occupancy while in pause; write the status now
-         -- this retains the pause flag
-         if (r.overOcc = '1') then
-            v.state := WREN_STATUS_S;
          end if;
 
       end case;
