@@ -55,6 +55,7 @@ entity Pix2PgpTop is
       overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pauseGlbl    : out sl;
       -- Pgp4TxLite Interface
       txReady      : in  sl;
       txValid      : out sl;
@@ -85,6 +86,7 @@ architecture rtl of Pix2PgpTop is
    signal colPause       : sl := '0';
    signal colEmpty       : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
+   signal pauseColMgr    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
    --
    signal pgpReady       : sl := '0';
@@ -92,6 +94,11 @@ architecture rtl of Pix2PgpTop is
    signal pgpData        : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
+
+   -- global pause signal output
+   pauseGlbl <= uOr(pauseColMgr);
+   -- individual column-pause output
+   pause     <= pauseColMgr;
 
    ---------------------------------------
    -- Column Manager
@@ -119,7 +126,7 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             busy      => busy(col),
-            pause     => pause(col),
+            pause     => pauseColMgr(col),
             -- Arbiter Interface
             statusRd  => statusRdCol(col),
             dataRd    => dataRdSel(col),

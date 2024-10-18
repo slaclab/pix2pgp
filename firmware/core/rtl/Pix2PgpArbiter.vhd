@@ -303,8 +303,8 @@ begin
       -- TO-DO: remove me
       case r.state is
          when IDLE_S          => dbgArb <= "00";
-         when CHECK_BITMASK_S => dbgArb <= "10";
-         when PARSE_DATA_S    => dbgArb <= "01";
+         when CHECK_BITMASK_S => dbgArb <= "01";
+         when PARSE_DATA_S    => dbgArb <= "10";
          when TX_DUMMY_S      => dbgArb <= "11";
       end case;
 

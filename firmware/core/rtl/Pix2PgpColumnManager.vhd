@@ -202,12 +202,12 @@ begin
 
             -- state switching
             if (r.pause = '1') then
-               v.state := EVAL_PAUSE_S;
+               v.state  := EVAL_PAUSE_S;
             elsif (r.overOcc = '1') then
                v.trgCnt := r.trgCnt + 1;
                v.state  := IN_FRAME_S;
             else
-               v.state := IDLE_S;
+               v.state  := IDLE_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -232,8 +232,8 @@ begin
       -- TO-DO: remove me
       case r.state is
          when IDLE_S        => dbgColManager <= "00";
-         when IN_FRAME_S    => dbgColManager <= "10";
-         when WREN_STATUS_S => dbgColManager <= "01";
+         when IN_FRAME_S    => dbgColManager <= "01";
+         when WREN_STATUS_S => dbgColManager <= "10";
          when EVAL_PAUSE_S  => dbgColManager <= "11";
       end case;
 
