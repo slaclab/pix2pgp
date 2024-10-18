@@ -199,7 +199,7 @@ begin
          when MON_STATUS_S =>
             v.pause    := '0';
             v.waitCnt  := (others => '0');
-            v.colEmpty := not(uOr(v.dataReady)));
+            v.colEmpty := not(uOr(v.dataReady));
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.evalFlags := '1';
