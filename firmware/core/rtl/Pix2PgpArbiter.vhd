@@ -286,9 +286,8 @@ begin
          when TX_DUMMY_S =>
             if (v.arbValid = '0' and pgpReady = '1') then
                v.arbValid := '1';
-               -- seize the process one count before overflow -> rolls-over to 0
-               --if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
-               if allBits(r.wordCnt, '1') then
+
+               if allBits(r.wordCnt, '1') and r.arbValid = '1' then
                   v.arbValid    := '0';
                   v.arbBusy     := '0';
                   v.dummyHeader := '0';
