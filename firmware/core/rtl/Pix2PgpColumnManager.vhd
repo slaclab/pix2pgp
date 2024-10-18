@@ -69,6 +69,8 @@ architecture rtl of Pix2PgpColumnManager is
    signal dataWrEn           : sl := '0';
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
+   signal dbgColManager      : slv(1 downto 0) := (others => '0'); -- TO-DO: remove me
+
    type StateType is (
       IDLE_S,
       IN_FRAME_S,
@@ -226,6 +228,14 @@ begin
 
       end case;
       -------------------------------------------------------------------------
+
+      -- TO-DO: remove me
+      case r.state is
+         when IDLE_S        => dbgColManager <= "00";
+         when IN_FRAME_S    => dbgColManager <= "10";
+         when WREN_STATUS_S => dbgColManager <= "01";
+         when EVAL_PAUSE_S  => dbgColManager <= "11";
+      end case;
 
       -- Outputs
       pause <= v.pause;

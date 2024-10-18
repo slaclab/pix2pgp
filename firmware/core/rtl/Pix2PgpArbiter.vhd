@@ -79,6 +79,8 @@ architecture rtl of Pix2PgpArbiter is
    signal arbValid : sl := '0';
    signal arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
+   signal dbgArb   : slv(1 downto 0) := (others => '0'); -- TO-DO: remove me
+
    type StateType is (
       IDLE_S,
       CHECK_BITMASK_S,
@@ -297,6 +299,14 @@ begin
 
       end case;
       -----------------------------------------------------------------------
+
+      -- TO-DO: remove me
+      case r.state is
+         when IDLE_S          => dbgArb <= "00";
+         when CHECK_BITMASK_S => dbgArb <= "10";
+         when PARSE_DATA_S    => dbgArb <= "01";
+         when TX_DUMMY_S      => dbgArb <= "11";
+      end case;
 
       -- header mapping
       v.dataHeader(OVEROCC_FLAG_POS_C)     := v.overOccError;
