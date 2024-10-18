@@ -51,6 +51,7 @@ entity Pix2PgpArbiter is
       overOccError : in  sl;
       alignError   : in  sl;
       colPause     : in  sl;
+      colEmpty     : in  sl;
       colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum       : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       arbBusy      : out sl;
@@ -74,16 +75,15 @@ architecture rtl of Pix2PgpArbiter is
       return result;
    end rightShift;
 
-   signal arbReady           : sl := '0';
-   signal arbValid           : sl := '0';
-   signal arbDout            : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal arbReady : sl := '0';
+   signal arbValid : sl := '0';
+   signal arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
-      TX_DUMMY_S,
-      DONE_S);
+      TX_DUMMY_S);
 
    type RegType is record
       -- inputs
@@ -150,7 +150,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, alignError, colBitmask, trgNum, colPause,
-                   pgpReady, arbReady) is
+                   pgpReady, arbReady, colEmpty) is
 
       variable v : RegType;
 
@@ -189,25 +189,39 @@ begin
       v.colFifoError := colFifoError and not(r.dummyHeader);
       v.alignError   := alignError   and not(r.dummyHeader);
 
+      -- header is always TX'd default; being overriden otherwise
+      v.arbDout := v.dataHeader;
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
          -- supervisor signals a start of sequence
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
-            v.dummyHeader := '0';
+            v.arbBusy     := '0';
             v.arbValid    := '0';
             v.colSel      := (others => '0');
-            v.arbDout     := r.dataHeader;
 
-            if arbStart = '1' and v.arbValid = '0' and pgpReady = '1' then
+            if arbStart = '1' and r.dummyHeader = '0' and v.arbValid = '0' and pgpReady = '1' then
                v.arbBusy  := '1';
                v.arbValid := '1';
                v.state    := CHECK_BITMASK_S;
 
+               -- if empty, just stay here
                if v.eventEmpty = '1' then
-                  v.state := DONE_S;
+                  v.state := IDLE_S;
                end if;
+            end if;
+
+            -- no activity in the columns, plus still data in the gearbox;
+            -- start flushing gearbox on next cycle
+            if not(allBits(r.wordCnt, '0')) and colEmpty = '1' then
+               v.dummyHeader := '1';
+            end if;
+
+            if r.dummyHeader = '1' then
+               v.arbBusy := '1';
+               v.state   := TX_DUMMY_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -217,7 +231,8 @@ begin
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := r.colSel + 1;
                if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                  v.state := DONE_S;
+                  v.arbBusy := '0';
+                  v.state   := IDLE_S;
                end if;
 
             else
@@ -259,35 +274,9 @@ begin
                   v.state    := CHECK_BITMASK_S;
                   -- Check if last column
                   if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                     v.state := DONE_S;
+                     v.arbBusy := '0';
+                     v.state   := IDLE_S;
                   end if;
-               end if;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- done transmitting meaningful data
-         -- check if gearbox needs to be flushed
-         when DONE_S =>
-            v.arbValid := '0';
-            v.arbDout  := r.dataHeader;
-
-            -- wait for the word counter to be updated first;
-            -- happens after valid signal has been released
-            if (r.arbValid = '0') then
-               -- gearbox *not flushed* and we are *not in pause*
-               if not(allBits(r.wordCnt, '0')) and (r.colPause) = '0' then
-                  v.dummyHeader := '1';
-                  v.waitCnt     := r.waitCnt + 1;
-                  -- need to wait for the header bits to be updated properly
-                  if allBits(r.waitCnt, '1') then
-                     v.waitCnt := (others => '0');
-                     v.state   := TX_DUMMY_S;
-                  end if;
-               -- got lucky. gearbox is empty; back to IDLE_S
-               -- OR we are in pause, so we need to hurry to empty the FIFOs
-               else
-                  v.arbBusy := '0';
-                  v.state   := IDLE_S;
                end if;
             end if;
 
@@ -298,9 +287,12 @@ begin
             if (v.arbValid = '0' and pgpReady = '1') then
                v.arbValid := '1';
                -- seize the process one count before overflow -> rolls-over to 0
-               if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
-                  v.arbBusy := '0';
-                  v.state   := IDLE_S;
+               --if allBits(r.wordCnt(r.wordCnt'length-1 downto 1), '1') then
+               if allBits(r.wordCnt, '1') then
+                  v.arbValid    := '0';
+                  v.arbBusy     := '0';
+                  v.dummyHeader := '0';
+                  v.state       := IDLE_S;
                end if;
             end if;
 

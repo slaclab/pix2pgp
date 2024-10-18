@@ -46,6 +46,7 @@ entity Pix2PgpColumnSupervisor is
       overOccError  : out sl;
       alignError    : out sl;
       colPause      : out sl;
+      colEmpty      : out sl;
       colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : out slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
@@ -55,7 +56,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type StateType is (
       MON_STATUS_S,
       UPDATE_FLAGS_S,
-      START_ARB_S,
       WAIT_ARB_S,
       PAUSE_S,
       DONE_S);
@@ -69,6 +69,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   : sl;
       alignError     : sl;
       colPause       : sl;
+      colEmpty       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -93,6 +94,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   => '0',
       alignError     => '0',
       colPause       => '0',
+      colEmpty       => '0',
       colBitmask     => (others => '0'),
       -- internal
       pause          => '0',
@@ -195,17 +197,21 @@ begin
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
+            v.pause   := '0';
             v.waitCnt := (others => '0');
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.evalFlags := '1';
                v.state     := UPDATE_FLAGS_S;
+            else
+               v.colEmpty  := '1';
             end if;
 
          ----------------------------------------------------------------------
          -- update the arbiter status bits before starting the readout process
          when UPDATE_FLAGS_S =>
             v.evalFlags     := '0';
+            v.colEmpty      := '0';
             v.colFifoError  := uOr(v.colFifoFullErr);
             v.overOccError  := uOr(v.colOverOccErr);
             v.colPause      := uOr(v.columnPause);
@@ -227,25 +233,21 @@ begin
                v.alignError := uOr(v.colTrgAlignErr);
             end if;
 
-            v.state := START_ARB_S;
+            -- state switching;
+            -- first raise the start flag...
+            if r.arbiterBusy = '0' and v.arbiterStart = '0' then
+               v.arbiterStart := '1';
+            end if;
 
-         ----------------------------------------------------------------------
-         -- ready to start the arbiter
-         when START_ARB_S =>
-            v.arbiterStart := '1';
-
-            -- rising-edge detection;
-            -- arbiter might be TX'ing dummy headers, so could already be busy;
-            -- need to account for this (can't just check `arbiterBusy = '1'`)
-            if v.arbiterBusy = '1' and r.arbiterBusy = '0' then
-               v.state := WAIT_ARB_S;
+            -- ...then switch and wait
+            if r.arbiterBusy = '1' and v.arbiterStart = '1' then
+               v.arbiterStart := '0';
+               v.state        := WAIT_ARB_S;
             end if;
 
          ----------------------------------------------------------------------
          -- wait for the arbiter to finish parsing the data
          when WAIT_ARB_S =>
-            v.arbiterStart := '0';
-
             if r.arbiterBusy = '0' then
                v.statusRd := '1'; -- pop the status word
                v.state    := DONE_S;
@@ -279,7 +281,6 @@ begin
          -- reading the status word on one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
          when DONE_S =>
-            v.pause   := '0';
             v.waitCnt := r.waitCnt + 1;
             if (r.waitCnt = FIFO_RD_DELAY_G) then
                v.state := MON_STATUS_S;
@@ -300,7 +301,8 @@ begin
       colPause     <= v.colPause;
       colBitmask   <= v.colBitmaskArb;
       trgNum       <= v.trgNumArb;
-      arbiterStart <= v.arbiterStart;
+      arbiterStart <= r.arbiterStart; -- delay for one cycle
+      colEmpty     <= v.colEmpty;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
