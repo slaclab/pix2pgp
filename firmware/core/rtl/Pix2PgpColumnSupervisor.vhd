@@ -197,14 +197,13 @@ begin
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
-            v.pause   := '0';
-            v.waitCnt := (others => '0');
+            v.pause    := '0';
+            v.waitCnt  := (others => '0');
+            v.colEmpty := not(uOr(v.dataReady)));
 
             if toBoolean(uAnd(v.dataReady)) and statusManagerDone = '1' then
                v.evalFlags := '1';
                v.state     := UPDATE_FLAGS_S;
-            else
-               v.colEmpty  := '1';
             end if;
 
          ----------------------------------------------------------------------
