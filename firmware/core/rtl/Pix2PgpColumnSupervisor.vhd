@@ -114,8 +114,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
    signal columnIgnore      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal refTrgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
 
-   signal dbgColSupervisor  : slv(2 downto 0) := (others => '0'); -- TO-DO: remove me
-
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
@@ -294,15 +292,6 @@ begin
 
       end case;
       ---------------------------------------------------------------------------
-
-      -- TO-DO: remove me
-      case r.state is
-         when MON_STATUS_S   => dbgColSupervisor <= "000";
-         when UPDATE_FLAGS_S => dbgColSupervisor <= "001";
-         when WAIT_ARB_S     => dbgColSupervisor <= "010";
-         when PAUSE_S        => dbgColSupervisor <= "011";
-         when DONE_S         => dbgColSupervisor <= "100";
-      end case;
 
       -- Outputs
       colFifoError <= v.colFifoError;
