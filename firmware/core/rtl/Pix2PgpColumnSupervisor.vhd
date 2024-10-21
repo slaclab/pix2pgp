@@ -54,11 +54,11 @@ end Pix2PgpColumnSupervisor;
 architecture rtl of Pix2PgpColumnSupervisor is
 
    type StateType is (
-      MON_STATUS_S,
-      UPDATE_FLAGS_S,
-      WAIT_ARB_S,
-      PAUSE_S,
-      DONE_S);
+      MON_STATUS_S,   -- 000
+      UPDATE_FLAGS_S, -- 001
+      WAIT_ARB_S,     -- 010
+      PAUSE_S,        -- 011
+      DONE_S);        -- 100
 
    type RegType is record
       -- i/o

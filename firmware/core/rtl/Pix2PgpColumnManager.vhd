@@ -70,10 +70,9 @@ architecture rtl of Pix2PgpColumnManager is
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
-      IDLE_S,
-      IN_FRAME_S,
-      WREN_STATUS_S,
-      EVAL_PAUSE_S);
+      IDLE_S,         -- 00
+      IN_FRAME_S,     -- 01
+      WREN_STATUS_S); -- 10
 
    type RegType is record
       -- i/o
@@ -136,7 +135,6 @@ begin
       v.din      := din;
       v.statusRd := statusRd;
       v.dataRd   := dataRd;
-      v.pause    := dataFifoFullDly;
 
       -- Strobes
       v.statusWr := '0';
@@ -170,8 +168,26 @@ begin
          -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
          when IN_FRAME_S =>
 
-            -- if FIFO gets full, write the status immediately
-            if (v.pause = '1' or v.eof = '1' or v.overOcc = '1') then
+            -- clear the flag here if was in pause before
+            if (r.pause = '1') then
+               v.pause := not(dataFifoEmptyDly);
+            end if;
+
+            -- if FIFO gets full for the first time, write the status immediately;
+            -- also tie the pause flag to the fullData signal
+            if (dataFifoFullDly = '1' and r.pause = '0') then
+               v.pause := dataFifoFullDly;
+               v.state := WREN_STATUS_S;
+            end if;
+
+            -- regular EOF (is never issued while in pause)
+            if (v.eof = '1') then
+               v.state := WREN_STATUS_S;
+            end if;
+
+            -- overOcc can happen because of analog (pause is low);
+            -- ...or because of digital backpressure (pause is high)
+            if (v.overOcc = '1') then
                v.state := WREN_STATUS_S;
             end if;
 
@@ -196,27 +212,13 @@ begin
 
             -- state switching
             if (v.pause = '1') then
-               v.state  := EVAL_PAUSE_S;
+               v.state  := IN_FRAME_S;
             elsif (r.overOcc = '1') then -- have to use the r. here (it gets cleared)
                v.trgCnt := r.trgCnt + 1;
                v.state  := IN_FRAME_S;
             else
                v.state  := IDLE_S;
             end if;
-
-         ----------------------------------------------------------------------
-         -- done; determine what to do after pause
-         when EVAL_PAUSE_S =>
-
-         -- over-occupancy while in pause; write the status now
-         -- this retains the pause flag;
-         -- overOcc always takes precedence
-         if (v.overOcc = '1') then
-            v.state  := WREN_STATUS_S;
-         -- wait for the FIFO to get empty
-         elsif (dataFifoEmptyDly = '1') then
-            v.state := IN_FRAME_S;
-         end if;
 
       end case;
       -------------------------------------------------------------------------
