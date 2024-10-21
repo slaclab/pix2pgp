@@ -260,7 +260,7 @@ begin
             -- this internally-used pause flag controls the way columns are read-out
             v.pause := '1';
 
-            if (v.columnPause = v.dataReady) then
+            if ((v.columnPause and v.dataReady) = v.columnPause) then
                v.evalFlags     := '1';
                v.pauseReadBmsk := v.columnPause;
                v.state         := UPDATE_FLAGS_S;

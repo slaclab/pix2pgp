@@ -212,7 +212,6 @@ begin
          -- this retains the pause flag;
          -- overOcc always takes precedence
          if (v.overOcc = '1') then
-            v.trgCnt := r.trgCnt + 1;
             v.state  := WREN_STATUS_S;
          -- wait for the FIFO to get empty
          elsif (dataFifoEmptyDly = '1') then
