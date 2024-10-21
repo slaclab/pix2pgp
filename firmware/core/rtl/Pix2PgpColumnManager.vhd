@@ -181,7 +181,8 @@ begin
             end if;
 
             -- regular EOF (is never issued while in pause)
-            if (v.eof = '1') then
+            -- posedge detection
+            if (v.eof = '1' and r.eof = '0') then
                v.state := WREN_STATUS_S;
             end if;
 
