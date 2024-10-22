@@ -89,7 +89,6 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
-      trgCnt        : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
       state         : StateType;
    end record RegType;
 
@@ -108,7 +107,6 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        => '0',
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
-      trgCnt        => (others => '1'), -- so that it rolls-over to zero on first trigger
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -160,7 +158,6 @@ begin
             -- start-of-frame detection
             if (v.sof = '1') then
                v.busy   := '1';
-               v.trgCnt := r.trgCnt + 1;
                v.state  := IN_FRAME_S;
             end if;
 
@@ -208,7 +205,6 @@ begin
 
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
             v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
-            v.statusFifoDin(STATUSFIFO_TRG_POS_C)     := r.trgCnt;
             v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
             v.statusWr := '1';
             v.wrEnCnt  := (others => '0');
@@ -217,7 +213,6 @@ begin
             if (v.pause = '1') then
                v.state  := IN_FRAME_S;
             elsif (r.overOcc = '1') then -- have to use the r. here (it gets cleared)
-               v.trgCnt := r.trgCnt + 1;
                v.state  := IN_FRAME_S;
             else
                v.state  := IDLE_S;
@@ -230,10 +225,9 @@ begin
       pause <= v.pause;
       busy  <= v.busy;
       -- status bus assignments (in pgpClk domain)
-      statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
-      statusBus.trgNum     <= statusFifoDout(STATUSFIFO_TRG_POS_C);
-      statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
       statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
+      statusBus.pause      <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
+      statusBus.dataLen    <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
       statusBus.columnFull <= statusFifoFullDly; -- dataFifo pauses the logic and shouldn't get full
 
       -- Reset

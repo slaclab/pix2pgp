@@ -48,7 +48,6 @@ entity Pix2PgpTb is
       din          : in  Pix2PgpSparseDinArray;
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      pauseGlbl    : out sl;
       -- FPGA Interface
       pgpDout      : out slv(31 downto 0);
       pgpDoutValid : out sl;
@@ -107,7 +106,6 @@ begin
          overOcc      => overOcc,
          busy         => busy,
          pause        => pause,
-         pauseGlbl    => pauseGlbl,
          -- Pgp4TxLite Interface
          txReady      => txReady,
          txValid      => txValid,

@@ -68,7 +68,6 @@ entity Pix2PgpSparkPixSTop is
       wrEn         : in  std_logic_vector(23 downto 0);
       busy         : out std_logic_vector(23 downto 0);
       pause        : out std_logic_vector(23 downto 0);
-      pauseGlbl    : out std_logic;
       -- Pgp4TxLite Interface
       txReady      : in  std_logic;
       txValid      : out std_logic;
@@ -116,7 +115,6 @@ begin
          din          => din,
          busy         => busy,
          pause        => pause,
-         pauseGlbl    => pauseGlbl,
          -- Pgp4TxLite Interface
          txReady      => txReady,
          txValid      => txValid,

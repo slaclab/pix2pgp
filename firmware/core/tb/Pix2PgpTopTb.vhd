@@ -78,8 +78,6 @@ architecture test of Pix2PgpTopTb is
    signal pgpValid  : sl := '0';
    signal pgpData   : slv(39 downto 0) := (others => '0');
 
-   signal pauseGlbl : sl := '0';
-
 begin
 
   -- rst and clk
@@ -180,7 +178,6 @@ begin
          rst          => rst,
          sro          => sroFinal,
          pause        => pause,
-         pauseGlbl    => pauseGlbl,
          sof          => sof,
          eof          => eof,
          busy         => busy,

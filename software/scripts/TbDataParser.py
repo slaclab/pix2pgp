@@ -34,16 +34,15 @@ def headerEval(header):
     _overOcc     = (header >> np.uint8(39)) & np.uint8(0x01)
     _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
     _columnFull  = (header >> np.uint8(37)) & np.uint8(0x01)
-    _alignError  = (header >> np.uint8(36)) & np.uint8(0x01)
-    _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
+    _dummyHeader = (header >> np.uint8(36)) & np.uint8(0x01)
     # some reserved bits
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
-    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnFull={2:<%d} AlignError={3:<%d} dummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnFull={2:<%d} dummyHeader={3:<%d} Bitmask={4:<%02x} Trigger={5:<%d}' % (1, 1, 1, 1, 8, 8)
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
-    print(_format.format(_overOcc, _pause, _columnFull, _alignError, _dummyHeader, hex(_bitmask).upper(), _trigger))
+    print(_format.format(_overOcc, _pause, _columnFull, _dummyHeader, hex(_bitmask).upper(), _trigger))
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
 

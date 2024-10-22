@@ -55,7 +55,6 @@ entity Pix2PgpTop is
       overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      pauseGlbl    : out sl;
       -- Pgp4TxLite Interface
       txReady      : in  sl;
       txValid      : out sl;
@@ -81,24 +80,17 @@ architecture rtl of Pix2PgpTop is
    signal arbStart       : sl := '0';
    signal colFifoError   : sl := '0';
    signal overOccError   : sl := '0';
-   signal alignError     : sl := '0';
    signal arbBusy        : sl := '0';
    signal colPause       : sl := '0';
    signal colEmpty       : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
-   signal pauseColMgr    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
-   signal trgNum         : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgNum         : slv(TRG_WIDTH_C-1 downto 0)            := (others => '0');
    --
    signal pgpReady       : sl := '0';
    signal pgpValid       : sl := '0';
    signal pgpData        : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
-
-   -- global pause signal output
-   pauseGlbl <= uOr(pauseColMgr);
-   -- individual column-pause output
-   pause     <= pauseColMgr;
 
    ---------------------------------------
    -- Column Manager
@@ -126,7 +118,7 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             busy      => busy(col),
-            pause     => pauseColMgr(col),
+            pause     => pause(col),
             -- Arbiter Interface
             statusRd  => statusRdCol(col),
             dataRd    => dataRdSel(col),
@@ -184,7 +176,6 @@ begin
          arbiterStart  => arbStart,
          colFifoError  => colFifoError,
          overOccError  => overOccError,
-         alignError    => alignError,
          colPause      => colPause,
          colEmpty      => colEmpty,
          colBitmask    => colBitmask,
@@ -212,7 +203,6 @@ begin
          arbStart     => arbStart,
          colFifoError => colFifoError,
          overOccError => overOccError,
-         alignError   => alignError,
          colPause     => colPause,
          colEmpty     => colEmpty,
          colBitmask   => colBitmask,

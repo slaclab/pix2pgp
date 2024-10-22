@@ -49,11 +49,10 @@ entity Pix2PgpArbiter is
       arbStart     : in  sl;
       colFifoError : in  sl;
       overOccError : in  sl;
-      alignError   : in  sl;
       colPause     : in  sl;
       colEmpty     : in  sl;
       colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum       : in  slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
+      trgNum       : in  slv(TRG_WIDTH_C-1 downto 0);
       arbBusy      : out sl;
       -- Pgp Adapter Interface
       pgpReady     : in  sl := '1';
@@ -91,10 +90,9 @@ architecture rtl of Pix2PgpArbiter is
       arbReady     : sl;
       colFifoError : sl;
       overOccError : sl;
-      alignError   : sl;
       colPause     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum       : slv(STATUSFIFO_TRG_WIDTH_C-1 downto 0);
+      trgNum       : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -119,7 +117,6 @@ architecture rtl of Pix2PgpArbiter is
       arbReady     => '1',
       colFifoError => '0',
       overOccError => '0',
-      alignError   => '0',
       colPause     => '0',
       colBitmask   => (others => '0'),
       trgNum       => (others => '0'),
@@ -149,7 +146,7 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
-                   overOccError, alignError, colBitmask, trgNum, colPause,
+                   overOccError, colBitmask, trgNum, colPause,
                    pgpReady, arbReady, colEmpty) is
 
       variable v : RegType;
@@ -180,14 +177,13 @@ begin
          v.colBitmask(col) := colBitmask(col) and not(r.dummyHeader);
       end loop;
       --
-      for trgBit in 0 to STATUSFIFO_TRG_WIDTH_C-1 loop
-         v.trgNum(trgBit)  := trgNum(trgBit)  and not(r.dummyHeader);
+      for trgBit in 0 to TRG_WIDTH_C-1 loop
+         v.trgNum(trgBit) := trgNum(trgBit) and not(r.dummyHeader);
       end loop;
       --
       v.overOccError := overOccError and not(r.dummyHeader);
       v.colPause     := colPause     and not(r.dummyHeader);
       v.colFifoError := colFifoError and not(r.dummyHeader);
-      v.alignError   := alignError   and not(r.dummyHeader);
 
       -- header is always TX'd default; being overriden otherwise
       v.arbDout := v.dataHeader;
@@ -302,7 +298,6 @@ begin
       v.dataHeader(OVEROCC_FLAG_POS_C)     := v.overOccError;
       v.dataHeader(PAUSE_FLAG_POS_C)       := v.colPause;
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
-      v.dataHeader(TRG_ALIGN_ERROR_POS_C)  := v.alignError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
