@@ -73,7 +73,7 @@ architecture rtl of Pix2PgpColumnManager is
    type StateType is (
       IDLE_S,         -- 00
       IN_FRAME_S,     -- 01
-      WAIT_CLOSE_S,    -- 10
+      WAIT_CLOSE_S,   -- 10
       WREN_STATUS_S); -- 11
 
    type RegType is record
