@@ -47,6 +47,7 @@ architecture rtl of AsicFlowCtrl is
     signal done        : std_logic;
 
 begin
+
     -- Edge detection for tok_fb
     process(clk)
     begin

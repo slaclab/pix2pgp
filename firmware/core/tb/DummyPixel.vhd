@@ -36,16 +36,17 @@ entity DummyPixel is
       WAIT_WREN_G    : natural := 3;
       COL_ID_G       : natural := 0);
    port (
-      clk     : in  sl;
-      rst     : in  sl := not RST_POLARITY_G;
-      sro     : in  sl;
-      pause   : in  sl;
-      hitLen  : in  slv(9 downto 0);
-      tok     : out sl;
-      tokFb   : out sl;
-      ackN    : out sl;
-      wrEn    : out sl;
-      dout    : out slv(SPARSE_DWIDTH_C-1 downto 0));
+      clk      : in  sl;
+      rst      : in  sl := not RST_POLARITY_G;
+      sro      : in  sl;
+      pause    : in  sl;
+      hitLen   : in  slv(9 downto 0);
+      pauseAck : out sl;
+      tok      : out sl;
+      tokFb    : out sl;
+      ackN     : out sl;
+      wrEn     : out sl;
+      dout     : out slv(SPARSE_DWIDTH_C-1 downto 0));
 end DummyPixel;
 
 architecture rtl of DummyPixel is
@@ -65,6 +66,8 @@ architecture rtl of DummyPixel is
       ackN    : sl;
       wrEn    : sl;
       pause   : sl;
+      busy    : sl;
+      pauseAck: sl;
       dout    : slv(SPARSE_DWIDTH_C-1 downto 0);
       --
       waitCnt : natural range 0 to 1023;
@@ -82,6 +85,8 @@ architecture rtl of DummyPixel is
       ackN    => '1',
       wrEn    => '0',
       pause   => '0',
+      busy    => '0',
+      pauseAck=> '0',
       dout    => (others => '0'),
       --
       waitCnt => 0,
@@ -123,14 +128,17 @@ comb : process (rst, r, hitLen, sro, pause) is
          ----------------------------------------------------------------------
          when IDLE_S =>
             -- only register the hitLen if idle
-            v.hitLen  := hitLen;
-            v.tokFb   := '1';
-            v.waitCnt := 0;
-            v.hitCnt  := toSlv(1, 8);
-            v.ackCnt  := 0;
+            v.hitLen   := hitLen;
+            v.tokFb    := '1';
+            v.waitCnt  := 0;
+            v.hitCnt   := toSlv(1, 8);
+            v.ackCnt   := 0;
+            v.busy     := '0';
+            v.pauseAck := '0';
 
             if (r.sro = '1') then
                v.tokFb := '0';
+               v.busy  := '1';
                v.dout(19 downto 16) := r.trgCnt;
                if (r.hitLen > 0) then
                   v.state := ISSUE_ACKN_S;
@@ -149,6 +157,8 @@ comb : process (rst, r, hitLen, sro, pause) is
                      v.ackCnt  := r.ackCnt + 1;
                      v.state   := ISSUE_WREN_S;
                   end if;
+               else
+                  v.pauseAck := r.pause;
                end if;
 
             ----------------------------------------------------------------------
@@ -168,6 +178,8 @@ comb : process (rst, r, hitLen, sro, pause) is
                         v.state  := ISSUE_ACKN_S;
                      end if;
                   end if;
+               else
+                  v.pauseAck := r.pause;
                end if;
 
             ----------------------------------------------------------------------
@@ -185,6 +197,7 @@ comb : process (rst, r, hitLen, sro, pause) is
       ackN   <= r.ackN;
       wrEn   <= r.wrEn;
       dout   <= r.dout;
+      pauseAck <= r.pauseAck;
 
       ----------------------------------------------------------------------
 

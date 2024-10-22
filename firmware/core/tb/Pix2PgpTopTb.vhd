@@ -66,6 +66,8 @@ architecture test of Pix2PgpTopTb is
    signal ackN      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal wrEn      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal pause     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal pauseAck  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal sparseBusy: slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal din       : Pix2PgpSparseDinArray := (others => (others => '0'));
 
    type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
@@ -128,16 +130,17 @@ begin
             WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
             COL_ID_G       => col)
          port map(
-            clk     => sparseClk,
-            rst     => rst,
-            sro     => sroFinal,
-            pause   => pause(col),
-            hitLen  => hitLen(col),
-            tok     => open,
-            tokFb   => tokFb(col),
-            ackN    => ackN(col),
-            wrEn    => wrEn(col),
-            dout    => din(col));
+            clk      => sparseClk,
+            rst      => rst,
+            sro      => sroFinal,
+            pause    => pause(col),
+            hitLen   => hitLen(col),
+            pauseAck => pauseAck(col),
+            tok      => open,
+            tokFb    => tokFb(col),
+            ackN     => ackN(col),
+            wrEn     => wrEn(col),
+            dout     => din(col));
 
       U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
         generic map(
@@ -147,7 +150,7 @@ begin
             df_reset_n      => rst,
             sro             => sroFinal,
             tok_fb          => tokFb(col),
-            sparse_itf_busy => '0',
+            sparse_itf_busy => sparseBusy(col),
             pix2pgp_busy    => busy(col),
             sof             => sof(col),
             eof             => eof(col),
@@ -176,12 +179,12 @@ begin
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
          rst          => rst,
-         sro          => sroFinal,
          pause        => pause,
          sof          => sof,
          eof          => eof,
          busy         => busy,
          overOcc      => overOcc,
+         pauseAck     => pauseAck,
          wrEn         => wrEn,
          din          => din,
          pgpDout      => pgpDout,

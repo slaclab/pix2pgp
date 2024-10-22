@@ -32,8 +32,7 @@ entity Pix2PgpColumnManager is
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
       DATA_DEPTH_G      : integer  := 32;
-      STATUS_DEPTH_G    : integer  := 32;
-      WAIT_CNT_WIDTH_G  : integer  := 2);
+      STATUS_DEPTH_G    : integer  := 32);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -46,6 +45,7 @@ entity Pix2PgpColumnManager is
       sof       : in  sl;
       eof       : in  sl;
       overOcc   : in  sl;
+      pauseAck  : in  sl;
       busy      : out sl;
       pause     : out sl;
       -- Arbiter Interface
@@ -71,10 +71,10 @@ architecture rtl of Pix2PgpColumnManager is
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
-      IDLE_S,         -- 00
-      IN_FRAME_S,     -- 01
-      WAIT_CLOSE_S,   -- 10
-      WREN_STATUS_S); -- 11
+      IDLE_S,        -- 00
+      IN_FRAME_S,    -- 01
+      WREN_STATUS_S, -- 10
+      IN_PAUSE_S);   -- 11
 
    type RegType is record
       -- i/o
@@ -91,7 +91,6 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
-      waitCnt       : slv(WAIT_CNT_WIDTH_G-1 downto 0);
       state         : StateType;
    end record RegType;
 
@@ -110,7 +109,6 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        => '0',
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
-      waitCnt       => (others => '0'),
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -122,8 +120,8 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, statusRd,
-                   dataRd, dataFifoEmptyDly, dataFifoFullDly,
-                   statusFifoDout, statusFifoFullDly, overOcc) is
+                   dataRd, dataFifoFullDly, pauseAck, overOcc,
+                   statusFifoDout, statusFifoFullDly) is
       variable v : RegType;
    begin
 
@@ -166,44 +164,27 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
+         -- wait for end-of-frame, or for over-occupancy, or for interface logic
+         -- to acknowledge pause
          when IN_FRAME_S =>
 
-            -- clear the flag here if was in pause before
-            if (r.pause = '1') then
-               v.pause := dataFifoFullDly;
-               -- alternative; keep for now
-               --v.pause := not(dataFifoEmptyDly);
-            end if;
+            v.pause := dataFifoFullDly;
 
-            -- if FIFO gets full for the first time, write the status immediately;
-            -- also tie the pause flag to the fullData signal
-            if (dataFifoFullDly = '1' and r.pause = '0') then
-               v.pause := dataFifoFullDly;
-               v.state := WAIT_CLOSE_S;
+            -- if FIFO gets full, interface logic will register that first,
+            -- and then give the green light to the ColManager to write the status
+            if (pauseAck = '1') then
+               v.state := WREN_STATUS_S;
             end if;
 
             -- regular EOF (is never issued while in pause)
             -- posedge detection
             if (v.eof = '1' and r.eof = '0') then
-               v.state := WAIT_CLOSE_S;
+               v.state := WREN_STATUS_S;
             end if;
 
             -- overOcc can happen because of analog (pause is low);
             -- ...or because of digital backpressure (pause is high)
             if (v.overOcc = '1') then
-               v.state := WAIT_CLOSE_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- *always* wait before closing the event and writing the status word!
-         -- why? because there might be one write-enable that was missed;
-         -- there are sometimes race conditions between the assertion of the
-         -- pause/eof/overOcc and the last write-enable pulse
-         when WAIT_CLOSE_S =>
-            v.waitCnt := r.waitCnt + 1;
-
-            if allBits(r.waitCnt, '1') then -- counter overflows and rolls to 0
                v.state := WREN_STATUS_S;
             end if;
 
@@ -226,12 +207,24 @@ begin
             v.wrEnCnt  := (others => '0');
 
             -- state switching
-            if (v.pause = '1') then
-               v.state  := IN_FRAME_S;
-            elsif (r.overOcc = '1') then -- have to use the r. here (it gets cleared)
+            if (r.pause = '1') then
+               v.state  := IN_PAUSE_S;
+            elsif (r.overOcc = '1') then
                v.state  := IN_FRAME_S;
             else
                v.state  := IDLE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- wait for the interface logic to clear the pause-acknowledgment
+         when IN_PAUSE_S =>
+            v.pause := dataFifoFullDly;
+
+            if (pauseAck = '0') then
+               v.state := WREN_STATUS_S;
+            elsif (v.overOcc = '1') then
+               -- over-occupancy while in pause
+               v.state := WREN_STATUS_S;
             end if;
 
       end case;

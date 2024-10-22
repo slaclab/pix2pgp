@@ -65,6 +65,7 @@ entity Pix2PgpSparkPixSTop is
       sof          : in  std_logic_vector(23 downto 0);
       eof          : in  std_logic_vector(23 downto 0);
       overOcc      : in  std_logic_vector(23 downto 0);
+      pauseAck     : in  std_logic_vector(23 downto 0);
       wrEn         : in  std_logic_vector(23 downto 0);
       busy         : out std_logic_vector(23 downto 0);
       pause        : out std_logic_vector(23 downto 0);
@@ -111,6 +112,7 @@ begin
          sof          => sof,
          eof          => eof,
          overOcc      => overOcc,
+         pauseAck     => pauseAck,
          wrEn         => wrEn,
          din          => din,
          busy         => busy,

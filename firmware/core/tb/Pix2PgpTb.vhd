@@ -39,11 +39,11 @@ entity Pix2PgpTb is
       sparseClk    : in  sl;
       pgpClk       : in  sl;
       rst          : in  sl := not RST_POLARITY_G;
-      sro          : in  sl;
       -- Pixel Interface
       sof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       eof          : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       overOcc      : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pauseAck     : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       din          : in  Pix2PgpSparseDinArray;
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -104,6 +104,7 @@ begin
          sof          => sof,
          eof          => eof,
          overOcc      => overOcc,
+         pauseAck     => pauseAck,
          busy         => busy,
          pause        => pause,
          -- Pgp4TxLite Interface
