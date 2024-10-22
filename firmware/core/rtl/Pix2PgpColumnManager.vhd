@@ -131,7 +131,7 @@ begin
       -- Register inputs
       v.sof      := sof;
       v.eof      := eof;
-      v.dataWr   := wrEn;
+      v.dataWr   := wrEn and not(r.pause); -- TO-DO: remove me (by adding ackNCnt handshaking)
       v.din      := din;
       v.statusRd := statusRd;
       v.dataRd   := dataRd;
@@ -170,7 +170,9 @@ begin
 
             -- clear the flag here if was in pause before
             if (r.pause = '1') then
-               v.pause := not(dataFifoEmptyDly);
+               v.pause := dataFifoFullDly;
+               -- alternative; keep for now
+               --v.pause := not(dataFifoEmptyDly);
             end if;
 
             -- if FIFO gets full for the first time, write the status immediately;
