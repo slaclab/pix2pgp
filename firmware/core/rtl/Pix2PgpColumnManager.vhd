@@ -32,7 +32,8 @@ entity Pix2PgpColumnManager is
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
       DATA_DEPTH_G      : integer  := 32;
-      STATUS_DEPTH_G    : integer  := 32);
+      STATUS_DEPTH_G    : integer  := 32;
+      WAIT_CNT_WIDTH_G  : integer  := 2);
    port(
       -- General Interface
       sparseClk : in  sl;
@@ -72,7 +73,8 @@ architecture rtl of Pix2PgpColumnManager is
    type StateType is (
       IDLE_S,         -- 00
       IN_FRAME_S,     -- 01
-      WREN_STATUS_S); -- 10
+      WAIT_CLOSE_S,    -- 10
+      WREN_STATUS_S); -- 11
 
    type RegType is record
       -- i/o
@@ -89,6 +91,7 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
+      waitCnt       : slv(WAIT_CNT_WIDTH_G-1 downto 0);
       state         : StateType;
    end record RegType;
 
@@ -107,6 +110,7 @@ architecture rtl of Pix2PgpColumnManager is
       dataWr        => '0',
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
+      waitCnt       => (others => '0'),
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -129,7 +133,7 @@ begin
       -- Register inputs
       v.sof      := sof;
       v.eof      := eof;
-      v.dataWr   := wrEn and not(r.pause); -- TO-DO: remove me (by adding ackNCnt handshaking)
+      v.dataWr   := wrEn;
       v.din      := din;
       v.statusRd := statusRd;
       v.dataRd   := dataRd;
@@ -176,18 +180,30 @@ begin
             -- also tie the pause flag to the fullData signal
             if (dataFifoFullDly = '1' and r.pause = '0') then
                v.pause := dataFifoFullDly;
-               v.state := WREN_STATUS_S;
+               v.state := WAIT_CLOSE_S;
             end if;
 
             -- regular EOF (is never issued while in pause)
             -- posedge detection
             if (v.eof = '1' and r.eof = '0') then
-               v.state := WREN_STATUS_S;
+               v.state := WAIT_CLOSE_S;
             end if;
 
             -- overOcc can happen because of analog (pause is low);
             -- ...or because of digital backpressure (pause is high)
             if (v.overOcc = '1') then
+               v.state := WAIT_CLOSE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- *always* wait before closing the event and writing the status word!
+         -- why? because there might be one write-enable that was missed;
+         -- there are sometimes race conditions between the assertion of the
+         -- pause/eof/overOcc and the last write-enable pulse
+         when WAIT_CLOSE_S =>
+            v.waitCnt := r.waitCnt + 1;
+
+            if allBits(r.waitCnt, '1') then -- counter overflows and rolls to 0
                v.state := WREN_STATUS_S;
             end if;
 
