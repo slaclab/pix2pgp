@@ -29,7 +29,6 @@ entity Pix2PgpColumnManager is
       TPD_G             : time     := 1 ns;
       RST_ASYNC_G       : boolean  := false;
       RST_POLARITY_G    : sl       := '1';
-      WAIT_STATUS_G     : boolean  := true;
       DATAFIFO_PIPE_G   : positive := 1;
       STATUSFIFO_PIPE_G : positive := 1;
       DATA_DEPTH_G      : integer  := 32;
@@ -58,8 +57,6 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   constant WAIT_WREN_STATUS_WIDTH_C : integer := 1;
-
    signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataFifoEmpty      : sl := '0';
    signal dataFifoEmptyDly   : sl := '0';
@@ -74,10 +71,10 @@ architecture rtl of Pix2PgpColumnManager is
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
-      IDLE_S,             -- 00
-      IN_FRAME_S,         -- 01
-      WAIT_WREN_STATUS_S, -- 10
-      WREN_STATUS_S);     -- 11
+      IDLE_S,         -- 00
+      IN_FRAME_S,     -- 01
+      WREN_STATUS_S,  -- 10
+      WAIT_PAUSE_S);  -- 11
 
    type RegType is record
       -- i/o
@@ -92,7 +89,6 @@ architecture rtl of Pix2PgpColumnManager is
       -- internal
       statusWr      : sl;
       dataWr        : sl;
-      waitCnt       : slv(WAIT_WREN_STATUS_WIDTH_C-1 downto 0);
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       state         : StateType;
@@ -111,7 +107,6 @@ architecture rtl of Pix2PgpColumnManager is
       -- internal
       statusWr      => '0',
       dataWr        => '0',
-      waitCnt       => (others => '0'),
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
       state         => IDLE_S);
@@ -125,7 +120,7 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, statusRd,
-                   dataRd, dataFifoEmptyDly, dataFifoFullDly,
+                   dataRd, dataFifoEmptyDly, dataFifoFullDly, pauseAck,
                    statusFifoDout, statusFifoFullDly, overOcc) is
 
       variable v : RegType;
@@ -173,22 +168,12 @@ begin
          -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
          when IN_FRAME_S =>
 
-            -- clear the flag here if was in pause before
-            -- clear it once the FIFO gets fully empty
-            if (r.pause = '1') then
-               v.pause := dataFifoFullDly;
-            end if;
+            v.pause := dataFifoFullDly;
 
-            -- if FIFO gets full for the first time, write the status immediately;
-            -- also tie the pause flag to the fullData signal
-            if dataFifoFullDly = '1' and r.pause = '0' then
-               v.pause := dataFifoFullDly;
-
-               if WAIT_STATUS_G then
-                  v.state := WAIT_WREN_STATUS_S;
-               else
-                  v.state := WREN_STATUS_S;
-               end if;
+            -- if FIFO gets full, write the status *after*
+            -- the FIFO-writing logic acknowledges the pause
+            if pauseAck = '1' then
+               v.state := WREN_STATUS_S;
             end if;
 
             -- regular EOF (is never issued while in pause)
@@ -198,24 +183,6 @@ begin
             -- ...or because of digital backpressure (pause is high)
                (v.overOcc = '1') then
 
-               if WAIT_STATUS_G then
-                  v.state := WAIT_WREN_STATUS_S;
-               else
-                  v.state := WREN_STATUS_S;
-               end if;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- option to wait before writing into the status FIFO;
-         -- this alleviates some potential race conditions.
-         -- sometimes, *after* the frame delimiter has been issued,
-         -- i.e. (eof/pause/overOcc), *another* wrEn is issued as well.
-         -- need to write the status word *always before the last wrEn*
-         when WAIT_WREN_STATUS_S =>
-            v.waitCnt := r.waitCnt + 1;
-
-            if allBits(r.waitCnt, '1') then
-               -- waitCnt rolls over automatically (no need to reset)
                v.state := WREN_STATUS_S;
             end if;
 
@@ -239,11 +206,20 @@ begin
 
             -- state switching
             if (r.pause = '1') then
-               v.state := IN_FRAME_S;
+               v.state := WAIT_PAUSE_S;
             elsif (r.overOcc = '1') then -- have to use the r. here (it gets cleared)
                v.state := IN_FRAME_S;
             else
                v.state := IDLE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- wait for the FIFO-writing FSM to de-assert the pause-acknowledgment
+         when WAIT_PAUSE_S =>
+            v.pause := dataFifoFullDly;
+
+            if pauseAck = '0' then
+               v.state := WREN_STATUS_S;
             end if;
 
       end case;
