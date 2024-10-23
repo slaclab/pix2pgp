@@ -224,7 +224,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          DWARE_DEPTH_G   => ADAPTER_DEPTH_G,
-         DWARE_AF_LVL_G  => ADAPTER_AF_LVL_G)         
+         DWARE_AF_LVL_G  => ADAPTER_AF_LVL_G)
       port map(
          -- General Interface
          pgpClk   => pgpClk,

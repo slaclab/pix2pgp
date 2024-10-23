@@ -204,6 +204,14 @@ begin
             v.colPause      := uOr(v.columnPause);
             v.colBitmaskArb := v.colBitmask;
 
+            -- override if in pause;
+            -- forces status readout on paused cols only
+            -- suppress alignment errors if in true pause mode
+            if r.pause = '1' then
+               v.alignError    := '0';
+               v.colBitmaskArb := v.pauseReadBmsk;
+            end if;
+
             -- state switching;
             -- first raise the start flag...
             if r.arbiterBusy = '0' and v.arbiterStart = '0' then
