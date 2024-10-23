@@ -215,10 +215,13 @@ begin
 
          ----------------------------------------------------------------------
          -- wait for the FIFO-writing FSM to de-assert the pause-acknowledgment
+         -- or to receive an over-occupancy flag
          when WAIT_PAUSE_S =>
             v.pause := dataFifoFullDly;
 
             if pauseAck = '0' then
+               v.state := IN_FRAME_S;
+            elsif v.overOcc = '1' then
                v.state := WREN_STATUS_S;
             end if;
 
