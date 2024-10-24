@@ -74,6 +74,43 @@ architecture rtl of Pix2PgpArbiter is
       return result;
    end rightShift;
 
+   -- col-select done
+   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean is
+      variable result: boolean := false;
+   begin
+      if inReverseRead = '1' and allBits(inColSel, '0') then
+         result := true;
+      elsif inReverseRead = '0' and conv_integer(unsigned(inColSel)) = NUM_OF_COL_MANAGERS_C-1 then
+         result := true;
+      end if;
+      return result;
+   end colSelDone;
+
+   -- col-select reset (set to max col value or zero)
+   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv is
+      variable result: slv(inColSelLen-1 downto 0) := (others => '0');
+   begin
+      if inReverseRead = '1' then
+         result := conv_std_logic_vector(NUM_OF_COL_MANAGERS_C-1, result'length);
+      else
+         result := (others => '0');
+      end if;
+      return result;
+   end colSelReset;
+
+   -- col-select switch (incr or decr)
+   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv is
+      constant inColSelLen: integer := inColSel'LENGTH-1;
+      variable result: slv(inColSelLen downto 0) := (others => '0');
+   begin
+      if inReverseRead = '1' then
+         result := inColSel - 1;
+      else
+         result := inColSel + 1;
+      end if;
+      return result;
+   end colSelSwitch;
+
    signal arbReady : sl := '0';
    signal arbValid : sl := '0';
    signal arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
@@ -103,6 +140,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   : sl;
       headerOnly   : sl;
       dummyHeader  : sl;
+      reverseRead  : sl;
       wordCnt      : slv(2 downto 0);
       waitCnt      : slv(1 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
@@ -130,6 +168,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   => '0',
       headerOnly   => '0',
       dummyHeader  => '0',
+      reverseRead  => '0',
       wordCnt      => (others => '0'),
       waitCnt      => (others => '0'),
       dataHeader   => (others => '0'),
@@ -194,9 +233,9 @@ begin
          -- supervisor signals a start of sequence
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
-            v.arbBusy     := '0';
-            v.arbValid    := '0';
-            v.colSel      := (others => '0');
+            v.arbBusy  := '0';
+            v.arbValid := '0';
+            v.colSel   := colSelReset(v.colSel'length, r.reverseRead);
 
             if arbStart = '1' and r.dummyHeader = '0' and v.arbValid = '0' and pgpReady = '1' then
                v.arbBusy  := '1';
@@ -225,10 +264,11 @@ begin
          -- if non-zero, write the length and start reading immediately
          when CHECK_BITMASK_S =>
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
-               v.colSel := r.colSel + 1;
-               if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                  v.arbBusy := '0';
-                  v.state   := IDLE_S;
+               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
+               if colSelDone(r.colSel, r.reverseRead) then
+                  v.arbBusy     := '0';
+                  v.reverseRead := not(r.reverseRead);
+                  v.state       := IDLE_S;
                end if;
 
             else
@@ -266,12 +306,13 @@ begin
                   -- Done with column
                   v.dataRd   := '0';
                   v.arbValid := '0';
-                  v.colSel   := r.colSel + 1;
+                  v.colSel   := colSelSwitch(r.colSel, r.reverseRead);
                   v.state    := CHECK_BITMASK_S;
                   -- Check if last column
-                  if (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
-                     v.arbBusy := '0';
-                     v.state   := IDLE_S;
+                  if colSelDone(r.colSel, r.reverseRead) then
+                     v.arbBusy     := '0';
+                     v.reverseRead := not(r.reverseRead);
+                     v.state       := IDLE_S;
                   end if;
                end if;
             end if;
@@ -299,6 +340,7 @@ begin
       v.dataHeader(PAUSE_FLAG_POS_C)       := v.colPause;
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
+      v.dataHeader(REVERSE_READ_POS_C)     := r.reverseRead;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;

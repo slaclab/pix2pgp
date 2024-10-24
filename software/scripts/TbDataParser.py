@@ -27,7 +27,8 @@ parser.add_argument(
 args = parser.parse_args()
 
 def headerEval(header):
-    empty  = True
+    empty   = True
+    reverse = False
     bitmask = []
     trigger = 0
 
@@ -35,6 +36,7 @@ def headerEval(header):
     _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
     _columnFull  = (header >> np.uint8(37)) & np.uint8(0x01)
     _dummyHeader = (header >> np.uint8(36)) & np.uint8(0x01)
+    _reverseRead = (header >> np.uint8(35)) & np.uint8(0x01)
     # some reserved bits
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
@@ -50,8 +52,9 @@ def headerEval(header):
         empty = False
         bitmask = _bitmask
         trigger = _trigger
+        reverse = bool(_reverseRead)
 
-    return empty, bitmask, trigger
+    return empty, bitmask, trigger, reverse
 
 def _hitPrinter(hits, decode, length):
     hit0 = (hits >> np.uint8(20)) & np.uint32(0xFFFFF)
@@ -102,6 +105,7 @@ if __name__ == "__main__":
     _colSel  = 0
     _bitmask = []
     _trigger = 0
+    _reverse = 0
     state    = "header_s"
 
     print(f"/////////////////////////////////////////////////////////////////////////")
@@ -109,18 +113,22 @@ if __name__ == "__main__":
         ########################################################################################
         if state == "header_s":
             _colSel = 0
-            _isEmpty, _bitmask, _trigger = headerEval(_lineArray[_line])
+            _isEmpty, _bitmask, _trigger, _reverse = headerEval(_lineArray[_line])
             _line += 1
+            if _reverse:
+                _colSel = 24
             if not(_isEmpty):
                 state = "bitmaskCheck_s"
         ########################################################################################
         elif state == "bitmaskCheck_s":
-            # time.sleep(0.2)
-            if _colSel < 24:
+            if (_colSel < 24 and not(_reverse)) or (_colSel >= 0 and _reverse):
                 if bitmaskCheck(_bitmask, _colSel):
                     state = "lenParse_s"
                 else:
-                    _colSel += 1
+                    if not(_reverse):
+                        _colSel += 1
+                    else:
+                        _colSel -= 1
             else:
                 print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                 print(f"Trigger = {_trigger} decoding Done. Next Event...")
@@ -142,6 +150,9 @@ if __name__ == "__main__":
             _lenCnt = _lenCnt - 2
             _line += 1
             if _lenCnt <= 0:
-                _colSel += 1
+                if not(_reverse):
+                    _colSel += 1
+                else:
+                    _colSel -= 1
                 state = "bitmaskCheck_s"
                 print(f"=========================================================================")

@@ -214,12 +214,12 @@ begin
 
             -- state switching;
             -- first raise the start flag...
-            if r.arbiterBusy = '0' and v.arbiterStart = '0' then
+            if v.arbiterBusy = '0' and v.arbiterStart = '0' then
                v.arbiterStart := '1';
             end if;
 
             -- ...then switch and wait
-            if r.arbiterBusy = '1' and v.arbiterStart = '1' then
+            if v.arbiterBusy = '1' and v.arbiterStart = '1' then
                v.arbiterStart := '0';
                v.state        := WAIT_ARB_S;
             end if;
