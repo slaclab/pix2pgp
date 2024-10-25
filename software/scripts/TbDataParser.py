@@ -141,7 +141,16 @@ if __name__ == "__main__":
             print(f"=========================================================================")
             print(f"Length of Hits = {_len} for Col = {_colSel}")
             _lenCnt = _len
-            state = "hitDecode_s"
+            # check this! there is a chance that after a post-pause-release a column does
+            # not have more hits and writes a dataLen=0
+            if _len > 0:
+                state = "hitDecode_s"
+            else:
+                if not(_reverse):
+                    _colSel += 1
+                else:
+                    _colSel -= 1
+                state = "bitmaskCheck_s"
             _line += 1
         ########################################################################################
         elif state == "hitDecode_s":

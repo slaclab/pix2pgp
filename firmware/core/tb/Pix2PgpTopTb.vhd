@@ -125,7 +125,7 @@ begin
             TPD_G          => TPD_G,
             RST_ASYNC_G    => RST_ASYNC_G,
             RST_POLARITY_G => RST_POLARITY_G,
-            WAIT_FB_G      => 2,
+            WAIT_FB_G      => 4,
             WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
             WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
             COL_ID_G       => col)
@@ -406,16 +406,37 @@ begin
      sro  <= '0';
 
      -- will force pause
-    --wait for CLK_PERIOD_SPARSE_C*293;
-    -- for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(34, hitLen(col)'length);
-    -- end loop;
-    -- sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    -- sro  <= '0';
+    wait for CLK_PERIOD_SPARSE_C*1693;
+     hitLen(0)  <= toSlv(0,  hitLen(5)'length);
+     hitLen(1)  <= toSlv(32,  hitLen(5)'length);
+     hitLen(2)  <= toSlv(0,  hitLen(5)'length);
+     hitLen(3)  <= toSlv(0,  hitLen(5)'length);
+     hitLen(4)  <= toSlv(4,  hitLen(5)'length);
+     hitLen(5)  <= toSlv(22,  hitLen(5)'length);
+     hitLen(6)  <= toSlv(0,  hitLen(6)'length);
+     hitLen(7)  <= toSlv(1,  hitLen(7)'length);
+     hitLen(8)  <= toSlv(5,  hitLen(8)'length);
+     hitLen(9)  <= toSlv(0,  hitLen(9)'length);
+     hitLen(10) <= toSlv(4,  hitLen(5)'length);
+     hitLen(11) <= toSlv(20,  hitLen(5)'length);
+     hitLen(12) <= toSlv(0,  hitLen(5)'length);
+     hitLen(13) <= toSlv(3,  hitLen(5)'length);
+     hitLen(14) <= toSlv(4,  hitLen(5)'length);
+     hitLen(15) <= toSlv(2,  hitLen(5)'length);
+     hitLen(16) <= toSlv(0,  hitLen(6)'length);
+     hitLen(17) <= toSlv(2,  hitLen(7)'length);
+     hitLen(18) <= toSlv(18,  hitLen(8)'length);
+     hitLen(19) <= toSlv(0,  hitLen(9)'length);
+     hitLen(20) <= toSlv(3,  hitLen(5)'length);
+     hitLen(21) <= toSlv(0,  hitLen(5)'length);
+     hitLen(22) <= toSlv(4,  hitLen(5)'length);
+     hitLen(23) <= toSlv(0,  hitLen(5)'length);
+     sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+     sro  <= '0';
 
-    -- !!!! note the *493
-    --wait for CLK_PERIOD_SPARSE_C*493;
+    -- !!!! note the long wait
+    --wait for CLK_PERIOD_SPARSE_C*1693;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
     --  hitLen(1)  <= toSlv(2,  hitLen(5)'length);
     --  hitLen(2)  <= toSlv(0,  hitLen(5)'length);
@@ -444,8 +465,7 @@ begin
     --wait for CLK_PERIOD_SPARSE_C*2;
     --  sro  <= '0';
 
-    -- !!!! note the *493
-    --wait for CLK_PERIOD_SPARSE_C*493;
+    --wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
     --  hitLen(1)  <= toSlv(4,  hitLen(5)'length);
     --  hitLen(2)  <= toSlv(3,  hitLen(5)'length);

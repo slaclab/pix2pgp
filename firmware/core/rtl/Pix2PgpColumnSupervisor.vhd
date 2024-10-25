@@ -66,19 +66,17 @@ architecture rtl of Pix2PgpColumnSupervisor is
       arbiterStart   : sl;
       colFifoError   : sl;
       overOccError   : sl;
-      alignError     : sl;
       colPause       : sl;
       colEmpty       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       pause          : sl;
-      evalFlags      : sl;
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colBitmaskArb  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      pauseReadBmsk  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum         : slv(TRG_WIDTH_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
@@ -91,19 +89,17 @@ architecture rtl of Pix2PgpColumnSupervisor is
       arbiterStart   => '0',
       colFifoError   => '0',
       overOccError   => '0',
-      alignError     => '0',
       colPause       => '0',
       colEmpty       => '0',
       colBitmask     => (others => '0'),
       -- internal
       pause          => '0',
-      evalFlags      => '0',
       dataReady      => (others => '0'),
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
       columnPause    => (others => '0'),
       colBitmaskArb  => (others => '0'),
-      pauseReadBmsk  => (others => '0'),
+      statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
       trgNum         => (others => '1'), -- so that on the first trigger it goes to zero
       waitCnt        => (others => '0'),
@@ -147,32 +143,27 @@ begin
             v.colBitmask(col) := '1';
          end if;
 
-         -- evaluate status/error flags
-         if r.evalFlags = '1' then
+         -- check for any over-occupancy errors
+         if  toBoolean(statusBusGlbl(col).overOcc)
+         and toBoolean(r.columnEnable(col)) then
+            v.colOverOccErr(col) := '1';
+         else
+            v.colOverOccErr(col) := '0';
+         end if;
 
-            -- check for any over-occupancy errors
-            if  toBoolean(statusBusGlbl(col).overOcc)
-            and toBoolean(r.columnEnable(col)) then
-               v.colOverOccErr(col) := '1';
-            else
-               v.colOverOccErr(col) := '0';
-            end if;
+         -- check for any columnFull errors
+         if  toBoolean(statusBusGlbl(col).columnFull)
+         and toBoolean(r.columnEnable(col)) then
+            v.colFifoFullErr(col) := '1';
+         else
+            v.colFifoFullErr(col) := '0';
+         end if;
 
-            -- check for any columnFull errors
-            if  toBoolean(statusBusGlbl(col).columnFull)
-            and toBoolean(r.columnEnable(col)) then
-               v.colFifoFullErr(col) := '1';
-            else
-               v.colFifoFullErr(col) := '0';
-            end if;
-
-            if  toBoolean(statusBusGlbl(col).pause)
-            and toBoolean(r.columnEnable(col)) then
-               v.columnPause(col) := '1';
-            else
-               v.columnPause(col) := '0';
-            end if;
-
+         if  toBoolean(statusBusGlbl(col).pause)
+         and toBoolean(r.columnEnable(col)) then
+            v.columnPause(col) := '1';
+         else
+            v.columnPause(col) := '0';
          end if;
 
       end loop;
@@ -184,32 +175,28 @@ begin
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
-            v.pause    := '0';
-            v.waitCnt  := (others => '0');
-            v.colEmpty := not(uOr(v.dataReady));
+            v.pause        := '0';
+            v.waitCnt      := (others => '0');
+            v.colEmpty     := not(uOr(v.dataReady));
+            v.statusRdBmsk := (others => '1');
 
             if toBoolean(uAnd(v.dataReady)) then
-               v.evalFlags := '1';
-               v.trgNum    := r.trgNum + 1;
-               v.state     := UPDATE_FLAGS_S;
+               v.trgNum := r.trgNum + 1;
+               v.state  := UPDATE_FLAGS_S;
             end if;
 
          ----------------------------------------------------------------------
          -- update the arbiter status bits before starting the readout process
          when UPDATE_FLAGS_S =>
-            v.evalFlags     := '0';
             v.colEmpty      := '0';
             v.colFifoError  := uOr(v.colFifoFullErr);
             v.overOccError  := uOr(v.colOverOccErr);
             v.colPause      := uOr(v.columnPause);
-            v.colBitmaskArb := v.colBitmask;
 
-            -- override if in pause;
-            -- forces status readout on paused cols only
-            -- suppress alignment errors if in true pause mode
-            if r.pause = '1' then
-               v.alignError    := '0';
-               v.colBitmaskArb := v.pauseReadBmsk;
+            -- if not in pause, get the regular bitmask;
+            -- if in pause, bitmask is grabbed on DONE
+            if r.pause = '0' then
+               v.colBitmaskArb := v.colBitmask;
             end if;
 
             -- state switching;
@@ -229,31 +216,35 @@ begin
          when WAIT_ARB_S =>
             if r.arbiterBusy = '0' then
                v.statusRd := '1'; -- pop the status word
+               v.pause    := '0'; -- clear the flag
                v.state    := DONE_S;
+
+               -- grab the previously-paused columns if last event was a pause
+               -- also set the pause flag
+               if (r.colPause = '1') then
+                  v.pause         := '1';
+                  v.colBitmaskArb := r.columnPause;
+               end if;
             end if;
 
          ----------------------------------------------------------------------
-         -- pause event. change the status-readout mask and raise the flag;
+         -- pause event. evaluate the status of the status bus only on paused cols;
          -- wait for the paused columns to resume and close-out their event
          -- (or pause themselves again);
          when PAUSE_S =>
-            -- this internally-used pause flag controls the way columns are read-out
-            v.pause := '1';
+            -- only pop the status words from the paused columns that are queried
+            v.statusRdBmsk := v.colBitmaskArb;
 
-            if (v.columnPause and v.dataReady) = v.columnPause then
-               v.evalFlags     := '1';
-               v.pauseReadBmsk := v.columnPause;
-               v.state         := UPDATE_FLAGS_S;
+            if (v.colBitmaskArb and v.dataReady) = v.colBitmaskArb then
+               v.state := UPDATE_FLAGS_S;
             end if;
 
             -- corner-case: another SRO came and now everyone has data again
             -- i.e. pause flag is dropped and normal operation is resumed
-            -- (probably an over-occupancy/trigger misalignment though)
             if toBoolean(uAnd(v.dataReady)) then
-               v.evalFlags := '1';
-               v.trgNum    := r.trgNum + 1;
-               v.pause     := '0';
-               v.state     := UPDATE_FLAGS_S;
+               v.pause  := '0';
+               v.trgNum := r.trgNum + 1;
+               v.state  := UPDATE_FLAGS_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -266,7 +257,7 @@ begin
                v.state := MON_STATUS_S;
 
                -- override; the event that was just read was a paused event
-               if (r.colPause = '1') then
+               if (v.pause = '1') then
                   v.state := PAUSE_S;
                end if;
             end if;
@@ -285,12 +276,7 @@ begin
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
-         -- note the difference if in pause mode; see relevant state
-         if r.pause = '0' then
-            statusRd(col) <= v.statusRd and (r.columnEnable(col));
-         else
-            statusRd(col) <= v.statusRd and v.pauseReadBmsk(col);
-         end if;
+         statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and r.columnEnable(col);
       end loop;
 
       -- Reset

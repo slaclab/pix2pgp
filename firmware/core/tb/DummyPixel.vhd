@@ -149,7 +149,8 @@ comb : process (rst, r, hitLen, sro, pause) is
 
             ----------------------------------------------------------------------
             when ISSUE_ACKN_S =>
-               if (r.pause = '0') then
+               v.pauseAck := r.pause;
+               if (v.pause = '0') then
                   v.waitCnt := r.waitCnt + 1;
                   if (v.waitCnt = WAIT_ACKN_G) then
                      v.ackN    := '0';
@@ -157,13 +158,12 @@ comb : process (rst, r, hitLen, sro, pause) is
                      v.ackCnt  := r.ackCnt + 1;
                      v.state   := ISSUE_WREN_S;
                   end if;
-               else
-                  v.pauseAck := r.pause;
                end if;
 
             ----------------------------------------------------------------------
             when ISSUE_WREN_S =>
-               if (r.pause = '0') then
+               v.pauseAck := r.pause;
+               if (v.pause = '0') then
                   v.waitCnt := r.waitCnt + 1;
                   if (v.waitCnt = WAIT_WREN_G) then
                      v.wrEn               := '1';
@@ -178,16 +178,16 @@ comb : process (rst, r, hitLen, sro, pause) is
                         v.state  := ISSUE_ACKN_S;
                      end if;
                   end if;
-               else
-                  v.pauseAck := r.pause;
                end if;
 
             ----------------------------------------------------------------------
             when WAIT_ISSUE_FB_S =>
-               v.waitCnt := r.waitCnt + 1;
-               v.tokFb   := '1';
-               if (r.waitCnt = WAIT_FB_G) then
-                  v.state := IDLE_S;
+               v.pauseAck := r.pause;
+               if (v.pause = '0') then
+                     v.waitCnt := r.waitCnt + 1;
+                  if (r.waitCnt = WAIT_FB_G) then
+                     v.state := IDLE_S;
+                  end if;
                end if;
       end case;
 
