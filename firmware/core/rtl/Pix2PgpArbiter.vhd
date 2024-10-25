@@ -38,26 +38,27 @@ entity Pix2PgpArbiter is
       DATAFIFO_FWFT_G : boolean  := true);
    port(
       -- General Interface
-      pgpClk       : in  sl;
-      pgpRst       : in  sl := not(RST_POLARITY_G);
+      pgpClk        : in  sl;
+      pgpRst        : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
-      dataLenSel   : in  slv(DATALEN_WIDTH_C-1 downto 0);
-      dataBusSel   : in  Pix2PgpDataBusType;
-      dataRd       : out sl;
-      colSel       : out slv(BITMAX_COL_MANAGERS_C downto 0);
+      dataLenSel    : in  slv(DATALEN_WIDTH_C-1 downto 0);
+      dataBusSel    : in  Pix2PgpDataBusType;
+      dataRd        : out sl;
+      colSel        : out slv(BITMAX_COL_MANAGERS_C downto 0);
       -- Column Supervisor Interface
-      arbStart     : in  sl;
-      colFifoError : in  sl;
-      overOccError : in  sl;
-      colPause     : in  sl;
-      colEmpty     : in  sl;
-      colBitmask   : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum       : in  slv(TRG_WIDTH_C-1 downto 0);
-      arbBusy      : out sl;
+      arbStart      : in  sl;
+      colFifoError  : in  sl;
+      overOccError  : in  sl;
+      colPauseError : in  sl;
+      colPause      : in  sl;
+      colEmpty      : in  sl;
+      colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum        : in  slv(TRG_WIDTH_C-1 downto 0);
+      arbBusy       : out sl;
       -- Pgp Adapter Interface
-      pgpReady     : in  sl := '1';
-      pgpValid     : out sl;
-      pgpData      : out slv(PGP_DWIDTH_C-1 downto 0));
+      pgpReady      : in  sl := '1';
+      pgpValid      : out sl;
+      pgpData       : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
@@ -123,58 +124,60 @@ architecture rtl of Pix2PgpArbiter is
 
    type RegType is record
       -- inputs
-      pgpReady     : sl;
-      arbReady     : sl;
-      colFifoError : sl;
-      overOccError : sl;
-      colPause     : sl;
-      colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum       : slv(TRG_WIDTH_C-1 downto 0);
+      pgpReady      : sl;
+      arbReady      : sl;
+      colFifoError  : sl;
+      overOccError  : sl;
+      colPauseError : sl;
+      colPause      : sl;
+      colBitmask    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum        : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
-      dataRd       : sl;
-      colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
-      arbBusy      : sl;
-      arbValid     : sl;
-      arbDout      : slv(DATABUS_DWIDTH_C-1 downto 0);
+      dataRd        : sl;
+      colSel        : slv(BITMAX_COL_MANAGERS_C downto 0);
+      arbBusy       : sl;
+      arbValid      : sl;
+      arbDout       : slv(DATABUS_DWIDTH_C-1 downto 0);
       -- internal
-      eventEmpty   : sl;
-      headerOnly   : sl;
-      dummyHeader  : sl;
-      reverseRead  : sl;
-      wordCnt      : slv(2 downto 0);
-      waitCnt      : slv(1 downto 0);
-      dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
-      dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
-      dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
-      state        : StateType;
+      eventEmpty    : sl;
+      headerOnly    : sl;
+      dummyHeader   : sl;
+      reverseRead   : sl;
+      wordCnt       : slv(2 downto 0);
+      waitCnt       : slv(1 downto 0);
+      dataHeader    : slv(HEADER_DWITDH_C-1 downto 0);
+      dataRdCnt     : slv(DATALEN_WIDTH_C-1 downto 0);
+      dataRdCycles  : slv(DATALEN_WIDTH_C-1 downto 0);
+      state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- inputs
-      pgpReady     => '1',
-      arbReady     => '1',
-      colFifoError => '0',
-      overOccError => '0',
-      colPause     => '0',
-      colBitmask   => (others => '0'),
-      trgNum       => (others => '0'),
+      pgpReady      => '1',
+      arbReady      => '1',
+      colFifoError  => '0',
+      overOccError  => '0',
+      colPauseError => '0',
+      colPause      => '0',
+      colBitmask    => (others => '0'),
+      trgNum        => (others => '0'),
       -- outputs
-      dataRd       => '0',
-      colSel       => (others => '0'),
-      arbBusy      => '0',
-      arbValid     => '0',
-      arbDout      => (others => '0'),
+      dataRd        => '0',
+      colSel        => (others => '0'),
+      arbBusy       => '0',
+      arbValid      => '0',
+      arbDout       => (others => '0'),
       -- internal
-      eventEmpty   => '0',
-      headerOnly   => '0',
-      dummyHeader  => '0',
-      reverseRead  => '0',
-      wordCnt      => (others => '0'),
-      waitCnt      => (others => '0'),
-      dataHeader   => (others => '0'),
-      dataRdCnt    => toSlv(0, DATALEN_WIDTH_C),
-      dataRdCycles => (others => '0'),
-      state        => IDLE_S);
+      eventEmpty    => '0',
+      headerOnly    => '0',
+      dummyHeader   => '0',
+      reverseRead   => '0',
+      wordCnt       => (others => '0'),
+      waitCnt       => (others => '0'),
+      dataHeader    => (others => '0'),
+      dataRdCnt     => toSlv(0, DATALEN_WIDTH_C),
+      dataRdCycles  => (others => '0'),
+      state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -185,7 +188,7 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
-                   overOccError, colBitmask, trgNum, colPause,
+                   overOccError, colBitmask, trgNum, colPause, colPauseError,
                    pgpReady, arbReady, colEmpty) is
 
       variable v : RegType;
@@ -220,9 +223,10 @@ begin
          v.trgNum(trgBit) := trgNum(trgBit) and not(r.dummyHeader);
       end loop;
       --
-      v.overOccError := overOccError and not(r.dummyHeader);
-      v.colPause     := colPause     and not(r.dummyHeader);
-      v.colFifoError := colFifoError and not(r.dummyHeader);
+      v.overOccError  := overOccError  and not(r.dummyHeader);
+      v.colPause      := colPause      and not(r.dummyHeader);
+      v.colFifoError  := colFifoError  and not(r.dummyHeader);
+      v.colPauseError := colPauseError and not(r.dummyHeader);
 
       -- header is always TX'd default; being overriden otherwise
       v.arbDout := v.dataHeader;
@@ -339,6 +343,7 @@ begin
       v.dataHeader(OVEROCC_FLAG_POS_C)     := v.overOccError;
       v.dataHeader(PAUSE_FLAG_POS_C)       := v.colPause;
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
+      v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := v.colPauseError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
       v.dataHeader(REVERSE_READ_POS_C)     := r.reverseRead;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');

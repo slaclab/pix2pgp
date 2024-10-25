@@ -44,6 +44,7 @@ entity Pix2PgpColumnSupervisor is
       arbiterStart  : out sl;
       colFifoError  : out sl;
       overOccError  : out sl;
+      colPauseError : out sl;
       colPause      : out sl;
       colEmpty      : out sl;
       colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -71,6 +72,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       pause          : sl;
+      pauseError     : sl;
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -78,6 +80,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colBitmaskArb  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum         : slv(TRG_WIDTH_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
@@ -94,6 +97,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colBitmask     => (others => '0'),
       -- internal
       pause          => '0',
+      pauseError     => '0',
       dataReady      => (others => '0'),
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
@@ -101,6 +105,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colBitmaskArb  => (others => '0'),
       statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
+      pauseErrorBmsk => (others => '0'),
       trgNum         => (others => '1'), -- so that on the first trigger it goes to zero
       waitCnt        => (others => '0'),
       state          => MON_STATUS_S);
@@ -166,6 +171,9 @@ begin
             v.columnPause(col) := '0';
          end if;
 
+         -- see columnManager; if any of both of these are high, an SRO was received while in pause
+         v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col);
+
       end loop;
 
       ---------------------------------------------------------------------------
@@ -176,6 +184,7 @@ begin
          -- don't do anything if all columns are disabled (see submodule)
          when MON_STATUS_S =>
             v.pause        := '0';
+            v.pauseError   := '0';
             v.waitCnt      := (others => '0');
             v.colEmpty     := not(uOr(v.dataReady));
             v.statusRdBmsk := (others => '1');
@@ -221,9 +230,18 @@ begin
 
                -- grab the previously-paused columns if last event was a pause
                -- also set the pause flag
-               if (r.colPause = '1') then
+               if r.colPause = '1' and r.pauseError = '0' then
                   v.pause         := '1';
                   v.colBitmaskArb := r.columnPause;
+               end if;
+
+               -- if in pause-error, keep draining the columns until they are all empty
+               if r.pauseError = '1' and uOr(v.dataReady) = '1' then
+                  v.statusRdBmsk := v.dataReady;
+                  v.state        := UPDATE_FLAGS_S;
+               -- recovered from pause-error -> resume normal operation
+               elsif r.pauseError = '1' and uOr(v.dataReady) = '0' then
+                  v.state        := MON_STATUS_S;
                end if;
             end if;
 
@@ -239,12 +257,15 @@ begin
                v.state := UPDATE_FLAGS_S;
             end if;
 
-            -- corner-case: another SRO came and now everyone has data again
-            -- i.e. pause flag is dropped and normal operation is resumed
-            if toBoolean(uAnd(v.dataReady)) then
-               v.pause  := '0';
-               v.trgNum := r.trgNum + 1;
-               v.state  := UPDATE_FLAGS_S;
+            -- corner-case: another SRO came and now everyone has data again;
+            -- abort and read the columns that have data;
+            -- not in regular pause anymore, so drop that flag
+            -- raise the pause-error flag
+            if toBoolean(uOr(v.pauseErrorBmsk)) then
+               v.pause        := '0';
+               v.pauseError   := '1';
+               v.statusRdBmsk := v.dataReady;
+               v.state        := UPDATE_FLAGS_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -266,13 +287,14 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      colFifoError <= v.colFifoError;
-      overOccError <= v.overOccError;
-      colPause     <= v.colPause;
-      colBitmask   <= v.colBitmaskArb;
-      trgNum       <= v.trgNum;
-      arbiterStart <= r.arbiterStart; -- delay for one cycle
-      colEmpty     <= v.colEmpty;
+      colFifoError  <= v.colFifoError;
+      overOccError  <= v.overOccError;
+      colPause      <= v.colPause;
+      colPauseError <= v.pauseError;
+      colBitmask    <= v.colBitmaskArb;
+      trgNum        <= v.trgNum;
+      arbiterStart  <= r.arbiterStart; -- delay for one cycle
+      colEmpty      <= v.colEmpty;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn

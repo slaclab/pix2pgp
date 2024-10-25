@@ -60,6 +60,7 @@ architecture rtl of Pix2PgpColumnManager is
    signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataFifoEmpty      : sl := '0';
    signal dataFifoEmptyDly   : sl := '0';
+   signal statusFifoEmpty    : sl := '0';
    signal statusFifoFull     : sl := '0';
    signal statusFifoFullDly  : sl := '0';
    signal dataFifoFull       : sl := '0';
@@ -71,10 +72,9 @@ architecture rtl of Pix2PgpColumnManager is
    signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
-      IDLE_S,        -- 00
-      IN_FRAME_S,    -- 01
-      WREN_STATUS_S, -- 10
-      IN_PAUSE_S);   -- 11
+      IDLE_S,         -- 00
+      IN_FRAME_S,     -- 01
+      WREN_STATUS_S); -- 10
 
    type RegType is record
       -- i/o
@@ -82,14 +82,12 @@ architecture rtl of Pix2PgpColumnManager is
       eof           : sl;
       overOcc       : sl;
       dataRd        : sl;
-      pause         : sl;
       busy          : sl;
       pauseAck      : sl;
       din           : slv(SPARSE_DWIDTH_C-1 downto 0);
       -- internal
       statusWr      : sl;
       dataWr        : sl;
-      overOccEdge   : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       state         : StateType;
@@ -101,14 +99,12 @@ architecture rtl of Pix2PgpColumnManager is
       eof           => '0',
       overOcc       => '0',
       dataRd        => '0',
-      pause         => '0',
       busy          => '0',
       pauseAck      => '0',
       din           => (others => '0'),
       -- internal
       statusWr      => '0',
       dataWr        => '0',
-      overOccEdge   => '0',
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
       state         => IDLE_S);
@@ -133,13 +129,12 @@ begin
       v := r;
 
       -- Register inputs
-      v.sof         := sof;
-      v.eof         := eof;
-      v.dataWr      := wrEn;
-      v.din         := din;
-      v.dataRd      := dataRd;
-      v.pauseAck    := pauseAck;
-      v.overOccEdge := overOcc;
+      v.sof      := sof;
+      v.eof      := eof;
+      v.dataWr   := wrEn;
+      v.din      := din;
+      v.dataRd   := dataRd;
+      v.pauseAck := pauseAck;
 
       -- Strobes
       v.statusWr := '0';
@@ -171,11 +166,11 @@ begin
          ----------------------------------------------------------------------
          -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
          when IN_FRAME_S =>
-            v.pause := dataFifoFullDly;
 
             -- if FIFO gets full, write the status *after*
             -- the FIFO-writing logic acknowledges the pause
-            if v.pauseAck = '1' then
+            -- rising-edge detection
+            if v.pauseAck = '1' and r.pauseAck = '0' then
                v.state := WREN_STATUS_S;
             end if;
 
@@ -185,9 +180,11 @@ begin
                v.state := WREN_STATUS_S;
             end if;
 
-            -- overOcc can happen because of analog (pause is low);
-            -- pauseAck should always be low but safeguard from it anyway
-            if v.overOcc = '1' and v.pauseAck = '0' then
+            -- over-occupancy
+            -- note that if this happens while in pause,
+            -- both overOcc and pause flags are written into the FIFO:
+            -- this will force the supervisor to resume normal operation
+            if v.overOcc = '1' then
                v.state := WREN_STATUS_S;
             end if;
 
@@ -204,41 +201,16 @@ begin
             end if;
 
             v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
-            v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pause;
+            v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAck;
             v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
             v.statusWr := '1';
             v.wrEnCnt  := (others => '0');
 
             -- state switching
-            if (r.pause = '1') then
-               v.state := IN_PAUSE_S;
-            elsif (r.overOcc = '1') then
+            if (r.pauseAck = '1' or r.overOcc = '1') then
                v.state := IN_FRAME_S;
             else
                v.state := IDLE_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- pause handling; very tricky
-         -- only way to *not* get misaligned is to inject the status FIFO
-         -- with dummy events; one per missed over-occupancy
-         when IN_PAUSE_S =>
-            v.pause   := dataFifoFullDly;
-            v.overOcc := '0'; -- clear the latched value while here
-
-            -- drained it; go back and monitor regular frame delimiters
-            if v.pauseAck = '0' then
-               v.state := IN_FRAME_S;
-            end if;
-
-            -- inject status FIFO with a dummy re-alignment event
-            -- very important to write a zero-pause here;
-            -- this allows for supervisor to resume normal operation
-            if v.overOccEdge = '1' and r.overOccEdge = '0' then
-               v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := '1';
-               v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := '0';
-               v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := (others => '0');
-               v.statusWr := '1';
             end if;
 
       end case;
@@ -329,7 +301,7 @@ begin
          wrEn    => statusWrEn,
          din     => statusDin,
          fullWr  => open,
-         emptyWr => open,
+         emptyWr => statusFifoEmpty,
          -- Read Interface
          rdClk   => pgpClk,
          rdEn    => statusRd,

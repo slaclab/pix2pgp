@@ -106,10 +106,12 @@ package Pix2PgpPkg is
    constant OVEROCC_FLAG_POS_C     : natural := HEADER_DWITDH_C-1;
    constant PAUSE_FLAG_POS_C       : natural := HEADER_DWITDH_C-2;
    constant COLUMN_FULL_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
-   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-4;
-   constant REVERSE_READ_POS_C     : natural := HEADER_DWITDH_C-5;
+   constant PAUSE_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-4;
+   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
+   constant REVERSE_READ_POS_C     : natural := HEADER_DWITDH_C-6;
+
    -- reserved bits
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-6
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
                                               downto HEADER_DWITDH_C-8;
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9

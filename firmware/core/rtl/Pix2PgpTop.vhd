@@ -83,6 +83,7 @@ architecture rtl of Pix2PgpTop is
    signal overOccError   : sl := '0';
    signal arbBusy        : sl := '0';
    signal colPause       : sl := '0';
+   signal colPauseError  : sl := '0';
    signal colEmpty       : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(TRG_WIDTH_C-1 downto 0)            := (others => '0');
@@ -178,6 +179,7 @@ begin
          arbiterStart  => arbStart,
          colFifoError  => colFifoError,
          overOccError  => overOccError,
+         colPauseError => colPauseError,
          colPause      => colPause,
          colEmpty      => colEmpty,
          colBitmask    => colBitmask,
@@ -194,26 +196,27 @@ begin
          DOUT_PIPE_G     => ARB_DOUT_PIPE_G)
       port map (
          -- General Interface
-         pgpClk       => pgpClk,
-         pgpRst       => pgpRst,
+         pgpClk        => pgpClk,
+         pgpRst        => pgpRst,
          -- Column Manager Interface
-         dataLenSel   => statusBusSel.dataLen,
-         dataBusSel   => dataBusSel,
-         dataRd       => dataRd,
-         colSel       => colSel,
+         dataLenSel    => statusBusSel.dataLen,
+         dataBusSel    => dataBusSel,
+         dataRd        => dataRd,
+         colSel        => colSel,
          -- Column Supervisor Interface
-         arbStart     => arbStart,
-         colFifoError => colFifoError,
-         overOccError => overOccError,
-         colPause     => colPause,
-         colEmpty     => colEmpty,
-         colBitmask   => colBitmask,
-         trgNum       => trgNum,
-         arbBusy      => arbBusy,
+         arbStart      => arbStart,
+         colFifoError  => colFifoError,
+         colPauseError => colPauseError,
+         overOccError  => overOccError,
+         colPause      => colPause,
+         colEmpty      => colEmpty,
+         colBitmask    => colBitmask,
+         trgNum        => trgNum,
+         arbBusy       => arbBusy,
          -- Pgp Adapter Interface
-         pgpReady     => pgpReady,
-         pgpValid     => pgpValid,
-         pgpData      => pgpData);
+         pgpReady      => pgpReady,
+         pgpValid      => pgpValid,
+         pgpData       => pgpData);
 
    -----------------------------------------
    -- PGP FIFO adapter
