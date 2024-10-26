@@ -145,31 +145,27 @@ begin
 
          -- check Data Length from each column manager's status bus and set the colBitmask;
          -- a high bit on the bitmask indicates that the associated column does have hits
-         if  allBits(statusBusGlbl(col).dataLen, '0')
-         and toBoolean(v.dataReady(col)) then
+         if allBits(statusBusGlbl(col).dataLen, '0') or toBoolean(not(v.dataReady(col))) then
             v.colBitmask(col) := '0';
          else
             v.colBitmask(col) := '1';
          end if;
 
          -- check for any over-occupancy errors
-         if  toBoolean(statusBusGlbl(col).overOcc)
-         and toBoolean(v.dataReady(col)) then
+         if toBoolean(statusBusGlbl(col).overOcc) and toBoolean(v.dataReady(col)) then
             v.colOverOccErr(col) := '1';
          else
             v.colOverOccErr(col) := '0';
          end if;
 
          -- check for any columnFull errors
-         if  toBoolean(statusBusGlbl(col).columnFull)
-         and toBoolean(v.dataReady(col)) then
+         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(v.dataReady(col)) then
             v.colFifoFullErr(col) := '1';
          else
             v.colFifoFullErr(col) := '0';
          end if;
 
-         if  toBoolean(statusBusGlbl(col).pause)
-         and toBoolean(v.dataReady(col)) then
+         if toBoolean(statusBusGlbl(col).pause) and toBoolean(v.dataReady(col)) then
             v.columnPause(col) := '1';
          else
             v.columnPause(col) := '0';
