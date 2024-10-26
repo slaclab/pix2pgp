@@ -227,6 +227,7 @@ begin
 
          ----------------------------------------------------------------------
          -- wait for the arbiter to finish parsing the data
+         -- evaluate pause-related flags now before they change state
          when WAIT_ARB_S =>
             if r.arbiterBusy = '0' then
                v.statusRd := '1'; -- pop the status word
@@ -234,21 +235,12 @@ begin
                v.state    := DONE_S;
 
                -- grab the previously-paused columns if last event was a pause
-               -- also set the pause flag
+               -- read r.colPause *now* because it will soon change state (after the statusRd)
+               -- grab the columnPause bitmask *now* for that same reason
+               -- set the pause flag; remember that if in pause-error, things are different
                if r.colPause = '1' and r.pauseError = '0' then
                   v.pause         := '1';
                   v.colBitmaskArb := r.columnPause;
-               end if;
-
-               -- if in pause-error, keep draining the columns until they are all empty
-               -- keep incrementing the trigger counter
-               if r.pauseError = '1' and uOr(v.dataReady) = '1' then
-                  v.statusRdBmsk := v.dataReady;
-                  v.trgNum       := r.trgNum + 1;
-                  v.state        := UPDATE_FLAGS_S;
-               -- recovered from pause-error -> resume normal operation
-               elsif r.pauseError = '1' and uOr(v.dataReady) = '0' then
-                  v.state        := MON_STATUS_S;
                end if;
             end if;
 
@@ -290,14 +282,27 @@ begin
          -- always wait before re-evaluating the status bus empty signal;
          -- reading the status word on one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
+         -- determine what to do with pause and pause-error corner-cases
          when DONE_S =>
             v.waitCnt := r.waitCnt + 1;
             if (r.waitCnt = FIFO_RD_DELAY_G) then
-               v.state := MON_STATUS_S;
+               v.waitCnt := (others => '0');
+               v.state   := MON_STATUS_S;
 
                -- override; the event that was just read was a paused event
-               if (v.pause = '1') then
+               if r.pause = '1' then
                   v.state := PAUSE_S;
+               end if;
+
+               -- if in pause-error, keep draining the columns until they are all empty
+               -- keep incrementing the trigger counter once for each read
+               if r.pauseError = '1' and uOr(v.dataReady) = '1' then
+                  v.statusRdBmsk := v.dataReady;
+                  v.trgNum       := r.trgNum + 1;
+                  v.state        := UPDATE_FLAGS_S;
+               -- recovered from pause-error -> resume normal operation
+               elsif r.pauseError = '1' and uOr(v.dataReady) = '0' then
+                  v.state        := MON_STATUS_S;
                end if;
             end if;
 
