@@ -236,8 +236,10 @@ begin
                end if;
 
                -- if in pause-error, keep draining the columns until they are all empty
+               -- keep incrementing the trigger counter
                if r.pauseError = '1' and uOr(v.dataReady) = '1' then
                   v.statusRdBmsk := v.dataReady;
+                  v.trgNum       := r.trgNum + 1;
                   v.state        := UPDATE_FLAGS_S;
                -- recovered from pause-error -> resume normal operation
                elsif r.pauseError = '1' and uOr(v.dataReady) = '0' then
@@ -257,13 +259,24 @@ begin
                v.state := UPDATE_FLAGS_S;
             end if;
 
-            -- corner-case: another SRO came and now everyone has data again;
+            -- corner-case 1: both previously-paused columns and non-paused columns are ready;
+            -- basically means that everyone closed their event properly;
+            -- resume normal operation (i.e. drop internal pause flag)
+            -- same trigger so do not increment trigger counter
+            if not(toBoolean(uOr(v.pauseErrorBmsk))) and toBoolean(uAnd(v.dataReady)) then
+               v.statusRdBmsk := (others => '1');
+               v.pause        := '0';
+               v.state        := UPDATE_FLAGS_S;
+            end if;
+
+            -- corner-case 2: another SRO came and now everyone has data again;
             -- abort and read the columns that have data;
             -- not in regular pause anymore, so drop that flag
-            -- raise the pause-error flag
+            -- raise the pause-error flag and increment the trigger counter (new SRO)
             if toBoolean(uOr(v.pauseErrorBmsk)) then
                v.pause        := '0';
                v.pauseError   := '1';
+               v.trgNum       := r.trgNum + 1;
                v.statusRdBmsk := v.dataReady;
                v.state        := UPDATE_FLAGS_S;
             end if;

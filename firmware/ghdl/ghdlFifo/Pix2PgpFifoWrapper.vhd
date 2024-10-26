@@ -40,21 +40,22 @@ entity Pix2PgpFifoWrapper is
       GEN_SYNC_FIFO_G  : boolean := false); -- 'false' generates a Clock-Domain-Crossing FIFO
    port(
       -- Resets
-      rst     : in  sl;
-      enable  : in  sl;
+      rst      : in  sl;
+      enable   : in  sl;
       -- Write Interface
-      wrClk   : in  sl;
-      wrEn    : in  sl;
-      din     : in  slv(WR_DATA_WIDTH_G-1 downto 0);
-      aFullWr : out sl;
-      fullWr  : out sl := '0';
-      emptyWr : out sl := '0';
+      wrClk    : in  sl;
+      wrEn     : in  sl;
+      din      : in  slv(WR_DATA_WIDTH_G-1 downto 0);
+      aFullWr  : out sl;
+      aEmptyWr : out sl;
+      fullWr   : out sl := '0';
+      emptyWr  : out sl := '0';
       -- Read Interface
-      rdClk   : in  sl;
-      rdEn    : in  sl;
-      emptyRd : out sl := '1';
-      fullRd  : out sl;
-      dout    : out slv(RD_DATA_WIDTH_G-1 downto 0));
+      rdClk    : in  sl;
+      rdEn     : in  sl;
+      emptyRd  : out sl := '1';
+      fullRd   : out sl;
+      dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
@@ -149,8 +150,9 @@ begin
          dataIn  => validRdStandalone,
          dataOut => validWr);
 
-   emptyWr <= not(validWr);
-   emptyRd <= not(validRdStandalone);
-   fullWr  <= fullWrStandalone;
+   aEmptyWr <= not(validWr); -- not really used in ghdl-based FIFOs
+   emptyWr  <= not(validWr);
+   emptyRd  <= not(validRdStandalone);
+   fullWr   <= fullWrStandalone;
 
 end rtl;

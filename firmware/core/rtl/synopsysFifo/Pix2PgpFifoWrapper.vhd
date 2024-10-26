@@ -37,21 +37,22 @@ entity Pix2PgpFifoWrapper is
       GEN_SYNC_FIFO_G  : boolean := false);
    port(
       -- Resets
-      rst     : in  sl;
-      enable  : in  sl;
+      rst      : in  sl;
+      enable   : in  sl;
       -- Write Interface
-      wrClk   : in  sl;
-      wrEn    : in  sl;
-      din     : in  slv(WR_DATA_WIDTH_G-1 downto 0);
-      aFullWr : out sl;
-      fullWr  : out sl := '0';
-      emptyWr : out sl := '0';
+      wrClk    : in  sl;
+      wrEn     : in  sl;
+      din      : in  slv(WR_DATA_WIDTH_G-1 downto 0);
+      aFullWr  : out sl;
+      aEmptyWr : out sl;
+      fullWr   : out sl := '0';
+      emptyWr  : out sl := '0';
       -- Read Interface
-      rdClk   : in  sl;
-      rdEn    : in  sl;
-      emptyRd : out sl := '1';
-      fullRd  : out sl;
-      dout    : out slv(RD_DATA_WIDTH_G-1 downto 0));
+      rdClk    : in  sl;
+      rdEn     : in  sl;
+      emptyRd  : out sl := '1';
+      fullRd   : out sl;
+      dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
 architecture rtl of Pix2PgpFifoWrapper is
@@ -164,6 +165,7 @@ begin
             depth       => DWARE_DEPTH_G,
             push_af_lvl => DWARE_AF_LVL_G,
             pop_af_lvl  => DWARE_AF_LVL_G,
+            push_ae_lvl => 3,
             rst_mode    => 2)
          port map (
             rst_n      => rstDwareFifo,
@@ -171,6 +173,7 @@ begin
             clk_push   => wrClk,
             push_req_n => wrEnDwareFifo,
             data_in    => din,
+            push_ae    => aEmptyWr,
             push_af    => aFullWr,
             push_full  => fullWr,
             push_empty => emptyWr,
@@ -190,6 +193,7 @@ begin
             depth          => DWARE_DEPTH_G,
             push_af_lvl    => DWARE_AF_LVL_G,
             pop_af_lvl     => DWARE_AF_LVL_G,
+            push_ae_lvl    => 3,
             rst_mode       => 2)
          port map (
             rst_n      => rstDwareFifo,
@@ -198,6 +202,7 @@ begin
             clk_push   => wrClk,
             push_req_n => wrEnDwareFifo,
             data_in    => din,
+            push_ae    => aEmptyWr,
             push_af    => aFullWr,
             push_full  => fullWr,
             push_empty => emptyWr,

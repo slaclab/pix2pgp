@@ -57,19 +57,20 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal dataFifoEmpty      : sl := '0';
-   signal dataFifoEmptyDly   : sl := '0';
-   signal statusFifoEmpty    : sl := '0';
-   signal statusFifoFull     : sl := '0';
-   signal statusFifoFullDly  : sl := '0';
-   signal dataFifoFull       : sl := '0';
-   signal dataFifoFullDly    : sl := '0';
+   signal statusFifoDout      : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataFifoEmpty       : sl := '0';
+   signal dataFifoAlmEmpty    : sl := '0';
+   signal dataFifoAlmEmptyDly : sl := '0';
+   signal statusFifoEmpty     : sl := '0';
+   signal statusFifoFull      : sl := '0';
+   signal statusFifoFullDly   : sl := '0';
+   signal dataFifoAlmFull     : sl := '0';
+   signal dataFifoAlmFullDly  : sl := '0';
 
-   signal statusWrEn         : sl := '0';
-   signal statusDin          : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
-   signal dataWrEn           : sl := '0';
-   signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
+   signal statusWrEn          : sl := '0';
+   signal statusDin           : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
+   signal dataWrEn            : sl := '0';
+   signal dataDin             : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,         -- 00
@@ -83,6 +84,7 @@ architecture rtl of Pix2PgpColumnManager is
       overOcc       : sl;
       dataRd        : sl;
       busy          : sl;
+      pauseOut      : sl;
       pauseAck      : sl;
       din           : slv(SPARSE_DWIDTH_C-1 downto 0);
       -- internal
@@ -100,6 +102,7 @@ architecture rtl of Pix2PgpColumnManager is
       overOcc       => '0',
       dataRd        => '0',
       busy          => '0',
+      pauseOut      => '0',
       pauseAck      => '0',
       din           => (others => '0'),
       -- internal
@@ -118,9 +121,8 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck,
-                   dataRd, dataFifoEmptyDly, dataFifoFullDly,
-                   statusFifoDout, statusFifoFullDly, overOcc,
-                   dataFifoFull) is
+                   dataRd, statusFifoDout, statusFifoFullDly,
+                   overOcc, dataFifoAlmFullDly, dataFifoAlmEmptyDly) is
 
       variable v : RegType;
    begin
@@ -175,8 +177,7 @@ begin
             end if;
 
             -- regular EOF (ignore if in pause)
-            -- pauseAck should always be low but safeguard from it anyway
-            if v.eof = '1' and v.pauseAck = '0' then
+            if v.eof = '1' and r.pauseAck = '0' then
                v.state := WREN_STATUS_S;
             end if;
 
@@ -216,9 +217,15 @@ begin
       end case;
       -------------------------------------------------------------------------
 
+      -- pause output handling (essentially wait for almost-empty)
+      if (r.pauseAck = '0') then
+         v.pauseOut := dataFifoAlmFullDly;
+      else
+         v.pauseOut := not(dataFifoAlmEmptyDly);
+      end if;
+
       -- Outputs
-      -- assign to dataFifoFull to make things faster
-      pause <= dataFifoFull;
+      pause <= v.pauseOut;
       busy  <= v.busy;
       -- status bus assignments (in pgpClk domain)
       statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
@@ -294,20 +301,21 @@ begin
          ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
-         rst     => sparseRst,
-         enable  => enable,
+         rst      => sparseRst,
+         enable   => enable,
          -- Write Interface
-         wrClk   => sparseClk,
-         wrEn    => statusWrEn,
-         din     => statusDin,
-         fullWr  => open,
-         emptyWr => statusFifoEmpty,
+         wrClk    => sparseClk,
+         wrEn     => statusWrEn,
+         din      => statusDin,
+         aEmptyWr => open,
+         fullWr   => open,
+         emptyWr  => statusFifoEmpty, -- for debugging
          -- Read Interface
-         rdClk   => pgpClk,
-         rdEn    => statusRd,
-         emptyRd => statusBus.columnEmpty,
-         fullRd  => statusFifoFull,
-         dout    => statusFifoDout);
+         rdClk    => pgpClk,
+         rdEn     => statusRd,
+         emptyRd  => statusBus.columnEmpty,
+         fullRd   => statusFifoFull,
+         dout     => statusFifoDout);
 
    ------------------------------------------------
    -- Data FIFO
@@ -334,25 +342,25 @@ begin
          din  => r.din,
          dout => dataDin);
 
-   U_PipelineDataEmpty : entity surf.SlvDelay
+   U_PipelineDataAlmostFull : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => STATUSFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
-         din(0)  => dataFifoEmpty,
-         dout(0) => dataFifoEmptyDly);
+         din(0)  => dataFifoAlmFull,
+         dout(0) => dataFifoAlmFullDly);
 
-   U_PipelineDataFull : entity surf.SlvDelay
+   U_PipelineDataAlmostEmpty : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => STATUSFIFO_PIPE_G)
       port map (
          clk     => sparseClk,
-         din(0)  => dataFifoFull,
-         dout(0) => dataFifoFullDly);
+         din(0)  => dataFifoAlmEmpty,
+         dout(0) => dataFifoAlmEmptyDly);
 
    U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
@@ -368,20 +376,21 @@ begin
          ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
-         rst     => sparseRst,
-         enable  => enable,
+         rst      => sparseRst,
+         enable   => enable,
          -- Write Interface
-         wrClk   => sparseClk,
-         wrEn    => dataWrEn,
-         din     => dataDin,
-         fullWr  => open,
-         aFullWr => dataFifoFull,
-         emptyWr => dataFifoEmpty,
+         wrClk    => sparseClk,
+         wrEn     => dataWrEn,
+         din      => dataDin,
+         fullWr   => open,
+         aEmptyWr => dataFifoAlmEmpty,
+         aFullWr  => dataFifoAlmFull,
+         emptyWr  => dataFifoEmpty,  -- for debugging
          -- Read Interface
-         rdClk   => pgpClk,
-         rdEn    => dataRd,
-         emptyRd => open,
-         fullRd  => open,
-         dout    => dataBus.data);
+         rdClk    => pgpClk,
+         rdEn     => dataRd,
+         emptyRd  => open,
+         fullRd   => open,
+         dout     => dataBus.data);
 
 end rtl;
