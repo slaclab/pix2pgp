@@ -54,11 +54,11 @@ end Pix2PgpColumnSupervisor;
 architecture rtl of Pix2PgpColumnSupervisor is
 
    type StateType is (
-      MON_STATUS_S,   -- 000
-      UPDATE_FLAGS_S, -- 001
-      WAIT_ARB_S,     -- 010
-      PAUSE_S,        -- 011
-      DONE_S);        -- 100
+      IDLE_S,            -- 000
+      ARB_START_S,       -- 001
+      WAIT_STATUS_S,     -- 010
+      IN_PAUSE_S,        -- 011
+      IN_PAUSE_ERROR_S); -- 100
 
    type RegType is record
       -- i/o
@@ -108,7 +108,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       pauseErrorBmsk => (others => '0'),
       trgNum         => (others => '1'), -- so that on the first trigger it goes to zero
       waitCnt        => (others => '0'),
-      state          => MON_STATUS_S);
+      state          => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -144,10 +144,10 @@ begin
 
          -- check Data Length from each column manager's status bus and set the colBitmask;
          -- a high bit on the bitmask indicates that the associated column does have hits
-         if allBits(statusBusGlbl(col).dataLen, '0') or toBoolean(not(v.dataReady(col))) then
-            v.colBitmask(col) := '0';
-         else
+         if toBoolean(uOr(statusBusGlbl(col).dataLen)) and toBoolean(v.dataReady(col)) then
             v.colBitmask(col) := '1';
+         else
+            v.colBitmask(col) := '0';
          end if;
 
          -- check for any over-occupancy errors
@@ -182,7 +182,7 @@ begin
          -- stay here until *all* columns have data;
          -- issue the rdEn pulse to the FIFO if all columns have data;
          -- don't do anything if all columns are disabled (see submodule)
-         when MON_STATUS_S =>
+         when IDLE_S =>
             v.pause        := '0';
             v.pauseError   := '0';
             v.waitCnt      := (others => '0');
@@ -191,12 +191,13 @@ begin
 
             if toBoolean(uAnd(v.dataReady)) then
                v.trgNum := r.trgNum + 1;
-               v.state  := UPDATE_FLAGS_S;
+               v.state  := ARB_START_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- update the arbiter status bits before starting the readout process
-         when UPDATE_FLAGS_S =>
+         -- start the arbiter; monitor the state of its busy signal
+         when ARB_START_S =>
+            -- update the arbiter status bits before starting the readout process
             v.colEmpty      := '0';
             v.colFifoError  := uOr(v.colFifoFullErr);
             v.overOccError  := uOr(v.colOverOccErr);
@@ -209,46 +210,70 @@ begin
             end if;
 
             -- state switching;
+            ----------------------------------------------------------------------------
             -- first raise the start flag...
-            if v.arbiterBusy = '0' and v.arbiterStart = '0' then
+            if v.arbiterBusy = '0' and r.arbiterBusy = '0' and v.arbiterStart = '0' then
                v.arbiterStart := '1';
             end if;
 
-            -- ...then switch and wait
+            -- ...then release and wait...
             if v.arbiterBusy = '1' and v.arbiterStart = '1' then
                v.arbiterStart := '0';
-               v.state        := WAIT_ARB_S;
             end if;
 
-         ----------------------------------------------------------------------
-         -- wait for the arbiter to finish parsing the data
-         -- evaluate pause-related flags now before they change state
-         when WAIT_ARB_S =>
-            if r.arbiterBusy = '0' then
+            -- ...and finally pop the status word when arbiter's busy transitions to low
+            -- (negative-edge detection)
+            if v.arbiterBusy = '0' and r.arbiterBusy = '1' then
                v.statusRd := '1'; -- pop the status word
-               v.pause    := '0'; -- clear the flag
-               v.state    := DONE_S;
+               v.pause    := '0'; -- clear the pause flag
+               v.state    := WAIT_STATUS_S;
 
-               -- grab the previously-paused columns if last event was a pause
+               -- were some columns in pause just now? set the pause flag!
                -- read r.colPause *now* because it will soon change state (after the statusRd)
                -- grab the columnPause bitmask *now* for that same reason
-               -- set the pause flag; remember that if in pause-error, things are different
+               -- (remember that if in pause-error, things are different)
                if r.colPause = '1' and r.pauseError = '0' then
                   v.pause         := '1';
                   v.colBitmaskArb := r.columnPause;
                end if;
+            end if;
+            ----------------------------------------------------------------------------
+
+         ----------------------------------------------------------------------
+         -- always wait before re-evaluating the status bus empty signal;
+         -- the dataReady signal *must* re-settle!
+         -- reading the status word on one cycle may not force the empty signal
+         -- to go high on the next if there are no more status words in the FIFO
+         -- determine what to do with pause and pause-error corner-cases
+         when WAIT_STATUS_S =>
+            v.waitCnt := r.waitCnt + 1;
+            if (r.waitCnt = FIFO_RD_DELAY_G) then
+               v.waitCnt := (others => '0');
+               v.state   := IDLE_S;
+
+               -- override; the event that was just read was a paused event
+               if r.pause = '1' then
+                  v.state := IN_PAUSE_S;
+               end if;
+
+               -- override; need to finish emptying the columns if in pause-error
+               if r.pauseError = '1' then
+                  v.state := IN_PAUSE_ERROR_S;
+               end if;
+
             end if;
 
          ----------------------------------------------------------------------
          -- pause event. evaluate the status of the status bus only on paused cols;
          -- wait for the paused columns to resume and close-out their event
          -- (or pause themselves again);
-         when PAUSE_S =>
+         when IN_PAUSE_S =>
             -- only pop the status words from the paused columns that are queried
             v.statusRdBmsk := v.colBitmaskArb;
 
+            -- paused columns are ready to be read
             if (v.colBitmaskArb and v.dataReady) = v.colBitmaskArb then
-               v.state := UPDATE_FLAGS_S;
+               v.state := ARB_START_S;
             end if;
 
             -- corner-case 1: both previously-paused columns and non-paused columns are ready;
@@ -258,7 +283,7 @@ begin
             if not(toBoolean(uOr(v.pauseErrorBmsk))) and toBoolean(uAnd(v.dataReady)) then
                v.statusRdBmsk := (others => '1');
                v.pause        := '0';
-               v.state        := UPDATE_FLAGS_S;
+               v.state        := ARB_START_S;
             end if;
 
             -- corner-case 2: another SRO came and now everyone has data again;
@@ -270,35 +295,23 @@ begin
                v.pauseError   := '1';
                v.trgNum       := r.trgNum + 1;
                v.statusRdBmsk := v.dataReady;
-               v.state        := UPDATE_FLAGS_S;
+               v.state        := ARB_START_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- always wait before re-evaluating the status bus empty signal;
-         -- reading the status word on one cycle may not force the empty signal
-         -- to go high on the next if there are no more status words in the FIFO
-         -- determine what to do with pause and pause-error corner-cases
-         when DONE_S =>
-            v.waitCnt := r.waitCnt + 1;
-            if (r.waitCnt = FIFO_RD_DELAY_G) then
-               v.waitCnt := (others => '0');
-               v.state   := MON_STATUS_S;
+         -- during pause-error the FIFOs are being drained as fast as possible
+         when IN_PAUSE_ERROR_S =>
+            -- keep draining the columns until they are all empty
+            -- keep incrementing the trigger counter once for each read
+            if uOr(v.dataReady) = '1' then
+               v.statusRdBmsk := v.dataReady;
+               v.trgNum       := r.trgNum + 1;
+               v.state        := ARB_START_S;
+            end if;
 
-               -- override; the event that was just read was a paused event
-               if r.pause = '1' then
-                  v.state := PAUSE_S;
-               end if;
-
-               -- if in pause-error, keep draining the columns until they are all empty
-               -- keep incrementing the trigger counter once for each read
-               if r.pauseError = '1' and uOr(v.dataReady) = '1' then
-                  v.statusRdBmsk := v.dataReady;
-                  v.trgNum       := r.trgNum + 1;
-                  v.state        := UPDATE_FLAGS_S;
-               -- recovered from pause-error -> resume normal operation
-               elsif r.pauseError = '1' and uOr(v.dataReady) = '0' then
-                  v.state        := MON_STATUS_S;
-               end if;
+            -- all FIFOs drained
+            if uOr(v.dataReady) = '0' then
+               v.state := IDLE_S;
             end if;
 
       end case;
