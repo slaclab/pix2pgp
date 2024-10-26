@@ -136,8 +136,7 @@ begin
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
          -- column is ready when its status FIFO has a word
-         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and
-                                (r.columnEnable(col));
+         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and r.columnEnable(col);
 
          -- note that for all flags we check against the dataReady signal;
          -- why? because we are using FWFT FIFOs...
