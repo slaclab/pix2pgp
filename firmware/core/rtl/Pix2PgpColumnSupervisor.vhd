@@ -139,10 +139,14 @@ begin
          v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and
                                 (r.columnEnable(col));
 
+         -- note that for all flags we check against the dataReady signal;
+         -- why? because we are using FWFT FIFOs...
+         -- which means that if the FIFO is empty, it might present stale/misleading data!
+
          -- check Data Length from each column manager's status bus and set the colBitmask;
          -- a high bit on the bitmask indicates that the associated column does have hits
          if  allBits(statusBusGlbl(col).dataLen, '0')
-         and toBoolean(r.columnEnable(col)) then
+         and toBoolean(v.dataReady(col)) then
             v.colBitmask(col) := '0';
          else
             v.colBitmask(col) := '1';
@@ -150,7 +154,7 @@ begin
 
          -- check for any over-occupancy errors
          if  toBoolean(statusBusGlbl(col).overOcc)
-         and toBoolean(r.columnEnable(col)) then
+         and toBoolean(v.dataReady(col)) then
             v.colOverOccErr(col) := '1';
          else
             v.colOverOccErr(col) := '0';
@@ -158,21 +162,22 @@ begin
 
          -- check for any columnFull errors
          if  toBoolean(statusBusGlbl(col).columnFull)
-         and toBoolean(r.columnEnable(col)) then
+         and toBoolean(v.dataReady(col)) then
             v.colFifoFullErr(col) := '1';
          else
             v.colFifoFullErr(col) := '0';
          end if;
 
          if  toBoolean(statusBusGlbl(col).pause)
-         and toBoolean(r.columnEnable(col)) then
+         and toBoolean(v.dataReady(col)) then
             v.columnPause(col) := '1';
          else
             v.columnPause(col) := '0';
          end if;
 
-         -- see columnManager; if any of both of these are high, an SRO was received while in pause
-         v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col);
+         -- see columnManager; if both of these are high, an SRO was received while in pause
+         -- also, check against the dataReady
+         v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col) and v.dataReady(col);
 
       end loop;
 
