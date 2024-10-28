@@ -38,6 +38,7 @@ entity Pix2PgpColumnSupervisor is
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface (via Bridge)
       statusBusGlbl : in  Pix2PgpStatusBusArray;
+      columnBusy    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRd      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Arbiter Interface
       arbiterBusy   : in  sl;
@@ -81,6 +82,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum         : slv(TRG_WIDTH_C-1 downto 0);
       waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
@@ -106,6 +108,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
       pauseErrorBmsk => (others => '0'),
+      columnBusy     => (others => '0'),
       trgNum         => (others => '1'), -- so that on the first trigger it goes to zero
       waitCnt        => (others => '0'),
       state          => IDLE_S);
@@ -118,7 +121,7 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy, columnEnable) is
+   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy, columnEnable, columnBusy) is
       variable v : RegType;
    begin
 
@@ -173,6 +176,9 @@ begin
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
          v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col) and v.dataReady(col);
+
+         -- busy is used to exit from the pause-error state
+         v.columnBusy(col) := columnBusy(col) and r.columnEnable(col);
 
       end loop;
 
@@ -310,7 +316,7 @@ begin
             end if;
 
             -- all FIFOs drained
-            if uOr(v.dataReady) = '0' then
+            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
                v.state := IDLE_S;
             end if;
 

@@ -77,6 +77,8 @@ architecture rtl of Pix2PgpTop is
    signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
    signal statusRdSuper  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal statusRdCol    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal busyCol        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal busySuper      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
    signal arbStart       : sl := '0';
    signal colFifoError   : sl := '0';
@@ -93,6 +95,9 @@ architecture rtl of Pix2PgpTop is
    signal pgpData        : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
+
+   -- route to output port
+   busy <= busyCol;
 
    ---------------------------------------
    -- Column Manager
@@ -120,7 +125,7 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             pauseAck  => pauseAck(col),
-            busy      => busy(col),
+            busy      => busyCol(col),
             pause     => pause(col),
             -- Arbiter Interface
             statusRd  => statusRdCol(col),
@@ -146,10 +151,12 @@ begin
          -- Column Manager Interface
          statusBusIn   => statusBus,
          dataBusIn     => dataBus,
+         busyIn        => busyCol,
          statusRdOut   => statusRdCol,
          dataRdOut     => dataRdSel,
          -- Column Supervisor Interface
          statusRdIn    => statusRdSuper,
+         busyOut       => busySuper,
          statusBusGlbl => statusBusGlbl,
          -- Arbiter Interface
          dataRdIn      => dataRd,
@@ -173,6 +180,7 @@ begin
          columnEnable  => columnEnable,
          -- Column Manager Interface (via Bridge)
          statusBusGlbl => statusBusGlbl,
+         columnBusy    => busySuper,
          statusRd      => statusRdSuper,
          -- Arbiter Interface
          arbiterBusy   => arbBusy,

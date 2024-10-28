@@ -36,10 +36,12 @@ entity Pix2PgpBridge is
       -- Column Manager Interface
       statusBusIn   : in  Pix2PgpStatusBusArray;
       dataBusIn     : in  Pix2PgpDataBusArray;
+      busyIn        : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRdOut   : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       dataRdOut     : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Supervisor Interface
       statusRdIn    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      busyOut       : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusBusGlbl : out Pix2PgpStatusBusArray;
       -- Arbiter Interface
       dataRdIn      : in  sl;
@@ -53,10 +55,11 @@ architecture rtl of Pix2PgpBridge is
 begin
 
    GEN_NO_PIPELINE_STATUS : if (PIPELINE_STATUS_G = false) generate
-      process(statusBusIn, colSel, statusRdIn)
+      process(statusBusIn, colSel, statusRdIn, busyIn)
       begin
          statusBusGlbl <= statusBusIn;
          statusRdOut   <= statusRdIn;
+         busyOut       <= busyIn;
 
          if colSel <= NUM_OF_COL_MANAGERS_C-1 then
             statusBusSel <= statusBusIn(conv_integer(unsigned(colSel)));
@@ -93,6 +96,7 @@ begin
          if (rising_edge(pgpClk)) then
             statusBusGlbl <= statusBusIn after TPD_G;
             statusRdOut   <= statusRdIn  after TPD_G;
+            busyOut       <= busyIn      after TPD_G;
 
             if colSel <= NUM_OF_COL_MANAGERS_C-1 then
                statusBusSel <= statusBusIn(conv_integer(unsigned(colSel))) after TPD_G;
