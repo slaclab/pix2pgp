@@ -90,6 +90,7 @@ architecture rtl of Pix2PgpColumnManager is
       -- internal
       statusWr      : sl;
       dataWr        : sl;
+      statusOk      : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
       state         : StateType;
@@ -108,6 +109,7 @@ architecture rtl of Pix2PgpColumnManager is
       -- internal
       statusWr      => '0',
       dataWr        => '0',
+      statusOk      => '0',
       statusFifoDin => (others => '0'),
       wrEnCnt       => (others => '0'),
       state         => IDLE_S);
@@ -121,7 +123,7 @@ begin
    -- Column Manager FSM
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck,
-                   dataRd, statusFifoDout, statusFifoFullDly,
+                   dataRd, statusFifoDout, statusFifoFull, statusFifoFullDly,
                    overOcc, dataFifoAlmFullDly, dataFifoAlmEmptyDly) is
 
       variable v : RegType;
@@ -133,18 +135,34 @@ begin
       -- Register inputs
       v.sof      := sof;
       v.eof      := eof;
-      v.dataWr   := wrEn;
       v.din      := din;
       v.dataRd   := dataRd;
       v.pauseAck := pauseAck;
 
-      -- Strobes
-      v.statusWr := '0';
+      -- need to account for status-FIFO going full;
+      -- if it goes full -> cannot write another word into it;
+      -- so inhibit status writing in IN_FRAME_S;
+      -- also prevent data words from being written to the data FIFO.
+      -- this ensures that the wrEnCnt does get written to the status FIFO,
+      -- once the status FIFO is not full again.
+      -- otherwise the data FIFOs might not get read properly later on
+      --
+      -- using the non-delayed signal here;
+      -- hopefully the design will still meet timing...
+      -- (delayed FIFO signals to ease placement)
+      -- gotta inhibit the writing of the status FIFO fast!
+      v.statusOk := not(statusFifoFull);
+
+      -- data FIFO wrEn
+      v.dataWr := wrEn and v.statusOk;
 
       -- wrEn counter management (rising-edge detection)
-      if (v.dataWr = '1' and r.dataWr = '0') then
+      if v.dataWr = '1' and r.dataWr = '0' then
          v.wrEnCnt := r.wrEnCnt + 1;
       end if;
+
+      -- Strobes
+      v.statusWr := '0';
 
       -- latch the over-occupancy flag here
       if (v.overOcc = '0') then
@@ -160,32 +178,38 @@ begin
             v.wrEnCnt := (others => '0');
 
             -- start-of-frame detection
-            if (v.sof = '1') then
+            if v.sof = '1' then
                v.busy   := '1';
                v.state  := IN_FRAME_S;
             end if;
 
          ----------------------------------------------------------------------
          -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
+         -- note the safeguards from status FIFO overflows
          when IN_FRAME_S =>
 
             -- if FIFO gets full, write the status *after*
             -- the FIFO-writing logic acknowledges the pause
             -- rising-edge detection
-            if v.pauseAck = '1' and r.pauseAck = '0' then
+            if v.pauseAck = '1' and r.pauseAck = '0' and v.statusOk = '1' then
                v.state := WREN_STATUS_S;
             end if;
 
             -- regular EOF (ignore if in pause)
-            if v.eof = '1' and r.pauseAck = '0' then
+            if v.eof = '1' and r.pauseAck = '0' and v.statusOk = '1' then
                v.state := WREN_STATUS_S;
             end if;
 
             -- over-occupancy
-            -- note that if this happens while in pause,
+            -- analog overOcc -> overOcc=high, pauseAck=low
+            -- digital overOcc -> overOcc=high, pauseAck=high. danger!
+            -- if digital overOcc happens ->
             -- both overOcc and pause flags are written into the FIFO:
-            -- this will force the supervisor to resume normal operation
-            if v.overOcc = '1' then
+            -- this will force the supervisor go to PAUSE_ERROR state.
+            -- in that state, all columns are drained ASAP;
+            -- if they are not drained in time, the status FIFO will get full;
+            -- there are safeguards from statusFull here
+            if v.overOcc = '1' and v.statusOk = '1' then
                v.state := WREN_STATUS_S;
             end if;
 

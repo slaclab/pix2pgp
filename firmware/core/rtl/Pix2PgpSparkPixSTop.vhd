@@ -18,7 +18,7 @@ entity Pix2PgpSparkPixSTop is
       RST_ASYNC_G                : boolean   := true;
       RST_POLARITY_G             : std_logic := '0';
       PIPELINE_BRIDGE_DATA_G     : boolean   := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean   := true;
+      PIPELINE_BRIDGE_STATUS_G   : boolean   := false;
       COLMANAGER_DATA_DEPTH_G    : integer   := 6;
       COLMANAGER_STATUS_DEPTH_G  : integer   := 4;
       ADAPTER_DEPTH_G            : integer   := 16;

@@ -27,10 +27,11 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 3);
+      TPD_G               : time     := 1 ns;
+      RST_ASYNC_G         : boolean  := false;
+      RST_POLARITY_G      : sl       := '1';
+      FIFO_RD_DELAY_G     : positive := 3;
+      PAUSE_ERROR_DELAY_G : positive := 15);
    port(
       -- General Interface
       pgpClk        : in  sl;
@@ -57,7 +58,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type StateType is (
       IDLE_S,            -- 000
       ARB_START_S,       -- 001
-      WAIT_STATUS_S,     -- 010
+      WAIT_STATE_S,      -- 010
       IN_PAUSE_S,        -- 011
       IN_PAUSE_ERROR_S); -- 100
 
@@ -74,6 +75,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       -- internal
       pause          : sl;
       pauseError     : sl;
+      pauseErrorEnd  : sl;
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -84,7 +86,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum         : slv(TRG_WIDTH_C-1 downto 0);
-      waitCnt        : slv(bitSize(FIFO_RD_DELAY_G)-1 downto 0);
+      waitCnt        : slv(3 downto 0);
       state          : StateType;
    end record RegType;
 
@@ -100,6 +102,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       -- internal
       pause          => '0',
       pauseError     => '0',
+      pauseErrorEnd  => '0',
       dataReady      => (others => '0'),
       colOverOccErr  => (others => '0'),
       colFifoFullErr => (others => '0'),
@@ -160,8 +163,10 @@ begin
             v.colOverOccErr(col) := '0';
          end if;
 
-         -- check for any columnFull errors
-         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(v.dataReady(col)) then
+         -- check for any columnFull errors;
+         -- note that in this case we do not check for dataReady!
+         -- we need to know if the status FIFO is full regardless of its dataReady status
+         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(r.columnEnable(col)) then
             v.colFifoFullErr(col) := '1';
          else
             v.colFifoFullErr(col) := '0';
@@ -216,7 +221,7 @@ begin
             end if;
 
             -- state switching;
-            ----------------------------------------------------------------------------
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- first raise the start flag...
             if v.arbiterBusy = '0' and r.arbiterBusy = '0' and v.arbiterStart = '0' then
                v.arbiterStart := '1';
@@ -232,7 +237,7 @@ begin
             if v.arbiterBusy = '0' and r.arbiterBusy = '1' then
                v.statusRd := '1'; -- pop the status word
                v.pause    := '0'; -- clear the pause flag
-               v.state    := WAIT_STATUS_S;
+               v.state    := WAIT_STATE_S;
 
                -- were some columns in pause just now? set the pause flag!
                -- read r.colPause *now* because it will soon change state (after the statusRd)
@@ -243,7 +248,7 @@ begin
                   v.colBitmaskArb := r.columnPause;
                end if;
             end if;
-            ----------------------------------------------------------------------------
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
          ----------------------------------------------------------------------
          -- always wait before re-evaluating the status bus empty signal;
@@ -251,9 +256,11 @@ begin
          -- reading the status word on one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
          -- determine what to do with pause and pause-error corner-cases
-         when WAIT_STATUS_S =>
+         -- note that the wait is longer to get out of the pause-error state;
+         when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
-            if (r.waitCnt = FIFO_RD_DELAY_G) then
+            if (r.waitCnt = FIFO_RD_DELAY_G     and r.pauseErrorEnd = '0') or
+               (r.waitCnt = PAUSE_ERROR_DELAY_G and r.pauseErrorEnd = '1') then
                v.waitCnt := (others => '0');
                v.state   := IDLE_S;
 
@@ -307,17 +314,34 @@ begin
          ----------------------------------------------------------------------
          -- during pause-error the FIFOs are being drained as fast as possible
          when IN_PAUSE_ERROR_S =>
+             -- reset the flag (override below at the relevant if-clause)
+            v.pauseErrorEnd := '0';
+
             -- keep draining the columns until they are all empty
-            -- keep incrementing the trigger counter once for each read
+            -- keep incrementing the trigger counter once for each read;
+            -- (that read must yield an over-occ event)
             if uOr(v.dataReady) = '1' then
+               if uOr(v.colOverOccErr) = '1' then
+                  v.trgNum := r.trgNum + 1;
+               end if;
+
                v.statusRdBmsk := v.dataReady;
-               v.trgNum       := r.trgNum + 1;
                v.state        := ARB_START_S;
             end if;
 
-            -- all FIFOs drained
+            -- all FIFOs drained.
+            -- wait for all status FIFOs to be completely settled;
+            -- do that by going to the relevant state.
             if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
-               v.state := IDLE_S;
+               -- raise the flag and then wait
+               v.pauseErrorEnd := '1';
+               v.state         := WAIT_STATE_S;
+
+               -- the flag is reset at the top of this current state;
+               -- the reg'd value will still be '1' if transitioned from WAIT_STATE_S
+               if r.pauseErrorEnd = '1' then
+                  v.state := IDLE_S;
+               end if;
             end if;
 
       end case;

@@ -25,7 +25,7 @@ entity Pix2PgpTb is
       DATAFIFO_PIPE_G            : positive := 2;
       STATUSFIFO_PIPE_G          : positive := 2;
       PIPELINE_BRIDGE_DATA_G     : boolean  := False;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := True;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := False;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
       ADAPTER_DEPTH_G            : integer  := 16;
