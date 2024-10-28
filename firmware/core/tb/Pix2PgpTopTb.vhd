@@ -24,7 +24,7 @@ entity Pix2PgpTopTb is
       RST_POLARITY_G             : sl       := '0';
       FPGA_SYNTH_G               : boolean  := false;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
       ADAPTER_DEPTH_G            : integer  := 6;
