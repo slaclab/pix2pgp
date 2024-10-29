@@ -59,23 +59,16 @@ architecture rtl of Pix2PgpColumnManager is
 
    signal statusFifoDout      : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataFifoEmpty       : sl := '0';
-   signal dataFifoAlmEmpty    : sl := '0';
-   signal dataFifoAlmEmptyDly : sl := '0';
    signal statusFifoEmpty     : sl := '0';
-   signal statusFifoFull      : sl := '0';
+   signal statusFifoFullRd    : sl := '0';
+   signal statusFifoAlmFull   : sl := '0';
    signal statusFifoFullDly   : sl := '0';
    signal dataFifoAlmFull     : sl := '0';
-   signal dataFifoAlmFullDly  : sl := '0';
 
    signal statusWrEn          : sl := '0';
    signal statusDin           : slv(STATUSFIFO_DWIDTH_C-1 downto 0) := (others => '0');
    signal dataWrEn            : sl := '0';
    signal dataDin             : slv(SPARSE_DWIDTH_C-1 downto 0) := (others => '0');
-
-   type StateType is (
-      IDLE_S,         -- 00
-      IN_FRAME_S,     -- 01
-      WREN_STATUS_S); -- 10
 
    type RegType is record
       -- i/o
@@ -84,16 +77,19 @@ architecture rtl of Pix2PgpColumnManager is
       overOcc       : sl;
       dataRd        : sl;
       busy          : sl;
-      pauseOut      : sl;
+      pause         : sl;
       pauseAck      : sl;
       din           : slv(SPARSE_DWIDTH_C-1 downto 0);
       -- internal
+      overOccReg    : sl;
+      pauseAckReg   : sl;
+      eofReg        : sl;
       statusWr      : sl;
       dataWr        : sl;
       statusOk      : sl;
+      statusFifoWr  : sl;
       statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
-      state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -103,16 +99,19 @@ architecture rtl of Pix2PgpColumnManager is
       overOcc       => '0',
       dataRd        => '0',
       busy          => '0',
-      pauseOut      => '0',
+      pause         => '0',
       pauseAck      => '0',
       din           => (others => '0'),
       -- internal
+      overOccReg    => '0',
+      pauseAckReg   => '0',
+      eofReg        => '0',
       statusWr      => '0',
       dataWr        => '0',
       statusOk      => '0',
+      statusFifoWr  => '0',
       statusFifoDin => (others => '0'),
-      wrEnCnt       => (others => '0'),
-      state         => IDLE_S);
+      wrEnCnt       => (others => '0'));
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -122,9 +121,9 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck,
-                   dataRd, statusFifoDout, statusFifoFull, statusFifoFullDly,
-                   overOcc, dataFifoAlmFullDly, dataFifoAlmEmptyDly) is
+   comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck, dataRd,
+                   statusFifoDout, statusFifoAlmFull, statusFifoFullDly,
+                   overOcc, dataFifoAlmFull) is
 
       variable v : RegType;
    begin
@@ -138,12 +137,16 @@ begin
       v.din      := din;
       v.dataRd   := dataRd;
       v.pauseAck := pauseAck;
+      v.overOcc  := overOcc;
+
+      -- Strobes
+      v.statusWr := '0';
 
       -- need to account for status-FIFO going full;
       -- if it goes full -> cannot write another word into it;
       -- so inhibit status writing in IN_FRAME_S;
       -- also prevent data words from being written to the data FIFO.
-      -- this ensures that the wrEnCnt does get written to the status FIFO,
+      -- this ensures that the correct wrEnCnt gets written to the status FIFO,
       -- once the status FIFO is not full again.
       -- otherwise the data FIFOs might not get read properly later on
       --
@@ -151,105 +154,83 @@ begin
       -- hopefully the design will still meet timing...
       -- (delayed FIFO signals to ease placement)
       -- gotta inhibit the writing of the status FIFO fast!
-      v.statusOk := not(statusFifoFull);
+      v.statusOk := not(statusFifoAlmFull);
+
+      -- rising-edge detection
+      -- raise busy signal
+      if v.sof = '1' and r.sof = '0' then
+         v.busy := '1';
+      end if;
 
       -- data FIFO wrEn
-      v.dataWr := wrEn and v.statusOk;
+      -- only write while busy (in-frame)
+      v.dataWr := wrEn and v.busy;
 
       -- wrEn counter management (rising-edge detection)
       if v.dataWr = '1' and r.dataWr = '0' then
          v.wrEnCnt := r.wrEnCnt + 1;
       end if;
 
-      -- Strobes
-      v.statusWr := '0';
-
-      -- latch the over-occupancy flag here
-      if (v.overOcc = '0') then
-         v.overOcc := overOcc;
+      -- all these trigger a writing of a status word;
+      -- note the use of *Reg. This is because a word might not be written right away.
+      -- (the status FIFO *must not* be almostFull in order for its din to be written)
+      -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      -- overOcc is single-cycle strobe; no need to catch edge
+      if v.overOcc = '1' and v.busy = '1' and r.overOccReg = '0' then
+         v.overOccReg := '1';
       end if;
 
-      -------------------------------------------------------------------------
-      case r.state is
-      -------------------------------------------------------------------------
-         -- wait for token; also reset the counters and flags
-         when IDLE_S =>
-            v.busy    := '0';
-            v.wrEnCnt := (others => '0');
-
-            -- start-of-frame detection
-            if v.sof = '1' then
-               v.busy   := '1';
-               v.state  := IN_FRAME_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- wait for end-of-frame, or for over-occupancy, or for FIFO to fill
-         -- note the safeguards from status FIFO overflows
-         when IN_FRAME_S =>
-
-            -- if FIFO gets full, write the status *after*
-            -- the FIFO-writing logic acknowledges the pause
-            -- rising-edge detection
-            if v.pauseAck = '1' and r.pauseAck = '0' and v.statusOk = '1' then
-               v.state := WREN_STATUS_S;
-            end if;
-
-            -- regular EOF (ignore if in pause)
-            if v.eof = '1' and r.pauseAck = '0' and v.statusOk = '1' then
-               v.state := WREN_STATUS_S;
-            end if;
-
-            -- over-occupancy
-            -- analog overOcc -> overOcc=high, pauseAck=low
-            -- digital overOcc -> overOcc=high, pauseAck=high. danger!
-            -- if digital overOcc happens ->
-            -- both overOcc and pause flags are written into the FIFO:
-            -- this will force the supervisor go to PAUSE_ERROR state.
-            -- in that state, all columns are drained ASAP;
-            -- if they are not drained in time, the status FIFO will get full;
-            -- there are safeguards from statusFull here
-            if v.overOcc = '1' and v.statusOk = '1' then
-               v.state := WREN_STATUS_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- write into the status FIFO
-         when WREN_STATUS_S =>
-            v.overOcc := '0'; -- clear (registered value still gets written)
-
-            if r.wrEnCnt(0) = '1' then
-               -- wrote odd number of hits? write an extra dummy word;
-               -- hold for one clock cycle;
-               -- wrEn will switch to input port by default on next cycle
-               v.dataWr := '1';
-            end if;
-
-            v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOcc;
-            v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAck;
-            v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
-            v.statusWr := '1';
-            v.wrEnCnt  := (others => '0');
-
-            -- state switching
-            if (r.pauseAck = '1' or r.overOcc = '1') then
-               v.state := IN_FRAME_S;
-            else
-               v.state := IDLE_S;
-            end if;
-
-      end case;
-      -------------------------------------------------------------------------
-
-      -- pause output handling (essentially wait for almost-empty)
-      if (r.pauseAck = '0') then
-         v.pauseOut := dataFifoAlmFullDly;
-      else
-         v.pauseOut := not(dataFifoAlmEmptyDly);
+      -- rising-edge detection (pauseAck is not a single-cycle strobe)
+      if v.pauseAck = '1' and r.pauseAck = '0' and v.busy = '1' and r.pauseAckReg = '0' then
+         v.pauseAckReg := '1';
       end if;
+
+      -- EOF will remain high as long as this logic is busy
+      -- busy is released once the EOF-related flag is written into the status
+      if v.eof = '1' and v.busy = '1' and r.eofReg = '0' then
+         v.eofReg := '1';
+      end if;
+      -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      -- write status FIFO
+      -- ///////////////////////////////////////////////////////////////////////////////////////////
+      if (r.overOccReg = '1' or r.pauseAckReg = '1' or r.eofReg = '1') and v.statusOk = '1' then
+         if r.wrEnCnt(0) = '1' then
+            -- wrote odd number of hits? write an extra dummy word;
+            -- hold for one clock cycle;
+            -- wrEn will switch to input port by default on next cycle
+            v.dataWr := '1';
+         end if;
+
+         v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOccReg;
+         v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAckReg;
+         v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
+         v.statusWr := '1';
+         v.wrEnCnt  := (others => '0');
+
+         -- reset the flags (including busy)
+         -- over-occupancy received and written
+         if r.overOccReg = '1' then
+            v.overOccReg := '0';
+         end if;
+
+         -- pause-acknowledge received and written
+         if r.pauseAckReg = '1' then
+            v.pauseAckReg := '0';
+         end if;
+
+         -- regular EOF received and status word written
+         if r.eofReg = '1' then
+            v.eofReg := '0';
+            v.busy   := '0';
+         end if;
+      end if;
+      -- ///////////////////////////////////////////////////////////////////////////////////////////
+      -- pause output handling
+      v.pause := dataFifoAlmFull or statusFifoAlmFull;
 
       -- Outputs
-      pause <= v.pauseOut;
+      pause <= v.pause;
       busy  <= v.busy;
       -- status bus assignments (in pgpClk domain)
       statusBus.overOcc    <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
@@ -309,7 +290,7 @@ begin
          DELAY_G        => STATUSFIFO_PIPE_G)
       port map (
          clk     => pgpClk,
-         din(0)  => statusFifoFull,
+         din(0)  => statusFifoFullRd,
          dout(0) => statusFifoFullDly);
 
    U_StatusFifo : entity pix2pgp.Pix2PgpFifoWrapper
@@ -318,6 +299,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          FWFT_EN_G       => true,
+         DWARE_AF_LVL_G  => 1,
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          DWARE_DEPTH_G   => STATUS_DEPTH_G,
@@ -332,13 +314,13 @@ begin
          wrEn     => statusWrEn,
          din      => statusDin,
          aEmptyWr => open,
-         fullWr   => open,
+         aFullWr  => statusFifoAlmFull,
          emptyWr  => statusFifoEmpty, -- for debugging
          -- Read Interface
          rdClk    => pgpClk,
          rdEn     => statusRd,
          emptyRd  => statusBus.columnEmpty,
-         fullRd   => statusFifoFull,
+         fullRd   => statusFifoFullRd,
          dout     => statusFifoDout);
 
    ------------------------------------------------
@@ -366,26 +348,6 @@ begin
          din  => r.din,
          dout => dataDin);
 
-   U_PipelineDataAlmostFull : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => STATUSFIFO_PIPE_G)
-      port map (
-         clk     => sparseClk,
-         din(0)  => dataFifoAlmFull,
-         dout(0) => dataFifoAlmFullDly);
-
-   U_PipelineDataAlmostEmpty : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => STATUSFIFO_PIPE_G)
-      port map (
-         clk     => sparseClk,
-         din(0)  => dataFifoAlmEmpty,
-         dout(0) => dataFifoAlmEmptyDly);
-
    U_DataFifo : entity pix2pgp.Pix2PgpFifoWrapper
       generic map (
          TPD_G           => TPD_G,
@@ -406,8 +368,6 @@ begin
          wrClk    => sparseClk,
          wrEn     => dataWrEn,
          din      => dataDin,
-         fullWr   => open,
-         aEmptyWr => dataFifoAlmEmpty,
          aFullWr  => dataFifoAlmFull,
          emptyWr  => dataFifoEmpty,  -- for debugging
          -- Read Interface

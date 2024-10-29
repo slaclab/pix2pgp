@@ -16,8 +16,8 @@ entity Pix2PgpEmuTb is
       FPGA_SYNTH_G               : boolean  := false;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G    : integer  := 6;
-      COLMANAGER_STATUS_DEPTH_G  : integer  := 4;
+      COLMANAGER_DATA_DEPTH_G    : integer  := 7;
+      COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
       ADAPTER_DEPTH_G            : integer  := 16;
       ADAPTER_AF_LVL_G           : integer  := 2;
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
