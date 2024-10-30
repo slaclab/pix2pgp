@@ -214,9 +214,8 @@ begin
             v.overOccError  := uOr(v.colOverOccErr);
             v.colPause      := uOr(v.columnPause);
 
-            -- if not in pause, get the regular bitmask;
-            -- if in pause, bitmask is grabbed on DONE
-            if r.pause = '0' then
+            -- if not in pause, get the regular bitmask
+            if r.pause = '0' and r.pauseError = '0' then
                v.colBitmaskArb := v.colBitmask;
             end if;
 
@@ -304,11 +303,12 @@ begin
             -- not in regular pause anymore, so drop that flag
             -- raise the pause-error flag and increment the trigger counter (new SRO)
             if toBoolean(uOr(v.pauseErrorBmsk)) then
-               v.pause        := '0';
-               v.pauseError   := '1';
-               v.trgNum       := r.trgNum + 1;
-               v.statusRdBmsk := v.dataReady;
-               v.state        := ARB_START_S;
+               v.pause         := '0';
+               v.pauseError    := '1';
+               v.trgNum        := r.trgNum + 1;
+               v.statusRdBmsk  := v.dataReady;
+               v.colBitmaskArb := v.colBitmask;
+               v.state         := ARB_START_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -325,8 +325,9 @@ begin
                   v.trgNum := r.trgNum + 1;
                end if;
 
-               v.statusRdBmsk := v.dataReady;
-               v.state        := ARB_START_S;
+               v.statusRdBmsk  := v.dataReady;
+               v.colBitmaskArb := v.colBitmask;
+               v.state         := ARB_START_S;
             end if;
 
             -- all FIFOs drained.
