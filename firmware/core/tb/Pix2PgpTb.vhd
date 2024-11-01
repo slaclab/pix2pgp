@@ -66,9 +66,6 @@ architecture test of Pix2PgpTb is
    signal txEof        : sl := '0';
    signal txEofe       : sl := '0';
 
-   signal fillFifos    : sl := '0';
-   signal fillCnt      : natural range 0 to 1023;
-
    signal phyTxValid  : sl := '0';
    signal phyTxReady  : sl := '1';
    signal phyTxData   : slv(65 downto 0) := (others => '0');

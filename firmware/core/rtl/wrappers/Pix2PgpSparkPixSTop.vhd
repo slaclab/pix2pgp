@@ -12,6 +12,8 @@ use ieee.std_logic_arith.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
+library surf;
+
 entity Pix2PgpSparkPixSTop is
    generic(
       TPD_G                      : time      := 1 ns;
@@ -69,19 +71,25 @@ entity Pix2PgpSparkPixSTop is
       wrEn         : in  std_logic_vector(23 downto 0);
       busy         : out std_logic_vector(23 downto 0);
       pause        : out std_logic_vector(23 downto 0);
-      -- Pgp4TxLite Interface
-      txReady      : in  std_logic;
-      txValid      : out std_logic;
-      txData       : out std_logic_vector(63 downto 0);
-      txSof        : out std_logic;
-      txEof        : out std_logic;
-      txEofe       : out std_logic);
+      -- Serializer Interface
+      doutSer      : out std_logic_vector(31 downto 0));
 end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
 
    signal din               : Pix2PgpSparseDinArray := (others => (others => '0'));
    signal columnEnableMuxed : std_logic_vector(23 downto 0);
+
+   signal txReady           : std_logic := '1';
+   signal txValid           : std_logic := '0';
+   signal txData            : std_logic_vector(63 downto 0) := (others => '0');
+   signal txSof             : std_logic := '0';
+   signal txEof             : std_logic := '0';
+   signal txEofe            : std_logic := '0';
+
+   signal phyTxValid        : std_logic := '0';
+   signal phyTxReady        : std_logic := '1';
+   signal phyTxData         : std_logic_vector(65 downto 0) := (others => '0');
 
 begin
 
@@ -125,6 +133,51 @@ begin
          txEof        => txEof,
          txEofe       => txEofe);
 
+   -- Instantiate the PGP4TxLiteWrapper
+   U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map(
+        -- Clock and Reset
+        clk        => pgpClk,
+        rst        => pgpRst,
+        -- 64-bit Input Framing Interface
+        txReady    => txReady,
+        txValid    => txValid,
+        txData     => txData,
+        txSof      => txSof,
+        txEof      => txEof,
+        txEofe     => txEofe,
+        -- 66-bit Output Interface
+        phyTxValid => phyTxValid,
+        phyTxReady => phyTxReady,
+        phyTxData  => phyTxData);
+
+   U_SerializerGearbox : entity surf.Gearbox
+      generic map (
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         SLAVE_WIDTH_G  => 66,
+         MASTER_WIDTH_G => 32)
+      port map (
+         -- Clock and Reset
+         clk            => pgpClk,
+         rst            => pgpRst,
+         -- Slave Interface
+         slaveValid     => phyTxValid,
+         slaveReady     => phyTxReady,
+         slaveData      => phyTxData,
+         slaveBitOrder  => '0',
+         -- Master Interface
+         masterBitOrder => '0',
+         masterReady    => '1',  -- serializer is always ready
+         masterValid    => open, -- data to serializer always valid
+         masterData     => doutSer);
+
+      -- dumb; but should always work with a .v/.sv wrapper above this level
       din(0)  <= din0;
       din(1)  <= din1;
       din(2)  <= din2;

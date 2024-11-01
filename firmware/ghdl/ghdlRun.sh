@@ -21,10 +21,12 @@ ROOT_DIR=${PWD}/../../
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 RTL_DIR=${ROOT_DIR}/firmware/core/rtl
+WRAPPERS_DIR=${RTL_DIR}/wrappers
 TB_DIR=${ROOT_DIR}/firmware/core/tb
 FIFO_DIR=${GHDL_DIR}/ghdlFifo
 
 RTL=${RTL_DIR}/*.vhd
+WRAPPERS=${WRAPPERS_DIR}/*.vhd
 FIFO=${FIFO_DIR}/*.vhd
 
 # note that the package has to be declared separately in order to be imported first
@@ -224,6 +226,7 @@ ghdlClean()
   fi
 
   checkFileExists ${RTL}
+  checkFileExists ${WRAPPERS}
   pix2pgp_exists=$?
 
   # pix2pgp import
@@ -233,6 +236,8 @@ ghdlClean()
     ${GHDL_IMPORT_PIX2PGP} ${TB}
     ${GHDL_IMPORT_PIX2PGP} ${FIFO}
     ${GHDL_IMPORT_PIX2PGP} ${RTL}
+    echo "[INFO]: Also importing the ASIC wrappers..."
+    ${GHDL_IMPORT_PIX2PGP} ${WRAPPERS}
   else
     echo "[ERROR]: No pix2pgp files found..."
     exit 1
@@ -249,6 +254,7 @@ ghdlAnalyze()
   echo "$(ls ${RTL})"
   echo "$(ls ${TB})"
   ${GHDL_ANALYZE} ${RTL}
+  ${GHDL_ANALYZE} ${WRAPPERS}
   ${GHDL_ANALYZE} ${TB}
 }
 
