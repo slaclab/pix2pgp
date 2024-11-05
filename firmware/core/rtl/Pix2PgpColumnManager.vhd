@@ -308,7 +308,7 @@ begin
       port map (
          -- Resets
          rst      => sparseRst,
-         enable   => enable,
+         enable   => '1',
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => statusWrEn,
@@ -363,7 +363,7 @@ begin
       port map (
          -- Resets
          rst      => sparseRst,
-         enable   => enable,
+         enable   => '1',
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => dataWrEn,
