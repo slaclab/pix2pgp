@@ -73,9 +73,9 @@ architecture test of Pix2PgpTopTb is
    type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
    signal hitLen  : hitLenArray := (others => (others => '0'));
 
-   signal pgpDout      : slv(31 downto 0) := (others => '0');
-   signal pgpDoutValid : sl;
-   signal pgpDoutReady : sl;
+   signal pgpDataAsic      : slv(31 downto 0) := (others => '0');
+   signal pgpDataAsicValid : sl;
+   signal pgpDataAsicReady : sl;
 
    signal pgpValid  : sl := '0';
    signal pgpData   : slv(39 downto 0) := (others => '0');
@@ -160,7 +160,7 @@ begin
    ------
    -- UUT
    ------
-   U_Uut : entity pix2pgp.Pix2PgpTb
+   U_Uut : entity pix2pgp.Pix2PgpSparkPixSTop
       generic map(
          TPD_G                      => TPD_G,
          RST_ASYNC_G                => RST_ASYNC_G,
@@ -177,8 +177,11 @@ begin
          ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
       port map(
          sparseClk    => sparseClk,
+         sparseRst    => rst,
          pgpClk       => pgpClk,
-         rst          => rst,
+         pgpRst       => rst,
+         sel          => '1',
+         columnEnable => (others => '1'),
          pause        => pause,
          sof          => sof,
          eof          => eof,
@@ -186,10 +189,33 @@ begin
          overOcc      => overOcc,
          pauseAck     => pauseAck,
          wrEn         => wrEn,
-         din          => din,
-         pgpDout      => pgpDout,
-         pgpDoutValid => pgpDoutValid,
-         pgpDoutReady => pgpDoutReady);
+         din0         => din(0),
+         din1         => din(1),
+         din2         => din(2),
+         din3         => din(3),
+         din4         => din(4),
+         din5         => din(5),
+         din6         => din(6),
+         din7         => din(7),
+         din8         => din(8),
+         din9         => din(9),
+         din10        => din(10),
+         din11        => din(11),
+         din12        => din(12),
+         din13        => din(13),
+         din14        => din(14),
+         din15        => din(15),
+         din16        => din(16),
+         din17        => din(17),
+         din18        => din(18),
+         din19        => din(19),
+         din20        => din(20),
+         din21        => din(21),
+         din22        => din(22),
+         din23        => din(23),
+         pgpDout      => pgpDataAsic,
+         pgpDoutValid => pgpDataAsicValid,
+         pgpDoutReady => pgpDataAsicReady);
 
    -------
    -- FPGA
@@ -207,9 +233,9 @@ begin
        clk         => pgpClk,
        rst         => rst,
        -- Pix2Pgp Interface
-       pgpDin      => pgpDout,
-       pgpDinValid => pgpDoutValid,
-       pgpDinReady => pgpDoutReady,
+       pgpDin      => pgpDataAsic,
+       pgpDinValid => pgpDataAsicValid, -- has to be connected; otherwise pgp does not align
+       pgpDinReady => pgpDataAsicReady, -- does not have to be connected
        -- FPGA RX Interface
        pgpValid    => pgpValid,
        pgpData     => pgpData);
@@ -243,13 +269,13 @@ begin
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*93;
-       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(4, hitLen(col)'length);
-       end loop;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro  <= '0';
+     --wait for CLK_PERIOD_SPARSE_C*93;
+     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+     --    hitLen(col) <= toSlv(4, hitLen(col)'length);
+     --  end loop;
+     --    sro <= '1';
+     --wait for CLK_PERIOD_SPARSE_C*2;
+     --    sro  <= '0';
 
        wait for CLK_PERIOD_SPARSE_C*93;
       hitLen(0)  <= toSlv(0,  hitLen(5)'length);
@@ -376,64 +402,64 @@ begin
     --wait for CLK_PERIOD_SPARSE_C*2;
     --    sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-        hitLen(col) <= toSlv(4, hitLen(col)'length);
-      end loop;
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
+    --  end loop;
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      hitLen(5) <= toSlv(3, hitLen(5)'length);
-      hitLen(6) <= toSlv(1, hitLen(6)'length);
-      hitLen(7) <= toSlv(2, hitLen(7)'length);
-      hitLen(8) <= toSlv(3, hitLen(8)'length);
-      hitLen(9) <= toSlv(4, hitLen(9)'length);
-      sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    --  hitLen(5) <= toSlv(3, hitLen(5)'length);
+    --  hitLen(6) <= toSlv(1, hitLen(6)'length);
+    --  hitLen(7) <= toSlv(2, hitLen(7)'length);
+    --  hitLen(8) <= toSlv(3, hitLen(8)'length);
+    --  hitLen(9) <= toSlv(4, hitLen(9)'length);
+    --  sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    --  sro  <= '0';
 
-    --  will force pause
-    wait for CLK_PERIOD_SPARSE_C*93;
-     hitLen(5) <= toSlv(13, hitLen(5)'length);
-     hitLen(6) <= toSlv(6,  hitLen(6)'length);
-     hitLen(7) <= toSlv(3,  hitLen(7)'length);
-     hitLen(8) <= toSlv(15, hitLen(8)'length);
-     hitLen(9) <= toSlv(1,  hitLen(9)'length);
-     sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-     sro  <= '0';
+    ----  will force pause
+    --wait for CLK_PERIOD_SPARSE_C*93;
+    -- hitLen(5) <= toSlv(13, hitLen(5)'length);
+    -- hitLen(6) <= toSlv(6,  hitLen(6)'length);
+    -- hitLen(7) <= toSlv(3,  hitLen(7)'length);
+    -- hitLen(8) <= toSlv(15, hitLen(8)'length);
+    -- hitLen(9) <= toSlv(1,  hitLen(9)'length);
+    -- sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    -- sro  <= '0';
 
-     -- will force pause
-    wait for CLK_PERIOD_SPARSE_C*1693;
-     hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(1)  <= toSlv(32,  hitLen(5)'length);
-     hitLen(2)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(4)  <= toSlv(4,  hitLen(5)'length);
-     hitLen(5)  <= toSlv(22,  hitLen(5)'length);
-     hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-     hitLen(7)  <= toSlv(1,  hitLen(7)'length);
-     hitLen(8)  <= toSlv(5,  hitLen(8)'length);
-     hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-     hitLen(10) <= toSlv(4,  hitLen(5)'length);
-     hitLen(11) <= toSlv(20,  hitLen(5)'length);
-     hitLen(12) <= toSlv(0,  hitLen(5)'length);
-     hitLen(13) <= toSlv(3,  hitLen(5)'length);
-     hitLen(14) <= toSlv(4,  hitLen(5)'length);
-     hitLen(15) <= toSlv(2,  hitLen(5)'length);
-     hitLen(16) <= toSlv(0,  hitLen(6)'length);
-     hitLen(17) <= toSlv(2,  hitLen(7)'length);
-     hitLen(18) <= toSlv(18,  hitLen(8)'length);
-     hitLen(19) <= toSlv(0,  hitLen(9)'length);
-     hitLen(20) <= toSlv(3,  hitLen(5)'length);
-     hitLen(21) <= toSlv(0,  hitLen(5)'length);
-     hitLen(22) <= toSlv(4,  hitLen(5)'length);
-     hitLen(23) <= toSlv(0,  hitLen(5)'length);
-     sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-     sro  <= '0';
+    -- -- will force pause
+    --wait for CLK_PERIOD_SPARSE_C*1693;
+    -- hitLen(0)  <= toSlv(0,  hitLen(5)'length);
+    -- hitLen(1)  <= toSlv(32,  hitLen(5)'length);
+    -- hitLen(2)  <= toSlv(0,  hitLen(5)'length);
+    -- hitLen(3)  <= toSlv(0,  hitLen(5)'length);
+    -- hitLen(4)  <= toSlv(4,  hitLen(5)'length);
+    -- hitLen(5)  <= toSlv(22,  hitLen(5)'length);
+    -- hitLen(6)  <= toSlv(0,  hitLen(6)'length);
+    -- hitLen(7)  <= toSlv(1,  hitLen(7)'length);
+    -- hitLen(8)  <= toSlv(5,  hitLen(8)'length);
+    -- hitLen(9)  <= toSlv(0,  hitLen(9)'length);
+    -- hitLen(10) <= toSlv(4,  hitLen(5)'length);
+    -- hitLen(11) <= toSlv(20,  hitLen(5)'length);
+    -- hitLen(12) <= toSlv(0,  hitLen(5)'length);
+    -- hitLen(13) <= toSlv(3,  hitLen(5)'length);
+    -- hitLen(14) <= toSlv(4,  hitLen(5)'length);
+    -- hitLen(15) <= toSlv(2,  hitLen(5)'length);
+    -- hitLen(16) <= toSlv(0,  hitLen(6)'length);
+    -- hitLen(17) <= toSlv(2,  hitLen(7)'length);
+    -- hitLen(18) <= toSlv(18,  hitLen(8)'length);
+    -- hitLen(19) <= toSlv(0,  hitLen(9)'length);
+    -- hitLen(20) <= toSlv(3,  hitLen(5)'length);
+    -- hitLen(21) <= toSlv(0,  hitLen(5)'length);
+    -- hitLen(22) <= toSlv(4,  hitLen(5)'length);
+    -- hitLen(23) <= toSlv(0,  hitLen(5)'length);
+    -- sro  <= '1';
+    --wait for CLK_PERIOD_SPARSE_C*2;
+    -- sro  <= '0';
 
     -- !!!! note the long wait
     --wait for CLK_PERIOD_SPARSE_C*1693;

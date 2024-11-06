@@ -72,7 +72,9 @@ entity Pix2PgpSparkPixSTop is
       busy         : out std_logic_vector(23 downto 0);
       pause        : out std_logic_vector(23 downto 0);
       -- Serializer Interface
-      doutSer      : out std_logic_vector(31 downto 0));
+      pgpDout      : out std_logic_vector(31 downto 0);
+      pgpDoutValid : out std_logic;
+      pgpDoutReady : in  std_logic);
 end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
@@ -173,9 +175,9 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => '1',  -- serializer is always ready
-         masterValid    => open, -- data to serializer always valid
-         masterData     => doutSer);
+         masterReady    => pgpDoutReady,
+         masterValid    => pgpDoutValid,
+         masterData     => pgpDout);
 
       -- dumb; but should always work with a .v/.sv wrapper above this level
       din(0)  <= din0;
