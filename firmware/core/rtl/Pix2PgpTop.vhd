@@ -117,7 +117,6 @@ begin
             sparseClk => sparseClk,
             pgpClk    => pgpClk,
             sparseRst => sparseRst,
-            enable    => columnEnable(col),
             -- Sparse Logic Interface
             din       => din(col),
             wrEn      => wrEn(col),

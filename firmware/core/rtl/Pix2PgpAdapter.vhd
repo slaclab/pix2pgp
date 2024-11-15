@@ -170,7 +170,6 @@ begin
       port map (
          -- Resets
          rst     => pgpRst,
-         enable  => '1',
          -- Writ e Interface
          wrClk   => pgpClk,
          wrEn    => pgpValid,

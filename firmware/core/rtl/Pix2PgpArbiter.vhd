@@ -325,15 +325,13 @@ begin
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
-            if (v.arbValid = '0' and pgpReady = '1') then
+            if allBits(r.wordCnt, '1') and r.arbValid = '1' then
+               v.arbValid    := '0';
+               v.arbBusy     := '0';
+               v.dummyHeader := '0';
+               v.state       := IDLE_S;
+            elsif (v.arbValid = '0' and pgpReady = '1') then
                v.arbValid := '1';
-
-               if allBits(r.wordCnt, '1') and r.arbValid = '1' then
-                  v.arbValid    := '0';
-                  v.arbBusy     := '0';
-                  v.dummyHeader := '0';
-                  v.state       := IDLE_S;
-               end if;
             end if;
 
       end case;

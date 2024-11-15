@@ -38,7 +38,6 @@ entity Pix2PgpFifoWrapper is
    port(
       -- Resets
       rst      : in  sl;
-      enable   : in  sl;
       -- Write Interface
       wrClk    : in  sl;
       wrEn     : in  sl;
@@ -153,8 +152,8 @@ architecture rtl of Pix2PgpFifoWrapper is
 
 begin
 
-   -- dware FIFOs *always* have an active-LOW reset (i.e. enable/rstN)
-   rstDwareFifo  <= (not(rst) and enable) when RST_POLARITY_G = '1' else (rst and enable);
+   -- dware FIFOs *always* have an active-LOW reset
+   rstDwareFifo  <= not(rst) when RST_POLARITY_G = '1' else rst;
    wrEnDwareFifo <= not(wrEn);
    rdEnDwareFifo <= not(rdEn);
 

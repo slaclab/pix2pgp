@@ -38,7 +38,6 @@ entity Pix2PgpColumnManager is
       sparseClk : in  sl;
       pgpClk    : in  sl;
       sparseRst : in  sl := not(RST_POLARITY_G);
-      enable    : in  sl;
       -- Sparse Logic Interface
       din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
       wrEn      : in  sl;
@@ -248,10 +247,9 @@ begin
 
    end process comb;
 
-   seq : process (sparseClk, sparseRst, enable) is
+   seq : process (sparseClk, sparseRst) is
    begin
-      if ((RST_ASYNC_G and sparseRst = RST_POLARITY_G)
-      or  enable = '0') then
+      if RST_ASYNC_G and sparseRst = RST_POLARITY_G then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(sparseClk) then
          r <= rin after TPD_G;
@@ -308,7 +306,6 @@ begin
       port map (
          -- Resets
          rst      => sparseRst,
-         enable   => '1',
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => statusWrEn,
@@ -363,7 +360,6 @@ begin
       port map (
          -- Resets
          rst      => sparseRst,
-         enable   => '1',
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => dataWrEn,

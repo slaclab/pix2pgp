@@ -141,8 +141,8 @@ begin
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-         -- column is ready when its status FIFO has a word
-         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and r.columnEnable(col);
+         -- column is ready when its status FIFO has a word;
+         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and v.columnEnable(col);
 
          -- note that for all flags we check against the dataReady signal;
          -- why? because we are using FWFT FIFOs...
@@ -166,7 +166,7 @@ begin
          -- check for any columnFull errors;
          -- note that in this case we do not check for dataReady!
          -- we need to know if the status FIFO is full regardless of its dataReady status
-         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(r.columnEnable(col)) then
+         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(v.columnEnable(col)) then
             v.colFifoFullErr(col) := '1';
          else
             v.colFifoFullErr(col) := '0';
@@ -183,16 +183,15 @@ begin
          v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col) and v.dataReady(col);
 
          -- busy is used to exit from the pause-error state
-         v.columnBusy(col) := columnBusy(col) and r.columnEnable(col);
+         v.columnBusy(col) := columnBusy(col) and v.columnEnable(col);
 
       end loop;
 
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
-         -- stay here until *all* columns have data;
-         -- issue the rdEn pulse to the FIFO if all columns have data;
-         -- don't do anything if all columns are disabled (see submodule)
+         -- stay here until *all* enabled columns have data;
+         -- at least *one* column must be enabled
          when IDLE_S =>
             v.pause        := '0';
             v.pauseError   := '0';
@@ -200,7 +199,7 @@ begin
             v.colEmpty     := not(uOr(v.dataReady));
             v.statusRdBmsk := (others => '1');
 
-            if toBoolean(uAnd(v.dataReady)) then
+            if (v.dataReady = v.columnEnable) and toBoolean(uOr(v.columnEnable)) then
                v.trgNum := r.trgNum + 1;
                v.state  := ARB_START_S;
             end if;
@@ -360,7 +359,7 @@ begin
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
-         statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and r.columnEnable(col);
+         statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and v.columnEnable(col);
       end loop;
 
       -- Reset

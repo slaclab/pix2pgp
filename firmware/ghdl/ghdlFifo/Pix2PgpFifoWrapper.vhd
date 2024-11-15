@@ -41,7 +41,6 @@ entity Pix2PgpFifoWrapper is
    port(
       -- Resets
       rst      : in  sl;
-      enable   : in  sl;
       -- Write Interface
       wrClk    : in  sl;
       wrEn     : in  sl;
@@ -62,12 +61,9 @@ architecture rtl of Pix2PgpFifoWrapper is
 
    signal fullWrStandalone  : sl := '0';
    signal validRdStandalone : sl := '0';
-   signal rstFifo           : sl := '0';
    signal validWr           : sl := '0';
 
 begin
-
-   rstFifo <= (rst and not(enable)) when RST_POLARITY_G = '1' else (rst and enable);
 
    SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
       U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
@@ -83,7 +79,7 @@ begin
             FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
-            rst       => rstFifo,
+            rst       => rst,
             -- Write Interface
             wr_clk    => wrClk,
             wr_en     => wrEn,
@@ -112,7 +108,7 @@ begin
             FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
-            rst       => rstFifo,
+            rst       => rst,
             -- Write Interface
             wr_clk    => wrClk,
             wr_en     => wrEn,
