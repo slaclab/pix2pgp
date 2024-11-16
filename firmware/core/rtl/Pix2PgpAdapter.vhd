@@ -66,6 +66,10 @@ architecture rtl of Pix2PgpAdapter is
       txValid  : sl;
       txSof    : sl;
       txEof    : sl;
+      pgpReady : sl;
+      pgpValid : sl;
+      txData   : slv(PGP_DWIDTH_C-1 downto 0);
+      pgpData  : slv(PGP_DWIDTH_C-1 downto 0);
       -- internal
       fifoRdEn : sl;
       frameCnt : slv(2 downto 0);
@@ -77,6 +81,10 @@ architecture rtl of Pix2PgpAdapter is
       txValid  => '0',
       txSof    => '0',
       txEof    => '0',
+      pgpReady => '0',
+      pgpValid => '0',
+      txData   => (others => '0'),
+      pgpData  => (others => '0'),
       -- internal
       fifoRdEn => '0',
       frameCnt => (others => '0'));
@@ -93,47 +101,52 @@ begin
    ------------------------------------------------
    -- Adapter FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, fifoEmpty, txReady) is
+   comb : process (r, pgpRst, fifoEmpty, txReady, pgpValid, pgpData) is
       variable v : RegType;
    begin
 
       -- Latch the current value
       v := r;
 
-      v.fifoRdEn := '0';
+      -- inputs
+      v.pgpData  := pgpData;
+      v.pgpValid := pgpValid;
+      v.txReady  := txReady;
+      v.txData   := v.pgpData;
 
-      -- flow control check
-      if (txReady = '1') then
-         v.txValid := '0';
-         v.txSof   := '0';
-         v.txEof   := '0';
+      -- defaults
+      v.pgpReady := '1'; -- ready to grab the data
+      v.txSof    := '1';
+      v.txEof    := '0';
+
+      if r.frameCnt > 0 then
+         v.txSof := '0';
       end if;
 
-      if fifoEmpty = '0' and v.txValid = '0' then
-         v.fifoRdEn := '1';
-         v.txValid  := '1';
-         v.frameCnt := r.frameCnt + 1;
+      if r.frameCnt = 4 then
+         v.txEof   := '1';
+      end if;
 
-         if r.frameCnt = 0 then
-            v.fifoRdEn := '0'; -- fwft; first word is pre-read
-            v.txSof    := '1';
+      if v.pgpValid = '1' then
+         v.pgpReady := '0'; -- stop receiving data
+         v.txValid  := '1'; -- go up and stay that way
+      end if;
+
+      if r.txValid = '1' then
+         v.pgpReady := '0'; -- stay down to block slave
+         if v.txReady = '1' then
+            v.pgpReady := '1'; -- ready to grab the data again
+            v.frameCnt := r.frameCnt + 1;
+            v.txValid  := '0'; -- drop the valid
          end if;
-
-         if r.frameCnt = 4 then
-            v.txEof    := '1';
-         end if;
-
-         if r.frameCnt = 5 then
-            v.frameCnt := (others => '0');
-         end if;
-
       end if;
 
       -- Outputs
-      fifoRdEn <= v.fifoRdEn;
-      txValid  <= not(fifoEmpty);
-      txSof    <= r.txSof;
-      txEof    <= r.txEof;
+      txData   <= v.txData;
+      pgpReady <= v.pgpReady;
+      txValid  <= r.txValid;
+      txSof    <= v.txSof;
+      txEof    <= v.txEof;
       txEofe   <= '0';
 
       -- Reset
@@ -154,36 +167,5 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
-
-   U_PgpBuffer : entity pix2pgp.Pix2PgpFifoWrapper
-      generic map (
-         TPD_G           => TPD_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         GEN_SYNC_FIFO_G => false,
-         FWFT_EN_G       => true,
-         WR_DATA_WIDTH_G => PGP_DWIDTH_C,
-         RD_DATA_WIDTH_G => PGP_DWIDTH_C,
-         DWARE_DEPTH_G   => DWARE_DEPTH_G,
-         DWARE_AF_LVL_G  => DWARE_AF_LVL_G,
-         ADDR_WIDTH_G    => 4)
-      port map (
-         -- Resets
-         rst     => pgpRst,
-         -- Writ e Interface
-         wrClk   => pgpClk,
-         wrEn    => pgpValid,
-         din     => pgpData,
-         aFullWr => pgpAFull,
-         fullWr  => pgpFull,
-         emptyWr => open,
-         -- Read Interface
-         rdClk   => pgpClk,
-         rdEn    => fifoRdEn,
-         emptyRd => fifoEmpty,
-         fullRd  => open,
-         dout    => txData);
-
-   pgpReady <= not(pgpAFull); -- tie with almost-full
 
 end rtl;

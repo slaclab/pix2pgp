@@ -199,7 +199,7 @@ begin
       v := r;
 
       v.eventEmpty := not(uOr(colBitmask));
-      v.pgpReady   := pgpReady;
+      v.arbReady   := arbReady;
 
       -- flow control check
       v.dataRd := '0';
@@ -209,7 +209,7 @@ begin
 
       -- keeps track of the words written into the gearbox;
       -- important for the final state after done TXing the data
-      if (r.arbValid = '1' and r.arbReady = '1') then
+      if (r.arbValid = '1' and v.arbReady = '1') then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -238,10 +238,9 @@ begin
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
             v.arbBusy  := '0';
-            v.arbValid := '0';
             v.colSel   := colSelReset(v.colSel'length, r.reverseRead);
 
-            if arbStart = '1' and r.dummyHeader = '0' and v.arbValid = '0' and pgpReady = '1' then
+            if arbStart = '1' and r.dummyHeader = '0' and v.arbValid = '0' then
                v.arbBusy  := '1';
                v.arbValid := '1';
                v.state    := CHECK_BITMASK_S;
@@ -276,7 +275,7 @@ begin
                end if;
 
             else
-               if (v.arbValid = '0' and pgpReady = '1') then
+               if v.arbValid = '0' then
                   v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
                   v.arbValid  := '1';
 
@@ -301,7 +300,7 @@ begin
          when PARSE_DATA_S =>
             v.arbDout := dataBusSel.data;
 
-            if v.arbValid = '0' and pgpReady = '1' then
+            if v.arbValid = '0' then
                v.dataRdCnt := r.dataRdCnt + 1;
                v.dataRd    := '1';
                v.arbValid  := '1';
@@ -325,13 +324,15 @@ begin
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
-            if allBits(r.wordCnt, '1') and r.arbValid = '1' then
-               v.arbValid    := '0';
-               v.arbBusy     := '0';
-               v.dummyHeader := '0';
-               v.state       := IDLE_S;
-            elsif (v.arbValid = '0' and pgpReady = '1') then
+            if v.arbValid = '0' then
                v.arbValid := '1';
+
+               if allBits(r.wordCnt, '1') then
+                  v.arbValid    := '0';
+                  v.arbBusy     := '0';
+                  v.dummyHeader := '0';
+                  v.state       := IDLE_S;
+               end if;
             end if;
 
       end case;
@@ -395,7 +396,7 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => '1', -- flow is controlled by adapter's FIFO progFull (pgpReady)
+         masterReady    => pgpReady,
          masterValid    => pgpValid,
          masterData     => pgpData);
 
