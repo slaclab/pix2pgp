@@ -260,6 +260,9 @@ begin
 
     wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
       hitLen(0) <= toSlv(4, hitLen(0)'length);
+      hitLen(1) <= toSlv(4, hitLen(0)'length);
+      hitLen(2) <= toSlv(4, hitLen(0)'length);
+      hitLen(3) <= toSlv(4, hitLen(0)'length);
       sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
       sro  <= '0';

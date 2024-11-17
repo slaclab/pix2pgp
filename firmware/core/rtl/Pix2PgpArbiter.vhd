@@ -219,9 +219,6 @@ begin
          v.gboxValid := '0';
       end if;
 
-      -- header is always TX'd default; being overriden otherwise
-      v.gboxDin := v.dataHeader;
-
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -234,6 +231,7 @@ begin
             v.colSel  := colSelReset(v.colSel'length, r.reverseRead);
 
             if arbStart = '1' and v.gboxValid = '0' then
+               v.gboxDin   := v.dataHeader;
                v.arbBusy   := '1';
                v.gboxValid := '1';
                v.state     := CHECK_BITMASK_S;
@@ -258,11 +256,11 @@ begin
             else
                if v.gboxValid = '0' then
                   v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
-                  v.gboxValid := '1';
 
                   -- TX the dataLength and start reading the data fifo
-                  v.gboxDin(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-                  v.gboxDin(9 downto 0)                   := dataLenSel;
+                  v.gboxDin(DATABUS_DWIDTH_C-1 downto DATALEN_WIDTH_C) := (others => '0');
+                  v.gboxDin(DATALEN_WIDTH_C-1  downto 0)               := dataLenSel;
+                  v.gboxValid := '1';
 
                   -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
                   -- if odd, add 1 for a 'true' div-by-2
@@ -279,40 +277,42 @@ begin
          ----------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.gboxDin := dataBusSel.data;
-
             if v.gboxValid = '0' then
+               v.gboxDin   := dataBusSel.data;
                v.dataRdCnt := r.dataRdCnt + 1;
                v.dataRd    := '1';
                v.gboxValid := '1';
+            end if;
 
-               if r.dataRdCnt = r.dataRdCycles then
-                  -- Done with column
-                  v.dataRd    := '0';
-                  v.gboxValid := '0';
-                  v.colSel    := colSelSwitch(r.colSel, r.reverseRead);
-                  v.state     := CHECK_BITMASK_S;
-                  -- Check if last column
-                  if colSelDone(r.colSel, r.reverseRead) then
-                     v.reverseRead := not(r.reverseRead);
-                     v.state       := DONE_S;
-                  end if;
+            if r.dataRdCnt = r.dataRdCycles then
+               -- Done with column
+               v.gboxDin   := (others => '0');
+               v.dataRd    := '0';
+               v.gboxValid := '0';
+               v.colSel    := colSelSwitch(r.colSel, r.reverseRead);
+               v.state     := CHECK_BITMASK_S;
+               -- Check if last column
+               if colSelDone(r.colSel, r.reverseRead) then
+                  v.reverseRead := not(r.reverseRead);
+                  v.state       := DONE_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
-         -- need to check if gearbox has stale data;
-         -- this state does exactly that
+         -- check if gearbox has stale data
          when DONE_S =>
             v.dummyHeader := '1';
+            v.gboxValid   := '0';
+            v.gboxDin     := (others => '0');
 
             if r.dummyHeader = '1' then
-               if allBits(r.wordCnt, '1') then
-                  -- corner-case where one more word needs to be TX'd
-                  if v.gboxValid = '0' then
-                     v.gboxValid := '1';
-                  end if;
-               elsif not(allBits(r.wordCnt, '0')) then
+               --if allBits(r.wordCnt, '1') then
+               --   -- corner-case where one more word needs to be TX'd
+               --   if v.gboxValid = '0' then
+               --      v.gboxDin   := v.dataHeader;
+               --      v.gboxValid := '1';
+               --   end if;
+               if not(allBits(r.wordCnt, '0')) then
                   -- regular case where some words need to flushed out
                   v.state := TX_DUMMY_S;
                else
@@ -330,14 +330,13 @@ begin
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
             if v.gboxValid = '0' then
+               v.gboxDin   := v.dataHeader;
                v.gboxValid := '1';
-
-               if allBits(r.wordCnt, '1') then
-                  v.gboxValid := '0';
-                  v.state     := DONE_S;
-               end if;
             end if;
 
+            if allBits(r.wordCnt, '1') then
+               v.state := DONE_S;
+            end if;
       end case;
       -----------------------------------------------------------------------
 
@@ -352,7 +351,7 @@ begin
 
       -- keeps track of the words written into the gearbox;
       -- important for the final state after done TXing all data
-      if r.gboxValid = '1' and v.gboxReady = '1' then
+      if v.gboxValid = '1' and v.gboxReady = '1' then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -381,8 +380,8 @@ begin
       arbBusy   <= v.arbBusy;
       dataRd    <= v.dataRd;
       colSel    <= v.colSel;
-      gboxValid <= r.gboxValid;
-      gboxDin   <= r.gboxDin;
+      gboxValid <= v.gboxValid;
+      gboxDin   <= v.gboxDin;
       txValid   <= v.txValid;
       txSof     <= v.txSof;
       txEof     <= v.txEof;
