@@ -215,7 +215,7 @@ begin
       v.dataRd := '0';
 
       -- flow control check
-      if txReady = '1' or gboxReady = '1' then
+      if gboxReady = '1' then
          v.gboxValid := '0';
       end if;
 
@@ -305,7 +305,6 @@ begin
          -- this state does exactly that
          when DONE_S =>
             v.dummyHeader := '1';
-            v.gboxValid   := '0';
 
             if r.dummyHeader = '1' then
                if allBits(r.wordCnt, '1') then
