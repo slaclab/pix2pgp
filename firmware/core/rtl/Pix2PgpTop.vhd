@@ -97,7 +97,9 @@ architecture rtl of Pix2PgpTop is
 begin
 
    -- route to output port
-   busy <= busyCol;
+   busy   <= busyCol;
+   -- always zero
+   txEofe <= '0';
 
    ---------------------------------------
    -- Column Manager
@@ -220,35 +222,11 @@ begin
          colBitmask    => colBitmask,
          trgNum        => trgNum,
          arbBusy       => arbBusy,
-         -- Pgp Adapter Interface
-         pgpReady      => pgpReady,
-         pgpValid      => pgpValid,
-         pgpData       => pgpData);
-
-   -----------------------------------------
-   -- PGP FIFO adapter
-   -----------------------------------------
-   U_Adapter: entity pix2pgp.Pix2PgpAdapter
-      generic map(
-         TPD_G           => TPD_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         DWARE_DEPTH_G   => ADAPTER_DEPTH_G,
-         DWARE_AF_LVL_G  => ADAPTER_AF_LVL_G)
-      port map(
-         -- General Interface
-         pgpClk   => pgpClk,
-         pgpRst   => pgpRst,
-         -- Gearbox Interface
-         pgpValid => pgpValid,
-         pgpData  => pgpData,
-         pgpReady => pgpReady,
          -- Pgp4TxLite Interface
-         txReady  => txReady,
-         txValid  => txValid,
-         txData   => txData,
-         txSof    => txSof,
-         txEof    => txEof,
-         txEofe   => txEofe);
+         txReady       => txReady,
+         txValid       => txValid,
+         txData        => txData,
+         txSof         => txSof,
+         txEof         => txEof);
 
 end rtl;

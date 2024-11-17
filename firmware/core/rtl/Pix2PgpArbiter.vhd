@@ -3,10 +3,8 @@
 -------------------------------------------------------------------------------
 -- Description: PIX2PGP Arbiter
 --              Column Supervisor signals Arbiter that FIFO statuses are stable
---              Then Arbiter Parses in the data accordingly
+--              Then Arbiter parses in the data accordingly
 --
--- Important!   Note the wordCnt functionality and its relationship with
---              the adapter logic
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -55,10 +53,16 @@ entity Pix2PgpArbiter is
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : in  slv(TRG_WIDTH_C-1 downto 0);
       arbBusy       : out sl;
-      -- Pgp Adapter Interface
-      pgpReady      : in  sl := '1';
-      pgpValid      : out sl;
-      pgpData       : out slv(PGP_DWIDTH_C-1 downto 0));
+      -- Pgp4TxLite Interface
+      txReady       : in   sl;
+      txValid       : out  sl;
+      txData        : out  slv(PGP_DWIDTH_C-1 downto 0);
+      txSof         : out  sl;
+      txEof         : out  sl);
+      ---- Pgp Adapter Interface
+      --pgpReady      : in  sl := '1';
+      --pgpValid      : out sl;
+      --pgpData       : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
@@ -112,32 +116,38 @@ architecture rtl of Pix2PgpArbiter is
       return result;
    end colSelSwitch;
 
-   signal arbReady : sl := '0';
-   signal arbValid : sl := '0';
-   signal arbDout  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal gboxReady       : sl := '0';
+   signal gboxValid       : sl := '0';
+   signal gboxDout        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+
+   signal gboxMasterValid : sl := '0';
 
    type StateType is (
       IDLE_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
-      TX_DUMMY_S);
+      TX_DUMMY_S,
+      DONE_S);
 
    type RegType is record
       -- inputs
-      pgpReady      : sl;
-      arbReady      : sl;
+      txReady       : sl;
+      gboxReady     : sl;
       colFifoError  : sl;
       overOccError  : sl;
       colPauseError : sl;
       colPause      : sl;
+      txValid       : sl;
       colBitmask    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
       dataRd        : sl;
       colSel        : slv(BITMAX_COL_MANAGERS_C downto 0);
       arbBusy       : sl;
-      arbValid      : sl;
-      arbDout       : slv(DATABUS_DWIDTH_C-1 downto 0);
+      gboxValid     : sl;
+      gboxDout      : slv(DATABUS_DWIDTH_C-1 downto 0);
+      txSof         : sl;
+      txEof         : sl;
       -- internal
       eventEmpty    : sl;
       headerOnly    : sl;
@@ -153,20 +163,23 @@ architecture rtl of Pix2PgpArbiter is
 
    constant REG_INIT_C : RegType := (
       -- inputs
-      pgpReady      => '1',
-      arbReady      => '1',
+      gboxReady     => '0',
+      txReady       => '0',
       colFifoError  => '0',
       overOccError  => '0',
       colPauseError => '0',
       colPause      => '0',
+      txValid       => '0',
       colBitmask    => (others => '0'),
       trgNum        => (others => '0'),
       -- outputs
       dataRd        => '0',
       colSel        => (others => '0'),
       arbBusy       => '0',
-      arbValid      => '0',
-      arbDout       => (others => '0'),
+      gboxValid     => '0',
+      gboxDout      => (others => '0'),
+      txSof         => '1',
+      txEof         => '0',
       -- internal
       eventEmpty    => '0',
       headerOnly    => '0',
@@ -189,7 +202,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, colBitmask, trgNum, colPause, colPauseError,
-                   pgpReady, arbReady, colEmpty) is
+                   txReady, gboxReady, colEmpty, gboxMasterValid) is
 
       variable v : RegType;
 
@@ -199,17 +212,19 @@ begin
       v := r;
 
       v.eventEmpty := not(uOr(colBitmask));
-      v.arbReady   := arbReady;
+      v.gboxReady  := gboxReady;
+      v.txReady    := txReady;
+      v.txValid    := gboxMasterValid;
 
       -- flow control check
       v.dataRd := '0';
-      if (arbReady = '1') then
-         v.arbValid := '0';
+      if gboxReady = '1' then
+         v.gboxValid := '0';
       end if;
 
       -- keeps track of the words written into the gearbox;
       -- important for the final state after done TXing the data
-      if (r.arbValid = '1' and v.arbReady = '1') then
+      if r.gboxValid = '1' and v.gboxReady = '1' then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -229,7 +244,7 @@ begin
       v.colPauseError := colPauseError and not(r.dummyHeader);
 
       -- header is always TX'd default; being overriden otherwise
-      v.arbDout := v.dataHeader;
+      v.gboxDout := v.dataHeader;
 
       -------------------------------------------------------------------------
       case r.state is
@@ -237,29 +252,20 @@ begin
          -- supervisor signals a start of sequence
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
-            v.arbBusy  := '0';
-            v.colSel   := colSelReset(v.colSel'length, r.reverseRead);
+            v.txSof   := '1';
+            v.txEof   := '0';
+            v.arbBusy := '0';
+            v.colSel  := colSelReset(v.colSel'length, r.reverseRead);
 
-            if arbStart = '1' and r.dummyHeader = '0' and v.arbValid = '0' then
-               v.arbBusy  := '1';
-               v.arbValid := '1';
-               v.state    := CHECK_BITMASK_S;
+            if arbStart = '1' and r.dummyHeader = '0' and v.gboxValid = '0' then
+               v.arbBusy   := '1';
+               v.gboxValid := '1';
+               v.state     := CHECK_BITMASK_S;
 
-               -- if empty, just stay here
+               -- if empty, go-to DONE state
                if v.eventEmpty = '1' then
-                  v.state := IDLE_S;
+                  v.state := DONE_S;
                end if;
-            end if;
-
-            -- no activity in the columns, plus still data in the gearbox;
-            -- start flushing gearbox on next cycle
-            if not(allBits(r.wordCnt, '0')) and colEmpty = '1' then
-               v.dummyHeader := '1';
-            end if;
-
-            if r.dummyHeader = '1' then
-               v.arbBusy := '1';
-               v.state   := TX_DUMMY_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -269,19 +275,18 @@ begin
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
                v.colSel := colSelSwitch(r.colSel, r.reverseRead);
                if colSelDone(r.colSel, r.reverseRead) then
-                  v.arbBusy     := '0';
                   v.reverseRead := not(r.reverseRead);
-                  v.state       := IDLE_S;
+                  v.state       := DONE_S;
                end if;
 
             else
-               if v.arbValid = '0' then
+               if v.gboxValid = '0' then
                   v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
-                  v.arbValid  := '1';
+                  v.gboxValid := '1';
 
                   -- TX the dataLength and start reading the data fifo
-                  v.arbDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-                  v.arbDout(9 downto 0)                   := dataLenSel;
+                  v.gboxDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
+                  v.gboxDout(9 downto 0)                   := dataLenSel;
 
                   -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
                   -- if odd, add 1 for a 'true' div-by-2
@@ -298,23 +303,47 @@ begin
          ----------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.arbDout := dataBusSel.data;
+            v.gboxDout := dataBusSel.data;
 
-            if v.arbValid = '0' then
+            if v.gboxValid = '0' then
                v.dataRdCnt := r.dataRdCnt + 1;
                v.dataRd    := '1';
-               v.arbValid  := '1';
+               v.gboxValid := '1';
 
                if r.dataRdCnt = r.dataRdCycles then
                   -- Done with column
-                  v.dataRd   := '0';
-                  v.arbValid := '0';
-                  v.colSel   := colSelSwitch(r.colSel, r.reverseRead);
-                  v.state    := CHECK_BITMASK_S;
+                  v.dataRd    := '0';
+                  v.gboxValid := '0';
+                  v.colSel    := colSelSwitch(r.colSel, r.reverseRead);
+                  v.state     := CHECK_BITMASK_S;
                   -- Check if last column
                   if colSelDone(r.colSel, r.reverseRead) then
-                     v.arbBusy     := '0';
                      v.reverseRead := not(r.reverseRead);
+                     v.state       := DONE_S;
+                  end if;
+               end if;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- need to check if gearbox has stale data;
+         -- this state does exactly that
+         when DONE_S =>
+            v.dummyHeader := '1';
+
+            if r.dummyHeader = '1' then
+               if allBits(r.wordCnt, '1') then
+                  -- corner-case where one more word needs to be TX'd
+                  if v.gboxValid = '0' then
+                     v.gboxValid := '1';
+                  end if;
+               elsif not(allBits(r.wordCnt, '0')) then
+                  -- regular case where some words need to flushed out
+                  v.state := TX_DUMMY_S;
+               else
+                  v.txEof := '1'; -- raise the EoF flag
+                  -- wait for the gearbox to stop TXing
+                  if v.txValid = '0' and v.txReady = '0' then
+                     v.dummyHeader := '0';
                      v.state       := IDLE_S;
                   end if;
                end if;
@@ -324,18 +353,25 @@ begin
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
-            if v.arbValid = '0' then
-               v.arbValid := '1';
+            if v.gboxValid = '0' then
+               v.gboxValid := '1';
 
                if allBits(r.wordCnt, '1') then
-                  v.arbValid    := '0';
-                  v.arbBusy     := '0';
-                  v.dummyHeader := '0';
-                  v.state       := IDLE_S;
+                  v.gboxValid := '0';
+                  v.state     := DONE_S;
                end if;
             end if;
 
       end case;
+      -----------------------------------------------------------------------
+
+      -----------------------------------------------------------------------
+      -- SOF delimiter handling
+      if v.txSof = '1' then
+         if r.txReady = '1' and r.txValid = '1' then
+            v.txSof := '0'; -- time to drop the flag
+         end if;
+      end if;
       -----------------------------------------------------------------------
 
       -- header mapping
@@ -344,17 +380,20 @@ begin
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
       v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := v.colPauseError;
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
-      v.dataHeader(REVERSE_READ_POS_C)     := r.reverseRead;
+      v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead;
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;
 
       -- Outputs
-      arbBusy  <= v.arbBusy;
-      dataRd   <= v.dataRd;
-      colSel   <= v.colSel;
-      arbValid <= r.arbValid;
-      arbDout  <= r.arbDout;
+      arbBusy   <= v.arbBusy;
+      dataRd    <= v.dataRd;
+      colSel    <= v.colSel;
+      gboxValid <= r.gboxValid;
+      gboxDout  <= r.gboxDout;
+      txValid   <= v.txValid;
+      txSof     <= v.txSof;
+      txEof     <= v.txEof;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
@@ -390,14 +429,14 @@ begin
          clk            => pgpClk,
          rst            => pgpRst,
          -- Slave Interface
-         slaveValid     => arbValid,
-         slaveData      => arbDout,
-         slaveReady     => arbReady,
+         slaveValid     => gboxValid,
+         slaveData      => gboxDout,
+         slaveReady     => gboxReady,
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => pgpReady,
-         masterValid    => pgpValid,
-         masterData     => pgpData);
+         masterReady    => txReady,
+         masterValid    => gboxMasterValid,
+         masterData     => txData);
 
 end rtl;
