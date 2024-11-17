@@ -37,7 +37,14 @@ package Pix2PgpPkg is
    type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(SPARSE_DWIDTH_C-1 downto 0);
 
    -- ColumnManager-related
-   constant DATALEN_WIDTH_C  : natural := 10; -- 672 pixels max (TO-DO: make this dynamic)
+   -- even though we have 672 pixels max, DATALEN_WIDTH_C should be less than 10 (10 bits fit 672);
+   -- this is because the dataLength for a single event can never reach 672;
+   -- the data FIFO cannot accommodate for that amount of hits.
+   -- so the true data length can only be smaller than the hits the data FIFO can fit.
+   -- after hitting almost-full, the data FIFO will get drained...
+   -- ...therefore
+   constant DATALEN_WIDTH_C  : natural := 5; -- 2^5=31 hits max before almost-full/pause
+
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
    constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
