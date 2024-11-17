@@ -21,6 +21,7 @@ use ieee.std_logic_arith.all;
 
 library surf;
 use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -54,12 +55,8 @@ entity Pix2PgpTop is
       busy         : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pause        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
-      txReady      : in  sl;
-      txValid      : out sl;
-      txData       : out slv(63 downto 0);
-      txSof        : out sl;
-      txEof        : out sl;
-      txEofe       : out sl);
+      pgpTxMaster : out  AxiStreamMasterType;
+      pgpTxSlave  : in   AxiStreamSlaveType);
 end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
@@ -86,16 +83,11 @@ architecture rtl of Pix2PgpTop is
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(TRG_WIDTH_C-1 downto 0)            := (others => '0');
    --
-   signal pgpReady       : sl := '0';
-   signal pgpValid       : sl := '0';
-   signal pgpData        : slv(PGP_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
 
    -- route to output port
-   busy   <= busyCol;
-   -- always zero
-   txEofe <= '0';
+   busy <= busyCol;
 
    ---------------------------------------
    -- Column Manager
@@ -216,10 +208,7 @@ begin
          trgNum        => trgNum,
          arbBusy       => arbBusy,
          -- Pgp4TxLite Interface
-         txReady       => txReady,
-         txValid       => txValid,
-         txData        => txData,
-         txSof         => txSof,
-         txEof         => txEof);
+         pgpTxMaster   => pgpTxMaster,
+         pgpTxSlave    => pgpTxSlave);
 
 end rtl;

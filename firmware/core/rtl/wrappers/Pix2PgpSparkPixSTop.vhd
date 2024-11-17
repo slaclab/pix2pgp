@@ -13,6 +13,7 @@ library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
 library surf;
+use surf.AxiStreamPkg.all;
 
 entity Pix2PgpSparkPixSTop is
    generic(
@@ -79,12 +80,8 @@ architecture rtl of Pix2PgpSparkPixSTop is
    signal din               : Pix2PgpSparseDinArray := (others => (others => '0'));
    signal columnEnableMuxed : std_logic_vector(23 downto 0);
 
-   signal txReady           : std_logic := '1';
-   signal txValid           : std_logic := '0';
-   signal txData            : std_logic_vector(63 downto 0) := (others => '0');
-   signal txSof             : std_logic := '0';
-   signal txEof             : std_logic := '0';
-   signal txEofe            : std_logic := '0';
+   signal pgpTxMaster       : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal pgpTxSlave        : AxiStreamSlaveType;
 
    signal phyTxValid        : std_logic := '0';
    signal phyTxReady        : std_logic := '1';
@@ -122,34 +119,26 @@ begin
          busy         => busy,
          pause        => pause,
          -- Pgp4TxLite Interface
-         txReady      => txReady,
-         txValid      => txValid,
-         txData       => txData,
-         txSof        => txSof,
-         txEof        => txEof,
-         txEofe       => txEofe);
+         pgpTxMaster  => pgpTxMaster,
+         pgpTxSlave   => pgpTxSlave);
 
    -- Instantiate the PGP4TxLiteWrapper
-   U_Pgp4TxLiteWrapper : entity surf.Pgp4TxLiteWrapper
+   U_Pgp4TxLiteWrapper : entity pix2pgp.Pix2Pgp4TxLiteWrapper
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map(
         -- Clock and Reset
-        clk        => pgpClk,
-        rst        => pgpRst,
+        clk         => pgpClk,
+        rst         => pgpRst,
         -- 64-bit Input Framing Interface
-        txReady    => txReady,
-        txValid    => txValid,
-        txData     => txData,
-        txSof      => txSof,
-        txEof      => txEof,
-        txEofe     => txEofe,
+        pgpTxMaster => pgpTxMaster,
+        pgpTxSlave  => pgpTxSlave,
         -- 66-bit Output Interface
-        phyTxValid => phyTxValid,
-        phyTxReady => phyTxReady,
-        phyTxData  => phyTxData);
+        phyTxValid  => phyTxValid,
+        phyTxReady  => phyTxReady,
+        phyTxData   => phyTxData);
 
    U_SerializerGearbox : entity surf.Gearbox
       generic map (
