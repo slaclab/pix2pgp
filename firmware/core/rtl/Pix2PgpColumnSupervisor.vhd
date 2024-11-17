@@ -115,6 +115,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
+   signal colEmptyDbg : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
 
 begin
 
@@ -232,7 +233,7 @@ begin
                v.pause    := '0'; -- clear the pause flag
                v.state    := WAIT_STATE_S;
 
-               -- were some columns in pause just now? set the pause flag!
+               -- were some columns in pause? set the pause flag!
                -- read r.colPause *now* because it will soon change state (after the statusRd)
                -- grab the columnPause bitmask *now* for that same reason
                -- (remember that if in pause-error, things are different)
@@ -277,8 +278,9 @@ begin
             -- only pop the status words from the paused columns that are queried
             v.statusRdBmsk := v.colBitmaskArb;
 
-            -- paused columns are ready to be read
-            if (v.colBitmaskArb and v.dataReady) = v.colBitmaskArb then
+            -- paused columns are still in pause and ready to be read;
+            if ((v.colBitmaskArb and v.dataReady) = v.colBitmaskArb)
+            and r.colPause = '1' then
                v.state := ARB_START_S;
             end if;
 
@@ -286,7 +288,9 @@ begin
             -- basically means that everyone closed their event properly;
             -- resume normal operation (i.e. drop internal pause flag)
             -- same trigger so do not increment trigger counter
-            if not(toBoolean(uOr(v.pauseErrorBmsk))) and toBoolean(uAnd(v.dataReady)) then
+            if not(toBoolean(uOr(v.pauseErrorBmsk)))
+               and toBoolean(uAnd(v.dataReady))
+               and r.colPause = '0' then
                v.statusRdBmsk := (others => '1');
                v.pause        := '0';
                v.state        := ARB_START_S;
@@ -374,5 +378,9 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   GEN_DBG: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+      colEmptyDbg(col) <= statusBusGlbl(col).columnEmpty;
+   end generate GEN_DBG;
 
 end rtl;
