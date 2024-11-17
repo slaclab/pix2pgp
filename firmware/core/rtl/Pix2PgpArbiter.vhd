@@ -49,7 +49,6 @@ entity Pix2PgpArbiter is
       overOccError  : in  sl;
       colPauseError : in  sl;
       colPause      : in  sl;
-      colEmpty      : in  sl;
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : in  slv(TRG_WIDTH_C-1 downto 0);
       arbBusy       : out sl;
@@ -124,6 +123,7 @@ architecture rtl of Pix2PgpArbiter is
 
    type StateType is (
       IDLE_S,
+      TX_HEADER_S,
       CHECK_BITMASK_S,
       PARSE_DATA_S,
       TX_DUMMY_S,
@@ -196,7 +196,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, colBitmask, trgNum, colPause, colPauseError,
-                   txReady, gboxReady, colEmpty, gboxTxValid) is
+                   txReady, gboxReady, gboxTxValid) is
 
       variable v : RegType;
 
@@ -212,7 +212,7 @@ begin
       v.txValid    := gboxTxValid;
 
       -- defaults
-      v.dataRd := '0';
+      v.dataRd  := '0';
 
       -- flow control check
       if gboxReady = '1' then
@@ -230,15 +230,28 @@ begin
             v.arbBusy := '0';
             v.colSel  := colSelReset(v.colSel'length, r.reverseRead);
 
-            if arbStart = '1' and v.gboxValid = '0' then
+            if arbStart = '1' then
+               v.arbBusy := '1';
+               v.state   := TX_HEADER_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- transmit the header
+         when TX_HEADER_S =>
+            if v.gboxValid = '0' then
                v.gboxDin   := v.dataHeader;
-               v.arbBusy   := '1';
                v.gboxValid := '1';
+            end if;
+
+            if r.gboxValid = '1' and r.gboxReady = '1' then
+               v.gboxDin   := (others => '0');
+               v.gboxValid := '0';
                v.state     := CHECK_BITMASK_S;
 
                -- if empty, go-to DONE state
                if v.eventEmpty = '1' then
-                  v.state := DONE_S;
+                  v.dummyHeader := '1';
+                  v.state       := TX_DUMMY_S;
                end if;
             end if;
 
@@ -250,7 +263,8 @@ begin
                v.colSel := colSelSwitch(r.colSel, r.reverseRead);
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
-                  v.state       := DONE_S;
+                  v.dummyHeader := '1';
+                  v.state       := TX_DUMMY_S;
                end if;
 
             else
@@ -294,34 +308,8 @@ begin
                -- Check if last column
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
-                  v.state       := DONE_S;
-               end if;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- check if gearbox has stale data
-         when DONE_S =>
-            v.dummyHeader := '1';
-            v.gboxValid   := '0';
-            v.gboxDin     := (others => '0');
-
-            if r.dummyHeader = '1' then
-               --if allBits(r.wordCnt, '1') then
-               --   -- corner-case where one more word needs to be TX'd
-               --   if v.gboxValid = '0' then
-               --      v.gboxDin   := v.dataHeader;
-               --      v.gboxValid := '1';
-               --   end if;
-               if not(allBits(r.wordCnt, '0')) then
-                  -- regular case where some words need to flushed out
-                  v.state := TX_DUMMY_S;
-               else
-                  v.txEof := '1'; -- raise the EoF flag
-                  -- wait for the gearbox to stop TXing
-                  if v.txValid = '0' and v.txReady = '0' then
-                     v.dummyHeader := '0';
-                     v.state       := IDLE_S;
-                  end if;
+                  v.dummyHeader := '1';
+                  v.state       := TX_DUMMY_S;
                end if;
             end if;
 
@@ -337,6 +325,19 @@ begin
             if allBits(r.wordCnt, '1') then
                v.state := DONE_S;
             end if;
+
+         ----------------------------------------------------------------------
+         -- issue the end-of-frame
+         when DONE_S =>
+            v.gboxValid := '0';
+            v.gboxDin   := (others => '0');
+            v.txEof     := '1'; -- raise the EoF flag
+            -- wait for the gearbox to stop TXing
+            if v.txValid = '0' and v.txReady = '0' then
+               v.dummyHeader := '0';
+               v.state       := IDLE_S;
+            end if;
+
       end case;
       -----------------------------------------------------------------------
 

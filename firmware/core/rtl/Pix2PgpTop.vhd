@@ -86,7 +86,6 @@ architecture rtl of Pix2PgpTop is
    signal arbBusy        : sl := '0';
    signal colPause       : sl := '0';
    signal colPauseError  : sl := '0';
-   signal colEmpty       : sl := '0';
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
    signal trgNum         : slv(TRG_WIDTH_C-1 downto 0)            := (others => '0');
    --
@@ -190,7 +189,6 @@ begin
          overOccError  => overOccError,
          colPauseError => colPauseError,
          colPause      => colPause,
-         colEmpty      => colEmpty,
          colBitmask    => colBitmask,
          trgNum        => trgNum);
 
@@ -218,7 +216,6 @@ begin
          colPauseError => colPauseError,
          overOccError  => overOccError,
          colPause      => colPause,
-         colEmpty      => colEmpty,
          colBitmask    => colBitmask,
          trgNum        => trgNum,
          arbBusy       => arbBusy,

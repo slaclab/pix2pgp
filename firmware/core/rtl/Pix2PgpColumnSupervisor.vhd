@@ -48,7 +48,6 @@ entity Pix2PgpColumnSupervisor is
       overOccError  : out sl;
       colPauseError : out sl;
       colPause      : out sl;
-      colEmpty      : out sl;
       colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum        : out slv(TRG_WIDTH_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
@@ -70,7 +69,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colFifoError   : sl;
       overOccError   : sl;
       colPause       : sl;
-      colEmpty       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -97,7 +95,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colFifoError   => '0',
       overOccError   => '0',
       colPause       => '0',
-      colEmpty       => '0',
       colBitmask     => (others => '0'),
       -- internal
       pause          => '0',
@@ -196,7 +193,6 @@ begin
             v.pause        := '0';
             v.pauseError   := '0';
             v.waitCnt      := (others => '0');
-            v.colEmpty     := not(uOr(v.dataReady));
             v.statusRdBmsk := (others => '1');
 
             if (v.dataReady = v.columnEnable) and toBoolean(uOr(v.columnEnable)) then
@@ -208,7 +204,6 @@ begin
          -- start the arbiter; monitor the state of its busy signal
          when ARB_START_S =>
             -- update the arbiter status bits before starting the readout process
-            v.colEmpty      := '0';
             v.colFifoError  := uOr(v.colFifoFullErr);
             v.overOccError  := uOr(v.colOverOccErr);
             v.colPause      := uOr(v.columnPause);
@@ -355,7 +350,6 @@ begin
       colBitmask    <= v.colBitmaskArb;
       trgNum        <= v.trgNum;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
-      colEmpty      <= v.colEmpty;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
