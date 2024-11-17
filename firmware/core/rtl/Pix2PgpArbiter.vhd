@@ -215,7 +215,7 @@ begin
       v.dataRd := '0';
 
       -- flow control check
-      if gboxReady = '1' then
+      if txReady = '1' or gboxReady = '1' then
          v.gboxValid := '0';
       end if;
 
@@ -233,7 +233,7 @@ begin
             v.arbBusy := '0';
             v.colSel  := colSelReset(v.colSel'length, r.reverseRead);
 
-            if arbStart = '1' and r.dummyHeader = '0' and v.gboxValid = '0' then
+            if arbStart = '1' and v.gboxValid = '0' then
                v.arbBusy   := '1';
                v.gboxValid := '1';
                v.state     := CHECK_BITMASK_S;
@@ -352,11 +352,8 @@ begin
       -----------------------------------------------------------------------
 
       -- keeps track of the words written into the gearbox;
-      -- important for the final state after done TXing the data
-
-      -- TO-DO: ghdl:
-      --if r.gboxValid = '1' and v.gboxReady = '1' then
-      if v.gboxValid = '1' and v.gboxReady = '1' then
+      -- important for the final state after done TXing all data
+      if r.gboxValid = '1' and v.gboxReady = '1' then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -385,8 +382,8 @@ begin
       arbBusy   <= v.arbBusy;
       dataRd    <= v.dataRd;
       colSel    <= v.colSel;
-      gboxValid <= v.gboxValid; -- TO-DO: ghdl: r.gboxValid;
-      gboxDin   <= v.gboxDin;   -- TO-DO: ghdl: r.gboxValid;
+      gboxValid <= r.gboxValid;
+      gboxDin   <= r.gboxDin;
       txValid   <= v.txValid;
       txSof     <= v.txSof;
       txEof     <= v.txEof;
