@@ -18,8 +18,6 @@ entity Pix2PgpEmuTb is
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
       COLMANAGER_DATA_DEPTH_G    : integer  := 6;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 5;
-      ADAPTER_DEPTH_G            : integer  := 16;
-      ADAPTER_AF_LVL_G           : integer  := 2;
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
       ARB_DOUT_PIPE_G            : natural  := 1;
       DATAFIFO_PIPE_G            : positive := 1;
@@ -61,10 +59,7 @@ architecture test of Pix2PgpEmuTb is
          PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
-         ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
          SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G,
          NUM_VC_G                   => NUM_VC_G)
       port map(
          dummyIn => clk);
