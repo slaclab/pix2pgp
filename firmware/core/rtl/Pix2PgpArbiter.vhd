@@ -116,11 +116,11 @@ architecture rtl of Pix2PgpArbiter is
       return result;
    end colSelSwitch;
 
-   signal gboxReady       : sl := '0';
-   signal gboxValid       : sl := '0';
-   signal gboxDout        : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal gboxReady   : sl := '0';
+   signal gboxValid   : sl := '0';
+   signal gboxDin     : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
-   signal gboxMasterValid : sl := '0';
+   signal gboxTxValid : sl := '0';
 
    type StateType is (
       IDLE_S,
@@ -131,43 +131,37 @@ architecture rtl of Pix2PgpArbiter is
 
    type RegType is record
       -- inputs
-      txReady       : sl;
-      gboxReady     : sl;
-      colFifoError  : sl;
-      overOccError  : sl;
-      colPauseError : sl;
-      colPause      : sl;
-      txValid       : sl;
-      colBitmask    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum        : slv(TRG_WIDTH_C-1 downto 0);
+      txReady      : sl;
+      gboxReady    : sl;
+      colPause     : sl;
+      txValid      : sl;
+      colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgNum       : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
-      dataRd        : sl;
-      colSel        : slv(BITMAX_COL_MANAGERS_C downto 0);
-      arbBusy       : sl;
-      gboxValid     : sl;
-      gboxDout      : slv(DATABUS_DWIDTH_C-1 downto 0);
-      txSof         : sl;
-      txEof         : sl;
+      dataRd       : sl;
+      colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
+      arbBusy      : sl;
+      gboxValid    : sl;
+      gboxDin      : slv(DATABUS_DWIDTH_C-1 downto 0);
+      txSof        : sl;
+      txEof        : sl;
       -- internal
-      eventEmpty    : sl;
-      headerOnly    : sl;
-      dummyHeader   : sl;
-      reverseRead   : sl;
-      wordCnt       : slv(2 downto 0);
-      waitCnt       : slv(1 downto 0);
-      dataHeader    : slv(HEADER_DWITDH_C-1 downto 0);
-      dataRdCnt     : slv(DATALEN_WIDTH_C-1 downto 0);
-      dataRdCycles  : slv(DATALEN_WIDTH_C-1 downto 0);
-      state         : StateType;
+      eventEmpty   : sl;
+      headerOnly   : sl;
+      dummyHeader  : sl;
+      reverseRead  : sl;
+      wordCnt      : slv(2 downto 0);
+      waitCnt      : slv(1 downto 0);
+      dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
+      dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
+      dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
+      state        : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- inputs
       gboxReady     => '0',
       txReady       => '0',
-      colFifoError  => '0',
-      overOccError  => '0',
-      colPauseError => '0',
       colPause      => '0',
       txValid       => '0',
       colBitmask    => (others => '0'),
@@ -177,7 +171,7 @@ architecture rtl of Pix2PgpArbiter is
       colSel        => (others => '0'),
       arbBusy       => '0',
       gboxValid     => '0',
-      gboxDout      => (others => '0'),
+      gboxDin       => (others => '0'),
       txSof         => '1',
       txEof         => '0',
       -- internal
@@ -202,7 +196,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, colBitmask, trgNum, colPause, colPauseError,
-                   txReady, gboxReady, colEmpty, gboxMasterValid) is
+                   txReady, gboxReady, colEmpty, gboxTxValid) is
 
       variable v : RegType;
 
@@ -211,40 +205,22 @@ begin
       -- Latch the current value
       v := r;
 
+      -- inputs
       v.eventEmpty := not(uOr(colBitmask));
       v.gboxReady  := gboxReady;
       v.txReady    := txReady;
-      v.txValid    := gboxMasterValid;
+      v.txValid    := gboxTxValid;
+
+      -- defaults
+      v.dataRd := '0';
 
       -- flow control check
-      v.dataRd := '0';
       if gboxReady = '1' then
          v.gboxValid := '0';
       end if;
 
-      -- keeps track of the words written into the gearbox;
-      -- important for the final state after done TXing the data
-      if r.gboxValid = '1' and v.gboxReady = '1' then
-         v.wordCnt := r.wordCnt + 1;
-      end if;
-
-      -- override header elements if in dummy-header-TX mode
-      --
-      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         v.colBitmask(col) := colBitmask(col) and not(r.dummyHeader);
-      end loop;
-      --
-      for trgBit in 0 to TRG_WIDTH_C-1 loop
-         v.trgNum(trgBit) := trgNum(trgBit) and not(r.dummyHeader);
-      end loop;
-      --
-      v.overOccError  := overOccError  and not(r.dummyHeader);
-      v.colPause      := colPause      and not(r.dummyHeader);
-      v.colFifoError  := colFifoError  and not(r.dummyHeader);
-      v.colPauseError := colPauseError and not(r.dummyHeader);
-
       -- header is always TX'd default; being overriden otherwise
-      v.gboxDout := v.dataHeader;
+      v.gboxDin := v.dataHeader;
 
       -------------------------------------------------------------------------
       case r.state is
@@ -285,8 +261,8 @@ begin
                   v.gboxValid := '1';
 
                   -- TX the dataLength and start reading the data fifo
-                  v.gboxDout(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
-                  v.gboxDout(9 downto 0)                   := dataLenSel;
+                  v.gboxDin(DATABUS_DWIDTH_C-1 downto 10) := (others => '0');
+                  v.gboxDin(9 downto 0)                   := dataLenSel;
 
                   -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
                   -- if odd, add 1 for a 'true' div-by-2
@@ -303,7 +279,7 @@ begin
          ----------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.gboxDout := dataBusSel.data;
+            v.gboxDin := dataBusSel.data;
 
             if v.gboxValid = '0' then
                v.dataRdCnt := r.dataRdCnt + 1;
@@ -329,6 +305,7 @@ begin
          -- this state does exactly that
          when DONE_S =>
             v.dummyHeader := '1';
+            v.gboxValid   := '0';
 
             if r.dummyHeader = '1' then
                if allBits(r.wordCnt, '1') then
@@ -368,19 +345,38 @@ begin
       -----------------------------------------------------------------------
       -- SOF delimiter handling
       if v.txSof = '1' then
-         if r.txReady = '1' and r.txValid = '1' then
+         if v.txReady = '1' and v.txValid = '1' then
             v.txSof := '0'; -- time to drop the flag
          end if;
       end if;
       -----------------------------------------------------------------------
 
-      -- header mapping
-      v.dataHeader(OVEROCC_FLAG_POS_C)     := v.overOccError;
-      v.dataHeader(PAUSE_FLAG_POS_C)       := v.colPause;
-      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := v.colFifoError;
-      v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := v.colPauseError;
+      -- keeps track of the words written into the gearbox;
+      -- important for the final state after done TXing the data
+
+      -- TO-DO: ghdl:
+      --if r.gboxValid = '1' and v.gboxReady = '1' then
+      if v.gboxValid = '1' and v.gboxReady = '1' then
+         v.wordCnt := r.wordCnt + 1;
+      end if;
+
+      -- header mapping and overriding
+      -- override header elements if in dummy-header-TX mode
+      --
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         v.colBitmask(col) := colBitmask(col) and not(v.dummyHeader);
+      end loop;
+      --
+      for trgBit in 0 to TRG_WIDTH_C-1 loop
+         v.trgNum(trgBit) := trgNum(trgBit) and not(v.dummyHeader);
+      end loop;
+      --
+      v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError  and not(v.dummyHeader);
+      v.dataHeader(PAUSE_FLAG_POS_C)       := colPause      and not(v.dummyHeader);
+      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
+      v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := colPauseError and not(v.dummyHeader);
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
-      v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead;
+      v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;
@@ -389,8 +385,8 @@ begin
       arbBusy   <= v.arbBusy;
       dataRd    <= v.dataRd;
       colSel    <= v.colSel;
-      gboxValid <= r.gboxValid;
-      gboxDout  <= r.gboxDout;
+      gboxValid <= v.gboxValid; -- TO-DO: ghdl: r.gboxValid;
+      gboxDin   <= v.gboxDin;   -- TO-DO: ghdl: r.gboxValid;
       txValid   <= v.txValid;
       txSof     <= v.txSof;
       txEof     <= v.txEof;
@@ -430,13 +426,13 @@ begin
          rst            => pgpRst,
          -- Slave Interface
          slaveValid     => gboxValid,
-         slaveData      => gboxDout,
+         slaveData      => gboxDin,
          slaveReady     => gboxReady,
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
          masterReady    => txReady,
-         masterValid    => gboxMasterValid,
+         masterValid    => gboxTxValid,
          masterData     => txData);
 
 end rtl;
