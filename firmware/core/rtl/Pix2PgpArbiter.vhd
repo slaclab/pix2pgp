@@ -107,7 +107,6 @@ architecture rtl of Pix2PgpArbiter is
       return result;
    end colSelSwitch;
 
-
    signal gboxRst : sl := '0';
 
    -- reset via the variables
@@ -142,10 +141,7 @@ architecture rtl of Pix2PgpArbiter is
 
    type RegType is record
       -- inputs
-      txReady      : sl;
-      gboxReady    : sl;
       colPause     : sl;
-      txValid      : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgNum       : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
@@ -154,12 +150,10 @@ architecture rtl of Pix2PgpArbiter is
       arbBusy      : sl;
       -- internal
       eventEmpty   : sl;
-      headerOnly   : sl;
       dummyHeader  : sl;
       reverseRead  : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
       wordCnt      : slv(2 downto 0);
-      waitCnt      : slv(1 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -170,10 +164,7 @@ architecture rtl of Pix2PgpArbiter is
 
    constant REG_INIT_C : RegType := (
       -- inputs
-      gboxReady     => '0',
-      txReady       => '0',
       colPause      => '0',
-      txValid       => '0',
       colBitmask    => (others => '0'),
       trgNum        => (others => '0'),
       -- outputs
@@ -182,12 +173,10 @@ architecture rtl of Pix2PgpArbiter is
       arbBusy       => '0',
       -- internal
       eventEmpty    => '0',
-      headerOnly    => '0',
       dummyHeader   => '0',
       reverseRead   => '0',
       txData        => (others => '0'),
       wordCnt       => (others => '0'),
-      waitCnt       => (others => '0'),
       dataHeader    => (others => '0'),
       dataRdCnt     => toSlv(0, DATALEN_WIDTH_C),
       dataRdCycles  => (others => '0'),
@@ -224,10 +213,12 @@ begin
       -- flow control check
       if sAxisSlave.tReady = '1' then
          v.sAxisMaster.tValid := '0';
-         v.sAxisMaster.tLast  := '0';
-         v.sAxisMaster.tUser  := (others => '0');
-         v.sAxisMaster.tKeep  := (others => '1');
       end if;
+
+      -- default flags
+      v.sAxisMaster.tLast  := '0';
+      v.sAxisMaster.tUser  := (others => '0');
+      v.sAxisMaster.tKeep  := (others => '1');
 
       -------------------------------------------------------------------------
       case r.state is
@@ -235,11 +226,9 @@ begin
          -- supervisor signals a start of sequence
          -- raise the busy flag and forward the header as-is
          when IDLE_S =>
-            v.arbBusy            := '0';
-            v.dummyHeader        := '0';
-            v.colSel             := colSelReset(v.colSel'length, r.reverseRead);
-            v.sAxisMaster.tLast  := '0';
-            v.sAxisMaster.tValid := '0';
+            v.arbBusy     := '0';
+            v.dummyHeader := '0';
+            v.colSel      := colSelReset(v.colSel'length, r.reverseRead);
 
             if arbStart = '1' then
                v.arbBusy := '1';
@@ -250,11 +239,10 @@ begin
          -- parse the header to the gearbox;
          -- determine what to do next
          when PARSE_HEADER_S =>
-            v.txData := v.dataHeader;
-
-            if r.sAxisMaster.tValid = '0' then
+            if v.sAxisMaster.tValid = '0' then
                v.sAxisMaster.tUser(1) := '1'; -- SoF
                v.sAxisMaster.tValid   := '1';
+               v.txData               := v.dataHeader;
 
                v.state := CHECK_BITMASK_S;
 
@@ -269,9 +257,6 @@ begin
          -- check the bitmask value of the selected column
          -- if non-zero, write the length and start reading immediately
          when CHECK_BITMASK_S =>
-            v.sAxisMaster.tUser(1) := '0';
-            v.sAxisMaster.tValid   := '0';
-
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
                v.colSel := colSelSwitch(r.colSel, r.reverseRead);
@@ -307,7 +292,7 @@ begin
          ------------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            if v.sAxisMaster.tValid = '0' then
+            if v.sAxisMaster.tValid = '0' and r.dataRdCnt /= r.dataRdCycles then
                --
                v.txData             := dataBusSel.data;
                v.sAxisMaster.tValid := '1';
@@ -316,15 +301,13 @@ begin
                v.dataRd    := '1';
             end if;
 
+            -- Done with column
             if r.dataRdCnt = r.dataRdCycles then
-               -- Done with column
                --
-               v.txData             := (others => '0');
-               v.sAxisMaster.tValid := '0';
+               v.dataRd := '0';
+               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
+               v.state  := CHECK_BITMASK_S;
                --
-               v.dataRd    := '0';
-               v.colSel    := colSelSwitch(r.colSel, r.reverseRead);
-               v.state     := CHECK_BITMASK_S;
                -- Check if last column
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
@@ -353,7 +336,7 @@ begin
 
       -- keeps track of the words written into the gearbox;
       -- important for the final state after done TXing all data
-      if v.sAxisMaster.tValid = '1' and sAxisSlave.tReady = '1' then
+      if sAxisSlave.tReady = '1' then
          v.wordCnt := r.wordCnt + 1;
       end if;
 
@@ -378,13 +361,15 @@ begin
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;
 
+      --
       v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := v.txData;
+      --
 
       -- Outputs
       arbBusy     <= v.arbBusy;
       dataRd      <= v.dataRd;
       colSel      <= v.colSel;
-      sAxisMaster <= v.sAxisMaster;
+      sAxisMaster <= r.sAxisMaster;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
@@ -429,6 +414,7 @@ begin
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
 
+   -- Axi-Stream Gearbox does not support different reset polarities
    gboxRst <= pgpRst when RST_POLARITY_G = '1' else not(pgpRst);
 
 end rtl;
