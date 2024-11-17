@@ -34,12 +34,9 @@ entity Pix2PgpTop is
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
       COLMANAGER_DATA_DEPTH_G    : integer  := 7;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
-      ADAPTER_DEPTH_G            : integer  := 16;
-      ADAPTER_AF_LVL_G           : integer  := 2;
       SUPER_FIFO_RD_DELAY_G      : positive := 3;
       DATAFIFO_PIPE_G            : positive := 1;
-      STATUSFIFO_PIPE_G          : positive := 1;
-      ARB_DOUT_PIPE_G            : positive := 1);
+      STATUSFIFO_PIPE_G          : positive := 1);
    port(
       -- General Interface
       sparseClk    : in  sl;
@@ -199,8 +196,7 @@ begin
       generic map (
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         DOUT_PIPE_G     => ARB_DOUT_PIPE_G)
+         RST_POLARITY_G  => RST_POLARITY_G)
       port map (
          -- General Interface
          pgpClk        => pgpClk,

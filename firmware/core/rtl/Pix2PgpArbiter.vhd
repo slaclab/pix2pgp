@@ -31,9 +31,7 @@ entity Pix2PgpArbiter is
    generic(
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1';
-      DOUT_PIPE_G     : positive := 1;
-      DATAFIFO_FWFT_G : boolean  := true);
+      RST_POLARITY_G  : sl       := '1');
    port(
       -- General Interface
       pgpClk        : in  sl;
@@ -58,10 +56,6 @@ entity Pix2PgpArbiter is
       txData        : out  slv(PGP_DWIDTH_C-1 downto 0);
       txSof         : out  sl;
       txEof         : out  sl);
-      ---- Pgp Adapter Interface
-      --pgpReady      : in  sl := '1';
-      --pgpValid      : out sl;
-      --pgpData       : out slv(PGP_DWIDTH_C-1 downto 0));
 end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is

@@ -25,14 +25,11 @@ entity Pix2PgpTopTb is
       FPGA_SYNTH_G               : boolean  := false;
       PIPELINE_BRIDGE_DATA_G     : boolean  := false;
       PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G    : integer  := 6;
-      COLMANAGER_STATUS_DEPTH_G  : integer  := 5;
-      ADAPTER_DEPTH_G            : integer  := 16;
-      ADAPTER_AF_LVL_G           : integer  := 2;
+      COLMANAGER_DATA_DEPTH_G    : integer  := 7;
+      COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
       SUPER_FIFO_RD_DELAY_G      : natural  := 3;
       DATAFIFO_PIPE_G            : positive := 1;
       STATUSFIFO_PIPE_G          : positive := 1;
-      ARB_DOUT_PIPE_G            : natural  := 1;
       NUM_VC_G                   : natural  := 1
    );
    port (
@@ -171,10 +168,7 @@ begin
          PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         ADAPTER_DEPTH_G            => ADAPTER_DEPTH_G,
-         ADAPTER_AF_LVL_G           => ADAPTER_AF_LVL_G,
-         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         ARB_DOUT_PIPE_G            => ARB_DOUT_PIPE_G)
+         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G)
       port map(
          sparseClk    => sparseClk,
          sparseRst    => rst,
