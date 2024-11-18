@@ -26,7 +26,8 @@ entity Pix2PgpSparkPixSTop is
       COLMANAGER_STATUS_DEPTH_G  : integer   := 6;
       SUPER_FIFO_RD_DELAY_G      : natural   := 3;
       DATAFIFO_PIPE_G            : positive  := 1;
-      STATUSFIFO_PIPE_G          : positive  := 1);
+      STATUSFIFO_PIPE_G          : positive  := 1;
+      SER_GBOX_PIPE_STAGES_G     : natural   := 0); -- only set when synthesizing (not in sim)
    port(
       -- General Interface
       sparseClk    : in  std_logic;
@@ -87,21 +88,25 @@ architecture rtl of Pix2PgpSparkPixSTop is
    signal phyTxReady        : std_logic := '1';
    signal phyTxData         : std_logic_vector(65 downto 0) := (others => '0');
 
+   signal serGboxReady      : std_logic := '0';
+   signal serGboxValid      : std_logic := '0';
+   signal serGboxData       : std_logic_vector(31 downto 0) := (others => '0');
+
 begin
 
    -- Top Level
    U_Pix2PgpTop : entity pix2pgp.Pix2PgpTop
       generic map (
-         TPD_G                      => TPD_G,
-         RST_ASYNC_G                => RST_ASYNC_G,
-         RST_POLARITY_G             => RST_POLARITY_G,
-         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
-         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G)
+         TPD_G                     => TPD_G,
+         RST_ASYNC_G               => RST_ASYNC_G,
+         RST_POLARITY_G            => RST_POLARITY_G,
+         COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
+         PIPELINE_BRIDGE_DATA_G    => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G  => PIPELINE_BRIDGE_STATUS_G,
+         DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G         => STATUSFIFO_PIPE_G,
+         SUPER_FIFO_RD_DELAY_G     => SUPER_FIFO_RD_DELAY_G)
       port map (
          -- General Interface
          sparseClk    => sparseClk,
@@ -146,7 +151,7 @@ begin
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
          SLAVE_WIDTH_G  => 66,
-         MASTER_WIDTH_G => 32)
+         MASTER_WIDTH_G => SER_DWIDTH_C)
       port map (
          -- Clock and Reset
          clk            => pgpClk,
@@ -158,9 +163,41 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => pgpDoutReady,
-         masterValid    => pgpDoutValid,
-         masterData     => pgpDout);
+         masterReady    => serGboxReady,
+         masterValid    => serGboxValid,
+         masterData     => serGboxData);
+
+   -- pipeline the gearbox interface with the serializer
+   U_PipelineGboxValid : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+      port map (
+         clk     => pgpClk,
+         din(0)  => serGboxValid,
+         dout(0) => pgpDoutValid);
+
+   U_PipelineGboxReady : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+      port map (
+         clk     => pgpClk,
+         din(0)  => pgpDoutReady,
+         dout(0) => serGboxReady);
+
+   U_PipelineGboxDout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => SER_DWIDTH_C,
+         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+      port map (
+         clk  => pgpClk,
+         din  => serGboxData,
+         dout => pgpDout);
 
       -- dumb; but should always work with a .v/.sv wrapper above this level
       din(0)  <= din0;

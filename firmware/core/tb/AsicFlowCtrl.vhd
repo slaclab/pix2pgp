@@ -16,8 +16,8 @@ entity AsicFlowCtrl is
         TIMEOUT_CNT_WIDTH   : integer := 4;  -- in bit-size
         TIMEOUT_CNT_LIMIT   : integer := 15; -- in decimal counts
         USE_PIX2PGP_BUSY    : boolean := true; -- use pix2pgp state in FSM
-        USE_SPARSE_ITF_BUSY : boolean := true  -- use sparse_itf state in FSM
-    );
+        USE_SPARSE_ITF_BUSY : boolean := true; -- use sparse_itf state in FSM
+        COL_ID_G            : natural := 0);
     port (
         clk                : in std_logic;       -- global clk of the whole digital (including balcony)
         df_reset_n        : in  std_logic := not RST_POLARITY_G;     -- separate reset signal for adc_sampl dff (x4): active LOW

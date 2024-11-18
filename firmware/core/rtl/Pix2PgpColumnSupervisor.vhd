@@ -27,11 +27,10 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G               : time     := 1 ns;
-      RST_ASYNC_G         : boolean  := false;
-      RST_POLARITY_G      : sl       := '1';
-      FIFO_RD_DELAY_G     : positive := 3;
-      PAUSE_ERROR_DELAY_G : positive := 15);
+      TPD_G           : time     := 1 ns;
+      RST_ASYNC_G     : boolean  := false;
+      RST_POLARITY_G  : sl       := '1';
+      FIFO_RD_DELAY_G : positive := 3);
    port(
       -- General Interface
       pgpClk        : in  sl;
@@ -46,9 +45,10 @@ entity Pix2PgpColumnSupervisor is
       arbiterStart  : out sl;
       colFifoError  : out sl;
       overOccError  : out sl;
+      timeoutError  : out sl;
       colPauseError : out sl;
       colPause      : out sl;
-      trgCntGlbl    : out  slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgCntGlbl    : out slv(TRGCNT_WIDTH_C-1 downto 0);
       colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
 
@@ -58,7 +58,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       IDLE_S,
       ARB_START_S,
       WAIT_STATE_S,
-      PAUSE_ERROR_S);
+      ERROR_S);
 
    type RegType is record
       -- i/o
@@ -67,12 +67,16 @@ architecture rtl of Pix2PgpColumnSupervisor is
       arbiterStart   : sl;
       colFifoError   : sl;
       overOccError   : sl;
+      timeoutError   : sl;
       colPause       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause          : sl;
       pauseError     : sl;
+      setWatchdog    : sl;
+      timeout        : sl;
+      allColsReady   : sl;
       hitmaskAll     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -92,12 +96,16 @@ architecture rtl of Pix2PgpColumnSupervisor is
       arbiterStart   => '0',
       colFifoError   => '0',
       overOccError   => '0',
+      timeoutError   => '0',
       colPause       => '0',
       colBitmask     => (others => '0'),
       trgCntGlbl     => (others => '1'),
       -- internal
       pause          => '0',
       pauseError     => '0',
+      setWatchdog    => '0',
+      timeout        => '0',
+      allColsReady   => '0',
       hitmaskAll     => (others => '0'),
       dataReady      => (others => '0'),
       colOverOccErr  => (others => '0'),
@@ -113,24 +121,30 @@ architecture rtl of Pix2PgpColumnSupervisor is
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
+   signal setWatchdog : sl := '0';
+   signal timeout     : sl := '0';
+
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy, columnEnable, columnBusy) is
+   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy,
+                   columnEnable, columnBusy, timeout) is
       variable v : RegType;
    begin
 
       -- Latch the current value
       v := r;
 
-      -- Strobes
-      v.statusRd := '0';
+      -- Strobes and Defaults
+      v.statusRd    := '0';
+      v.setWatchdog := '0';
 
       -- Register inputs
       v.arbiterBusy  := arbiterBusy;
       v.columnEnable := columnEnable;
+      v.timeout      := timeout;
 
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
@@ -179,48 +193,68 @@ begin
          v.trgCntGlbl := statusBusGlbl(23).trgCnt;
       end if;
 
+      v.allColsReady := toSl(v.dataReady = v.columnEnable) and uOr(v.columnEnable);
+
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
          -- stay here until *all* enabled columns have data;
          -- at least *one* column must be enabled
          when IDLE_S =>
-            v.pause        := '0';
             v.waitCnt      := (others => '0');
             v.statusRdBmsk := (others => '1');
             v.colBitmask   := v.hitmaskAll;
+            v.colFifoError := uOr(v.colFifoErr);
+            v.overOccError := uOr(v.colOverOccErr);
             v.pause        := '0';
+            v.timeoutError := '0';
             v.pauseError   := '0';
 
-            if (v.dataReady = v.columnEnable) and toBoolean(uOr(v.columnEnable)) then
-
-               -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-               -- latch the errors
-               -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-               v.colFifoError := uOr(v.colFifoErr);
-               v.overOccError := uOr(v.colOverOccErr);
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            -- nominal operation
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            if v.allColsReady = '1' then
 
                -- raise the pause flag if necessary;
-               -- override the columns that will be read
+               -- override the columns that will be read;
+               -- in terms of status and data as well
                if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
                   v.statusRdBmsk := v.columnPause;
                   v.colBitmask   := v.columnPause;
                   v.pause        := '1';
                end if;
 
-               -- will take into effect on next cycle
-               if uOr(v.pauseErrorBmsk) = '1' then
-                  v.pauseError := '1';
-               end if;
-               -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
                v.state := ARB_START_S;
             end if;
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            -- error handling
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
+               v.setWatchdog := '1';
+            end if;
+
+            -- waited for too long for all columns to be ready,
+            -- while some have been ready for some time...
+            -- (use the r. to allow watchdog to be placed far away)
+            if r.timeout = '1' then
+               v.timeoutError := '1';
+               v.state        := ERROR_S;
+            end if;
+
+            -- pause + overOcc -> digital cannot keep up with the rate
+            if uOr(v.pauseErrorBmsk) = '1' then
+               v.pauseError := '1';
+               v.state      := ERROR_S;
+            end if;
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
          ----------------------------------------------------------------------
          -- start the arbiter; monitor the state of its busy signal
          when ARB_START_S =>
 
+            -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- state switching;
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- first raise the start flag...
@@ -244,22 +278,21 @@ begin
          ----------------------------------------------------------------------
          -- always wait before re-evaluating the status bus empty signal;
          -- the dataReady signal *must* re-settle!
-         -- reading the status word on one cycle may not force the empty signal
+         -- reading the status word after one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
             if r.waitCnt = FIFO_RD_DELAY_G then
-               v.waitCnt := (others => '0');
-               v.state   := IDLE_S;
+               v.state := IDLE_S;
 
-               if r.pauseError = '1' then
-                  v.state := PAUSE_ERROR_S;
+               if v.pauseError = '1' or v.timeoutError = '1' then
+                  v.state := ERROR_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
-         -- during pause-error the FIFOs are being drained as fast as possible
-         when PAUSE_ERROR_S =>
+         -- during this state the FIFOs are being drained as fast as possible
+         when ERROR_S =>
 
             -- more data to read
             if uOr(v.dataReady) = '1' then
@@ -269,14 +302,11 @@ begin
             end if;
 
             -- all FIFOs drained.
-            -- wait for all status FIFOs to be completely settled;
-            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
-               -- wait
-               v.waitCnt := r.waitCnt + 1;
-               if r.waitCnt = FIFO_RD_DELAY_G then
-                  v.waitCnt := (others => '0');
-                  v.state   := IDLE_S;
-               end if;
+            -- release the error flags and go back to idle
+            if uOr(v.dataReady and v.columnBusy) = '0' then
+               v.timeoutError := '0';
+               v.pauseError   := '0';
+               v.state        := IDLE_S;
             end if;
 
       end case;
@@ -290,6 +320,9 @@ begin
       colBitmask    <= v.colBitmask;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
       trgCntGlbl    <= r.trgCntGlbl;
+      timeoutError  <= v.timeoutError;
+
+      setWatchdog   <= r.setWatchdog; -- use the r. to allow watchdog to be placed far away
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
@@ -314,5 +347,19 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => 8) -- 8-bit -> 2^8=256*5.384 = 1380 ns
+      port map(
+         -- General Interface
+         clk     => pgpClk,
+         rst     => pgpRst,
+         -- Control Interface
+         set     => setWatchdog,
+         timeout => timeout);
 
 end rtl;

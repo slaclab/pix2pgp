@@ -32,21 +32,22 @@ def headerEval(header):
     bitmask = []
     trigger = 0
 
-    _overOcc     = (header >> np.uint8(39)) & np.uint8(0x01)
-    _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
-    _columnError = (header >> np.uint8(37)) & np.uint8(0x01)
-    _pauseError  = (header >> np.uint8(36)) & np.uint8(0x01)
-    _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
-    _reverseRead = (header >> np.uint8(34)) & np.uint8(0x01)
+    _overOcc      = (header >> np.uint8(39)) & np.uint8(0x01)
+    _pause        = (header >> np.uint8(38)) & np.uint8(0x01)
+    _columnError  = (header >> np.uint8(37)) & np.uint8(0x01)
+    _pauseError   = (header >> np.uint8(36)) & np.uint8(0x01)
+    _dummyHeader  = (header >> np.uint8(35)) & np.uint8(0x01)
+    _reverseRead  = (header >> np.uint8(34)) & np.uint8(0x01)
+    _timeout      = (header >> np.uint8(33)) & np.uint8(0x01)
 
     # some reserved bits
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
-    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnError={2:<%d} PauseError={3:<%d} DummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} DummyHeader={5:<%d} Bitmask={6:<%02x} Trigger={7:<%d}' % (1, 1, 1, 1, 1, 1, 8, 8)
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
-    print(_format.format(_overOcc, _pause, _columnError, _pauseError, _dummyHeader, hex(_bitmask).upper(), _trigger))
+    print(_format.format(_overOcc, _pause, _columnError, _pauseError, _timeout, _dummyHeader, hex(_bitmask).upper(), _trigger))
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
 

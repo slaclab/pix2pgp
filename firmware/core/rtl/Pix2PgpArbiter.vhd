@@ -49,6 +49,7 @@ entity Pix2PgpArbiter is
       colFifoError  : in  sl;
       overOccError  : in  sl;
       colPauseError : in  sl;
+      timeoutError  : in  sl;
       colPause      : in  sl;
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       arbBusy       : out sl;
@@ -193,7 +194,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
                    overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
-                   trgCntGlbl, trgCntSel) is
+                   trgCntGlbl, trgCntSel, timeoutError) is
 
       variable v : RegType;
 
@@ -353,6 +354,7 @@ begin
       v.dataHeader(PAUSE_FLAG_POS_C)       := colPause      and not(v.dummyHeader);
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
       v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := colPauseError and not(v.dummyHeader);
+      v.dataHeader(TIMEOUT_FLAG_POS_C)     := timeoutError  and not(v.dummyHeader);
       v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
       v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');

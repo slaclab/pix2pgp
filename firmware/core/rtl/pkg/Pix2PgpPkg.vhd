@@ -52,6 +52,7 @@ package Pix2PgpPkg is
    constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
 
    constant PGP_DWIDTH_C     : natural := 64;
+   constant SER_DWIDTH_C     : natural := 32;
 
    -- status FIFO bus
    -- does not have the same width as the whole status bus;
@@ -123,9 +124,10 @@ package Pix2PgpPkg is
    constant PAUSE_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-4;
    constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
    constant REVERSE_READ_POS_C     : natural := HEADER_DWITDH_C-6;
+   constant TIMEOUT_FLAG_POS_C     : natural := HEADER_DWITDH_C-7;
 
    -- reserved bits
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-8
                                               downto HEADER_DWITDH_C-8;
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9

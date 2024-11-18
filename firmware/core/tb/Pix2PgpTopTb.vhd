@@ -19,18 +19,18 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTopTb is
    generic(
-      TPD_G                      : time     := 1 ns;
-      RST_ASYNC_G                : boolean  := true;
-      RST_POLARITY_G             : sl       := '0';
-      FPGA_SYNTH_G               : boolean  := false;
-      PIPELINE_BRIDGE_DATA_G     : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G    : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
-      SUPER_FIFO_RD_DELAY_G      : natural  := 3;
-      DATAFIFO_PIPE_G            : positive := 1;
-      STATUSFIFO_PIPE_G          : positive := 1;
-      NUM_VC_G                   : natural  := 1
+      TPD_G                     : time     := 1 ns;
+      RST_ASYNC_G               : boolean  := true;
+      RST_POLARITY_G            : sl       := '0';
+      FPGA_SYNTH_G              : boolean  := false;
+      PIPELINE_BRIDGE_DATA_G    : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G  : boolean  := true;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
+      SUPER_FIFO_RD_DELAY_G     : natural  := 3;
+      DATAFIFO_PIPE_G           : positive := 1;
+      STATUSFIFO_PIPE_G         : positive := 1;
+      NUM_VC_G                  : natural  := 1
    );
    port (
     dummyIn : in sl
@@ -141,7 +141,8 @@ begin
 
       U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
         generic map(
-          RST_POLARITY_G => RST_POLARITY_G)
+          RST_POLARITY_G => RST_POLARITY_G,
+          COL_ID_G       => col)
         port map(
             clk             => sparseClk,
             df_reset_n      => rst,
@@ -214,7 +215,6 @@ begin
    -------
    -- FPGA
    -------
-
    U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
     generic map(
        TPD_G          => TPD_G,

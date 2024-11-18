@@ -10,19 +10,19 @@ library pix2pgp;
 
 entity Pix2PgpEmuTb is
    generic(
-      TPD_G                      : time     := 1 ns;
-      RST_ASYNC_G                : boolean  := true;
-      RST_POLARITY_G             : std_logic:= '0';
-      FPGA_SYNTH_G               : boolean  := false;
-      PIPELINE_BRIDGE_DATA_G     : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G    : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
-      SUPER_FIFO_RD_DELAY_G      : natural  := 3;
-      ARB_DOUT_PIPE_G            : natural  := 1;
-      DATAFIFO_PIPE_G            : positive := 1;
-      STATUSFIFO_PIPE_G          : positive := 1;
-      NUM_VC_G                   : natural  := 1
+      TPD_G                     : time     := 1 ns;
+      RST_ASYNC_G               : boolean  := true;
+      RST_POLARITY_G            : std_logic:= '0';
+      FPGA_SYNTH_G              : boolean  := false;
+      PIPELINE_BRIDGE_DATA_G    : boolean  := false;
+      PIPELINE_BRIDGE_STATUS_G  : boolean  := true;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
+      SUPER_FIFO_RD_DELAY_G     : natural  := 3;
+      ARB_DOUT_PIPE_G           : natural  := 1;
+      DATAFIFO_PIPE_G           : positive := 1;
+      STATUSFIFO_PIPE_G         : positive := 1;
+      NUM_VC_G                  : natural  := 1
    );
 end entity Pix2PgpEmuTb;
 
@@ -49,18 +49,18 @@ architecture test of Pix2PgpEmuTb is
    ------
    U_Uut : entity pix2pgp.Pix2PgpTopTb
       generic map(
-         TPD_G                      => TPD_G,
-         RST_ASYNC_G                => RST_ASYNC_G,
-         RST_POLARITY_G             => RST_POLARITY_G,
-         FPGA_SYNTH_G               => FPGA_SYNTH_G,
-         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         PIPELINE_BRIDGE_DATA_G     => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G   => PIPELINE_BRIDGE_STATUS_G,
-         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G,
-         SUPER_FIFO_RD_DELAY_G      => SUPER_FIFO_RD_DELAY_G,
-         NUM_VC_G                   => NUM_VC_G)
+         TPD_G                     => TPD_G,
+         RST_ASYNC_G               => RST_ASYNC_G,
+         RST_POLARITY_G            => RST_POLARITY_G,
+         FPGA_SYNTH_G              => FPGA_SYNTH_G,
+         DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
+         STATUSFIFO_PIPE_G         => STATUSFIFO_PIPE_G,
+         PIPELINE_BRIDGE_DATA_G    => PIPELINE_BRIDGE_DATA_G,
+         PIPELINE_BRIDGE_STATUS_G  => PIPELINE_BRIDGE_STATUS_G,
+         COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
+         COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
+         SUPER_FIFO_RD_DELAY_G     => SUPER_FIFO_RD_DELAY_G,
+         NUM_VC_G                  => NUM_VC_G)
       port map(
          dummyIn => clk);
 

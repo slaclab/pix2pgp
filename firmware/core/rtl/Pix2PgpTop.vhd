@@ -80,6 +80,7 @@ architecture rtl of Pix2PgpTop is
    signal arbBusy        : sl := '0';
    signal colPause       : sl := '0';
    signal colPauseError  : sl := '0';
+   signal timeoutError   : sl := '0';
    signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
@@ -177,6 +178,7 @@ begin
          trgCntGlbl    => trgCntGlbl,
          colFifoError  => colFifoError,
          overOccError  => overOccError,
+         timeoutError  => timeoutError,
          colPauseError => colPauseError,
          colPause      => colPause,
          colBitmask    => colBitmask);
@@ -205,6 +207,7 @@ begin
          colFifoError  => colFifoError,
          colPauseError => colPauseError,
          overOccError  => overOccError,
+         timeoutError  => timeoutError,
          colPause      => colPause,
          colBitmask    => colBitmask,
          arbBusy       => arbBusy,
