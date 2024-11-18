@@ -57,7 +57,8 @@ architecture rtl of Pix2PgpColumnSupervisor is
    type StateType is (
       IDLE_S,
       ARB_START_S,
-      WAIT_STATE_S);
+      WAIT_STATE_S,
+      PAUSE_ERROR_S);
 
    type RegType is record
       -- i/o
@@ -143,33 +144,18 @@ begin
 
          -- check Data Length from each column manager's status bus and set `hitmaskAll`;
          -- a high bit on this bitmask indicates that the associated column does have hits
-         if toBoolean(uOr(statusBusGlbl(col).dataLen)) and toBoolean(v.dataReady(col)) then
-            v.hitmaskAll(col) := '1';
-         else
-            v.hitmaskAll(col) := '0';
-         end if;
+         v.hitmaskAll(col) := uOr(statusBusGlbl(col).dataLen) and v.dataReady(col);
 
          -- check for any over-occupancy errors
-         if toBoolean(statusBusGlbl(col).overOcc) and toBoolean(v.dataReady(col)) then
-            v.colOverOccErr(col) := '1';
-         else
-            v.colOverOccErr(col) := '0';
-         end if;
+         v.colOverOccErr(col) := statusBusGlbl(col).overOcc and v.dataReady(col);
 
          -- check for any fifoError flags;
          -- note that in this case we do not check for dataReady!
          -- we need to know if the FIFOs have underflowed regardless of the dataReady status
-         if toBoolean(statusBusGlbl(col).fifoError) and toBoolean(v.columnEnable(col)) then
-            v.colFifoErr(col) := '1';
-         else
-            v.colFifoErr(col) := '0';
-         end if;
+         v.colFifoErr(col) := statusBusGlbl(col).fifoError and v.columnEnable(col);
 
-         if toBoolean(statusBusGlbl(col).pause) and toBoolean(v.dataReady(col)) then
-            v.columnPause(col) := '1';
-         else
-            v.columnPause(col) := '0';
-         end if;
+         -- pause handling
+         v.columnPause(col) := statusBusGlbl(col).pause and v.dataReady(col);
 
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
@@ -231,23 +217,6 @@ begin
                v.state := ARB_START_S;
             end if;
 
-            -- in pause-error from previous readout cycle; (hence the r.)
-            -- keep draining the columns until they are all empty
-            if r.pauseError = '1' then
-               v.pause := '0';
-
-               if uOr(v.dataReady) = '1' then
-                  v.statusRdBmsk := v.dataReady;
-                  v.colBitmask   := v.hitmaskAll;
-
-                  if uOr(v.pauseErrorBmsk) = '1' then
-                     v.pauseError := '1';
-                  end if;
-               else
-                  v.pauseError   := '0';
-               end if;
-            end if;
-
          ----------------------------------------------------------------------
          -- start the arbiter; monitor the state of its busy signal
          when ARB_START_S =>
@@ -282,6 +251,32 @@ begin
             if r.waitCnt = FIFO_RD_DELAY_G then
                v.waitCnt := (others => '0');
                v.state   := IDLE_S;
+
+               if r.pauseError = '1' then
+                  v.state := PAUSE_ERROR_S;
+               end if;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- during pause-error the FIFOs are being drained as fast as possible
+         when PAUSE_ERROR_S =>
+
+            -- more data to read
+            if uOr(v.dataReady) = '1' then
+               v.statusRdBmsk := v.dataReady;
+               v.colBitmask   := v.hitmaskAll;
+               v.state        := ARB_START_S;
+            end if;
+
+            -- all FIFOs drained.
+            -- wait for all status FIFOs to be completely settled;
+            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
+               -- wait
+               v.waitCnt := r.waitCnt + 1;
+               if r.waitCnt = FIFO_RD_DELAY_G then
+                  v.waitCnt := (others => '0');
+                  v.state   := IDLE_S;
+               end if;
             end if;
 
       end case;

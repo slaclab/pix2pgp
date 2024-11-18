@@ -211,7 +211,7 @@ begin
          end if;
 
          v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOccStatus;
-         v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAckStatus;
+         v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAck; -- write sticky flag
          v.statusFifoDin(STATUSFIFO_TRGCNT_POS_C)  := r.trgCnt;
          v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
          v.statusWr := '1';
