@@ -54,6 +54,7 @@ entity Pix2PgpFifoWrapper is
       rdEn     : in  sl;
       emptyRd  : out sl := '1';
       fullRd   : out sl;
+      rdErr    : out sl;
       dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
@@ -90,6 +91,7 @@ begin
             rd_clk    => rdClk,
             rd_en     => rdEn,
             valid     => validRdStandalone,
+            underflow => rdErr,
             dout      => dout);
    end generate SYMM_GEN;
 
@@ -119,6 +121,7 @@ begin
             rd_clk    => rdClk,
             rd_en     => rdEn,
             valid     => validRdStandalone,
+            underflow => rdErr,
             dout      => dout);
    end generate ASYMM_GEN;
 

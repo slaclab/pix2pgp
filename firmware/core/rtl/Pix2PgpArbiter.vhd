@@ -39,6 +39,8 @@ entity Pix2PgpArbiter is
       pgpRst        : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
       dataLenSel    : in  slv(DATALEN_WIDTH_C-1 downto 0);
+      trgCntSel     : in  slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       dataBusSel    : in  Pix2PgpDataBusType;
       dataRd        : out sl;
       colSel        : out slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -49,7 +51,6 @@ entity Pix2PgpArbiter is
       colPauseError : in  sl;
       colPause      : in  sl;
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum        : in  slv(TRG_WIDTH_C-1 downto 0);
       arbBusy       : out sl;
       -- Pgp4TxLite Interface
       pgpTxMaster   : out AxiStreamMasterType;
@@ -143,7 +144,6 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       colPause     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum       : slv(TRG_WIDTH_C-1 downto 0);
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -166,7 +166,6 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       colPause      => '0',
       colBitmask    => (others => '0'),
-      trgNum        => (others => '0'),
       -- outputs
       dataRd        => '0',
       colSel        => (others => '0'),
@@ -193,8 +192,8 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
-                   overOccError, colBitmask, trgNum, colPause, colPauseError,
-                   sAxisSlave) is
+                   overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
+                   trgCntGlbl, trgCntSel) is
 
       variable v : RegType;
 
@@ -208,7 +207,7 @@ begin
       v.sAxisSlave := sAxisSlave;
 
       -- defaults
-      v.dataRd  := '0';
+      v.dataRd := '0';
 
       -- flow control check
       if sAxisSlave.tReady = '1' then
@@ -270,8 +269,11 @@ begin
             else
                if v.sAxisMaster.tValid = '0' then
                   --
-                  v.txData(DATABUS_DWIDTH_C-1 downto DATALEN_WIDTH_C) := (others => '0');
-                  v.txData(DATALEN_WIDTH_C-1  downto 0)               := dataLenSel;
+                  v.txData(DATABUS_DWIDTH_C-1 downto TRGCNT_WIDTH_C + DATALEN_WIDTH_C)
+                                                                    := (others => '0');
+                  v.txData(TRGCNT_WIDTH_C + DATALEN_WIDTH_C-1 downto DATALEN_WIDTH_C)
+                                                                    := trgCntSel;
+                  v.txData(DATALEN_WIDTH_C-1 downto           0)    := dataLenSel;
                   v.sAxisMaster.tValid := '1';
                   --
 
@@ -285,7 +287,7 @@ begin
                      v.dataRdCycles := rightShift(dataLenSel, 1);
                   end if;
 
-                  v.state := PARSE_DATA_S;
+                  v.state  := PARSE_DATA_S;
                end if;
             end if;
 
@@ -347,10 +349,6 @@ begin
          v.colBitmask(col) := colBitmask(col) and not(v.dummyHeader);
       end loop;
       --
-      for trgBit in 0 to TRG_WIDTH_C-1 loop
-         v.trgNum(trgBit) := trgNum(trgBit) and not(v.dummyHeader);
-      end loop;
-      --
       v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError  and not(v.dummyHeader);
       v.dataHeader(PAUSE_FLAG_POS_C)       := colPause      and not(v.dummyHeader);
       v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
@@ -359,7 +357,7 @@ begin
       v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)          := v.trgNum;
+      v.dataHeader(TRG_CNT_POS_C)          := trgCntGlbl;
 
       --
       v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := v.txData;

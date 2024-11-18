@@ -34,7 +34,7 @@ def headerEval(header):
 
     _overOcc     = (header >> np.uint8(39)) & np.uint8(0x01)
     _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
-    _columnFull  = (header >> np.uint8(37)) & np.uint8(0x01)
+    _columnError = (header >> np.uint8(37)) & np.uint8(0x01)
     _pauseError  = (header >> np.uint8(36)) & np.uint8(0x01)
     _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
     _reverseRead = (header >> np.uint8(34)) & np.uint8(0x01)
@@ -43,10 +43,10 @@ def headerEval(header):
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
-    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnFull={2:<%d} PauseError={3:<%d} DummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+    _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnError={2:<%d} PauseError={3:<%d} DummyHeader={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
-    print(_format.format(_overOcc, _pause, _columnFull, _pauseError, _dummyHeader, hex(_bitmask).upper(), _trigger))
+    print(_format.format(_overOcc, _pause, _columnError, _pauseError, _dummyHeader, hex(_bitmask).upper(), _trigger))
     if _dummyHeader == 0:
         print(f"/////////////////////////////////////////////////////////////////////////")
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         ########################################################################################
         elif state == "lenParse_s":
             # time.sleep(0.2)
-            _len = _lineArray[_line]
+            _len = _lineArray[_line] & np.uint16(0x1F)
             print(f"=========================================================================")
             print(f"Length of Hits = {_len} for Col = {_colSel}")
             _lenCnt = _len

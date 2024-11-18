@@ -48,8 +48,8 @@ entity Pix2PgpColumnSupervisor is
       overOccError  : out sl;
       colPauseError : out sl;
       colPause      : out sl;
-      colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum        : out slv(TRG_WIDTH_C-1 downto 0));
+      trgCntGlbl    : out  slv(TRGCNT_WIDTH_C-1 downto 0);
+      colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
@@ -68,19 +68,19 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   : sl;
       colPause       : sl;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause          : sl;
       pauseError     : sl;
       hitmaskAll     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colFifoFullErr : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colFifoErr     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgNum         : slv(TRG_WIDTH_C-1 downto 0);
       waitCnt        : slv(3 downto 0);
       state          : StateType;
    end record RegType;
@@ -93,25 +93,24 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   => '0',
       colPause       => '0',
       colBitmask     => (others => '0'),
+      trgCntGlbl     => (others => '1'),
       -- internal
       pause          => '0',
       pauseError     => '0',
       hitmaskAll     => (others => '0'),
       dataReady      => (others => '0'),
       colOverOccErr  => (others => '0'),
-      colFifoFullErr => (others => '0'),
+      colFifoErr     => (others => '0'),
       columnPause    => (others => '0'),
       statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
       pauseErrorBmsk => (others => '0'),
       columnBusy     => (others => '0'),
-      trgNum         => (others => '0'),
       waitCnt        => (others => '0'),
       state          => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
-   signal colEmptyDbg : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
 
 begin
 
@@ -157,13 +156,13 @@ begin
             v.colOverOccErr(col) := '0';
          end if;
 
-         -- check for any columnFull errors;
+         -- check for any fifoError flags;
          -- note that in this case we do not check for dataReady!
-         -- we need to know if the status FIFO is full regardless of its dataReady status
-         if toBoolean(statusBusGlbl(col).columnFull) and toBoolean(v.columnEnable(col)) then
-            v.colFifoFullErr(col) := '1';
+         -- we need to know if the FIFOs have underflowed regardless of the dataReady status
+         if toBoolean(statusBusGlbl(col).fifoError) and toBoolean(v.columnEnable(col)) then
+            v.colFifoErr(col) := '1';
          else
-            v.colFifoFullErr(col) := '0';
+            v.colFifoErr(col) := '0';
          end if;
 
          if toBoolean(statusBusGlbl(col).pause) and toBoolean(v.dataReady(col)) then
@@ -181,6 +180,19 @@ begin
 
       end loop;
 
+      -- some random picks...can't think of anything smarter...
+      if v.columnEnable(7) = '1' then
+         v.trgCntGlbl := statusBusGlbl(7).trgCnt;
+      elsif v.columnEnable(0) = '1' then
+         v.trgCntGlbl := statusBusGlbl(0).trgCnt;
+      elsif v.columnEnable(5) = '1' then
+         v.trgCntGlbl := statusBusGlbl(5).trgCnt;
+      elsif v.columnEnable(15) = '1' then
+         v.trgCntGlbl := statusBusGlbl(15).trgCnt;
+      elsif v.columnEnable(23) = '1' then
+         v.trgCntGlbl := statusBusGlbl(23).trgCnt;
+      end if;
+
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
@@ -195,12 +207,11 @@ begin
             v.pauseError   := '0';
 
             if (v.dataReady = v.columnEnable) and toBoolean(uOr(v.columnEnable)) then
-               v.trgNum := r.trgNum + 1;
 
                -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                -- latch the errors
                -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-               v.colFifoError := uOr(v.colFifoFullErr);
+               v.colFifoError := uOr(v.colFifoErr);
                v.overOccError := uOr(v.colOverOccErr);
 
                -- raise the pause flag if necessary;
@@ -272,8 +283,8 @@ begin
       colPause      <= v.pause;
       colPauseError <= v.pauseError;
       colBitmask    <= v.colBitmask;
-      trgNum        <= v.trgNum;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
+      trgCntGlbl    <= r.trgCntGlbl;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
@@ -298,9 +309,5 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
-
-   GEN_DBG: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      colEmptyDbg(col) <= statusBusGlbl(col).columnEmpty;
-   end generate GEN_DBG;
 
 end rtl;

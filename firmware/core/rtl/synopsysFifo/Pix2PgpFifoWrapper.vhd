@@ -50,6 +50,7 @@ entity Pix2PgpFifoWrapper is
       rdClk    : in  sl;
       rdEn     : in  sl;
       emptyRd  : out sl := '1';
+      rdErr    : out sl;
       fullRd   : out sl;
       dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
@@ -181,6 +182,7 @@ begin
             pop_req_n  => rdEnDwareFifo,
             pop_empty  => emptyRd,
             pop_full   => fullRd,
+            pop_error  => rdErr,
             data_out   => dout);
    end generate SYMM_GEN;
 
@@ -210,6 +212,7 @@ begin
             pop_req_n  => rdEnDwareFifo,
             pop_empty  => emptyRd,
             pop_full   => fullRd,
+            pop_error  => rdErr,
             data_out   => dout);
    end generate ASYMM_GEN;
 

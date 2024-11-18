@@ -80,8 +80,8 @@ architecture rtl of Pix2PgpTop is
    signal arbBusy        : sl := '0';
    signal colPause       : sl := '0';
    signal colPauseError  : sl := '0';
-   signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0)  := (others => '0');
-   signal trgNum         : slv(TRG_WIDTH_C-1 downto 0)            := (others => '0');
+   signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
+   signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
 
 begin
@@ -174,12 +174,12 @@ begin
          -- Arbiter Interface
          arbiterBusy   => arbBusy,
          arbiterStart  => arbStart,
+         trgCntGlbl    => trgCntGlbl,
          colFifoError  => colFifoError,
          overOccError  => overOccError,
          colPauseError => colPauseError,
          colPause      => colPause,
-         colBitmask    => colBitmask,
-         trgNum        => trgNum);
+         colBitmask    => colBitmask);
 
    -----------------------------------------
    -- Arbiter
@@ -195,6 +195,8 @@ begin
          pgpRst        => pgpRst,
          -- Column Manager Interface
          dataLenSel    => statusBusSel.dataLen,
+         trgCntSel     => statusBusSel.trgCnt,
+         trgCntGlbl    => trgCntGlbl,
          dataBusSel    => dataBusSel,
          dataRd        => dataRd,
          colSel        => colSel,
@@ -205,7 +207,6 @@ begin
          overOccError  => overOccError,
          colPause      => colPause,
          colBitmask    => colBitmask,
-         trgNum        => trgNum,
          arbBusy       => arbBusy,
          -- Pgp4TxLite Interface
          pgpTxMaster   => pgpTxMaster,

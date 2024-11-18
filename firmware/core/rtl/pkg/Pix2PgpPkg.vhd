@@ -43,7 +43,9 @@ package Pix2PgpPkg is
    -- so the true data length can only be smaller than the hits the data FIFO can fit.
    -- after hitting almost-full, the data FIFO will get drained...
    -- ...therefore
-   constant DATALEN_WIDTH_C  : natural := 5; -- 2^5=31 hits max before almost-full/pause
+   constant DATALEN_WIDTH_C : natural := 5; -- 2^5=31 hits max before almost-full/pause
+
+   constant TRGCNT_WIDTH_C  : natural := 3; -- short 3-bit counter to double-check alignment
 
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
@@ -53,25 +55,29 @@ package Pix2PgpPkg is
 
    -- status FIFO bus
    -- does not have the same width as the whole status bus;
-   -- *only* the overOcc flag, the pause and the dataLen are stored into the FIFO
-   -- the other flags (columnFull/columnEmpty) run parallel the FIFO dout on the status bus
+   -- *only* the overOcc flag, the pause, the trgCnt, and the dataLen are stored into the FIFO
+   -- the other flags (fifoError/columnEmpty) run parallel the FIFO dout on the status bus
 
-   -- status fifo data width is +2 because of the overoccupancy and pause flags
-   constant STATUSFIFO_DWIDTH_C      : natural := DATALEN_WIDTH_C + 2;
+   -- status fifo data width is + 2 because of the overoccupancy and pause flags
+   constant STATUSFIFO_DWIDTH_C       : natural := DATALEN_WIDTH_C + TRGCNT_WIDTH_C + 2;
 
-   constant STATUSFIFO_OVEROCC_POS_C : natural := STATUSFIFO_DWIDTH_C-1;
-   constant STATUSFIFO_PAUSE_POS_C   : natural := STATUSFIFO_DWIDTH_C-2;
+   constant STATUSFIFO_OVEROCC_POS_C  : natural := STATUSFIFO_DWIDTH_C-1;
+   constant STATUSFIFO_PAUSE_POS_C    : natural := STATUSFIFO_DWIDTH_C-2;
 
-   subtype STATUSFIFO_DATALEN_POS_C  is natural range STATUSFIFO_DWIDTH_C-3
-                                                downto 0;
+   subtype STATUSFIFO_TRGCNT_POS_C   is natural range STATUSFIFO_DWIDTH_C-3
+                                               downto DATALEN_WIDTH_C;
+
+   subtype STATUSFIFO_DATALEN_POS_C  is natural range DATALEN_WIDTH_C-1
+                                               downto 0;
 
    type Pix2PgpStatusBusType is record
       -- flags begin
       overOcc     : sl;
       pause       : sl;
-      columnFull  : sl;
+      fifoError   : sl;
       columnEmpty : sl;
       -- flags end
+      trgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
       dataLen     : slv(DATALEN_WIDTH_C-1 downto 0);
    end record;
 
@@ -79,9 +85,10 @@ package Pix2PgpPkg is
       -- flags begin
       overOcc     => '0',
       pause       => '0',
-      columnFull  => '0',
+      fifoError   => '0',
       columnEmpty => '1',
       -- flags end
+      trgCnt      => (others => '1'),
       dataLen     => (others => '0'));
 
    type Pix2PgpStatusBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpStatusBusType;
@@ -102,7 +109,7 @@ package Pix2PgpPkg is
 
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
    constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
-   constant TRG_WIDTH_C         : natural := 8;                     -- 8
+   constant RESERVED_WIDTH_C    : natural := 8;                     -- 8
    constant FLAGS_WIDTH_C       : natural := 8;                     -- 8
    constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24
    -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
@@ -122,10 +129,13 @@ package Pix2PgpPkg is
                                               downto HEADER_DWITDH_C-8;
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
-                                              downto TRG_WIDTH_C;
-   -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  TRG_WIDTH_C-1
+                                              downto RESERVED_WIDTH_C;
+   --------------------------
+   -- some empty bits here...
+   -- ...
+   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_WIDTH_C-1
                                               downto 0;
+
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
    -------------------------------------------
