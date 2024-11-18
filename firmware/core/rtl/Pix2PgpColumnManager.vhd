@@ -71,46 +71,46 @@ architecture rtl of Pix2PgpColumnManager is
 
    type RegType is record
       -- i/o
-      sof           : sl;
-      eof           : sl;
-      overOcc       : sl;
-      dataRd        : sl;
-      busy          : sl;
-      pause         : sl;
-      pauseAck      : sl;
-      din           : slv(SPARSE_DWIDTH_C-1 downto 0);
+      sof            : sl;
+      eof            : sl;
+      overOcc        : sl;
+      dataRd         : sl;
+      busy           : sl;
+      pause          : sl;
+      pauseAck       : sl;
+      din            : slv(SPARSE_DWIDTH_C-1 downto 0);
       -- internal
-      overOccReg    : sl;
-      pauseAckReg   : sl;
-      eofReg        : sl;
-      statusWr      : sl;
-      dataWr        : sl;
-      statusOk      : sl;
-      statusFifoWr  : sl;
-      statusFifoDin : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-      wrEnCnt       : slv(DATALEN_WIDTH_C-1 downto 0);
+      overOccStatus  : sl;
+      pauseAckStatus : sl;
+      eofStatus      : sl;
+      statusWr       : sl;
+      dataWr         : sl;
+      statusFifoOk   : sl;
+      statusFifoWr   : sl;
+      statusFifoDin  : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+      wrEnCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- i/o
-      sof           => '0',
-      eof           => '0',
-      overOcc       => '0',
-      dataRd        => '0',
-      busy          => '0',
-      pause         => '0',
-      pauseAck      => '0',
-      din           => (others => '0'),
+      sof            => '0',
+      eof            => '0',
+      overOcc        => '0',
+      dataRd         => '0',
+      busy           => '0',
+      pause          => '0',
+      pauseAck       => '0',
+      din            => (others => '0'),
       -- internal
-      overOccReg    => '0',
-      pauseAckReg   => '0',
-      eofReg        => '0',
-      statusWr      => '0',
-      dataWr        => '0',
-      statusOk      => '0',
-      statusFifoWr  => '0',
-      statusFifoDin => (others => '0'),
-      wrEnCnt       => (others => '0'));
+      overOccStatus  => '0',
+      pauseAckStatus => '0',
+      eofStatus      => '0',
+      statusWr       => '0',
+      dataWr         => '0',
+      statusFifoOk   => '0',
+      statusFifoWr   => '0',
+      statusFifoDin  => (others => '0'),
+      wrEnCnt        => (others => '0'));
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -153,11 +153,10 @@ begin
       -- hopefully the design will still meet timing...
       -- (delayed FIFO signals to ease placement)
       -- gotta inhibit the writing of the status FIFO fast!
-      v.statusOk := not(statusFifoAlmFull);
+      v.statusFifoOk := not(statusFifoAlmFull);
 
-      -- rising-edge detection
-      -- raise busy signal
-      if v.sof = '1' and r.sof = '0' then
+      -- raise and latch busy signal until reset
+      if v.sof = '1' and v.busy = '0' then
          v.busy := '1';
       end if;
 
@@ -171,29 +170,30 @@ begin
       end if;
 
       -- all these trigger a writing of a status word;
-      -- note the use of *Reg. This is because a word might not be written right away.
       -- (the status FIFO *must not* be almostFull in order for its din to be written)
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       -- overOcc is single-cycle strobe; no need to catch edge
-      if v.overOcc = '1' and v.busy = '1' and r.overOccReg = '0' then
-         v.overOccReg := '1';
+      if v.overOcc = '1' and v.busy = '1' and r.overOccStatus = '0' then
+         v.overOccStatus := '1';
       end if;
 
       -- rising-edge detection (pauseAck is not a single-cycle strobe)
-      if v.pauseAck = '1' and r.pauseAck = '0' and v.busy = '1' and r.pauseAckReg = '0' then
-         v.pauseAckReg := '1';
+      if v.pauseAck = '1' and r.pauseAck = '0' and v.busy = '1' and r.pauseAckStatus = '0' then
+         v.pauseAckStatus := '1';
       end if;
 
       -- EOF will remain high as long as this logic is busy
       -- busy is released once the EOF-related flag is written into the status
-      if v.eof = '1' and v.busy = '1' and r.eofReg = '0' then
-         v.eofReg := '1';
+      if v.eof = '1' and v.busy = '1' and r.eofStatus = '0' then
+         v.eofStatus := '1';
       end if;
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
       -- write status FIFO
       -- ///////////////////////////////////////////////////////////////////////////////////////////
-      if (r.overOccReg = '1' or r.pauseAckReg = '1' or r.eofReg = '1') and v.statusOk = '1' then
+      if (r.overOccStatus = '1' or r.pauseAckStatus = '1' or r.eofStatus = '1') and
+         (v.statusFifoOk = '1' and v.busy = '1') then
+
          if r.wrEnCnt(0) = '1' then
             -- wrote odd number of hits? write an extra dummy word;
             -- hold for one clock cycle;
@@ -201,27 +201,29 @@ begin
             v.dataWr := '1';
          end if;
 
-         v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOccReg;
-         v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAckReg;
+         v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOccStatus;
+         v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAckStatus;
          v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
          v.statusWr := '1';
          v.wrEnCnt  := (others => '0');
 
          -- reset the flags (including busy)
          -- over-occupancy received and written
-         if r.overOccReg = '1' then
-            v.overOccReg := '0';
+         if r.overOccStatus = '1' then
+            v.overOccStatus := '0';
          end if;
 
          -- pause-acknowledge received and written
-         if r.pauseAckReg = '1' then
-            v.pauseAckReg := '0';
+         if r.pauseAckStatus = '1' then
+            v.pauseAckStatus := '0';
          end if;
 
-         -- regular EOF received and status word written
-         if r.eofReg = '1' then
-            v.eofReg := '0';
-            v.busy   := '0';
+         -- regular EOF received and written; reset all flags and busy
+         if r.eofStatus = '1' then
+            v.eofStatus      := '0';
+            v.overOccStatus  := '0';
+            v.pauseAckStatus := '0';
+            v.busy           := '0';
          end if;
       end if;
       -- ///////////////////////////////////////////////////////////////////////////////////////////

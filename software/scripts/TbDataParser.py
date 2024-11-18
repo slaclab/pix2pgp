@@ -63,12 +63,12 @@ def _hitPrinter(hits, decode, length):
     hit1 = (hits >> np.uint8(0)) & np.uint32(0xFFFFF)
 
     if decode:
-        hitCnt0 = (hit0 >> np.uint8(0))  & np.uint8(0xFF)
-        colId0  = (hit0 >> np.uint8(8))  & np.uint8(0xFF)
-        hitTrg0 = (hit0 >> np.uint8(16)) & np.uint8(0x0F)
-        hitCnt1 = (hit1 >> np.uint8(0))  & np.uint8(0xFF)
-        colId1  = (hit1 >> np.uint8(8))  & np.uint8(0xFF)
-        hitTrg1 = (hit1 >> np.uint8(16)) & np.uint8(0x0F)
+        hitCnt0 = (hit0 >> np.uint16(0))  & np.uint16(0x3FF)
+        colId0  = (hit0 >> np.uint16(10)) & np.uint16(0x3F)
+        hitTrg0 = (hit0 >> np.uint16(16)) & np.uint16(0x0F)
+        hitCnt1 = (hit1 >> np.uint16(0))  & np.uint16(0x3FF)
+        colId1  = (hit1 >> np.uint16(10)) & np.uint16(0x3F)
+        hitTrg1 = (hit1 >> np.uint16(16)) & np.uint16(0x0F)
         _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d} ColId1={3:<%d} HitCnt1={4:<%d} hitTrg1={5:<%d}' % (4, 4, 4, 4, 4, 4)
         if length == 1:
             _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d}' % (4, 4, 4)
