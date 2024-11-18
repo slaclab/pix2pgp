@@ -17,17 +17,17 @@ use surf.AxiStreamPkg.all;
 
 entity Pix2PgpSparkPixSTop is
    generic(
-      TPD_G                      : time      := 1 ns;
-      RST_ASYNC_G                : boolean   := true;
-      RST_POLARITY_G             : std_logic := '0';
-      PIPELINE_BRIDGE_DATA_G     : boolean   := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean   := true;
-      COLMANAGER_DATA_DEPTH_G    : integer   := 7;
-      COLMANAGER_STATUS_DEPTH_G  : integer   := 6;
-      SUPER_FIFO_RD_DELAY_G      : natural   := 3;
-      DATAFIFO_PIPE_G            : positive  := 1;
-      STATUSFIFO_PIPE_G          : positive  := 1;
-      SER_GBOX_PIPE_STAGES_G     : natural   := 0); -- only set when synthesizing (not in sim)
+      TPD_G                     : time      := 1 ns;
+      RST_ASYNC_G               : boolean   := true;
+      RST_POLARITY_G            : std_logic := '0';
+      PIPELINE_BRIDGE_DATA_G    : boolean   := false; -- pipeline data FIFO output downstream
+      PIPELINE_BRIDGE_STATUS_G  : boolean   := true;  -- pipeline status FIFO output downstream
+      COLMANAGER_DATA_DEPTH_G   : integer   := 7;     -- colManager data FIFO depth (holds *2 hits)
+      COLMANAGER_STATUS_DEPTH_G : integer   := 6;     -- colManager status FIFO depth (1 per event)
+      SUPER_FIFO_RD_DELAY_G     : natural   := 3;     -- supervisor FIFO signal evaluation timeout
+      DATAFIFO_PIPE_G           : natural   := 1;     -- colManager data FIFO I/O pipeline stages
+      STATUSFIFO_PIPE_G         : natural   := 1;     -- colManager status FIFO I/O pipeline stages
+      SER_GBOX_PIPE_G           : natural   := 0);    -- *only* set when synthesizing (*not* in sim)
    port(
       -- General Interface
       sparseClk    : in  std_logic;
@@ -172,7 +172,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+         DELAY_G        => SER_GBOX_PIPE_G)
       port map (
          clk     => pgpClk,
          din(0)  => serGboxValid,
@@ -182,7 +182,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+         DELAY_G        => SER_GBOX_PIPE_G)
       port map (
          clk     => pgpClk,
          din(0)  => pgpDoutReady,
@@ -193,7 +193,7 @@ begin
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          WIDTH_G        => SER_DWIDTH_C,
-         DELAY_G        => SER_GBOX_PIPE_STAGES_G)
+         DELAY_G        => SER_GBOX_PIPE_G)
       port map (
          clk  => pgpClk,
          din  => serGboxData,

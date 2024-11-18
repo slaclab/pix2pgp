@@ -20,8 +20,8 @@ entity Pix2PgpEmuTb is
       COLMANAGER_STATUS_DEPTH_G : integer  := 6;
       SUPER_FIFO_RD_DELAY_G     : natural  := 3;
       ARB_DOUT_PIPE_G           : natural  := 1;
-      DATAFIFO_PIPE_G           : positive := 1;
-      STATUSFIFO_PIPE_G         : positive := 1;
+      DATAFIFO_PIPE_G           : natural  := 1;
+      STATUSFIFO_PIPE_G         : natural  := 1;
       NUM_VC_G                  : natural  := 1
    );
 end entity Pix2PgpEmuTb;

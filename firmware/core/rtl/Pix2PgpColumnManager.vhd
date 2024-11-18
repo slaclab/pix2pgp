@@ -26,13 +26,13 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnManager is
    generic(
-      TPD_G             : time     := 1 ns;
-      RST_ASYNC_G       : boolean  := false;
-      RST_POLARITY_G    : sl       := '1';
-      DATAFIFO_PIPE_G   : positive := 1;
-      STATUSFIFO_PIPE_G : positive := 1;
-      DATA_DEPTH_G      : integer  := 32;
-      STATUS_DEPTH_G    : integer  := 32);
+      TPD_G             : time    := 1 ns;
+      RST_ASYNC_G       : boolean := false;
+      RST_POLARITY_G    : sl      := '1';
+      DATAFIFO_PIPE_G   : natural := 1;
+      STATUSFIFO_PIPE_G : natural := 1;
+      DATA_DEPTH_G      : integer := 32;
+      STATUS_DEPTH_G    : integer := 32);
    port(
       -- General Interface
       sparseClk : in  sl;
