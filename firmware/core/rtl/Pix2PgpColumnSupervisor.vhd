@@ -222,9 +222,7 @@ begin
                   v.pause        := '1';
                end if;
 
-               -- emergency; digital logic can't keep up with rate.
-               -- columns are read as fast as possible
-               -- TO-DO: fix this !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+               -- will take into effect on next cycle
                if uOr(v.pauseErrorBmsk) = '1' then
                   v.pauseError := '1';
                end if;
@@ -233,10 +231,22 @@ begin
                v.state := ARB_START_S;
             end if;
 
-            -- in pause-error from previous readout cycle
-            -- TO-DO: fix this !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            --if r.pauseError = '1' then
-            --end if;
+            -- in pause-error from previous readout cycle; (hence the r.)
+            -- keep draining the columns until they are all empty
+            if r.pauseError = '1' then
+               v.pause := '0';
+
+               if uOr(v.dataReady) = '1' then
+                  v.statusRdBmsk := v.dataReady;
+                  v.colBitmask   := v.hitmaskAll;
+
+                  if uOr(v.pauseErrorBmsk) = '1' then
+                     v.pauseError := '1';
+                  end if;
+               else
+                  v.pauseError   := '0';
+               end if;
+            end if;
 
          ----------------------------------------------------------------------
          -- start the arbiter; monitor the state of its busy signal
