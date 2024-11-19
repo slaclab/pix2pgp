@@ -237,8 +237,7 @@ begin
 
             -- waited for too long for all columns to be ready,
             -- while some have been ready for some time...
-            -- (use the r. to allow watchdog to be placed far away)
-            if r.timeout = '1' then
+            if v.timeout = '1' then
                v.timeoutError := '1';
                v.state        := ERROR_S;
             end if;
@@ -302,11 +301,11 @@ begin
             end if;
 
             -- all FIFOs drained.
-            -- release the error flags and go back to idle
-            if uOr(v.dataReady and v.columnBusy) = '0' then
+            -- release the error flags and go back to idle (after waiting)
+            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
                v.timeoutError := '0';
                v.pauseError   := '0';
-               v.state        := IDLE_S;
+               v.state        := WAIT_STATE_S;
             end if;
 
       end case;
@@ -322,7 +321,7 @@ begin
       trgCntGlbl    <= r.trgCntGlbl;
       timeoutError  <= v.timeoutError;
 
-      setWatchdog   <= r.setWatchdog; -- use the r. to allow watchdog to be placed far away
+      setWatchdog   <= v.setWatchdog;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
