@@ -144,6 +144,7 @@ architecture rtl of Pix2PgpArbiter is
    type RegType is record
       -- inputs
       colPause     : sl;
+      arbStart     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- outputs
       dataRd       : sl;
@@ -166,6 +167,7 @@ architecture rtl of Pix2PgpArbiter is
    constant REG_INIT_C : RegType := (
       -- inputs
       colPause      => '0',
+      arbStart      => '0',
       colBitmask    => (others => '0'),
       -- outputs
       dataRd        => '0',
@@ -206,6 +208,7 @@ begin
       -- inputs
       v.eventEmpty := not(uOr(colBitmask));
       v.sAxisSlave := sAxisSlave;
+      v.arbStart   := arbStart;
 
       -- defaults
       v.dataRd := '0';
@@ -230,7 +233,7 @@ begin
             v.dummyHeader := '0';
             v.colSel      := colSelReset(v.colSel'length, r.reverseRead);
 
-            if arbStart = '1' then
+            if r.arbStart = '1' then
                v.arbBusy := '1';
                v.state   := PARSE_HEADER_S;
             end if;

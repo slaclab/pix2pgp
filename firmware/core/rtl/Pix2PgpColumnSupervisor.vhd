@@ -181,16 +181,18 @@ begin
       end loop;
 
       -- some random picks...can't think of anything smarter...
-      if v.columnEnable(7) = '1' then
+      if v.columnEnable(7) = '1' and v.dataReady(7) = '1' then
          v.trgCntGlbl := statusBusGlbl(7).trgCnt;
-      elsif v.columnEnable(0) = '1' then
+      elsif v.columnEnable(0) = '1' and v.dataReady(0) = '1' then
          v.trgCntGlbl := statusBusGlbl(0).trgCnt;
-      elsif v.columnEnable(5) = '1' then
+      elsif v.columnEnable(5) = '1' and v.dataReady(5) = '1' then
          v.trgCntGlbl := statusBusGlbl(5).trgCnt;
-      elsif v.columnEnable(15) = '1' then
+      elsif v.columnEnable(15) = '1'  and v.dataReady(15) = '1' then
          v.trgCntGlbl := statusBusGlbl(15).trgCnt;
-      elsif v.columnEnable(23) = '1' then
+      elsif v.columnEnable(23) = '1' and v.dataReady(23) = '1' then
          v.trgCntGlbl := statusBusGlbl(23).trgCnt;
+      else
+         v.trgCntGlbl := (others => '0');
       end if;
 
       v.allColsReady := toSl(v.dataReady = v.columnEnable) and uOr(v.columnEnable);
@@ -318,7 +320,7 @@ begin
       colPauseError <= v.pauseError;
       colBitmask    <= v.colBitmask;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
-      trgCntGlbl    <= r.trgCntGlbl;
+      trgCntGlbl    <= v.trgCntGlbl;
       timeoutError  <= v.timeoutError;
 
       setWatchdog   <= v.setWatchdog;
