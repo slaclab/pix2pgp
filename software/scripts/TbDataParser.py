@@ -39,8 +39,9 @@ def headerEval(header):
     _dummyHeader  = (header >> np.uint8(35)) & np.uint8(0x01)
     _reverseRead  = (header >> np.uint8(34)) & np.uint8(0x01)
     _timeout      = (header >> np.uint8(33)) & np.uint8(0x01)
-
-    # some reserved bits
+    # -------------
+    # some reserved bits ..
+    # -------------
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
     _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
 
@@ -140,9 +141,11 @@ if __name__ == "__main__":
         ########################################################################################
         elif state == "lenParse_s":
             # time.sleep(0.2)
-            _len = _lineArray[_line] & np.uint16(0x1F)
+            _len = _lineArray[_line] & np.uint16(0xFF)
+            _trg = (_lineArray[_line] >> np.uint16(8)) & np.uint16(0x3FF)
             print(f"=========================================================================")
             print(f"Length of Hits = {_len} for Col = {_colSel}")
+            print(f"Col TriggerCnt = {_trg} for Col = {_colSel}")
             _lenCnt = _len
             # check this! there is a chance that after a post-pause-release a column does
             # not have more hits and writes a dataLen=0

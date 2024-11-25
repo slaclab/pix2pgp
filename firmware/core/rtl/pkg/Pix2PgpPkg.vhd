@@ -45,7 +45,7 @@ package Pix2PgpPkg is
    -- ...therefore
    constant DATALEN_WIDTH_C : natural := 5; -- 2^5=31 hits max before almost-full/pause
 
-   constant TRGCNT_WIDTH_C  : natural := 3; -- short 3-bit counter to double-check alignment
+   constant TRGCNT_WIDTH_C  : natural := 8; -- 8-bit counter to double-check alignment
 
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
@@ -66,10 +66,10 @@ package Pix2PgpPkg is
    constant STATUSFIFO_PAUSE_POS_C    : natural := STATUSFIFO_DWIDTH_C-2;
 
    subtype STATUSFIFO_TRGCNT_POS_C   is natural range STATUSFIFO_DWIDTH_C-3
-                                               downto DATALEN_WIDTH_C;
+                                                downto DATALEN_WIDTH_C;
 
    subtype STATUSFIFO_DATALEN_POS_C  is natural range DATALEN_WIDTH_C-1
-                                               downto 0;
+                                                downto 0;
 
    type Pix2PgpStatusBusType is record
       -- flags begin
@@ -110,7 +110,7 @@ package Pix2PgpPkg is
 
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
    constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
-   constant RESERVED_WIDTH_C    : natural := 8;                     -- 8
+   --constant TRGCNT_WIDTH_C    : natural := 8;                     -- 8 (aldready defined)
    constant FLAGS_WIDTH_C       : natural := 8;                     -- 8
    constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24
    -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
@@ -125,16 +125,16 @@ package Pix2PgpPkg is
    constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
    constant REVERSE_READ_POS_C     : natural := HEADER_DWITDH_C-6;
    constant TIMEOUT_FLAG_POS_C     : natural := HEADER_DWITDH_C-7;
-
-   -- reserved bits
+   --------------------------
+   -- reserved bits (only one left)
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-8
                                               downto HEADER_DWITDH_C-8;
+   --------------------------
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
-                                              downto RESERVED_WIDTH_C;
+                                              downto TRGCNT_WIDTH_C;
    --------------------------
-   -- some empty bits here...
-   -- ...
+   -- trigger counter
    subtype  TRG_CNT_POS_C          is natural range  TRGCNT_WIDTH_C-1
                                               downto 0;
 

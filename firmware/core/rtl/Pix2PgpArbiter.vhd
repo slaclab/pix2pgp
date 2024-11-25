@@ -273,12 +273,9 @@ begin
             else
                if v.sAxisMaster.tValid = '0' then
                   --
-                  v.txData(DATABUS_DWIDTH_C-1 downto TRGCNT_WIDTH_C + DATALEN_WIDTH_C)
-                                                                    := (others => '0');
-                  v.txData(TRGCNT_WIDTH_C + DATALEN_WIDTH_C-1 downto DATALEN_WIDTH_C)
-                                                                    := trgCntSel;
-                  v.txData(DATALEN_WIDTH_C-1 downto           0)    := dataLenSel;
-                  v.sAxisMaster.tValid := '1';
+                  v.txData(DATABUS_DWIDTH_C-1 downto 8) := resize(trgCntSel,  32);
+                  v.txData(7 downto 0)                  := resize(dataLenSel, 8);
+                  v.sAxisMaster.tValid                  := '1';
                   --
 
                   v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);

@@ -180,9 +180,7 @@ begin
       -- (the status FIFO *must not* be almostFull in order for its din to be written)
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       -- overOcc is single-cycle strobe; no need to catch edge
-      -- increment trigger counter as well (treat it like a SoF)
       if v.overOcc = '1' and v.busy = '1' and r.overOccStatus = '0' then
-         v.trgCnt        := r.trgCnt + 1;
          v.overOccStatus := '1';
       end if;
 
@@ -219,7 +217,9 @@ begin
 
          -- reset the flags (including busy)
          -- over-occupancy received and written
+         -- retroactively increment trigger counter
          if r.overOccStatus = '1' then
+            v.trgCnt        := r.trgCnt + 1;
             v.overOccStatus := '0';
          end if;
 
