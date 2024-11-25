@@ -97,6 +97,7 @@ architecture rtl of Pix2PgpArbiter is
       colPause     : sl;
       arbStart     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgCntGlbl   : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -120,6 +121,7 @@ architecture rtl of Pix2PgpArbiter is
       colPause      => '0',
       arbStart      => '0',
       colBitmask    => (others => '0'),
+      trgCntGlbl    => (others => '0'),
       -- outputs
       dataRd        => '0',
       colSel        => (others => '0'),
@@ -301,16 +303,21 @@ begin
          v.colBitmask(col) := colBitmask(col) and not(v.dummyHeader);
       end loop;
       --
-      v.dataHeader(OVEROCC_FLAG_POS_C)     := overOccError  and not(v.dummyHeader);
-      v.dataHeader(PAUSE_FLAG_POS_C)       := colPause      and not(v.dummyHeader);
-      v.dataHeader(COLUMN_FULL_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
-      v.dataHeader(PAUSE_ERROR_FLAG_POS_C) := colPauseError and not(v.dummyHeader);
-      v.dataHeader(TIMEOUT_FLAG_POS_C)     := timeoutError  and not(v.dummyHeader);
-      v.dataHeader(DUMMY_HEADER_POS_C)     := v.dummyHeader;
-      v.dataHeader(REVERSE_READ_POS_C)     := v.reverseRead and not(v.dummyHeader);
-      v.dataHeader(FLAGS_RESERVED_POS_C)   := (others => '0');
-      v.dataHeader(COL_BITMASK_POS_C)      := v.colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)          := trgCntGlbl;
+      for i in 0 to TRGCNT_WIDTH_C-1 loop
+         v.trgCntGlbl(i) := trgCntGlbl(i) and not(v.dummyHeader);
+      end loop;
+      --
+      --
+      v.dataHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(v.dummyHeader);
+      v.dataHeader(PAUSE_FLAG_POS_C)        := colPause      and not(v.dummyHeader);
+      v.dataHeader(COLUMN_ERROR_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
+      v.dataHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(v.dummyHeader);
+      v.dataHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(v.dummyHeader);
+      v.dataHeader(DUMMY_HEADER_POS_C)      := v.dummyHeader;
+      v.dataHeader(REVERSE_READ_POS_C)      := v.reverseRead and not(v.dummyHeader);
+      v.dataHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
+      v.dataHeader(COL_BITMASK_POS_C)       := v.colBitmask;
+      v.dataHeader(TRG_CNT_POS_C)           := v.trgCntGlbl;
 
       --
       v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := v.txData;

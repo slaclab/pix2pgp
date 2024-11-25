@@ -109,22 +109,23 @@ package Pix2PgpPkg is
    ----------------------------
 
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
-   constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
-   --constant TRGCNT_WIDTH_C    : natural := 8;                     -- 8 (aldready defined)
-   constant FLAGS_WIDTH_C       : natural := 8;                     -- 8
-   constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24
    -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
+   --
+   constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
+   --constant TRGCNT_WIDTH_C      : natural := 8;                     -- 8  (aldready defined)
+   --constant FLAGS_WIDTH_C       : natural := 8;                     -- 8  (unused)
+   --constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24 (unused)
 
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C     : natural := HEADER_DWITDH_C-1;
-   constant PAUSE_FLAG_POS_C       : natural := HEADER_DWITDH_C-2;
-   constant COLUMN_FULL_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
-   constant PAUSE_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-4;
-   constant DUMMY_HEADER_POS_C     : natural := HEADER_DWITDH_C-5;
-   constant REVERSE_READ_POS_C     : natural := HEADER_DWITDH_C-6;
-   constant TIMEOUT_FLAG_POS_C     : natural := HEADER_DWITDH_C-7;
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1;
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWITDH_C-2;
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
+   constant REVERSE_READ_POS_C      : natural := HEADER_DWITDH_C-6;
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-7;
    --------------------------
    -- reserved bits (only one left)
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-8
@@ -156,7 +157,9 @@ package Pix2PgpPkg is
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
 
-   constant GEARBOX_OUTPUT_WIDTH_C  : natural := DATABUS_DWIDTH_C*8;
+   -- note that the order of the hits can be reversed depending on the value of REVERSE_READ_POS_C;
+
+   constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
 
    -- functions
    --
