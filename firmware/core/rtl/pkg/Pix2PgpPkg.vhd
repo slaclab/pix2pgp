@@ -158,8 +158,65 @@ package Pix2PgpPkg is
 
    constant GEARBOX_OUTPUT_WIDTH_C  : natural := DATABUS_DWIDTH_C*8;
 
+   -- functions
+   --
+   function rightShift (inSlv: slv; count: natural) return slv;
+   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean;
+   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv;
+   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv;
+   --
+
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
+
+   -- stolen from numberic_std
+   function rightShift (inSlv: slv; count: natural) return slv is
+      constant inSlvLen: integer := inSlv'LENGTH-1;
+      alias xarg: slv(inSlvLen downto 0) is inSlv;
+      variable result: slv(inSlvLen downto 0) := (others => '0');
+   begin
+      if count <= inSlvLen then
+         result(inSlvLen-count downto 0) := xarg(inSlvLen downto count);
+      end if;
+      return result;
+   end rightShift;
+
+   -- col-select done
+   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean is
+      variable result: boolean := false;
+   begin
+      if inReverseRead = '1' and allBits(inColSel, '0') then
+         result := true;
+      elsif inReverseRead = '0' and conv_integer(unsigned(inColSel)) = NUM_OF_COL_MANAGERS_C-1 then
+         result := true;
+      end if;
+      return result;
+   end colSelDone;
+
+   -- col-select reset (set to max col value or zero)
+   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv is
+      variable result: slv(inColSelLen-1 downto 0) := (others => '0');
+   begin
+      if inReverseRead = '1' then
+         result := conv_std_logic_vector(NUM_OF_COL_MANAGERS_C-1, result'length);
+      else
+         result := (others => '0');
+      end if;
+      return result;
+   end colSelReset;
+
+   -- col-select switch (incr or decr)
+   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv is
+      constant inColSelLen: integer := inColSel'LENGTH-1;
+      variable result: slv(inColSelLen downto 0) := (others => '0');
+   begin
+      if inReverseRead = '1' then
+         result := inColSel - 1;
+      else
+         result := inColSel + 1;
+      end if;
+      return result;
+   end colSelSwitch;
 
 end package body Pix2PgpPkg;
