@@ -47,7 +47,7 @@ end entity Pix2PgpTopTb;
 architecture test of Pix2PgpTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
-   constant CLK_PERIOD_PGP_C    : time := 5.384  ns;
+   constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
@@ -79,9 +79,28 @@ architecture test of Pix2PgpTopTb is
 
 begin
 
-  -- rst and clk
-  sparseClk <= not sparseClk after CLK_PERIOD_SPARSE_C - TPD_G;
-  pgpClk    <= not pgpClk    after CLK_PERIOD_PGP_C    - TPD_G;
+   -- clocks
+   U_ClkRst_pgpClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_PGP_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => pgpClk,
+         clkN => open);
+
+   U_ClkRst_sparseClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SPARSE_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sparseClk,
+         clkN => open);
 
     writeDataProcess: process(pgpClk)
 
