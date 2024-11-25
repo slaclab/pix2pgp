@@ -45,7 +45,7 @@ package Pix2PgpPkg is
    -- ...therefore
    constant DATALEN_WIDTH_C : natural := 5; -- 2^5=31 hits max before almost-full/pause
 
-   constant TRGCNT_WIDTH_C  : natural := 8; -- 8-bit counter to double-check alignment
+   constant TRGCNT_WIDTH_C  : natural := 6; -- 6-bit counter to double-check alignment
 
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
@@ -111,10 +111,14 @@ package Pix2PgpPkg is
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
    -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
    --
-   constant HEADER_DWITDH_C     : natural := DATABUS_DWIDTH_C;
-   --constant TRGCNT_WIDTH_C      : natural := 8;                     -- 8  (aldready defined)
-   --constant FLAGS_WIDTH_C       : natural := 8;                     -- 8  (unused)
-   --constant COL_BITMASK_WIDTH_C : natural := NUM_OF_COL_MANAGERS_C; -- 24 (unused)
+   -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
+   -- the header has a standard trigger counter width that needs to be larger or equal
+   -- to the actual trigger counter coming in from the columns;
+   -- (the inbound trigger counter from the columns gets resized to fit)
+   constant HEADER_DWITDH_C       : natural := DATABUS_DWIDTH_C;
+   constant TRGCNT_HEADER_WIDTH_C : natural := 8;                        -- 8
+   -- constant FLAGS_WIDTH_C         : natural := 8;                     -- 8  (unused)
+   -- constant COL_BITMASK_WIDTH_C   : natural := NUM_OF_COL_MANAGERS_C; -- 24 (unused)
 
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
@@ -133,10 +137,10 @@ package Pix2PgpPkg is
    --------------------------
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
-                                              downto TRGCNT_WIDTH_C;
+                                              downto TRGCNT_HEADER_WIDTH_C;
    --------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_WIDTH_C-1
+   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1
                                               downto 0;
 
    -------------------------------------------

@@ -474,6 +474,23 @@ begin
     wait for CLK_PERIOD_SPARSE_C*2;
      sro  <= '0';
 
+    wait for CLK_PERIOD_SPARSE_C*1093;
+       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(0, hitLen(col)'length);
+       end loop;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+
+     -- blast it; use with VCS (ghdl is not fast enough)
+     --for trg in 0 to 1023 loop
+     --  wait for CLK_PERIOD_SPARSE_C*93;
+     -- hitLen(col) <= toSlv(4, hitLen(col)'length);
+     --   sro <= '1';
+     --  wait for CLK_PERIOD_SPARSE_C*2;
+     --   sro <= '0';
+     --end loop;
+
     --wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
     --  hitLen(1)  <= toSlv(4,  hitLen(5)'length);

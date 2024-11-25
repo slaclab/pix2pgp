@@ -317,7 +317,7 @@ begin
       v.dataHeader(REVERSE_READ_POS_C)      := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)       := v.colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)           := v.trgCntGlbl;
+      v.dataHeader(TRG_CNT_POS_C)           := resize(v.trgCntGlbl, 8);
 
       --
       v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := v.txData;

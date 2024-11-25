@@ -43,7 +43,7 @@ def headerEval(header):
     # some reserved bits ..
     # -------------
     _bitmask = (header >> np.uint8(8)) & np.uint32(0xFFFFFF)
-    _trigger = (header >> np.uint8(0)) & np.uint8(0xFF)
+    _trigger = (header >> np.uint8(0)) & np.uint8(0x3F)
 
     _format = 'OverOcc={0:<%d} Pause={1:<%d} ColumnError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} DummyHeader={5:<%d} Bitmask={6:<%02x} Trigger={7:<%d}' % (1, 1, 1, 1, 1, 1, 8, 8)
     if _dummyHeader == 0:
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         elif state == "lenParse_s":
             # time.sleep(0.2)
             _len = _lineArray[_line] & np.uint16(0xFF)
-            _trg = (_lineArray[_line] >> np.uint16(8)) & np.uint16(0x3FF)
+            _trg = (_lineArray[_line] >> np.uint16(8)) & np.uint16(0x3F)
             print(f"=========================================================================")
             print(f"Length of Hits = {_len} for Col = {_colSel}")
             print(f"Col TriggerCnt = {_trg} for Col = {_colSel}")
