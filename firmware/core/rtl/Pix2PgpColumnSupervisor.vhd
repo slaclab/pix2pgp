@@ -261,7 +261,7 @@ begin
          when ARB_START_S =>
 
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            -- state switching;
+            -- state switching
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- first raise the start flag...
             if v.arbiterBusy = '0' and r.arbiterBusy = '0' and v.arbiterStart = '0' then
@@ -299,7 +299,6 @@ begin
          ----------------------------------------------------------------------
          -- during this state the FIFOs are being drained as fast as possible
          when ERROR_S =>
-
             -- more data to read
             if uOr(v.dataReady) = '1' then
                v.statusRdBmsk := v.dataReady;

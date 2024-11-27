@@ -105,7 +105,7 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader  : sl;
       reverseRead  : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
-      wordCnt      : slv(2 downto 0);
+      dummyCnt     : slv(2 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -129,7 +129,7 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader   => '0',
       reverseRead   => '0',
       txData        => (others => '0'),
-      wordCnt       => (others => '0'),
+      dummyCnt      => (others => '0'),
       dataHeader    => (others => '0'),
       dataRdCnt     => toSlv(0, DATALEN_WIDTH_C),
       dataRdCycles  => (others => '0'),
@@ -182,6 +182,7 @@ begin
          when IDLE_S =>
             v.arbBusy     := '0';
             v.dummyHeader := '0';
+            v.dummyCnt    := (others => '0');
             v.colSel      := colSelReset(v.colSel'length, r.reverseRead);
 
             if r.arbStart = '1' then
@@ -202,8 +203,7 @@ begin
 
                -- if empty, go-to DONE state
                if v.eventEmpty = '1' then
-                  v.dummyHeader := '1';
-                  v.state       := TX_DUMMY_S;
+                  v.state := TX_DUMMY_S;
                end if;
             end if;
 
@@ -217,7 +217,6 @@ begin
 
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
-                  v.dummyHeader := '1';
                   v.state       := TX_DUMMY_S;
                end if;
 
@@ -265,7 +264,6 @@ begin
                -- Check if last column
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
-                  v.dummyHeader := '1';
                   v.state       := TX_DUMMY_S;
                end if;
             end if;
@@ -274,25 +272,27 @@ begin
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
-            v.sAxisMaster.tUser(1) := '0';
-            if v.sAxisMaster.tValid = '0' then
-               v.txData             := v.dataHeader;
-               v.sAxisMaster.tValid := '1';
+            v.dummyHeader := '1';
 
-               if allBits(r.wordCnt, '1') then
-                  v.sAxisMaster.tLast := '1';
-                  v.state             := IDLE_S;
+            if r.dummyHeader = '1' then
+               if v.sAxisMaster.tValid = '0' then
+                  v.txData             := v.dataHeader;
+                  v.sAxisMaster.tValid := '1';
+
+                  if sAxisSlave.tReady = '1' then
+                     v.dummyCnt := r.dummyCnt + 1;
+                  end if;
+
+                  if allBits(r.dummyCnt, '1') then
+                     v.sAxisMaster.tValid := '0';
+                     v.sAxisMaster.tLast  := '1';
+                     v.state              := IDLE_S;
+                  end if;
                end if;
             end if;
 
       end case;
       -----------------------------------------------------------------------
-
-      -- keeps track of the words written into the gearbox;
-      -- important for the final state after done TXing all data
-      if sAxisSlave.tReady = '1' then
-         v.wordCnt := r.wordCnt + 1;
-      end if;
 
       -- header mapping and overriding
       -- override header elements if in dummy-header-TX mode
