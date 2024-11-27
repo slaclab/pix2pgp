@@ -60,8 +60,6 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
-   signal gboxRst : sl := '0';
-
    -- reset via the variables
    signal sAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal sAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -355,6 +353,7 @@ begin
       generic map(
          -- General Configurations
          TPD_G               => TPD_G,
+         RST_POLARITY_G      => RST_POLARITY_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
@@ -362,7 +361,7 @@ begin
       port map(
          -- Clock and reset
          axisClk     => pgpClk,
-         axisRst     => gboxRst,
+         axisRst     => pgpRst,
          -- Slave Port
          sAxisMaster => sAxisMaster,
          sSideBand   => (others => '0'),
@@ -371,8 +370,5 @@ begin
          mAxisMaster => pgpTxMaster,
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
-
-   -- Axi-Stream Gearbox does not support different reset polarities
-   gboxRst <= pgpRst when RST_POLARITY_G = '1' else not(pgpRst);
 
 end rtl;
