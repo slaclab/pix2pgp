@@ -36,6 +36,7 @@ entity Pix2PgpTop is
       COLMANAGER_DATA_DEPTH_G    : integer  := 7;
       COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
       SUPER_FIFO_RD_DELAY_G      : positive := 3;
+      SUPER_TIMEOUT_WIDTH_G      : positive := 12;
       DATAFIFO_PIPE_G            : natural  := 1;
       STATUSFIFO_PIPE_G          : natural  := 1);
    port(
@@ -44,6 +45,7 @@ entity Pix2PgpTop is
       pgpClk       : in  sl;
       sparseRst    : in  sl := not(RST_POLARITY_G);
       pgpRst       : in  sl := not(RST_POLARITY_G);
+      timeoutLimit : in  slv(SUPER_TIMEOUT_WIDTH_G-1 downto 0);
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
@@ -62,7 +64,7 @@ end Pix2PgpTop;
 architecture rtl of Pix2PgpTop is
 
    signal dataRd         : sl := '0';
-   signal colSel         : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
+   signal colSel         : slv(BITMAX_COL_MANAGERS_C downto 0)   := (others => '0');
    signal dataRdSel      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal statusBusSel   : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;
    signal dataBusSel     : Pix2PgpDataBusType    := DEFAULT_PIX2PGP_DATABUS_C;
@@ -162,11 +164,13 @@ begin
          TPD_G           => TPD_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
-         FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G)
+         FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G,
+         TIMEOUT_WIDTH_G => SUPER_TIMEOUT_WIDTH_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
+         timeoutLimit  => timeoutLimit,
          columnEnable  => columnEnable,
          -- Column Manager Interface (via Bridge)
          statusBusGlbl => statusBusGlbl,

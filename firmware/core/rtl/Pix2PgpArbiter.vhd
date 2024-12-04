@@ -5,7 +5,6 @@
 --              Column Supervisor signals Arbiter that FIFO statuses are stable
 --              Then Arbiter parses in the data accordingly
 --
---
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the

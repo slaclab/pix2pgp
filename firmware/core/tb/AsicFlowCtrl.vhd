@@ -92,17 +92,15 @@ begin
                 when IN_FRAME =>
                     arm_cnt  <= tok_fb_dly;
                     sof      <= '0';  -- one-cycle toggle
-                    if COL_ID_G > 0 then
-                        if sro_posedge = '1' then -- over-occ takes precedence
-                            eof <= '0'; -- frame not properly closed
-                            over_occ <= '1'; -- raise over-occ flag
-                            state <= IN_OVEROCC; -- go back to previous state; event botched
-                        elsif tok_fb = '1' and
-                              (USE_SPARSE_ITF_BUSY = false or (sparse_itf_busy = '0' and USE_SPARSE_ITF_BUSY = true)) then
-                                eof <= '1'; -- close the frame properly
-                                over_occ <= '0'; -- normal case, not over-occ
-                                state <= IDLE; -- done! back to IDLE
-                        end if;
+                    if sro_posedge = '1' then -- over-occ takes precedence
+                        eof <= '0'; -- frame not properly closed
+                        over_occ <= '1'; -- raise over-occ flag
+                        state <= IN_OVEROCC; -- go back to previous state; event botched
+                    elsif tok_fb = '1' and
+                          (USE_SPARSE_ITF_BUSY = false or (sparse_itf_busy = '0' and USE_SPARSE_ITF_BUSY = true)) then
+                            eof <= '1'; -- close the frame properly
+                            over_occ <= '0'; -- normal case, not over-occ
+                            state <= IDLE; -- done! back to IDLE
                     end if;
 
                 when IN_OVEROCC =>

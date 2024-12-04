@@ -2,7 +2,7 @@
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
 -- Description: Column Supervisor
---              Oversees the general status of all column managers;
+--              Oversees the general status of all column managers
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -30,11 +30,13 @@ entity Pix2PgpColumnSupervisor is
       TPD_G           : time     := 1 ns;
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 3);
+      FIFO_RD_DELAY_G : positive := 3;
+      TIMEOUT_WIDTH_G : positive := 12);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
+      timeoutLimit  : in  slv(TIMEOUT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface (via Bridge)
       statusBusGlbl : in  Pix2PgpStatusBusArray;
@@ -86,7 +88,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt        : slv(3 downto 0);
+      waitCnt        : slv(bitsize(FIFO_RD_DELAY_G) downto 0);
       state          : StateType;
    end record RegType;
 
@@ -358,12 +360,13 @@ begin
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G)
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => TIMEOUT_WIDTH_G)
       port map(
          -- General Interface
          clk     => pgpClk,
          rst     => pgpRst,
-         limit   => x"ff",
+         limit   => timeoutLimit,
          -- Control Interface
          set     => setWatchdog,
          timeout => timeout);
