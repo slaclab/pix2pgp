@@ -118,9 +118,10 @@ comb : process (rst, r, hitLen, sro, pause) is
       v.ackN := '1';
       v.wrEn := '0';
 
-      if (v.sro = '1') then
+      if (v.sro = '1') then -- reset everything
          v.tok    := '0';
          v.trgCnt := r.trgCnt + 1;
+         v.state  := IDLE_S;
       end if;
 
       case r.state is

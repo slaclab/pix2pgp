@@ -1,8 +1,10 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Simple watchdog circuit
---
+-- Description: Simple watchdog circuit;
+--              Minimum timeout counting of 16 cycles, unless limit == 0;
+--              The value of 'limit' is added on top of the 16 cycles *16;
+--              e.g. if limit = 8 -> timeout after 16+8*16=144 cycles
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -34,6 +36,7 @@ entity Pix2PgpWatchdog is
       -- General Interface
       clk     : in  sl;
       rst     : in  sl := not(RST_POLARITY_G);
+      limit   : in  slv((CNT_WIDTH_G-4)-1 downto 0);
       -- Control Interface
       set     : in  sl;
       timeout : out sl);
@@ -55,15 +58,15 @@ architecture rtl of Pix2PgpWatchdog is
 
 begin
 
-   comb : process (r, rst, set) is
+   comb : process (r, rst, set, limit) is
       variable v : RegType;
    begin
 
       -- Latch the current value
       v := r;
 
-      if (set = '1') then
-         if allBits(r.cnt, '1') then
+      if (set = '1' and uOr(limit) = '1') then
+         if r.cnt = limit & x"f" then
             -- stay in this state until rst or set=low
             v.timeout := '1';
          else

@@ -276,8 +276,9 @@ begin
             -- ...and finally pop the status word when arbiter's busy transitions to low
             -- (negative-edge detection)
             if v.arbiterBusy = '0' and r.arbiterBusy = '1' then
-               v.statusRd := '1'; -- pop the status word
-               v.state    := WAIT_STATE_S;
+               v.statusRd     := '1'; -- pop the status word
+               v.timeoutError := '0'; -- reset this
+               v.state        := WAIT_STATE_S;
             end if;
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -299,6 +300,8 @@ begin
          ----------------------------------------------------------------------
          -- during this state the FIFOs are being drained as fast as possible
          when ERROR_S =>
+            v.waitCnt := (others => '0');
+
             -- more data to read
             if uOr(v.dataReady) = '1' then
                v.statusRdBmsk := v.dataReady;
@@ -306,12 +309,10 @@ begin
                v.state        := ARB_START_S;
             end if;
 
-            -- all FIFOs drained.
+            -- all FIFOs drained;
             -- release the error flags and go back to idle (after waiting)
             if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
-               v.timeoutError := '0';
-               v.pauseError   := '0';
-               v.state        := WAIT_STATE_S;
+               v.state := WAIT_STATE_S;
             end if;
 
       end case;
@@ -357,12 +358,12 @@ begin
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => 8) -- 8-bit -> 2^8=256*5.384 = 1380 ns
+         RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
          clk     => pgpClk,
          rst     => pgpRst,
+         limit   => x"ff",
          -- Control Interface
          set     => setWatchdog,
          timeout => timeout);
