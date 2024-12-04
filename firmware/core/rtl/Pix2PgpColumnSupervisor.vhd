@@ -88,7 +88,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt        : slv(bitsize(FIFO_RD_DELAY_G) downto 0);
+      waitCnt        : slv(bitsize(FIFO_RD_DELAY_G)-1 downto 0);
       state          : StateType;
    end record RegType;
 
