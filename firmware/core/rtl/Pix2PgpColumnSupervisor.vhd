@@ -264,7 +264,7 @@ begin
             -- state switching
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- first raise the start flag...
-            if v.arbiterBusy = '0' and r.arbiterBusy = '0' and v.arbiterStart = '0' then
+            if v.arbiterBusy = '0' and v.arbiterStart = '0' then
                v.arbiterStart := '1';
             end if;
 
@@ -285,7 +285,7 @@ begin
          -- always wait before re-evaluating the status bus empty signal;
          -- the dataReady signal *must* re-settle!
          -- reading the status word after one cycle may not force the empty signal
-         -- to go high on the next if there are no more status words in the FIFO
+         -- to go high on the next even if there are no more status words in the FIFO
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
             if r.waitCnt = FIFO_RD_DELAY_G then
