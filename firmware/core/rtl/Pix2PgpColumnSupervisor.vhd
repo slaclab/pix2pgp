@@ -264,7 +264,7 @@ begin
             -- state switching
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- first raise the start flag...
-            if v.arbiterBusy = '0' and v.arbiterStart = '0' then
+            if v.arbiterBusy = '0' and r.arbiterBusy = '0' and v.arbiterStart = '0' then
                v.arbiterStart := '1';
             end if;
 
