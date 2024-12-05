@@ -104,6 +104,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   : sl;
       dummyHeader  : sl;
       reverseRead  : sl;
+      waitSel      : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
@@ -128,6 +129,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty    => '0',
       dummyHeader   => '0',
       reverseRead   => '0',
+      waitSel       => '0',
       txData        => (others => '0'),
       dummyCnt      => (others => '0'),
       dataHeader    => (others => '0'),
@@ -221,30 +223,34 @@ begin
                end if;
 
             else
-               if v.sAxisMaster.tValid = '0' then
-                  --
-                  v.txData(DATABUS_DWIDTH_C-1 downto 8) := resize(trgCntSel,  32);
-                  v.txData(7 downto 0)                  := resize(dataLenSel, 8);
-                  v.sAxisMaster.tValid                  := '1';
-                  --
+               v.waitSel := '1'; -- wait one cycle for bus to stabilize
+               if r.waitSel = '1' then
+                  if v.sAxisMaster.tValid = '0' then
+                     --
+                     v.txData(DATABUS_DWIDTH_C-1 downto 8) := resize(trgCntSel,  32);
+                     v.txData(7 downto 0)                  := resize(dataLenSel, 8);
+                     v.sAxisMaster.tValid                  := '1';
+                     --
 
-                  v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
+                     v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
 
-                  -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
-                  -- if odd, add 1 for a 'true' div-by-2
-                  if dataLenSel(0) = '1' then
-                     v.dataRdCycles := rightShift(dataLenSel, 1) + 1;
-                  else
-                     v.dataRdCycles := rightShift(dataLenSel, 1);
+                     -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
+                     -- if odd, add 1 for a 'true' div-by-2
+                     if dataLenSel(0) = '1' then
+                        v.dataRdCycles := rightShift(dataLenSel, 1) + 1;
+                     else
+                        v.dataRdCycles := rightShift(dataLenSel, 1);
+                     end if;
+                     v.state := PARSE_DATA_S;
                   end if;
-
-                  v.state  := PARSE_DATA_S;
                end if;
             end if;
 
          ------------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
+            v.waitSel := '0'; -- reset the flag
+
             if v.sAxisMaster.tValid = '0' and r.dataRdCnt /= r.dataRdCycles then
                --
                v.txData             := dataBusSel.data;
@@ -322,9 +328,9 @@ begin
       --
 
       -- Outputs
-      arbBusy     <= v.arbBusy;
-      dataRd      <= v.dataRd;
-      colSel      <= v.colSel;
+      arbBusy     <= r.arbBusy;
+      dataRd      <= r.dataRd;
+      colSel      <= r.colSel;
       sAxisMaster <= r.sAxisMaster;
 
       -- Reset

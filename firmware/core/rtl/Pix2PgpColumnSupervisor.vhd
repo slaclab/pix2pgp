@@ -132,6 +132,7 @@ begin
    comb : process (r, pgpRst, statusBusGlbl, arbiterBusy,
                    columnEnable, columnBusy, timeout) is
       variable v : RegType;
+
    begin
 
       -- Latch the current value
@@ -318,16 +319,16 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      colFifoError  <= v.colFifoError;
-      overOccError  <= v.overOccError;
-      colPause      <= v.pause;
-      colPauseError <= v.pauseError;
-      colBitmask    <= v.colBitmask;
+      colFifoError  <= r.colFifoError;
+      overOccError  <= r.overOccError;
+      colPause      <= r.pause;
+      colPauseError <= r.pauseError;
+      colBitmask    <= r.colBitmask;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
-      trgCntGlbl    <= v.trgCntGlbl;
-      timeoutError  <= v.timeoutError;
+      trgCntGlbl    <= r.trgCntGlbl;
+      timeoutError  <= r.timeoutError;
 
-      setWatchdog   <= v.setWatchdog;
+      setWatchdog   <= r.setWatchdog;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
