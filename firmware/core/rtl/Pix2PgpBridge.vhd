@@ -72,11 +72,19 @@ begin
    GEN_NO_PIPELINE_DATA : if (PIPELINE_DATA_G = false) generate
       process(colSel, dataBusIn, dataRdIn)
       begin
-         if colSel <= NUM_OF_COL_MANAGERS_C-1 then
-            dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn;
-            dataBusSel <= dataBusIn(conv_integer(unsigned(colSel)));
+         if dataRdIn = '1' then
+            if colSel <= NUM_OF_COL_MANAGERS_C-1 then
+               dataRdOut(conv_integer(unsigned(colSel))) <= dataRdIn;
+            else
+               dataRdOut <= (others => '0');
+            end if;
          else
             dataRdOut <= (others => '0');
+         end if;
+
+         if colSel <= NUM_OF_COL_MANAGERS_C-1 then
+            dataBusSel <= dataBusIn(conv_integer(unsigned(colSel)));
+         else
             dataBusSel <= DEFAULT_PIX2PGP_DATABUS_C;
          end if;
       end process;
