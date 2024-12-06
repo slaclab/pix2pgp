@@ -128,11 +128,10 @@ package Pix2PgpPkg is
    constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
    constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
    constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
-   constant REVERSE_READ_POS_C      : natural := HEADER_DWITDH_C-6;
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-7;
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6;
    --------------------------
    -- reserved bits (only one left)
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-8
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
                                               downto HEADER_DWITDH_C-8;
    --------------------------
    -- col-bitmask
@@ -161,16 +160,10 @@ package Pix2PgpPkg is
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
 
-   -- note that the order of the hits can be reversed depending on the value of REVERSE_READ_POS_C;
-
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
-
-   -- functions
    --
+   -- functions
    function rightShift (inSlv: slv; count: natural) return slv;
-   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean;
-   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv;
-   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv;
    --
 
 end Pix2PgpPkg;
@@ -188,42 +181,5 @@ package body Pix2PgpPkg is
       end if;
       return result;
    end rightShift;
-
-   -- col-select done
-   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean is
-      variable result: boolean := false;
-   begin
-      if inReverseRead = '1' and allBits(inColSel, '0') then
-         result := true;
-      elsif inReverseRead = '0' and conv_integer(unsigned(inColSel)) = NUM_OF_COL_MANAGERS_C-1 then
-         result := true;
-      end if;
-      return result;
-   end colSelDone;
-
-   -- col-select reset (set to max col value or zero)
-   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv is
-      variable result: slv(inColSelLen-1 downto 0) := (others => '0');
-   begin
-      if inReverseRead = '1' then
-         result := conv_std_logic_vector(NUM_OF_COL_MANAGERS_C-1, result'length);
-      else
-         result := (others => '0');
-      end if;
-      return result;
-   end colSelReset;
-
-   -- col-select switch (incr or decr)
-   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv is
-      constant inColSelLen: integer := inColSel'LENGTH-1;
-      variable result: slv(inColSelLen downto 0) := (others => '0');
-   begin
-      if inReverseRead = '1' then
-         result := inColSel - 1;
-      else
-         result := inColSel + 1;
-      end if;
-      return result;
-   end colSelSwitch;
 
 end package body Pix2PgpPkg;

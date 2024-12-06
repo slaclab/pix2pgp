@@ -105,7 +105,6 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   : sl;
       dummyHeader  : sl;
-      reverseRead  : sl;
       waitSel      : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
@@ -132,7 +131,6 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty    => '0',
       dummyHeader   => '0',
-      reverseRead   => '0',
       waitSel       => '0',
       txData        => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -206,7 +204,7 @@ begin
             v.arbBusy     := '0';
             v.dummyHeader := '0';
             v.dummyCnt    := (others => '0');
-            v.colSel      := colSelReset(v.colSel'length, r.reverseRead);
+            v.colSel      := (others => '0');
 
             if r.arbStart = '1' then
                v.arbBusy := '1';
@@ -236,11 +234,10 @@ begin
          when CHECK_BITMASK_S =>
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
-               if colSelDone(r.colSel, r.reverseRead) then
-                  v.reverseRead := not(r.reverseRead);
-                  v.state       := TX_DUMMY_S;
+               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+                  v.state  := TX_DUMMY_S;
                else
-                  v.colSel      := colSelSwitch(r.colSel, r.reverseRead);
+                  v.colSel := r.colSel + 1;
                end if;
 
             else
@@ -288,11 +285,10 @@ begin
                v.state  := CHECK_BITMASK_S;
                --
                -- Check if last column
-               if colSelDone(r.colSel, r.reverseRead) then
-                  v.reverseRead := not(r.reverseRead);
-                  v.state       := TX_DUMMY_S;
+               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+                  v.state  := TX_DUMMY_S;
                else
-                  v.colSel      := colSelSwitch(r.colSel, r.reverseRead);
+                  v.colSel := r.colSel + 1;
                end if;
             end if;
 
@@ -340,7 +336,6 @@ begin
       v.dataHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(v.dummyHeader);
       v.dataHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(v.dummyHeader);
       v.dataHeader(DUMMY_HEADER_POS_C)      := v.dummyHeader;
-      v.dataHeader(REVERSE_READ_POS_C)      := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)       := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)           := resize(v.trgCntGlbl, 8);
