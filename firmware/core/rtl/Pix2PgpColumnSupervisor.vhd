@@ -27,17 +27,18 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 3);
+      TPD_G             : time     := 1 ns;
+      RST_ASYNC_G       : boolean  := false;
+      RST_POLARITY_G    : sl       := '1';
+      FIFO_RD_DELAY_G   : positive := 3;
+      PIPELINE_STATUS_G : boolean  := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      -- Column Manager Interface (via Bridge)
-      statusBusGlbl : in  Pix2PgpStatusBusArray;
+      -- Column Manager Interface
+      statusBus     : in  Pix2PgpStatusBusArray;
       columnBusy    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRd      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Arbiter Interface
@@ -69,7 +70,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   : sl;
       timeoutError   : sl;
       colPause       : sl;
+      statusBus      : Pix2PgpStatusBusArray;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -84,8 +87,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);  
       waitCnt        : slv(3 downto 0);
       state          : StateType;
    end record RegType;
@@ -98,7 +100,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   => '0',
       timeoutError   => '0',
       colPause       => '0',
+      statusBus      => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask     => (others => '0'),
+      columnBusy     => (others => '0'),
       trgCntGlbl     => (others => '1'),
       -- internal
       pause          => '0',
@@ -114,7 +118,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
       pauseErrorBmsk => (others => '0'),
-      columnBusy     => (others => '0'),
       waitCnt        => (others => '0'),
       state          => IDLE_S);
 
@@ -129,14 +132,26 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy,
+   comb : process (r, pgpRst, statusBus, arbiterBusy,
                    columnEnable, columnBusy, timeout) is
-      variable v : RegType;
+
+      variable v             : RegType;
+      variable statusBusInt  : Pix2PgpStatusBusArray;
+      variable columnBusyInt : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
    begin
 
       -- Latch the current value
       v := r;
+
+      -- Get the status
+      v.statusBus := statusBus;
+      -- To pipeline or not to pipeline?
+      if PIPELINE_STATUS_G then
+         statusBusInt := r.statusBus;
+      else
+         statusBusInt := v.statusBus;
+      end if;
 
       -- Strobes and Defaults
       v.statusRd    := '0';
@@ -151,7 +166,7 @@ begin
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
          -- column is ready when its status FIFO has a word;
-         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and v.columnEnable(col);
+         v.dataReady(col) := not(statusBusInt(col).columnEmpty) and v.columnEnable(col);
 
          -- note that for all flags we check against the dataReady signal;
          -- why? because we are using FWFT FIFOs...
@@ -159,18 +174,18 @@ begin
 
          -- check Data Length from each column manager's status bus and set `hitmaskAll`;
          -- a high bit on this bitmask indicates that the associated column does have hits
-         v.hitmaskAll(col) := uOr(statusBusGlbl(col).dataLen) and v.dataReady(col);
+         v.hitmaskAll(col) := uOr(statusBusInt(col).dataLen) and v.dataReady(col);
 
          -- check for any over-occupancy errors
-         v.colOverOccErr(col) := statusBusGlbl(col).overOcc and v.dataReady(col);
+         v.colOverOccErr(col) := statusBusInt(col).overOcc and v.dataReady(col);
 
          -- check for any fifoError flags;
          -- note that in this case we do not check for dataReady!
          -- we need to know if the FIFOs have underflowed regardless of the dataReady status
-         v.colFifoErr(col) := statusBusGlbl(col).fifoError and v.columnEnable(col);
+         v.colFifoErr(col) := statusBusInt(col).fifoError and v.columnEnable(col);
 
          -- pause handling
-         v.columnPause(col) := statusBusGlbl(col).pause and v.dataReady(col);
+         v.columnPause(col) := statusBusInt(col).pause and v.dataReady(col);
 
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
@@ -178,6 +193,11 @@ begin
 
          -- busy is used to exit from the pause-error state
          v.columnBusy(col) := columnBusy(col) and v.columnEnable(col);
+         if PIPELINE_STATUS_G then
+            columnBusyInt := r.columnBusy;
+         else
+            columnBusyInt := v.columnBusy;
+         end if;
 
       end loop;
 
@@ -189,12 +209,12 @@ begin
       -- separate loop for trigger counter assertion (have to exit it on first index hit)
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          if v.dataReady(col) = '1' and uOr(v.columnPause) = '0' then
-            v.trgCntGlbl := statusBusGlbl(col).trgCnt;
+            v.trgCntGlbl := statusBusInt(col).trgCnt;
             exit;
          end if;
 
          if v.columnPause(col) = '1' and uOr(v.columnPause) = '1' then
-            v.trgCntGlbl := statusBusGlbl(col).trgCnt;
+            v.trgCntGlbl := statusBusInt(col).trgCnt;
             exit;
          end if;
       end loop;
@@ -309,7 +329,7 @@ begin
 
             -- all FIFOs drained.
             -- release the error flags and go back to idle (after waiting)
-            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
+            if uOr(v.dataReady) = '0' and uOr(columnBusyInt) = '0' then
                v.timeoutError := '0';
                v.pauseError   := '0';
                v.state        := WAIT_STATE_S;
@@ -332,7 +352,11 @@ begin
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
-         statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and v.columnEnable(col);
+         if PIPELINE_STATUS_G then
+            statusRd(col) <= r.statusRd and r.statusRdBmsk(col) and r.columnEnable(col);
+         else
+            statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and v.columnEnable(col);
+         end if;
       end loop;
 
       -- Reset

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Thu Dec  5 22:48:19 2024
+[*] Fri Dec  6 01:29:38 2024
 [*]
 [dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Thu Dec  5 22:42:44 2024"
-[dumpfile_size] 9449873
+[dumpfile_mtime] "Fri Dec  6 01:23:58 2024"
+[dumpfile_size] 9527542
 [savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 26391040000
+[timestart] 25985600000
 [size] 1610 986
 [pos] -1 -1
-*-23.129679 26402693800 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.527491 26095771600 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].
@@ -30,12 +30,8 @@
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.saxismaster.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_bridge.databussel.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_bridge.statusbussel.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.
 [sst_width] 353
 [signals_width] 286
@@ -47,7 +43,7 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colpause
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colpauseerror
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.overoccerror
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colfifoerror
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.pgprst
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.reverseread
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.dummyheader
@@ -69,11 +65,6 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.r.writeindex
 -
 @24
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[0]
-@22
-#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[39:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[39] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[38] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[37] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[36] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[35] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[34] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[33] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[32] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[31] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[30] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[29] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[28] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[27] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[26] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[25] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[24] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.data[0]
-@24
-#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[4:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datalensel[0]
-@25
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[9:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[0]
 @420
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.state
@@ -84,6 +75,38 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.pgpclk
 @22
 [color] 2
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[39:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[39] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[38] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[37] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[36] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[35] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[34] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[33] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[32] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[31] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[30] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[29] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[28] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[27] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[26] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[25] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[24] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[0]
+@28
+[color] 2
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.saxisslave.tready
+@800023
+#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
+@29
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[20]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[19]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[18]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[17]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[16]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[15]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[14]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[13]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[12]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[11]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[10]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[9]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[8]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[7]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[6]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[5]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[4]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
+@1001201
+-group_end
 @200
 -
 -toPgpTxLite

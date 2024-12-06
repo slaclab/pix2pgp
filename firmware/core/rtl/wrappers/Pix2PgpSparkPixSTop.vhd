@@ -20,8 +20,8 @@ entity Pix2PgpSparkPixSTop is
       TPD_G                     : time      := 1 ns;
       RST_ASYNC_G               : boolean   := true;
       RST_POLARITY_G            : std_logic := '0';
-      PIPELINE_BRIDGE_DATA_G    : boolean   := false; -- pipeline data FIFO output downstream
-      PIPELINE_BRIDGE_STATUS_G  : boolean   := true;  -- pipeline status FIFO output downstream
+      PIPELINE_DATA_G           : boolean   := false; -- pipeline data FIFO output downstream
+      PIPELINE_STATUS_G         : boolean   := true;  -- pipeline status FIFO output downstream
       COLMANAGER_DATA_DEPTH_G   : integer   := 7;     -- colManager data FIFO depth (holds *2 hits)
       COLMANAGER_STATUS_DEPTH_G : integer   := 6;     -- colManager status FIFO depth (1 per event)
       SUPER_FIFO_RD_DELAY_G     : natural   := 3;     -- supervisor FIFO signal evaluation timeout
@@ -102,8 +102,8 @@ begin
          RST_POLARITY_G            => RST_POLARITY_G,
          COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
-         PIPELINE_BRIDGE_DATA_G    => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G  => PIPELINE_BRIDGE_STATUS_G,
+         PIPELINE_DATA_G           => PIPELINE_DATA_G,
+         PIPELINE_STATUS_G         => PIPELINE_STATUS_G,
          DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G         => STATUSFIFO_PIPE_G,
          SUPER_FIFO_RD_DELAY_G     => SUPER_FIFO_RD_DELAY_G)

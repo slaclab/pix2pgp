@@ -28,16 +28,16 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is
    generic(
-      TPD_G                      : time     := 1 ns;
-      RST_ASYNC_G                : boolean  := true;
-      RST_POLARITY_G             : sl       := '1';
-      PIPELINE_BRIDGE_DATA_G     : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G   : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G    : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G  : integer  := 6;
-      SUPER_FIFO_RD_DELAY_G      : positive := 3;
-      DATAFIFO_PIPE_G            : natural  := 1;
-      STATUSFIFO_PIPE_G          : natural  := 1);
+      TPD_G                     : time     := 1 ns;
+      RST_ASYNC_G               : boolean  := true;
+      RST_POLARITY_G            : sl       := '1';
+      PIPELINE_DATA_G           : boolean  := false;
+      PIPELINE_STATUS_G         : boolean  := true;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
+      SUPER_FIFO_RD_DELAY_G     : positive := 3;
+      DATAFIFO_PIPE_G           : natural  := 1;
+      STATUSFIFO_PIPE_G         : natural  := 1);
    port(
       -- General Interface
       sparseClk    : in  sl;
@@ -61,18 +61,11 @@ end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
 
-   signal dataRd         : sl := '0';
-   signal colSel         : slv(BITMAX_COL_MANAGERS_C downto 0) := (others => '0');
-   signal dataRdSel      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal statusBusSel   : Pix2PgpStatusBusType  := DEFAULT_PIX2PGP_STATUSBUS_C;
-   signal dataBusSel     : Pix2PgpDataBusType    := DEFAULT_PIX2PGP_DATABUS_C;
+   signal dataRd         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal statusRd       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    signal statusBus      : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
-   signal statusBusGlbl  : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
    signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal statusRdSuper  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal statusRdCol    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal busyCol        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal busySuper      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
    --
    signal arbStart       : sl := '0';
    signal colFifoError   : sl := '0';
@@ -88,7 +81,7 @@ architecture rtl of Pix2PgpTop is
 begin
 
    -- route to output port
-   busy <= busyCol;
+   busy <= columnBusy;
 
    ---------------------------------------
    -- Column Manager
@@ -115,63 +108,34 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             pauseAck  => pauseAck(col),
-            busy      => busyCol(col),
+            busy      => columnBusy(col),
             pause     => pause(col),
-            -- Arbiter Interface
-            statusRd  => statusRdCol(col),
-            dataRd    => dataRdSel(col),
+            -- Arbiter and Column Supervisor Interface
+            statusRd  => statusRd(col),
+            dataRd    => dataRd(col),
             statusBus => statusBus(col),
             dataBus   => dataBus(col));
    end generate GEN_COL_MANAGER;
-
-   ---------------------------------------
-   -- Bridge
-   ---------------------------------------
-   -- set bridge to no pipelining since we are pipelining on the column manager level;
-   -- that is, the FIFO dins/wrEns are pipelined; these signals can be 'slower'.
-   -- reading and switching between FIFOs should be much faster. So no pipelinening.
-   U_Bridge : entity pix2pgp.Pix2PgpBridge
-      generic map(
-         TPD_G             => TPD_G,
-         PIPELINE_DATA_G   => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_STATUS_G => PIPELINE_BRIDGE_STATUS_G)
-      port map(
-         -- General Interface
-         pgpClk        => pgpClk,
-         -- Column Manager Interface
-         statusBusIn   => statusBus,
-         dataBusIn     => dataBus,
-         busyIn        => busyCol,
-         statusRdOut   => statusRdCol,
-         dataRdOut     => dataRdSel,
-         -- Column Supervisor Interface
-         statusRdIn    => statusRdSuper,
-         busyOut       => busySuper,
-         statusBusGlbl => statusBusGlbl,
-         -- Arbiter Interface
-         dataRdIn      => dataRd,
-         colSel        => colSel,
-         statusBusSel  => statusBusSel,
-         dataBusSel    => dataBusSel);
 
    ---------------------------------------
    -- Column Supervisor
    ---------------------------------------
    U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
       generic map(
-         TPD_G           => TPD_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         FIFO_RD_DELAY_G => SUPER_FIFO_RD_DELAY_G)
+         TPD_G             => TPD_G,
+         RST_ASYNC_G       => RST_ASYNC_G,
+         RST_POLARITY_G    => RST_POLARITY_G,
+         FIFO_RD_DELAY_G   => SUPER_FIFO_RD_DELAY_G,
+         PIPELINE_STATUS_G => PIPELINE_STATUS_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
          columnEnable  => columnEnable,
-         -- Column Manager Interface (via Bridge)
-         statusBusGlbl => statusBusGlbl,
-         columnBusy    => busySuper,
-         statusRd      => statusRdSuper,
+         -- Column Manager Interface
+         statusBus     => statusBus,
+         columnBusy    => columnBusy,
+         statusRd      => statusRd,
          -- Arbiter Interface
          arbiterBusy   => arbBusy,
          arbiterStart  => arbStart,
@@ -188,22 +152,22 @@ begin
    -----------------------------------------
    U_Arbiter : entity pix2pgp.Pix2PgpArbiter
       generic map (
-         TPD_G           => TPD_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         RST_POLARITY_G  => RST_POLARITY_G)
+         TPD_G             => TPD_G,
+         RST_ASYNC_G       => RST_ASYNC_G,
+         RST_POLARITY_G    => RST_POLARITY_G,
+         PIPELINE_STATUS_G => PIPELINE_STATUS_G,
+         PIPELINE_DATA_G   => PIPELINE_DATA_G)
       port map (
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
          -- Column Manager Interface
-         dataLenSel    => statusBusSel.dataLen,
-         trgCntSel     => statusBusSel.trgCnt,
-         trgCntGlbl    => trgCntGlbl,
-         dataBusSel    => dataBusSel,
+         statusBus     => statusBus,
+         dataBus       => dataBus,
          dataRd        => dataRd,
-         colSel        => colSel,
          -- Column Supervisor Interface
          arbStart      => arbStart,
+         trgCntGlbl    => trgCntGlbl,
          colFifoError  => colFifoError,
          colPauseError => colPauseError,
          overOccError  => overOccError,

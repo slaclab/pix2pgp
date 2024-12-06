@@ -30,20 +30,19 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpArbiter is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1');
+      TPD_G             : time     := 1 ns;
+      RST_ASYNC_G       : boolean  := false;
+      RST_POLARITY_G    : sl       := '1';
+      PIPELINE_STATUS_G : boolean  := false;
+      PIPELINE_DATA_G   : boolean  := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
-      dataLenSel    : in  slv(DATALEN_WIDTH_C-1 downto 0);
-      trgCntSel     : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      dataBusSel    : in  Pix2PgpDataBusType;
-      dataRd        : out sl;
-      colSel        : out slv(BITMAX_COL_MANAGERS_C downto 0);
+      statusBus     : in  Pix2PgpStatusBusArray;
+      dataBus       : in  Pix2PgpDataBusArray;
+      dataRd        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Supervisor Interface
       arbStart      : in  sl;
       colFifoError  : in  sl;
@@ -51,6 +50,7 @@ entity Pix2PgpArbiter is
       colPauseError : in  sl;
       timeoutError  : in  sl;
       colPause      : in  sl;
+      trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       arbBusy       : out sl;
       -- Pgp4TxLite Interface
@@ -96,6 +96,8 @@ architecture rtl of Pix2PgpArbiter is
       arbStart     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl   : slv(TRGCNT_WIDTH_C-1 downto 0);
+      dataBus      : Pix2PgpDataBusArray;
+      statusBus    : Pix2PgpStatusBusArray;
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -121,6 +123,8 @@ architecture rtl of Pix2PgpArbiter is
       arbStart      => '0',
       colBitmask    => (others => '0'),
       trgCntGlbl    => (others => '0'),
+      dataBus       => (others => DEFAULT_PIX2PGP_DATABUS_C),
+      statusBus     => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       -- outputs
       dataRd        => '0',
       colSel        => (others => '0'),
@@ -147,11 +151,14 @@ begin
    ------------------------------------------------
    -- Arbiter FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
+   comb : process (r, pgpRst, dataBus, statusBus, arbStart, colFifoError,
                    overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
-                   trgCntGlbl, trgCntSel, timeoutError) is
+                   trgCntGlbl, timeoutError) is
 
       variable v : RegType;
+      variable dataLenSel : slv(DATALEN_WIDTH_C-1 downto 0);
+      variable trgCntSel  : slv(TRGCNT_WIDTH_C-1 downto 0);
+      variable dataBusSel : slv(DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 
@@ -162,6 +169,8 @@ begin
       v.eventEmpty := not(uOr(colBitmask));
       v.sAxisSlave := sAxisSlave;
       v.arbStart   := arbStart;
+      v.statusBus  := statusBus;
+      v.dataBus    := dataBus;
 
       -- defaults
       v.dataRd := '0';
@@ -175,6 +184,20 @@ begin
       v.sAxisMaster.tLast  := '0';
       v.sAxisMaster.tUser  := (others => '0');
       v.sAxisMaster.tKeep  := (others => '1');
+
+      if r.colSel <= NUM_OF_COL_MANAGERS_C-1 then
+         -- status Mux
+         if PIPELINE_STATUS_G then
+            dataLenSel := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+            trgCntSel  := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         else
+            dataLenSel := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+            trgCntSel  := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         end if;
+
+         -- data Mux
+         dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
+      end if;
 
       -------------------------------------------------------------------------
       case r.state is
@@ -253,7 +276,7 @@ begin
 
             if v.sAxisMaster.tValid = '0' and r.dataRdCnt /= r.dataRdCycles then
                --
-               v.txData             := dataBusSel.data;
+               v.txData             := dataBusSel;
                v.sAxisMaster.tValid := '1';
                --
                v.dataRdCnt := r.dataRdCnt + 1;
@@ -329,9 +352,16 @@ begin
 
       -- Outputs
       arbBusy     <= r.arbBusy;
-      dataRd      <= r.dataRd;
-      colSel      <= r.colSel;
       sAxisMaster <= r.sAxisMaster;
+
+      -- data-read demux
+      if v.dataRd = '1' then
+         if r.colSel <= NUM_OF_COL_MANAGERS_C-1 then
+            dataRd(conv_integer(unsigned(r.colSel))) <= v.dataRd;
+         end if;
+      else
+         dataRd <= (others => '0');
+      end if;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
