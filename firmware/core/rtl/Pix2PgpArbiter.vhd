@@ -185,19 +185,17 @@ begin
       v.sAxisMaster.tUser  := (others => '0');
       v.sAxisMaster.tKeep  := (others => '1');
 
-      if r.colSel <= NUM_OF_COL_MANAGERS_C-1 then
-         -- status Mux
-         if PIPELINE_STATUS_G then
-            dataLenSel := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
-            trgCntSel  := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
-         else
-            dataLenSel := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
-            trgCntSel  := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
-         end if;
-
-         -- data Mux
-         dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
+      -- status Mux
+      if PIPELINE_STATUS_G then
+         dataLenSel := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel  := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+      else
+         dataLenSel := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel  := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
       end if;
+
+      -- data Mux
+      dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
 
       -------------------------------------------------------------------------
       case r.state is
@@ -238,11 +236,11 @@ begin
          when CHECK_BITMASK_S =>
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
-               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
-
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
                   v.state       := TX_DUMMY_S;
+               else
+                  v.colSel      := colSelSwitch(r.colSel, r.reverseRead);
                end if;
 
             else
@@ -287,13 +285,14 @@ begin
             if r.dataRdCnt = r.dataRdCycles then
                --
                v.dataRd := '0';
-               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
                v.state  := CHECK_BITMASK_S;
                --
                -- Check if last column
                if colSelDone(r.colSel, r.reverseRead) then
                   v.reverseRead := not(r.reverseRead);
                   v.state       := TX_DUMMY_S;
+               else
+                  v.colSel      := colSelSwitch(r.colSel, r.reverseRead);
                end if;
             end if;
 
@@ -354,19 +353,19 @@ begin
       arbBusy     <= r.arbBusy;
       sAxisMaster <= r.sAxisMaster;
 
-      -- data-read demux
-      if v.dataRd = '1' then
-         if r.colSel <= NUM_OF_COL_MANAGERS_C-1 then
-            dataRd(conv_integer(unsigned(r.colSel))) <= v.dataRd;
-         end if;
-      else
-         dataRd <= (others => '0');
-      end if;
-
       -- Reset
       if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
+
+      -- Iterate bit-by-bit assignment for dataRd
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         if col = conv_integer(unsigned(r.colSel)) then
+            dataRd(col) <= v.dataRd;
+         else
+            dataRd(col) <= '0';
+         end if;
+      end loop;
 
       -- Register the variable for next clock cycle
       rin <= v;
