@@ -2,7 +2,7 @@
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
 -- Description: Column Supervisor
---              Oversees the general status of all column managers
+--              Oversees the general status of all column managers;
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -27,19 +27,19 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1';
-      FIFO_RD_DELAY_G : positive := 3;
-      TIMEOUT_WIDTH_G : positive := 12);
+      TPD_G                 : time     := 1 ns;
+      RST_ASYNC_G           : boolean  := false;
+      RST_POLARITY_G        : sl       := '1';
+      PIPELINE_STATUS_G     : boolean  := false;
+      TIMEOUT_LIMIT_WIDTH_G : positive := 12);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
-      timeoutLimit  : in  slv(TIMEOUT_WIDTH_G-1 downto 0);
+      timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      -- Column Manager Interface (via Bridge)
-      statusBusGlbl : in  Pix2PgpStatusBusArray;
+      -- Column Manager Interface
+      statusBus     : in  Pix2PgpStatusBusArray;
       columnBusy    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRd      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Arbiter Interface
@@ -56,6 +56,9 @@ end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
 
+   constant STATUS_EVAL_DELAY_NORMAL_C : positive := 3;
+   constant STATUS_EVAL_DELAY_ERROR_C  : positive := 15;
+
    type StateType is (
       IDLE_S,
       ARB_START_S,
@@ -71,7 +74,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   : sl;
       timeoutError   : sl;
       colPause       : sl;
+      statusBus      : Pix2PgpStatusBusArray;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -87,8 +92,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt        : slv(bitsize(FIFO_RD_DELAY_G)-1 downto 0);
+      waitCnt        : slv(bitsize(STATUS_EVAL_DELAY_ERROR_C)-1 downto 0);
       state          : StateType;
    end record RegType;
 
@@ -100,7 +104,9 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError   => '0',
       timeoutError   => '0',
       colPause       => '0',
+      statusBus      => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask     => (others => '0'),
+      columnBusy     => (others => '0'),
       trgCntGlbl     => (others => '1'),
       -- internal
       pause          => '0',
@@ -116,7 +122,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   => (others => '1'),
       columnEnable   => (others => '1'),
       pauseErrorBmsk => (others => '0'),
-      columnBusy     => (others => '0'),
       waitCnt        => (others => '0'),
       state          => IDLE_S);
 
@@ -131,13 +136,26 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBusGlbl, arbiterBusy,
+   comb : process (r, pgpRst, statusBus, arbiterBusy,
                    columnEnable, columnBusy, timeout) is
-      variable v : RegType;
+
+      variable v             : RegType;
+      variable statusBusInt  : Pix2PgpStatusBusArray;
+      variable columnBusyInt : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+
    begin
 
       -- Latch the current value
       v := r;
+
+      -- Get the status
+      v.statusBus := statusBus;
+      -- To pipeline or not to pipeline?
+      if PIPELINE_STATUS_G then
+         statusBusInt := r.statusBus;
+      else
+         statusBusInt := v.statusBus;
+      end if;
 
       -- Strobes and Defaults
       v.statusRd    := '0';
@@ -152,7 +170,7 @@ begin
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
          -- column is ready when its status FIFO has a word;
-         v.dataReady(col) := not(statusBusGlbl(col).columnEmpty) and v.columnEnable(col);
+         v.dataReady(col) := not(statusBusInt(col).columnEmpty) and v.columnEnable(col);
 
          -- note that for all flags we check against the dataReady signal;
          -- why? because we are using FWFT FIFOs...
@@ -160,18 +178,18 @@ begin
 
          -- check Data Length from each column manager's status bus and set `hitmaskAll`;
          -- a high bit on this bitmask indicates that the associated column does have hits
-         v.hitmaskAll(col) := uOr(statusBusGlbl(col).dataLen) and v.dataReady(col);
+         v.hitmaskAll(col) := uOr(statusBusInt(col).dataLen) and v.dataReady(col);
 
          -- check for any over-occupancy errors
-         v.colOverOccErr(col) := statusBusGlbl(col).overOcc and v.dataReady(col);
+         v.colOverOccErr(col) := statusBusInt(col).overOcc and v.dataReady(col);
 
          -- check for any fifoError flags;
          -- note that in this case we do not check for dataReady!
          -- we need to know if the FIFOs have underflowed regardless of the dataReady status
-         v.colFifoErr(col) := statusBusGlbl(col).fifoError and v.columnEnable(col);
+         v.colFifoErr(col) := statusBusInt(col).fifoError and v.columnEnable(col);
 
          -- pause handling
-         v.columnPause(col) := statusBusGlbl(col).pause and v.dataReady(col);
+         v.columnPause(col) := statusBusInt(col).pause and v.dataReady(col);
 
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
@@ -179,6 +197,11 @@ begin
 
          -- busy is used to exit from the pause-error state
          v.columnBusy(col) := columnBusy(col) and v.columnEnable(col);
+         if PIPELINE_STATUS_G then
+            columnBusyInt := r.columnBusy;
+         else
+            columnBusyInt := v.columnBusy;
+         end if;
 
       end loop;
 
@@ -190,12 +213,12 @@ begin
       -- separate loop for trigger counter assertion (have to exit it on first index hit)
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          if v.dataReady(col) = '1' and uOr(v.columnPause) = '0' then
-            v.trgCntGlbl := statusBusGlbl(col).trgCnt;
+            v.trgCntGlbl := statusBusInt(col).trgCnt;
             exit;
          end if;
 
          if v.columnPause(col) = '1' and uOr(v.columnPause) = '1' then
-            v.trgCntGlbl := statusBusGlbl(col).trgCnt;
+            v.trgCntGlbl := statusBusInt(col).trgCnt;
             exit;
          end if;
       end loop;
@@ -219,6 +242,16 @@ begin
             v.timeoutError := '0';
             v.pauseError   := '0';
 
+            -- pause flag
+            if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
+               v.pause := '1';
+            end if;
+
+            -- set-watchdog flag
+            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
+               v.setWatchdog := '1';
+            end if;
+
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- nominal operation
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -227,10 +260,9 @@ begin
                -- raise the pause flag if necessary;
                -- override the columns that will be read;
                -- in terms of status and data as well
-               if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
+               if v.pause = '1' then
                   v.statusRdBmsk := v.columnPause;
                   v.colBitmask   := v.columnPause;
-                  v.pause        := '1';
                end if;
 
                v.state := ARB_START_S;
@@ -240,10 +272,6 @@ begin
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- error handling
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
-               v.setWatchdog := '1';
-            end if;
-
             -- waited for too long for all columns to be ready,
             -- while some have been ready for some time...
             if v.timeout = '1' then
@@ -278,9 +306,8 @@ begin
             -- ...and finally pop the status word when arbiter's busy transitions to low
             -- (negative-edge detection)
             if v.arbiterBusy = '0' and r.arbiterBusy = '1' then
-               v.statusRd     := '1'; -- pop the status word
-               v.timeoutError := '0'; -- reset this
-               v.state        := WAIT_STATE_S;
+               v.statusRd := '1'; -- pop the status word
+               v.state    := WAIT_STATE_S;
             end if;
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -288,14 +315,19 @@ begin
          -- always wait before re-evaluating the status bus empty signal;
          -- the dataReady signal *must* re-settle!
          -- reading the status word after one cycle may not force the empty signal
-         -- to go high on the next even if there are no more status words in the FIFO
+         -- to go high on the next if there are no more status words in the FIFO
+         -- note that we have two different delays;
+         -- need to wait longer when assessing error cases
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
-            if r.waitCnt = FIFO_RD_DELAY_G then
-               v.state := IDLE_S;
 
-               if v.pauseError = '1' or v.timeoutError = '1' then
+            if v.pauseError = '1' or v.timeoutError = '1' then
+               if r.waitCnt = STATUS_EVAL_DELAY_ERROR_C then
                   v.state := ERROR_S;
+               end if;
+            else
+               if r.waitCnt = STATUS_EVAL_DELAY_NORMAL_C then
+                  v.state := IDLE_S;
                end if;
             end if;
 
@@ -311,30 +343,35 @@ begin
                v.state        := ARB_START_S;
             end if;
 
-            -- all FIFOs drained;
-            -- release the error flags and go back to idle (after waiting)
-            if uOr(v.dataReady) = '0' and uOr(v.columnBusy) = '0' then
-               v.state := WAIT_STATE_S;
+            -- all FIFOs drained; back to IDLE
+            if uOr(v.dataReady) = '0' and uOr(columnBusyInt) = '0' then
+               v.timeoutError := '0';
+               v.pauseError   := '0';
+               v.state        := IDLE_S;
             end if;
 
       end case;
       ---------------------------------------------------------------------------
 
       -- Outputs
-      colFifoError  <= v.colFifoError;
-      overOccError  <= v.overOccError;
-      colPause      <= v.pause;
-      colPauseError <= v.pauseError;
-      colBitmask    <= v.colBitmask;
+      colFifoError  <= r.colFifoError;
+      overOccError  <= r.overOccError;
+      colPause      <= r.pause;
+      colPauseError <= r.pauseError;
+      colBitmask    <= r.colBitmask;
       arbiterStart  <= r.arbiterStart; -- delay for one cycle
-      trgCntGlbl    <= v.trgCntGlbl;
-      timeoutError  <= v.timeoutError;
+      trgCntGlbl    <= r.trgCntGlbl;
+      timeoutError  <= r.timeoutError;
 
-      setWatchdog   <= v.setWatchdog;
+      setWatchdog   <= r.setWatchdog;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
-         statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and v.columnEnable(col);
+         if PIPELINE_STATUS_G then
+            statusRd(col) <= r.statusRd and r.statusRdBmsk(col) and r.columnEnable(col);
+         else
+            statusRd(col) <= v.statusRd and v.statusRdBmsk(col) and v.columnEnable(col);
+         end if;
       end loop;
 
       -- Reset
@@ -361,7 +398,7 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => TIMEOUT_WIDTH_G)
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
       port map(
          -- General Interface
          clk     => pgpClk,

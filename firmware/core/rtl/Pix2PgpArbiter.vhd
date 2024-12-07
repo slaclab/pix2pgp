@@ -29,20 +29,19 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpArbiter is
    generic(
-      TPD_G           : time     := 1 ns;
-      RST_ASYNC_G     : boolean  := false;
-      RST_POLARITY_G  : sl       := '1');
+      TPD_G             : time     := 1 ns;
+      RST_ASYNC_G       : boolean  := false;
+      RST_POLARITY_G    : sl       := '1';
+      PIPELINE_STATUS_G : boolean  := false;
+      PIPELINE_DATA_G   : boolean  := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
       -- Column Manager Interface
-      dataLenSel    : in  slv(DATALEN_WIDTH_C-1 downto 0);
-      trgCntSel     : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      dataBusSel    : in  Pix2PgpDataBusType;
-      dataRd        : out sl;
-      colSel        : out slv(BITMAX_COL_MANAGERS_C downto 0);
+      statusBus     : in  Pix2PgpStatusBusArray;
+      dataBus       : in  Pix2PgpDataBusArray;
+      dataRd        : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Supervisor Interface
       arbStart      : in  sl;
       colFifoError  : in  sl;
@@ -50,6 +49,7 @@ entity Pix2PgpArbiter is
       colPauseError : in  sl;
       timeoutError  : in  sl;
       colPause      : in  sl;
+      trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       arbBusy       : out sl;
       -- Pgp4TxLite Interface
@@ -95,6 +95,8 @@ architecture rtl of Pix2PgpArbiter is
       arbStart     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl   : slv(TRGCNT_WIDTH_C-1 downto 0);
+      dataBus      : Pix2PgpDataBusArray;
+      statusBus    : Pix2PgpStatusBusArray;
       -- outputs
       dataRd       : sl;
       colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -102,7 +104,7 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   : sl;
       dummyHeader  : sl;
-      reverseRead  : sl;
+      waitColSel   : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
@@ -119,6 +121,8 @@ architecture rtl of Pix2PgpArbiter is
       arbStart      => '0',
       colBitmask    => (others => '0'),
       trgCntGlbl    => (others => '0'),
+      dataBus       => (others => DEFAULT_PIX2PGP_DATABUS_C),
+      statusBus     => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       -- outputs
       dataRd        => '0',
       colSel        => (others => '0'),
@@ -126,7 +130,7 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty    => '0',
       dummyHeader   => '0',
-      reverseRead   => '0',
+      waitColSel    => '0',
       txData        => (others => '0'),
       dummyCnt      => (others => '0'),
       dataHeader    => (others => '0'),
@@ -144,11 +148,19 @@ begin
    ------------------------------------------------
    -- Arbiter FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, dataLenSel, dataBusSel, arbStart, colFifoError,
+   comb : process (r, pgpRst, dataBus, statusBus, arbStart, colFifoError,
                    overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
-                   trgCntGlbl, trgCntSel, timeoutError) is
+                   trgCntGlbl, timeoutError) is
 
       variable v : RegType;
+      -- temp variables for status bus
+      variable pauseSel     : sl;
+      variable overOccSel   : sl;
+      variable flagsSel     : slv(7 downto 0);
+      variable dataLenSel   : slv(DATALEN_WIDTH_C-1 downto 0);
+      variable trgCntSel    : slv(TRGCNT_WIDTH_C-1 downto 0);
+      -- temp variables for data bus
+      variable dataBusSel   : slv(DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 
@@ -159,6 +171,8 @@ begin
       v.eventEmpty := not(uOr(colBitmask));
       v.sAxisSlave := sAxisSlave;
       v.arbStart   := arbStart;
+      v.statusBus  := statusBus;
+      v.dataBus    := dataBus;
 
       -- defaults
       v.dataRd := '0';
@@ -173,6 +187,25 @@ begin
       v.sAxisMaster.tUser  := (others => '0');
       v.sAxisMaster.tKeep  := (others => '1');
 
+      -- status Mux
+      if PIPELINE_STATUS_G then
+         overOccSel   := r.statusBus(conv_integer(unsigned(r.colSel))).overOcc;
+         pauseSel     := r.statusBus(conv_integer(unsigned(r.colSel))).pause;
+         dataLenSel   := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel    := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+      else
+         overOccSel   := v.statusBus(conv_integer(unsigned(r.colSel))).overOcc;
+         pauseSel     := v.statusBus(conv_integer(unsigned(r.colSel))).pause;
+         dataLenSel   := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel    := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+      end if;
+
+      -- group the flags
+      flagsSel := resize(overOccSel & pauseSel, 8);
+
+      -- data Mux
+      dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -182,7 +215,7 @@ begin
             v.arbBusy     := '0';
             v.dummyHeader := '0';
             v.dummyCnt    := (others => '0');
-            v.colSel      := colSelReset(v.colSel'length, r.reverseRead);
+            v.colSel      := (others => '0');
 
             if r.arbStart = '1' then
                v.arbBusy := '1';
@@ -200,7 +233,7 @@ begin
 
                v.state := CHECK_BITMASK_S;
 
-               -- if empty, go-to DONE state
+               -- if empty, go-to state where dummy headers are TX'd
                if v.eventEmpty = '1' then
                   v.state := TX_DUMMY_S;
                end if;
@@ -208,45 +241,52 @@ begin
 
          ----------------------------------------------------------------------
          -- check the bitmask value of the selected column
-         -- if non-zero, write the length and start reading immediately
+         -- if non-zero, write the column metadata and start reading immediately
          when CHECK_BITMASK_S =>
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
-               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
-
-               if colSelDone(r.colSel, r.reverseRead) then
-                  v.reverseRead := not(r.reverseRead);
-                  v.state       := TX_DUMMY_S;
+               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+                  v.state  := TX_DUMMY_S;
+               else
+                  v.colSel := r.colSel + 1;
                end if;
 
             else
-               if v.sAxisMaster.tValid = '0' then
-                  --
-                  v.txData(DATABUS_DWIDTH_C-1 downto 8) := resize(trgCntSel,  32);
-                  v.txData(7 downto 0)                  := resize(dataLenSel, 8);
-                  v.sAxisMaster.tValid                  := '1';
-                  --
+               v.waitColSel := '1'; -- wait one cycle for mux/demuxes to stabilize
 
-                  v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
+               if r.waitColSel = '1' then
+                  if v.sAxisMaster.tValid = '0' then
+                     --
+                     -- these look a bit too ASIC-specific for the time being...
+                     v.txData(39 downto 24) := resize(flagsSel,  16);
+                     v.txData(23 downto 16) := resize(r.colSel,   8);
+                     v.txData(15 downto 8)  := resize(trgCntSel,  8);
+                     v.txData(7 downto 0)   := resize(dataLenSel, 8);
+                     v.sAxisMaster.tValid   := '1';
+                     --
 
-                  -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
-                  -- if odd, add 1 for a 'true' div-by-2
-                  if dataLenSel(0) = '1' then
-                     v.dataRdCycles := rightShift(dataLenSel, 1) + 1;
-                  else
-                     v.dataRdCycles := rightShift(dataLenSel, 1);
+                     v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
+
+                     -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
+                     -- if odd, add 1 for a 'true' div-by-2
+                     if dataLenSel(0) = '1' then
+                        v.dataRdCycles := rightShift(dataLenSel, 1) + 1;
+                     else
+                        v.dataRdCycles := rightShift(dataLenSel, 1);
+                     end if;
+                     v.state := PARSE_DATA_S;
                   end if;
-
-                  v.state  := PARSE_DATA_S;
                end if;
             end if;
 
          ------------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
+            v.waitColSel := '0'; -- reset the flag
+
             if v.sAxisMaster.tValid = '0' and r.dataRdCnt /= r.dataRdCycles then
                --
-               v.txData             := dataBusSel.data;
+               v.txData             := dataBusSel;
                v.sAxisMaster.tValid := '1';
                --
                v.dataRdCnt := r.dataRdCnt + 1;
@@ -257,13 +297,13 @@ begin
             if r.dataRdCnt = r.dataRdCycles then
                --
                v.dataRd := '0';
-               v.colSel := colSelSwitch(r.colSel, r.reverseRead);
                v.state  := CHECK_BITMASK_S;
                --
                -- Check if last column
-               if colSelDone(r.colSel, r.reverseRead) then
-                  v.reverseRead := not(r.reverseRead);
-                  v.state       := TX_DUMMY_S;
+               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+                  v.state  := TX_DUMMY_S;
+               else
+                  v.colSel := r.colSel + 1;
                end if;
             end if;
 
@@ -311,7 +351,6 @@ begin
       v.dataHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(v.dummyHeader);
       v.dataHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(v.dummyHeader);
       v.dataHeader(DUMMY_HEADER_POS_C)      := v.dummyHeader;
-      v.dataHeader(REVERSE_READ_POS_C)      := v.reverseRead and not(v.dummyHeader);
       v.dataHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       v.dataHeader(COL_BITMASK_POS_C)       := v.colBitmask;
       v.dataHeader(TRG_CNT_POS_C)           := resize(v.trgCntGlbl, 8);
@@ -321,15 +360,22 @@ begin
       --
 
       -- Outputs
-      arbBusy     <= v.arbBusy;
-      dataRd      <= v.dataRd;
-      colSel      <= v.colSel;
+      arbBusy     <= r.arbBusy;
       sAxisMaster <= r.sAxisMaster;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
+
+      -- Iterate bit-by-bit assignment for dataRd
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         if col = conv_integer(unsigned(r.colSel)) then
+            dataRd(col) <= v.dataRd;
+         else
+            dataRd(col) <= '0';
+         end if;
+      end loop;
 
       -- Register the variable for next clock cycle
       rin <= v;

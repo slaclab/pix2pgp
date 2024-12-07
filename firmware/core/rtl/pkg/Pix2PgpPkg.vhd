@@ -128,11 +128,10 @@ package Pix2PgpPkg is
    constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
    constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
    constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
-   constant REVERSE_READ_POS_C      : natural := HEADER_DWITDH_C-6;
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-7;
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6;
    --------------------------
    -- reserved bits (only one left)
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-8
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
                                               downto HEADER_DWITDH_C-8;
    --------------------------
    -- col-bitmask
@@ -150,27 +149,21 @@ package Pix2PgpPkg is
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
 
    -- examples of the final pix2pgp frame format:
-   -- e.g. 1: this event has 2 hits from two different cols (cols 0 and 5)
-   -- pgp data frame header | col0_dataLen | col0_hit0 | col5_dataLen | col5_hit0
+   -- e.g. 1: this event has 1 hit from two different cols (cols 0 and 5)
+   -- pgp data frame header | col5_dataLen=1 | col0_hit0 | col2_dataLen=1 | col5_hit0
    -- e.g. 2: this event has 3 hits from one column (col 2)
-   -- pgp data frame header | col2_dataLen | col2_hit0 | col2_hit1 | col2_hit2
+   -- pgp data frame header | col2_dataLen=3 | col2_hit0 | col2_hit1 | col2_hit2
 
-   -- note that because the datalength is 40-bit, the colX_dataLen word is padded with zeros;
-   -- (on the MSB)
+   -- note that the colX_dataLen field is comprised from other column-related metadata as well;
+   -- it also yields info on the pause/overOcc status of the column, plus a colID for backup
 
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
 
-   -- note that the order of the hits can be reversed depending on the value of REVERSE_READ_POS_C;
-
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
-
-   -- functions
    --
+   -- functions
    function rightShift (inSlv: slv; count: natural) return slv;
-   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean;
-   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv;
-   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv;
    --
 
 end Pix2PgpPkg;
@@ -188,42 +181,5 @@ package body Pix2PgpPkg is
       end if;
       return result;
    end rightShift;
-
-   -- col-select done
-   function colSelDone (inColSel: slv; inReverseRead: sl) return boolean is
-      variable result: boolean := false;
-   begin
-      if inReverseRead = '1' and allBits(inColSel, '0') then
-         result := true;
-      elsif inReverseRead = '0' and conv_integer(unsigned(inColSel)) = NUM_OF_COL_MANAGERS_C-1 then
-         result := true;
-      end if;
-      return result;
-   end colSelDone;
-
-   -- col-select reset (set to max col value or zero)
-   function colSelReset (inColSelLen: integer; inReverseRead: sl) return slv is
-      variable result: slv(inColSelLen-1 downto 0) := (others => '0');
-   begin
-      if inReverseRead = '1' then
-         result := conv_std_logic_vector(NUM_OF_COL_MANAGERS_C-1, result'length);
-      else
-         result := (others => '0');
-      end if;
-      return result;
-   end colSelReset;
-
-   -- col-select switch (incr or decr)
-   function colSelSwitch (inColSel: slv; inReverseRead: sl) return slv is
-      constant inColSelLen: integer := inColSel'LENGTH-1;
-      variable result: slv(inColSelLen downto 0) := (others => '0');
-   begin
-      if inReverseRead = '1' then
-         result := inColSel - 1;
-      else
-         result := inColSel + 1;
-      end if;
-      return result;
-   end colSelSwitch;
 
 end package body Pix2PgpPkg;

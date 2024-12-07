@@ -4,8 +4,6 @@
 -- maybe can create a dinArray equivalent in systemVerilog?
 -- breaking down the din into individual std_logic_vectors works too though...
 
--- hardcoding i/o port widths and checking them with asserts instead
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -22,12 +20,11 @@ entity Pix2PgpSparkPixSTop is
       TPD_G                     : time      := 1 ns;
       RST_ASYNC_G               : boolean   := true;
       RST_POLARITY_G            : std_logic := '0';
-      PIPELINE_BRIDGE_DATA_G    : boolean   := false; -- pipeline data FIFO output downstream
-      PIPELINE_BRIDGE_STATUS_G  : boolean   := true;  -- pipeline status FIFO output downstream
+      PIPELINE_DATA_G           : boolean   := false; -- pipeline data FIFO output downstream
+      PIPELINE_STATUS_G         : boolean   := true;  -- pipeline status FIFO output downstream
+      TIMEOUT_LIMIT_WIDTH_G     : positive  := 12;    -- bitwidth of timeout counter
       COLMANAGER_DATA_DEPTH_G   : integer   := 7;     -- colManager data FIFO depth (holds *2 hits)
       COLMANAGER_STATUS_DEPTH_G : integer   := 6;     -- colManager status FIFO depth (1 per event)
-      SUPER_FIFO_RD_DELAY_G     : positive  := 3;     -- supervisor FIFO signal evaluation timeout
-      SUPER_TIMEOUT_WIDTH_G     : positive  := 12;    -- supervisor colReady='1' timeout width
       DATAFIFO_PIPE_G           : natural   := 1;     -- colManager data FIFO I/O pipeline stages
       STATUSFIFO_PIPE_G         : natural   := 1;     -- colManager status FIFO I/O pipeline stages
       SER_GBOX_PIPE_G           : natural   := 0);    -- *only* set when synthesizing (*not* in sim)
@@ -83,8 +80,8 @@ end entity Pix2PgpSparkPixSTop;
 architecture rtl of Pix2PgpSparkPixSTop is
 
    signal din               : Pix2PgpSparseDinArray := (others => (others => '0'));
-   signal columnEnableMuxed : std_logic_vector(23 downto 0);
    signal timeoutLimitMuxed : std_logic_vector(11 downto 0);
+   signal columnEnableMuxed : std_logic_vector(23 downto 0);
 
    signal pgpTxMaster       : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal pgpTxSlave        : AxiStreamSlaveType;
@@ -102,8 +99,8 @@ begin
    -- check the length equivalence with asserts
    -- avoid tying input port widths to generics; hardcode them instead
    -- ...ASIC flow tools can be annoying...
-   assert (timeoutLimit'length /= SUPER_TIMEOUT_WIDTH_G-1)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match timeoutLimit port width with SUPER_TIMEOUT_WIDTH_G generic" severity failure;
+   assert (timeoutLimit'length /= TIMEOUT_LIMIT_WIDTH_G-1)
+      report "[ERROR]: Pix2PgpSparkPixSTop; Please match timeoutLimit port width with TIMEOUT_LIMIT_WIDTH_G generic" severity failure;
 
    assert (columnEnable'length /= NUM_OF_COL_MANAGERS_C-1)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match columnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
@@ -137,12 +134,11 @@ begin
          TPD_G                     => TPD_G,
          RST_ASYNC_G               => RST_ASYNC_G,
          RST_POLARITY_G            => RST_POLARITY_G,
-         PIPELINE_BRIDGE_DATA_G    => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G  => PIPELINE_BRIDGE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
-         SUPER_FIFO_RD_DELAY_G     => SUPER_FIFO_RD_DELAY_G,
-         SUPER_TIMEOUT_WIDTH_G     => SUPER_TIMEOUT_WIDTH_G,
+         TIMEOUT_LIMIT_WIDTH_G     => TIMEOUT_LIMIT_WIDTH_G,
+         PIPELINE_DATA_G           => PIPELINE_DATA_G,
+         PIPELINE_STATUS_G         => PIPELINE_STATUS_G,
          DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G         => STATUSFIFO_PIPE_G)
       port map (
@@ -269,8 +265,8 @@ begin
    begin
       if (rising_edge(pgpClk)) then
          if sel = '1' then
-            columnEnableMuxed <= columnEnable;
             timeoutLimitMuxed <= timeoutLimit;
+            columnEnableMuxed <= columnEnable;
          end if;
       end if;
    end process;

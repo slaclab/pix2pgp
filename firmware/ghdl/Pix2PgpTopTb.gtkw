@@ -1,20 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Wed Dec  4 01:26:32 2024
+[*] Fri Dec  6 09:17:42 2024
 [*]
-[dumpfile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Wed Dec  4 01:22:39 2024"
-[dumpfile_size] 5562979
-[savefile] "/home/cbakalis/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 23459300000
+[dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
+[dumpfile_mtime] "Fri Dec  6 09:17:17 2024"
+[dumpfile_size] 6145938
+[savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
+[timestart] 25143400000
 [size] 1850 1016
 [pos] -1 -1
-*-26.719933 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.942970 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.
-[treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[20].u_dummypixel.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[7].u_dummypixel.r.
@@ -30,13 +29,10 @@
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[20].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.databussel.
+[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.saxismaster.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_bridge.databussel.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_bridge.statusbussel.
-[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.
 [sst_width] 353
 [signals_width] 286
@@ -48,7 +44,7 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colpause
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colpauseerror
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.overoccerror
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.colfifoerror
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.pgprst
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.reverseread
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.dummyheader
@@ -70,7 +66,6 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.r.writeindex
 -
 @24
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[0]
-@22
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[9:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.datardcnt[0]
 @420
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.state
@@ -81,6 +76,40 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.pgpclk
 @22
 [color] 2
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[39:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[39] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[38] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[37] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[36] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[35] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[34] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[33] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[32] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[31] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[30] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[29] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[28] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[27] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[26] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[25] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[24] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.txdata[0]
+@28
+[color] 2
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.saxisslave.tready
+@800022
+#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
+@28
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[20]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[19]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[18]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[17]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[16]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[15]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[14]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[13]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[12]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[11]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[10]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[9]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[8]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[7]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[6]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[5]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[4]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1]
+top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
+@1001200
+-group_end
+@25
+#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[0]
 @200
 -
 -toPgpTxLite
@@ -97,28 +126,5 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.maxismaster.tlast
 top.pix2pgptoptb.u_fpga.pgpvalid
 @22
 #{top.pix2pgptoptb.pgpdata[39:0]} top.pix2pgptoptb.pgpdata[39] top.pix2pgptoptb.pgpdata[38] top.pix2pgptoptb.pgpdata[37] top.pix2pgptoptb.pgpdata[36] top.pix2pgptoptb.pgpdata[35] top.pix2pgptoptb.pgpdata[34] top.pix2pgptoptb.pgpdata[33] top.pix2pgptoptb.pgpdata[32] top.pix2pgptoptb.pgpdata[31] top.pix2pgptoptb.pgpdata[30] top.pix2pgptoptb.pgpdata[29] top.pix2pgptoptb.pgpdata[28] top.pix2pgptoptb.pgpdata[27] top.pix2pgptoptb.pgpdata[26] top.pix2pgptoptb.pgpdata[25] top.pix2pgptoptb.pgpdata[24] top.pix2pgptoptb.pgpdata[23] top.pix2pgptoptb.pgpdata[22] top.pix2pgptoptb.pgpdata[21] top.pix2pgptoptb.pgpdata[20] top.pix2pgptoptb.pgpdata[19] top.pix2pgptoptb.pgpdata[18] top.pix2pgptoptb.pgpdata[17] top.pix2pgptoptb.pgpdata[16] top.pix2pgptoptb.pgpdata[15] top.pix2pgptoptb.pgpdata[14] top.pix2pgptoptb.pgpdata[13] top.pix2pgptoptb.pgpdata[12] top.pix2pgptoptb.pgpdata[11] top.pix2pgptoptb.pgpdata[10] top.pix2pgptoptb.pgpdata[9] top.pix2pgptoptb.pgpdata[8] top.pix2pgptoptb.pgpdata[7] top.pix2pgptoptb.pgpdata[6] top.pix2pgptoptb.pgpdata[5] top.pix2pgptoptb.pgpdata[4] top.pix2pgptoptb.pgpdata[3] top.pix2pgptoptb.pgpdata[2] top.pix2pgptoptb.pgpdata[1] top.pix2pgptoptb.pgpdata[0]
-@200
--
--
-@28
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.timeouterror
-@420
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.state
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.state
-@28
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.arbstart
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.timeout
-top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.setwatchdog
-@24
-#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.waitcnt[3:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.waitcnt[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.waitcnt[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.waitcnt[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.waitcnt[0]
-@28
-top.pix2pgptoptb.sro
-@22
-#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[23:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.dataready[0]
-#{top.pix2pgptoptb.sof[23:0]} top.pix2pgptoptb.sof[23] top.pix2pgptoptb.sof[22] top.pix2pgptoptb.sof[21] top.pix2pgptoptb.sof[20] top.pix2pgptoptb.sof[19] top.pix2pgptoptb.sof[18] top.pix2pgptoptb.sof[17] top.pix2pgptoptb.sof[16] top.pix2pgptoptb.sof[15] top.pix2pgptoptb.sof[14] top.pix2pgptoptb.sof[13] top.pix2pgptoptb.sof[12] top.pix2pgptoptb.sof[11] top.pix2pgptoptb.sof[10] top.pix2pgptoptb.sof[9] top.pix2pgptoptb.sof[8] top.pix2pgptoptb.sof[7] top.pix2pgptoptb.sof[6] top.pix2pgptoptb.sof[5] top.pix2pgptoptb.sof[4] top.pix2pgptoptb.sof[3] top.pix2pgptoptb.sof[2] top.pix2pgptoptb.sof[1] top.pix2pgptoptb.sof[0]
-@23
-#{top.pix2pgptoptb.eof[23:0]} top.pix2pgptoptb.eof[23] top.pix2pgptoptb.eof[22] top.pix2pgptoptb.eof[21] top.pix2pgptoptb.eof[20] top.pix2pgptoptb.eof[19] top.pix2pgptoptb.eof[18] top.pix2pgptoptb.eof[17] top.pix2pgptoptb.eof[16] top.pix2pgptoptb.eof[15] top.pix2pgptoptb.eof[14] top.pix2pgptoptb.eof[13] top.pix2pgptoptb.eof[12] top.pix2pgptoptb.eof[11] top.pix2pgptoptb.eof[10] top.pix2pgptoptb.eof[9] top.pix2pgptoptb.eof[8] top.pix2pgptoptb.eof[7] top.pix2pgptoptb.eof[6] top.pix2pgptoptb.eof[5] top.pix2pgptoptb.eof[4] top.pix2pgptoptb.eof[3] top.pix2pgptoptb.eof[2] top.pix2pgptoptb.eof[1] top.pix2pgptoptb.eof[0]
-@420
-top.pix2pgptoptb.gen_dummy_pixel[0].u_dummypixel.r.state
 [pattern_trace] 1
 [pattern_trace] 0

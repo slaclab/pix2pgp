@@ -14,11 +14,11 @@ entity Pix2PgpEmuTb is
       RST_ASYNC_G               : boolean  := true;
       RST_POLARITY_G            : std_logic:= '0';
       FPGA_SYNTH_G              : boolean  := false;
-      PIPELINE_BRIDGE_DATA_G    : boolean  := false;
-      PIPELINE_BRIDGE_STATUS_G  : boolean  := true;
+      PIPELINE_DATA_G           : boolean  := false;
+      PIPELINE_STATUS_G         : boolean  := true;
       COLMANAGER_DATA_DEPTH_G   : integer  := 7;
       COLMANAGER_STATUS_DEPTH_G : integer  := 6;
-      SUPER_FIFO_RD_DELAY_G     : natural  := 3;
+      TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
       ARB_DOUT_PIPE_G           : natural  := 1;
       DATAFIFO_PIPE_G           : natural  := 1;
       STATUSFIFO_PIPE_G         : natural  := 1;
@@ -55,11 +55,11 @@ architecture test of Pix2PgpEmuTb is
          FPGA_SYNTH_G              => FPGA_SYNTH_G,
          DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
          STATUSFIFO_PIPE_G         => STATUSFIFO_PIPE_G,
-         PIPELINE_BRIDGE_DATA_G    => PIPELINE_BRIDGE_DATA_G,
-         PIPELINE_BRIDGE_STATUS_G  => PIPELINE_BRIDGE_STATUS_G,
+         PIPELINE_DATA_G           => PIPELINE_DATA_G,
+         PIPELINE_STATUS_G         => PIPELINE_STATUS_G,
          COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
-         SUPER_FIFO_RD_DELAY_G     => SUPER_FIFO_RD_DELAY_G,
+         TIMEOUT_LIMIT_WIDTH_G     => TIMEOUT_LIMIT_WIDTH_G,
          NUM_VC_G                  => NUM_VC_G)
       port map(
          dummyIn => clk);
