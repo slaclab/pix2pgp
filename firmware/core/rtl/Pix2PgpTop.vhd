@@ -33,9 +33,9 @@ entity Pix2PgpTop is
       RST_POLARITY_G            : sl       := '1';
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
+      TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
       COLMANAGER_DATA_DEPTH_G   : integer  := 7;
       COLMANAGER_STATUS_DEPTH_G : integer  := 6;
-      SUPER_FIFO_RD_DELAY_G     : positive := 3;
       DATAFIFO_PIPE_G           : natural  := 1;
       STATUSFIFO_PIPE_G         : natural  := 1);
    port(
@@ -44,6 +44,7 @@ entity Pix2PgpTop is
       pgpClk       : in  sl;
       sparseRst    : in  sl := not(RST_POLARITY_G);
       pgpRst       : in  sl := not(RST_POLARITY_G);
+      timeoutLimit : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
@@ -122,15 +123,16 @@ begin
    ---------------------------------------
    U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
       generic map(
-         TPD_G             => TPD_G,
-         RST_ASYNC_G       => RST_ASYNC_G,
-         RST_POLARITY_G    => RST_POLARITY_G,
-         FIFO_RD_DELAY_G   => SUPER_FIFO_RD_DELAY_G,
-         PIPELINE_STATUS_G => PIPELINE_STATUS_G)
+         TPD_G                 => TPD_G,
+         RST_ASYNC_G           => RST_ASYNC_G,
+         RST_POLARITY_G        => RST_POLARITY_G,
+         PIPELINE_STATUS_G     => PIPELINE_STATUS_G,
+         TIMEOUT_LIMIT_WIDTH_G => TIMEOUT_LIMIT_WIDTH_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
+         timeoutLimit  => timeoutLimit,
          columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBus     => statusBus,

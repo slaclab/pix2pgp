@@ -27,15 +27,16 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G             : time     := 1 ns;
-      RST_ASYNC_G       : boolean  := false;
-      RST_POLARITY_G    : sl       := '1';
-      FIFO_RD_DELAY_G   : positive := 3;
-      PIPELINE_STATUS_G : boolean  := false);
+      TPD_G                 : time     := 1 ns;
+      RST_ASYNC_G           : boolean  := false;
+      RST_POLARITY_G        : sl       := '1';
+      PIPELINE_STATUS_G     : boolean  := false;
+      TIMEOUT_LIMIT_WIDTH_G : positive := 12);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl := not(RST_POLARITY_G);
+      timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       statusBus     : in  Pix2PgpStatusBusArray;
@@ -54,6 +55,9 @@ entity Pix2PgpColumnSupervisor is
 end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
+
+   constant STATUS_EVAL_DELAY_NORMAL_C : positive := 3;
+   constant STATUS_EVAL_DELAY_ERROR_C  : positive := 15;
 
    type StateType is (
       IDLE_S,
@@ -88,7 +92,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt        : slv(3 downto 0);
+      waitCnt        : slv(bitsize(STATUS_EVAL_DELAY_ERROR_C)-1 downto 0);
       state          : StateType;
    end record RegType;
 
@@ -238,6 +242,16 @@ begin
             v.timeoutError := '0';
             v.pauseError   := '0';
 
+            -- pause flag
+            if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
+               v.pause := '1';
+            end if;
+
+            -- set-watchdog flag
+            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
+               v.setWatchdog := '1';
+            end if;
+
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- nominal operation
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -246,10 +260,9 @@ begin
                -- raise the pause flag if necessary;
                -- override the columns that will be read;
                -- in terms of status and data as well
-               if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
+               if v.pause = '1' then
                   v.statusRdBmsk := v.columnPause;
                   v.colBitmask   := v.columnPause;
-                  v.pause        := '1';
                end if;
 
                v.state := ARB_START_S;
@@ -259,10 +272,6 @@ begin
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- error handling
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
-               v.setWatchdog := '1';
-            end if;
-
             -- waited for too long for all columns to be ready,
             -- while some have been ready for some time...
             if v.timeout = '1' then
@@ -307,19 +316,26 @@ begin
          -- the dataReady signal *must* re-settle!
          -- reading the status word after one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
+         -- note that we have two different delays;
+         -- need to wait longer when assessing error cases
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
-            if r.waitCnt = FIFO_RD_DELAY_G then
-               v.state := IDLE_S;
 
-               if v.pauseError = '1' or v.timeoutError = '1' then
+            if v.pauseError = '1' or v.timeoutError = '1' then
+               if r.waitCnt = STATUS_EVAL_DELAY_ERROR_C then
                   v.state := ERROR_S;
+               end if;
+            else
+               if r.waitCnt = STATUS_EVAL_DELAY_NORMAL_C then
+                  v.state := IDLE_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
          -- during this state the FIFOs are being drained as fast as possible
          when ERROR_S =>
+            v.waitCnt := (others => '0');
+
             -- more data to read
             if uOr(v.dataReady) = '1' then
                v.statusRdBmsk := v.dataReady;
@@ -327,12 +343,11 @@ begin
                v.state        := ARB_START_S;
             end if;
 
-            -- all FIFOs drained.
-            -- release the error flags and go back to idle (after waiting)
+            -- all FIFOs drained; back to IDLE
             if uOr(v.dataReady) = '0' and uOr(columnBusyInt) = '0' then
                v.timeoutError := '0';
                v.pauseError   := '0';
-               v.state        := WAIT_STATE_S;
+               v.state        := IDLE_S;
             end if;
 
       end case;
@@ -383,11 +398,12 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => 8) -- 8-bit -> 2^8=256*5.384 = 1380 ns
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
       port map(
          -- General Interface
          clk     => pgpClk,
          rst     => pgpRst,
+         limit   => timeoutLimit,
          -- Control Interface
          set     => setWatchdog,
          timeout => timeout);

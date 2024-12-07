@@ -26,14 +26,15 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpWatchdog is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';
-      CNT_WIDTH_G    : integer := 12);
+      TPD_G          : time     := 1 ns;
+      RST_ASYNC_G    : boolean  := false;
+      RST_POLARITY_G : sl       := '1';
+      CNT_WIDTH_G    : positive := 12);
    port(
       -- General Interface
       clk     : in  sl;
       rst     : in  sl := not(RST_POLARITY_G);
+      limit   : in  slv(CNT_WIDTH_G-1 downto 0);
       -- Control Interface
       set     : in  sl;
       timeout : out sl);
@@ -62,8 +63,8 @@ begin
       -- Latch the current value
       v := r;
 
-      if (set = '1') then
-         if allBits(r.cnt, '1') then
+      if (set = '1' and uOr(limit) = '1') then
+         if r.cnt = limit then
             -- stay in this state until rst or set=low
             v.timeout := '1';
          else

@@ -32,7 +32,7 @@ entity AsicFlowCtrl is
 end entity;
 
 architecture rtl of AsicFlowCtrl is
-    type state_type is (IDLE, WAIT_TOKFB_HIGH, IN_FRAME);
+    type state_type is (IDLE, IN_FRAME);
     signal state       : state_type := IDLE;
     signal tok_fb_dly  : std_logic := '0';
     signal sro_dly     : std_logic := '0';
@@ -88,27 +88,19 @@ begin
                     if tok_fb_negedge = '1' and
                        (USE_PIX2PGP_BUSY = false or (pix2pgp_busy = '0' and USE_PIX2PGP_BUSY = true)) then
                         sof <= '1';
-                        state <= WAIT_TOKFB_HIGH;
-                    end if;
-
-                when WAIT_TOKFB_HIGH =>
-                    -- one-cycle toggle
-                    sof <= '0';
-                    over_occ <= '0'; -- one-cycle toggle
-                    arm_cnt <= '0';
-
-                    if tok_fb_posedge = '1' then
                         state <= IN_FRAME;
                     end if;
 
                 when IN_FRAME =>
                     arm_cnt <= tok_fb_dly;
+                    sof <= '0';
+                    over_occ <= '0';
 
                     if sro_posedge = '1' then -- over-occ takes precedence
                         eof <= '0'; -- frame not properly closed
                         over_occ <= '1'; -- raise over-occ flag
-                        state <= WAIT_TOKFB_HIGH; -- go back to previous state; event botched
-                    elsif tok_fb_settled = '1' and
+                        state <= IN_FRAME; -- go back to previous state; event botched
+                    elsif tok_fb_posedge = '1' and
                           (USE_SPARSE_ITF_BUSY = false or (sparse_itf_busy = '0' and USE_SPARSE_ITF_BUSY = true)) then
                         eof <= '1'; -- close the frame properly
                         over_occ <= '0'; -- normal case, not over-occ
@@ -120,19 +112,5 @@ begin
             end case;
         end if;
     end process;
-
-    -- Instantiate the watchdog component
-    U_Pix2PgpWatchdog : entity pix2pgp.Pix2PgpWatchdog
-        generic map (
-            TPD_G          => 1 ns,
-            RST_ASYNC_G    => true,
-            CNT_WIDTH_G    => TIMEOUT_CNT_WIDTH,
-            RST_POLARITY_G => RST_POLARITY_G)
-        port map (
-            clk => clk,
-            rst => df_reset_n,
-            set => arm_cnt,
-            timeout => tok_fb_settled
-        );
 
 end architecture rtl;
