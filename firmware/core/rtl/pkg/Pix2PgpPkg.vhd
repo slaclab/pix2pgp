@@ -149,13 +149,13 @@ package Pix2PgpPkg is
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
 
    -- examples of the final pix2pgp frame format:
-   -- e.g. 1: this event has 2 hits from two different cols (cols 0 and 5)
-   -- pgp data frame header | col0_dataLen | col0_hit0 | col5_dataLen | col5_hit0
+   -- e.g. 1: this event has 1 hit from two different cols (cols 0 and 5)
+   -- pgp data frame header | col5_dataLen=1 | col0_hit0 | col2_dataLen=1 | col5_hit0
    -- e.g. 2: this event has 3 hits from one column (col 2)
-   -- pgp data frame header | col2_dataLen | col2_hit0 | col2_hit1 | col2_hit2
+   -- pgp data frame header | col2_dataLen=3 | col2_hit0 | col2_hit1 | col2_hit2
 
-   -- note that because the datalength is 40-bit, the colX_dataLen word is padded with zeros;
-   -- (on the MSB)
+   -- note that the colX_dataLen field is comprised from other column-related metadata as well;
+   -- it also yields info on the pause/overOcc status of the column, plus a colID for backup
 
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col

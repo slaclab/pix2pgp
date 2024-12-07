@@ -105,7 +105,7 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty   : sl;
       dummyHeader  : sl;
-      waitSel      : sl;
+      waitColSel   : sl;
       txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
       dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
@@ -131,7 +131,7 @@ architecture rtl of Pix2PgpArbiter is
       -- internal
       eventEmpty    => '0',
       dummyHeader   => '0',
-      waitSel       => '0',
+      waitColSel    => '0',
       txData        => (others => '0'),
       dummyCnt      => (others => '0'),
       dataHeader    => (others => '0'),
@@ -154,9 +154,14 @@ begin
                    trgCntGlbl, timeoutError) is
 
       variable v : RegType;
-      variable dataLenSel : slv(DATALEN_WIDTH_C-1 downto 0);
-      variable trgCntSel  : slv(TRGCNT_WIDTH_C-1 downto 0);
-      variable dataBusSel : slv(DATABUS_DWIDTH_C-1 downto 0);
+      -- temp variables for status bus
+      variable pauseSel     : sl;
+      variable overOccSel   : sl;
+      variable flagsSel     : slv(7 downto 0);
+      variable dataLenSel   : slv(DATALEN_WIDTH_C-1 downto 0);
+      variable trgCntSel    : slv(TRGCNT_WIDTH_C-1 downto 0);
+      -- temp variables for data bus
+      variable dataBusSel   : slv(DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 
@@ -185,12 +190,19 @@ begin
 
       -- status Mux
       if PIPELINE_STATUS_G then
-         dataLenSel := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
-         trgCntSel  := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         overOccSel   := r.statusBus(conv_integer(unsigned(r.colSel))).overOcc;
+         pauseSel     := r.statusBus(conv_integer(unsigned(r.colSel))).pause;
+         dataLenSel   := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel    := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
       else
-         dataLenSel := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
-         trgCntSel  := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         overOccSel   := v.statusBus(conv_integer(unsigned(r.colSel))).overOcc;
+         pauseSel     := v.statusBus(conv_integer(unsigned(r.colSel))).pause;
+         dataLenSel   := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
+         trgCntSel    := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
       end if;
+
+      -- group the flags
+      flagsSel := resize(overOccSel & pauseSel, 8);
 
       -- data Mux
       dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
@@ -222,7 +234,7 @@ begin
 
                v.state := CHECK_BITMASK_S;
 
-               -- if empty, go-to DONE state
+               -- if empty, go-to state where dummy headers are TX'd
                if v.eventEmpty = '1' then
                   v.state := TX_DUMMY_S;
                end if;
@@ -230,7 +242,7 @@ begin
 
          ----------------------------------------------------------------------
          -- check the bitmask value of the selected column
-         -- if non-zero, write the length and start reading immediately
+         -- if non-zero, write the column metadata and start reading immediately
          when CHECK_BITMASK_S =>
             if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
@@ -241,13 +253,17 @@ begin
                end if;
 
             else
-               v.waitSel := '1'; -- wait one cycle for bus to stabilize
-               if r.waitSel = '1' then
+               v.waitColSel := '1'; -- wait one cycle for mux/demuxes to stabilize
+
+               if r.waitColSel = '1' then
                   if v.sAxisMaster.tValid = '0' then
                      --
-                     v.txData(DATABUS_DWIDTH_C-1 downto 8) := resize(trgCntSel,  32);
-                     v.txData(7 downto 0)                  := resize(dataLenSel, 8);
-                     v.sAxisMaster.tValid                  := '1';
+                     -- these look a bit too ASIC-specific for the time being...
+                     v.txData(39 downto 24) := resize(flagsSel,  16);
+                     v.txData(23 downto 16) := resize(r.colSel,   8);
+                     v.txData(15 downto 8)  := resize(trgCntSel,  8);
+                     v.txData(7 downto 0)   := resize(dataLenSel, 8);
+                     v.sAxisMaster.tValid   := '1';
                      --
 
                      v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
@@ -267,7 +283,7 @@ begin
          ------------------------------------------------------------------------
          -- parse the data from the selected data bus
          when PARSE_DATA_S =>
-            v.waitSel := '0'; -- reset the flag
+            v.waitColSel := '0'; -- reset the flag
 
             if v.sAxisMaster.tValid = '0' and r.dataRdCnt /= r.dataRdCycles then
                --
