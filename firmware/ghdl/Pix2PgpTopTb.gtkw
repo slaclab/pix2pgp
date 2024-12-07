@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Fri Dec  6 01:29:38 2024
+[*] Fri Dec  6 09:17:42 2024
 [*]
 [dumpfile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.ghw"
-[dumpfile_mtime] "Fri Dec  6 01:23:58 2024"
-[dumpfile_size] 9527542
+[dumpfile_mtime] "Fri Dec  6 09:17:17 2024"
+[dumpfile_size] 6145938
 [savefile] "/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/Pix2PgpTopTb.gtkw"
-[timestart] 25985600000
-[size] 1610 986
+[timestart] 25143400000
+[size] 1850 1016
 [pos] -1 -1
-*-25.527491 26095771600 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.942970 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.pix2pgptoptb.
 [treeopen] top.pix2pgptoptb.gen_dummy_pixel[0].
@@ -30,6 +30,7 @@
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.gen_col_manager[7].u_columnmanager.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.
+[treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.r.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.u_gearbox.saxismaster.
 [treeopen] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_columnsupervisor.r.
@@ -78,9 +79,9 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.pgpclk
 @28
 [color] 2
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.saxisslave.tready
-@800023
+@800022
 #{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[20] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[19] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[18] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[17] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[16] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[15] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[14] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[13] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[12] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[11] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[10] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[9] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[8] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[7] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[6] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[5] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
-@29
+@28
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[23]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[22]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[21]
@@ -105,8 +106,10 @@ top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[3]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[2]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[1]
 top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.datard[0]
-@1001201
+@1001200
 -group_end
+@25
+#{top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4:0]} top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[4] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[3] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[2] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[1] top.pix2pgptoptb.u_uut.u_pix2pgptop.u_arbiter.r.colsel[0]
 @200
 -
 -toPgpTxLite
