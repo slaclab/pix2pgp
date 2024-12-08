@@ -306,8 +306,9 @@ begin
             -- ...and finally pop the status word when arbiter's busy transitions to low
             -- (negative-edge detection)
             if v.arbiterBusy = '0' and r.arbiterBusy = '1' then
-               v.statusRd := '1'; -- pop the status word
-               v.state    := WAIT_STATE_S;
+               v.statusRd     := '1'; -- pop the status word
+               v.timeoutError := '0'; -- clear the flag
+               v.state        := WAIT_STATE_S;
             end if;
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -321,7 +322,7 @@ begin
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
 
-            if v.pauseError = '1' or v.timeoutError = '1' then
+            if v.pauseError = '1' then
                if r.waitCnt = STATUS_EVAL_DELAY_ERROR_C then
                   v.state := ERROR_S;
                end if;
