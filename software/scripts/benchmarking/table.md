@@ -1,4 +1,4 @@
-| **Occupancy (%)** | **Total Hits (per 24 hours)** | **User Payload (bits)** | **Number of PGP Frame Words** | **Data Transfer Efficiency (%)** | **Maximum Rate (in KHz)** |
+| **Occupancy (%)** | **Total Hits (per 24 cols)** | **User Payload (bits)** | **Number of PGP Frame Words** | **Data Transfer Efficiency (%)** | **Maximum Rate (in KHz)** |
 |-------------------|-------------------------------|--------------------------|-------------------------------|----------------------------------|---------------------------|
 | 0.5               | 96                            | 2272                     | 50                            | 66.2                             | 1146.5155                 |
 | 1.0               | 168                           | 3712                     | 80                            | 68.58                            | 829.1764                  |
