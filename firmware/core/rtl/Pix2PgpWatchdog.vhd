@@ -28,7 +28,7 @@ entity Pix2PgpWatchdog is
    generic(
       TPD_G          : time     := 1 ns;
       RST_ASYNC_G    : boolean  := false;
-      RST_POLARITY_G : sl       := '1';
+      RST_POLARITY_G : std_logic := '1';
       CNT_WIDTH_G    : positive := 12);
    port(
       -- General Interface

@@ -25,7 +25,7 @@ entity Pix2PgpFifoWrapper is
    generic(
       TPD_G            : time    := 1 ns;
       RST_ASYNC_G      : boolean := false;
-      RST_POLARITY_G   : sl      := '1';
+      RST_POLARITY_G   : std_logic := '1';
       WR_DATA_WIDTH_G  : integer := 20;
       RD_DATA_WIDTH_G  : integer := 20;
       FULL_THRES_G     : integer := 6;

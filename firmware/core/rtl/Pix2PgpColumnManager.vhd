@@ -28,7 +28,7 @@ entity Pix2PgpColumnManager is
    generic(
       TPD_G             : time    := 1 ns;
       RST_ASYNC_G       : boolean := false;
-      RST_POLARITY_G    : sl      := '1';
+      RST_POLARITY_G    : std_logic := '1';
       DATAFIFO_PIPE_G   : natural := 1;
       STATUSFIFO_PIPE_G : natural := 1;
       DATA_DEPTH_G      : integer := 32;

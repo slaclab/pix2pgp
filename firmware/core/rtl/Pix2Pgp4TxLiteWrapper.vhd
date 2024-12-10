@@ -25,7 +25,7 @@ use surf.Pgp4Pkg.all;
 entity Pix2Pgp4TxLiteWrapper is
    generic (
       TPD_G          : time    := 1 ns;
-      RST_POLARITY_G : sl      := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
+      RST_POLARITY_G : std_logic := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
       RST_ASYNC_G    : boolean := false);
    port (
       -- Clock and Reset

@@ -31,7 +31,7 @@ entity Pix2PgpArbiter is
    generic(
       TPD_G             : time     := 1 ns;
       RST_ASYNC_G       : boolean  := false;
-      RST_POLARITY_G    : sl       := '1';
+      RST_POLARITY_G    : std_logic := '1';
       PIPELINE_STATUS_G : boolean  := false;
       PIPELINE_DATA_G   : boolean  := false);
    port(

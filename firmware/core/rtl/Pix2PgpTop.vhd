@@ -30,7 +30,7 @@ entity Pix2PgpTop is
    generic(
       TPD_G                     : time     := 1 ns;
       RST_ASYNC_G               : boolean  := true;
-      RST_POLARITY_G            : sl       := '1';
+      RST_POLARITY_G            : std_logic := '1';
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
