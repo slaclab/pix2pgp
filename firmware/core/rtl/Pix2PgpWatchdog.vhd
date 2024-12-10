@@ -26,10 +26,10 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpWatchdog is
    generic(
-      TPD_G          : time     := 1 ns;
-      RST_ASYNC_G    : boolean  := false;
+      TPD_G          : time      := 1 ns;
+      RST_ASYNC_G    : boolean   := false;
       RST_POLARITY_G : std_logic := '1';
-      CNT_WIDTH_G    : positive := 12);
+      CNT_WIDTH_G    : positive  := 12);
    port(
       -- General Interface
       clk     : in  sl;

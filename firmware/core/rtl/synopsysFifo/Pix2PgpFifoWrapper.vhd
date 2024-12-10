@@ -23,18 +23,18 @@ use surf.StdRtlPkg.all;
 
 entity Pix2PgpFifoWrapper is
    generic(
-      TPD_G            : time    := 1 ns;
-      RST_ASYNC_G      : boolean := false;
+      TPD_G            : time      := 1 ns;
+      RST_ASYNC_G      : boolean   := false;
       RST_POLARITY_G   : std_logic := '1';
-      WR_DATA_WIDTH_G  : integer := 20;
-      RD_DATA_WIDTH_G  : integer := 20;
-      FULL_THRES_G     : integer := 6;
-      ADDR_WIDTH_G     : integer := 12;
-      DWARE_DEPTH_G    : integer := 32;
-      DWARE_AF_LVL_G   : integer := 2;
-      PIPE_STAGES_G    : natural := 0;
-      FWFT_EN_G        : boolean := false;
-      GEN_SYNC_FIFO_G  : boolean := false);
+      WR_DATA_WIDTH_G  : integer   := 20;
+      RD_DATA_WIDTH_G  : integer   := 20;
+      FULL_THRES_G     : integer   := 6;
+      ADDR_WIDTH_G     : integer   := 12;
+      DWARE_DEPTH_G    : integer   := 32;
+      DWARE_AF_LVL_G   : integer   := 2;
+      PIPE_STAGES_G    : natural   := 0;
+      FWFT_EN_G        : boolean   := false;
+      GEN_SYNC_FIFO_G  : boolean   := false);
    port(
       -- Resets
       rst      : in  sl;

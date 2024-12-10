@@ -27,11 +27,11 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G                 : time     := 1 ns;
-      RST_ASYNC_G           : boolean  := false;
+      TPD_G                 : time      := 1 ns;
+      RST_ASYNC_G           : boolean   := false;
       RST_POLARITY_G        : std_logic := '1';
-      PIPELINE_STATUS_G     : boolean  := false;
-      TIMEOUT_LIMIT_WIDTH_G : positive := 12);
+      PIPELINE_STATUS_G     : boolean   := false;
+      TIMEOUT_LIMIT_WIDTH_G : positive  := 12);
    port(
       -- General Interface
       pgpClk        : in  sl;

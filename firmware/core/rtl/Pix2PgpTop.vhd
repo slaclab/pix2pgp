@@ -28,16 +28,16 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is
    generic(
-      TPD_G                     : time     := 1 ns;
-      RST_ASYNC_G               : boolean  := true;
+      TPD_G                     : time      := 1 ns;
+      RST_ASYNC_G               : boolean   := true;
       RST_POLARITY_G            : std_logic := '1';
-      PIPELINE_DATA_G           : boolean  := false;
-      PIPELINE_STATUS_G         : boolean  := true;
-      TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
-      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
-      DATAFIFO_PIPE_G           : natural  := 1;
-      STATUSFIFO_PIPE_G         : natural  := 1);
+      PIPELINE_DATA_G           : boolean   := false;
+      PIPELINE_STATUS_G         : boolean   := true;
+      TIMEOUT_LIMIT_WIDTH_G     : positive  := 12;
+      COLMANAGER_DATA_DEPTH_G   : integer   := 7;
+      COLMANAGER_STATUS_DEPTH_G : integer   := 6;
+      DATAFIFO_PIPE_G           : natural   := 1;
+      STATUSFIFO_PIPE_G         : natural   := 1);
    port(
       -- General Interface
       sparseClk    : in  sl;
