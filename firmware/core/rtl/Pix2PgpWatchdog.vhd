@@ -33,7 +33,7 @@ entity Pix2PgpWatchdog is
    port(
       -- General Interface
       clk     : in  sl;
-      rst     : in  sl := not(RST_POLARITY_G);
+      rst     : in  sl;
       limit   : in  slv(CNT_WIDTH_G-1 downto 0);
       -- Control Interface
       set     : in  sl;

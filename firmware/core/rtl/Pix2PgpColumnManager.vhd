@@ -37,7 +37,7 @@ entity Pix2PgpColumnManager is
       -- General Interface
       sparseClk : in  sl;
       pgpClk    : in  sl;
-      sparseRst : in  sl := not(RST_POLARITY_G);
+      sparseRst : in  sl;
       -- Sparse Logic Interface
       din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
       wrEn      : in  sl;

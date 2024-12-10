@@ -37,7 +37,7 @@ entity Pix2PgpArbiter is
    port(
       -- General Interface
       pgpClk        : in  sl;
-      pgpRst        : in  sl := not(RST_POLARITY_G);
+      pgpRst        : in  sl;
       -- Column Manager Interface
       statusBus     : in  Pix2PgpStatusBusArray;
       dataBus       : in  Pix2PgpDataBusArray;

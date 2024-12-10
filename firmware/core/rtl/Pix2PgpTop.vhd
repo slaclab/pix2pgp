@@ -42,8 +42,8 @@ entity Pix2PgpTop is
       -- General Interface
       sparseClk    : in  sl;
       pgpClk       : in  sl;
-      sparseRst    : in  sl := not(RST_POLARITY_G);
-      pgpRst       : in  sl := not(RST_POLARITY_G);
+      sparseRst    : in  sl;
+      pgpRst       : in  sl;
       timeoutLimit : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
