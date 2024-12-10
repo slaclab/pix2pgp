@@ -51,7 +51,7 @@ architecture rtl of Pix2PgpWatchdog is
       cnt     => (others => '0'),
       timeout => '0');
 
-   signal r   : RegType := REG_INIT_C;
+   signal r   : RegType;
    signal rin : RegType;
 
 begin

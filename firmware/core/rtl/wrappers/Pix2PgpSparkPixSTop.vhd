@@ -79,20 +79,20 @@ end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
 
-   signal din               : Pix2PgpSparseDinArray := (others => (others => '0'));
+   signal din               : Pix2PgpSparseDinArray;
    signal timeoutLimitMuxed : std_logic_vector(11 downto 0);
    signal columnEnableMuxed : std_logic_vector(23 downto 0);
 
-   signal pgpTxMaster       : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal pgpTxMaster       : AxiStreamMasterType;
    signal pgpTxSlave        : AxiStreamSlaveType;
 
-   signal phyTxValid        : std_logic := '0';
-   signal phyTxReady        : std_logic := '1';
-   signal phyTxData         : std_logic_vector(65 downto 0) := (others => '0');
+   signal phyTxValid        : std_logic;
+   signal phyTxReady        : std_logic;
+   signal phyTxData         : std_logic_vector(65 downto 0);
 
-   signal serGboxReady      : std_logic := '0';
-   signal serGboxValid      : std_logic := '0';
-   signal serGboxData       : std_logic_vector(31 downto 0) := (others => '0');
+   signal serGboxReady      : std_logic;
+   signal serGboxValid      : std_logic;
+   signal serGboxData       : std_logic_vector(31 downto 0);
 
 begin
 

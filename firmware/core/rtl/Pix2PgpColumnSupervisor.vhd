@@ -125,11 +125,11 @@ architecture rtl of Pix2PgpColumnSupervisor is
       waitCnt        => (others => '0'),
       state          => IDLE_S);
 
-   signal r   : RegType := REG_INIT_C;
+   signal r   : RegType;
    signal rin : RegType;
 
-   signal setWatchdog : sl := '0';
-   signal timeout     : sl := '0';
+   signal setWatchdog : sl;
+   signal timeout     : sl;
 
 begin
 

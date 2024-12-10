@@ -62,21 +62,21 @@ end Pix2PgpTop;
 
 architecture rtl of Pix2PgpTop is
 
-   signal dataRd         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal statusRd       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal statusBus      : Pix2PgpStatusBusArray := (others => DEFAULT_PIX2PGP_STATUSBUS_C);
-   signal dataBus        : Pix2PgpDataBusArray   := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal dataRd         : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal statusRd       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal statusBus      : Pix2PgpStatusBusArray;
+   signal dataBus        : Pix2PgpDataBusArray;
+   signal columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    --
-   signal arbStart       : sl := '0';
-   signal colFifoError   : sl := '0';
-   signal overOccError   : sl := '0';
-   signal arbBusy        : sl := '0';
-   signal colPause       : sl := '0';
-   signal colPauseError  : sl := '0';
-   signal timeoutError   : sl := '0';
-   signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
-   signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+   signal arbStart       : sl;
+   signal colFifoError   : sl;
+   signal overOccError   : sl;
+   signal arbBusy        : sl;
+   signal colPause       : sl;
+   signal colPauseError  : sl;
+   signal timeoutError   : sl;
+   signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
+   signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    --
 
 begin

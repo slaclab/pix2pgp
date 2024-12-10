@@ -59,10 +59,6 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
-   -- reset via the variables
-   signal sAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal sAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
@@ -140,8 +136,12 @@ architecture rtl of Pix2PgpArbiter is
       sAxisMaster   => AXI_STREAM_MASTER_INIT_C,
       sAxisSlave    => AXI_STREAM_SLAVE_INIT_C);
 
-   signal r   : RegType := REG_INIT_C;
+   signal r   : RegType;
    signal rin : RegType;
+
+   -- reset via the variables
+   signal sAxisMaster : AxiStreamMasterType;
+   signal sAxisSlave  : AxiStreamSlaveType;
 
 begin
 

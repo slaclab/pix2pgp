@@ -42,27 +42,19 @@ end entity Pix2Pgp4TxLiteWrapper;
 
 architecture mapping of Pix2Pgp4TxLiteWrapper is
 
-   signal pgpTxIn : Pgp4TxInType := (
-      disable     => '0',               -- TX is enabled
-      flowCntlDis => '1',  -- Disable PGPv4 pause flow control from RX side
-      resetTx     => '0',               -- Not resetting TX
-      skpInterval => (others => '0'),  -- No skips (assumes clock source synchronous system)
-      opCodeEn    => '0',               -- OP-code mode not being implemented
-      opCodeData  => (others => '0'),
-      locData     => (others => '0'));  -- sideband locData not being implemented
-
-   signal rstL : sl;
+   signal pgpTxIn : Pgp4TxInType;
+   signal rstL    : sl;
 
 begin
 
    -- static assignment in architecture (ASIC)
-   pgpTxIn.disable     <= '0';
-   pgpTxIn.flowCntlDis <= '1';
-   pgpTxIn.resetTx     <= '0';
-   pgpTxIn.skpInterval <= (others => '0');
-   pgpTxIn.opCodeEn    <= '0';
+   pgpTxIn.disable     <= '0';             -- TX is enabled
+   pgpTxIn.flowCntlDis <= '1';             -- Disable PGPv4 pause flow control from RX side
+   pgpTxIn.resetTx     <= '0';             -- Not resetting TX
+   pgpTxIn.skpInterval <= (others => '0'); -- No skips (assumes clock source synchronous system)
+   pgpTxIn.opCodeEn    <= '0';             -- OP-code mode not being implemented
    pgpTxIn.opCodeData  <= (others => '0');
-   pgpTxIn.locData     <= (others => '0');
+   pgpTxIn.locData     <= (others => '0'); -- sideband locData not being implemented
 
    U_Pgp4TxLite : entity surf.Pgp4TxLite
       generic map (

@@ -145,11 +145,11 @@ architecture rtl of Pix2PgpFifoWrapper is
          data_out    : out std_logic_vector( width-1 downto 0 ));
    end component;
 
-   signal rstDwareFifo      : sl := '0';
-   signal wrEnDwareFifo     : sl := '0';
-   signal rdEnDwareFifo     : sl := '0';
-   signal rstFifo           : sl := '0';
-   signal validWr           : sl := '0';
+   signal rstDwareFifo      : sl;
+   signal wrEnDwareFifo     : sl;
+   signal rdEnDwareFifo     : sl;
+   signal rstFifo           : sl;
+   signal validWr           : sl;
 
 begin
 
