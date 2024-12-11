@@ -261,10 +261,16 @@ begin
       din(23) <= din23;
 
    -- Configurable Registers Management
-   process(pgpClk)
+   process(pgpRst, pgpClk)
    begin
-      if (rising_edge(pgpClk)) then
-         if sel = '1' then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
+         timeoutLimitMuxed <= (others => '0');
+         columnEnableMuxed <= (others => '0');
+      elsif (rising_edge(pgpClk)) then
+         if pgpRst = RST_POLARITY_G then
+            timeoutLimitMuxed <= (others => '0');
+            columnEnableMuxed <= (others => '0');
+         elsif sel = '1' then
             timeoutLimitMuxed <= timeoutLimit;
             columnEnableMuxed <= columnEnable;
          end if;
