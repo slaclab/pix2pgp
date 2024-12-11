@@ -40,7 +40,6 @@ entity Pix2PgpColumnSupervisor is
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       statusBus     : in  Pix2PgpStatusBusArray;
-      columnBusy    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRd      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Arbiter Interface
       arbiterBusy   : in  sl;
@@ -76,7 +75,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colPause       : sl;
       statusBus      : Pix2PgpStatusBusArray;
       colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause          : sl;
@@ -106,7 +104,6 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colPause       => '0',
       statusBus      => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask     => (others => '0'),
-      columnBusy     => (others => '0'),
       trgCntGlbl     => (others => '1'),
       -- internal
       pause          => '0',
@@ -136,12 +133,10 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBus, arbiterBusy,
-                   columnEnable, columnBusy, timeout) is
+   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable, timeout) is
 
       variable v             : RegType;
       variable statusBusInt  : Pix2PgpStatusBusArray;
-      variable columnBusyInt : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
    begin
 
@@ -194,14 +189,6 @@ begin
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
          v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col) and v.dataReady(col);
-
-         -- busy is used to exit from the pause-error state
-         v.columnBusy(col) := columnBusy(col) and v.columnEnable(col);
-         if PIPELINE_STATUS_G then
-            columnBusyInt := r.columnBusy;
-         else
-            columnBusyInt := v.columnBusy;
-         end if;
 
       end loop;
 
@@ -345,7 +332,7 @@ begin
             end if;
 
             -- all FIFOs drained; back to IDLE
-            if uOr(v.dataReady) = '0' and uOr(columnBusyInt) = '0' then
+            if uOr(v.dataReady) = '0' then
                v.timeoutError := '0';
                v.pauseError   := '0';
                v.state        := IDLE_S;

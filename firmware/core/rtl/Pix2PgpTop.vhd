@@ -66,7 +66,6 @@ architecture rtl of Pix2PgpTop is
    signal statusRd       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal statusBus      : Pix2PgpStatusBusArray;
    signal dataBus        : Pix2PgpDataBusArray;
-   signal columnBusy     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    --
    signal arbStart       : sl;
    signal colFifoError   : sl;
@@ -80,9 +79,6 @@ architecture rtl of Pix2PgpTop is
    --
 
 begin
-
-   -- route to output port
-   busy <= columnBusy;
 
    ---------------------------------------
    -- Column Manager
@@ -109,7 +105,7 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             pauseAck  => pauseAck(col),
-            busy      => columnBusy(col),
+            busy      => busy(col),
             pause     => pause(col),
             -- Arbiter and Column Supervisor Interface
             statusRd  => statusRd(col),
@@ -136,7 +132,6 @@ begin
          columnEnable  => columnEnable,
          -- Column Manager Interface
          statusBus     => statusBus,
-         columnBusy    => columnBusy,
          statusRd      => statusRd,
          -- Arbiter Interface
          arbiterBusy   => arbBusy,
