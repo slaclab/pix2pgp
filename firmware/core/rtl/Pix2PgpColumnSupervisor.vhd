@@ -55,7 +55,7 @@ end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
 
-   constant STATUS_EVAL_DELAY_NORMAL_C : positive := 3;
+   constant STATUS_EVAL_DELAY_NORMAL_C : positive := 4;
    constant STATUS_EVAL_DELAY_ERROR_C  : positive := 15;
 
    type StateType is (
@@ -235,7 +235,7 @@ begin
             end if;
 
             -- set-watchdog flag
-            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
+            if uOr(v.dataReady) = '1' and r.allColsReady = '0' then
                v.setWatchdog := '1';
             end if;
 
@@ -243,7 +243,7 @@ begin
             -- nominal operation
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- one extra delay cycle
-            if v.allColsReady = '1' and r.allColsReady = '1' then
+            if r.allColsReady = '1' then
 
                -- raise the pause flag if necessary;
                -- override the columns that will be read;
