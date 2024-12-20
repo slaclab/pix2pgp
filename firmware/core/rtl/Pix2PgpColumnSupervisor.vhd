@@ -56,7 +56,7 @@ end Pix2PgpColumnSupervisor;
 architecture rtl of Pix2PgpColumnSupervisor is
 
    constant STATUS_EVAL_DELAY_NORMAL_C : positive := 3;
-   constant STATUS_EVAL_DELAY_ERROR_C  : positive := 15;
+   constant STATUS_EVAL_DELAY_ERROR_C  : positive := 10;
 
    type StateType is (
       IDLE_S,

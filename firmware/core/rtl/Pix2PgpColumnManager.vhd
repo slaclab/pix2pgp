@@ -160,11 +160,21 @@ begin
       -- gotta inhibit the writing of the status FIFO fast!
       v.statusFifoOk := not(statusFifoAlmFull);
 
-      -- raise and latch busy signal until end-of-frame;
-      -- increment trigger counter
+      -- raise and latch busy signal until end-of-frame
       if v.sof = '1' and v.busy = '0' then
+         v.busy := '1';
+      end if;
+
+      -- trigger counter control; essentially increments once per SRO
+      -- sof is easy...just increment on rising-edge. this is the nominal case
+      -- note how the trigger counter is incremented on over-Occ;
+      -- upon reception of over-occ, the trgCnt increments one cycle later,
+      -- since the *previous* trgCnt should be written into the status FIFO;
+      -- note that over-occ acts as an eof and a sof, and is always single-cycle wide
+      if v.sof = '1' and r.sof = '0' then
          v.trgCnt := r.trgCnt + 1;
-         v.busy   := '1';
+      elsif r.overOcc = '1' then
+         v.trgCnt := r.trgCnt + 1;
       end if;
 
       -- data FIFO wrEn
@@ -215,25 +225,21 @@ begin
          v.statusWr := '1';
          v.wrEnCnt  := (others => '0');
 
-         -- reset the flags (including busy)
-         -- over-occupancy received and written
-         -- retroactively increment trigger counter
+         -- reset the flags
+         -- over-occupancy received and written; reset flag
          if r.overOccStatus = '1' then
-            v.trgCnt        := r.trgCnt + 1;
             v.overOccStatus := '0';
          end if;
 
-         -- pause-acknowledge received and written
+         -- pause-acknowledge received and written; reset flag
          if r.pauseAckStatus = '1' then
             v.pauseAckStatus := '0';
          end if;
 
-         -- regular EOF received and written; reset all flags and busy
+         -- regular EOF received and written; reset flag and busy
          if r.eofStatus = '1' then
-            v.eofStatus      := '0';
-            v.overOccStatus  := '0';
-            v.pauseAckStatus := '0';
-            v.busy           := '0';
+            v.eofStatus := '0';
+            v.busy      := '0';
          end if;
       end if;
       -- ///////////////////////////////////////////////////////////////////////////////////////////
