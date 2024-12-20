@@ -242,8 +242,7 @@ begin
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- nominal operation
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            -- one extra delay cycle
-            if v.allColsReady = '1' and r.allColsReady = '1' then
+            if v.allColsReady = '1' then
 
                -- raise the pause flag if necessary;
                -- override the columns that will be read;
@@ -348,7 +347,7 @@ begin
       colPause      <= r.pause;
       colPauseError <= r.pauseError;
       colBitmask    <= r.colBitmask;
-      arbiterStart  <= r.arbiterStart;
+      arbiterStart  <= r.arbiterStart; -- delay for one cycle
       trgCntGlbl    <= r.trgCntGlbl;
       timeoutError  <= r.timeoutError;
 
