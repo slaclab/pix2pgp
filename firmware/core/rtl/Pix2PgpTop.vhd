@@ -74,11 +74,19 @@ architecture rtl of Pix2PgpTop is
    signal colPause       : sl;
    signal colPauseError  : sl;
    signal timeoutError   : sl;
+   signal anyColBusy     : sl;
    signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal colBusy        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    --
 
 begin
+
+   -- busy out
+   busy <= colBusy;
+
+   -- busy internal (sparseClk domain; re-sync if necessary)
+   anyColBusy <= uOr(colBusy);
 
    ---------------------------------------
    -- Column Manager
@@ -105,7 +113,7 @@ begin
             eof       => eof(col),
             overOcc   => overOcc(col),
             pauseAck  => pauseAck(col),
-            busy      => busy(col),
+            busy      => colBusy(col),
             pause     => pause(col),
             -- Arbiter and Column Supervisor Interface
             statusRd  => statusRd(col),
@@ -131,6 +139,7 @@ begin
          timeoutLimit  => timeoutLimit,
          columnEnable  => columnEnable,
          -- Column Manager Interface
+         colBusy       => anyColBusy,
          statusBus     => statusBus,
          statusRd      => statusRd,
          -- Arbiter Interface

@@ -39,6 +39,7 @@ entity Pix2PgpColumnSupervisor is
       timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
+      colBusy       : in  sl;
       statusBus     : in  Pix2PgpStatusBusArray;
       statusRd      : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Arbiter Interface
@@ -79,6 +80,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       -- internal
       pause          : sl;
       pauseError     : sl;
+      lastErrorRead  : sl;
       setWatchdog    : sl;
       timeout        : sl;
       allColsReady   : sl;
@@ -108,6 +110,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       -- internal
       pause          => '0',
       pauseError     => '0',
+      lastErrorRead  => '0',
       setWatchdog    => '0',
       timeout        => '0',
       allColsReady   => '0',
@@ -127,13 +130,14 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    signal setWatchdog : sl;
    signal timeout     : sl;
+   signal colBusySync : sl;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable, timeout) is
+   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable, timeout, colBusySync) is
 
       variable v             : RegType;
       variable statusBusInt  : Pix2PgpStatusBusArray;
@@ -305,18 +309,34 @@ begin
          -- reading the status word after one cycle may not force the empty signal
          -- to go high on the next if there are no more status words in the FIFO
          -- note that we have two different delays;
-         -- need to wait longer when assessing error cases
+         -- need to wait longer when exiting the error-read case
          when WAIT_STATE_S =>
             v.waitCnt := r.waitCnt + 1;
 
-            if v.pauseError = '1' then
-               if r.waitCnt = STATUS_EVAL_DELAY_ERROR_C then
+            -- nominal
+            if r.waitCnt = STATUS_EVAL_DELAY_NORMAL_C and v.lastErrorRead = '0' then
+            
+               v.state := IDLE_S;
+
+               -- override if in pause-error
+               if v.pauseError = '1' then
                   v.state := ERROR_S;
                end if;
-            else
-               if r.waitCnt = STATUS_EVAL_DELAY_NORMAL_C then
-                  v.state := IDLE_S;
+
+            end if;
+
+            -- last error read; make sure that all is empty and no-one is busy
+            if r.waitCnt = STATUS_EVAL_DELAY_ERROR_C and v.lastErrorRead = '1' then
+
+               v.lastErrorRead := '0';
+               v.state         := ERROR_S;
+
+               -- all good; override state transition
+               if uOr(v.dataReady) = '0' and colBusySync = '0' then
+                  v.pauseError := '0';
+                  v.state      := IDLE_S;
                end if;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -331,11 +351,12 @@ begin
                v.state        := ARB_START_S;
             end if;
 
-            -- all FIFOs drained; back to IDLE
+            -- all FIFOs drained;
+            -- 1. wait for some more cycles
+            -- 2. make sure the columns are not busy and FIFOs are still empty
             if uOr(v.dataReady) = '0' then
-               v.timeoutError := '0';
-               v.pauseError   := '0';
-               v.state        := IDLE_S;
+               v.lastErrorRead := '1';
+               v.state         := WAIT_STATE_S;
             end if;
 
       end case;
@@ -380,6 +401,16 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   U_SyncBusy : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpClk,
+         dataIn  => colBusy,
+         dataOut => colBusySync);
 
    U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
       generic map(
