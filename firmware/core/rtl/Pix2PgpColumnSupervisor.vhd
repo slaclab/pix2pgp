@@ -238,8 +238,13 @@ begin
                v.pause := '1';
             end if;
 
-            -- set-watchdog flag
-            if uOr(v.dataReady) = '1' and v.allColsReady = '0' then
+            -- set-watchdog flag.
+            -- if there is at least one column with data but not all;
+            -- AND if the state of the column-ready bus does not change =>
+            -- trigger the watchdog count.
+            -- (if the state of the bus changes, the watchdog will reset itself)
+            if (uOr(v.dataReady) = '1' and v.allColsReady = '0') and
+               ((v.dataReady and v.columnEnable) = (r.dataReady and v.columnEnable)) then
                v.setWatchdog := '1';
             end if;
 
@@ -315,7 +320,6 @@ begin
 
             -- nominal
             if r.waitCnt = STATUS_EVAL_DELAY_NORMAL_C and v.lastErrorRead = '0' then
-            
                v.state := IDLE_S;
 
                -- override if in pause-error
