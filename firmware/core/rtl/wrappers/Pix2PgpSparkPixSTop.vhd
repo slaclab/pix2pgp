@@ -23,8 +23,8 @@ entity Pix2PgpSparkPixSTop is
       PIPELINE_DATA_G           : boolean   := false; -- pipeline data FIFO output downstream
       PIPELINE_STATUS_G         : boolean   := true;  -- pipeline status FIFO output downstream
       TIMEOUT_LIMIT_WIDTH_G     : positive  := 12;    -- bitwidth of timeout counter
-      COLMANAGER_DATA_DEPTH_G   : integer   := 7;     -- colManager data FIFO depth (holds *2 hits)
-      COLMANAGER_STATUS_DEPTH_G : integer   := 6;     -- colManager status FIFO depth (1 per event)
+      COLMANAGER_DATA_DEPTH_G   : integer   := 12;    -- colManager data FIFO depth (holds *2 hits)
+      COLMANAGER_STATUS_DEPTH_G : integer   := 12;    -- colManager status FIFO depth (1 per event)
       DATAFIFO_PIPE_G           : natural   := 1;     -- colManager data FIFO I/O pipeline stages
       STATUSFIFO_PIPE_G         : natural   := 1;     -- colManager status FIFO I/O pipeline stages
       SER_GBOX_PIPE_G           : natural   := 0);    -- *only* set when synthesizing (*not* in sim)
