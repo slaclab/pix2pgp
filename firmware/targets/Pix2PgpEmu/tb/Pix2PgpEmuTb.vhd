@@ -16,8 +16,8 @@ entity Pix2PgpEmuTb is
       FPGA_SYNTH_G              : boolean  := false;
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
-      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 8;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 8;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
       ARB_DOUT_PIPE_G           : natural  := 1;
       DATAFIFO_PIPE_G           : natural  := 1;

@@ -26,8 +26,8 @@ entity Pix2PgpTopTb is
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
-      COLMANAGER_DATA_DEPTH_G   : integer  := 7;
-      COLMANAGER_STATUS_DEPTH_G : integer  := 6;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 8;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 8;
       DATAFIFO_PIPE_G           : natural  := 1;
       STATUSFIFO_PIPE_G         : natural  := 1;
       NUM_VC_G                  : natural  := 1
