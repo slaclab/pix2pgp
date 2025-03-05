@@ -21,23 +21,32 @@ ROOT_DIR=${PWD}/../../
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 RTL_DIR=${ROOT_DIR}/firmware/core/rtl
-WRAPPERS_DIR=${RTL_DIR}/wrappers
 TB_DIR=${ROOT_DIR}/firmware/core/tb
 FIFO_DIR=${GHDL_DIR}/ghdlFifo
 
 RTL=${RTL_DIR}/*.vhd
-WRAPPERS=${WRAPPERS_DIR}/*.vhd
+
 FIFO=${FIFO_DIR}/*.vhd
+
+WRAPPERS_DIR=${RTL_DIR}/wrappers
+WRAPPERS=${WRAPPERS_DIR}/*.vhd
+WRAPPERS_SPARKPIXS=${WRAPPERS_DIR}/Pix2PgpSparkPixSTop.vhd
+WRAPPERS_SPARKPIXT=${WRAPPERS_DIR}/Pix2PgpSparkPixTTop.vhd
 
 # note that the package has to be declared separately in order to be imported first
 PIX2PGP_PKG_DIR=${RTL_DIR}/pkg
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
+
+PIX2PGP_PKG_VAULT_DIR=${WRAPPERS_DIR}/asicPkg
 
 SURF_DIR=${RTL_DIR}/surf
 SURF=${SURF_DIR}/*.vhd
 SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
 TB=${TB_DIR}/*Tb.vhd
+TB_WRAPPERS_DIR=${TB_DIR}/wrappers
+TB_WRAPPERS_SPARKPIXS=${TB_WRAPPERS_DIR}/Pix2PgpSparkPixSTopTb.vhd
+TB_WRAPPERS_SPARKPIXT=${TB_WRAPPERS_DIR}/Pix2PgpSparkPixTTopTb.vhd
 
 # note that the packages hav to be declared separately in order to be imported first
 # the order of the packages *matter*.
@@ -247,6 +256,46 @@ ghdlClean()
 
 }
 
+##########################################################################
+# checks the testbench name and copies-over the corresponding Pkg
+checkWrapper()
+{
+    checkFileExists ${PIX2PGP_PKG}
+    pkg_exists=$?
+
+  if [[ $1 == *"SparkPixS"* ]]; then
+    echo "[INFO]: SparkPix-S testbench!"
+
+    if [[ $pkg_exists -eq 1 ]]; then
+      echo "[INFO]: Pkg exists! Removing file..."
+      echo "[INFO]: linking firmware/core/wrappers/asicPkg/SparkPixSPkg.vhd"
+      rm ${PIX2PGP_PKG}
+      ln -s ${PIX2PGP_PKG_VAULT_DIR}/SparkPixSPkg.vhd ${PIX2PGP_PKG}
+    fi
+
+    ${GHDL_ANALYZE} ${WRAPPERS_SPARKPIXS}
+    ${GHDL_ANALYZE} ${WRAPPERS_TB_SPARKPIXS}
+
+  elif [[ $1 == *"SparkPixT"* ]]; then
+    echo "[INFO]: SparkPix-T testbench!"
+
+    if [[ $pkg_exists -eq 1 ]]; then
+      echo "[INFO]: Pkg exists! Removing file..."
+      echo "[INFO]: linking firmware/core/wrappers/asicPkg/SparkPixTPkg.vhd"
+      rm ${PIX2PGP_PKG}
+      ln -s ${PIX2PGP_PKG_VAULT_DIR}/SparkPixTPkg.vhd ${PIX2PGP_PKG}
+    fi
+
+    ${GHDL_ANALYZE} ${WRAPPERS_SPARKPIXT}
+    ${GHDL_ANALYZE} ${WRAPPERS_TB_SPARKPIXT}
+
+  else
+    echo "[INFO]: Not sourcing any ASIC-specific tesbench."
+    echo "[INFO]: Not touching the package!"
+  fi
+
+}
+
 ghdlAnalyze()
 {
 
@@ -255,14 +304,14 @@ ghdlAnalyze()
   echo "Analyzing:"
   echo "$(ls ${RTL})"
   echo "$(ls ${TB})"
+
+  checkWrapper $1
   ${GHDL_ANALYZE} ${RTL}
-  ${GHDL_ANALYZE} ${WRAPPERS}
-  ${GHDL_ANALYZE} ${TB}
 }
 
 ghdlTestbench()
 {
-  tbFilePath="${TB_DIR}/${1}.vhd"
+  tbFilePath="${TB_WRAPPERS_DIR}/${1}.vhd"
   tbFileName="${1}.vhd"
   checkFileExists ${tbFilePath}
   tbExists=$?
@@ -324,7 +373,7 @@ main()
   fi
 
   ghdlClean
-  ghdlAnalyze
+  ghdlAnalyze $1
 
   if [[ $doTb -eq 1 ]]; then
     ghdlTestbench "$1" "$2"
