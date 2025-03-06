@@ -1,1 +1,1 @@
-/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/../..//firmware/core/rtl/wrappers/asicPkg/SparkPixSPkg.vhd
+/home/cb/Work/SLAC/projects/github/detectors/pix2pgp/firmware/ghdl/../..//firmware/core/rtl/wrappers/asicPkg/SparkPixTPkg.vhd

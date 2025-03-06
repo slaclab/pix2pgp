@@ -258,7 +258,8 @@ begin
                   if v.sAxisMaster.tValid = '0' then
                      --
                      -- these look a bit too ASIC-specific for the time being...
-                     v.txData(39 downto 24) := resize(flagsSel,  16);
+                     --v.txData(39 downto 24) := resize(flagsSel,  16); -- SparkPix-S
+                     v.txData(63 downto 24) := resize(flagsSel,  40); -- SparkPix-T
                      v.txData(23 downto 16) := resize(r.colSel,   8);
                      v.txData(15 downto 8)  := resize(trgCntSel,  8);
                      v.txData(7 downto 0)   := resize(dataLenSel, 8);
@@ -394,26 +395,31 @@ begin
    -----------------------------------------
    -- Axi-Stream Gearbox (40:64)
    -----------------------------------------
-   U_Gearbox : entity surf.AxiStreamGearbox
-      generic map(
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_POLARITY_G      => RST_POLARITY_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
-      port map(
-         -- Clock and reset
-         axisClk     => pgpClk,
-         axisRst     => pgpRst,
-         -- Slave Port
-         sAxisMaster => sAxisMaster,
-         sSideBand   => (others => '0'),
-         sAxisSlave  => sAxisSlave,
-         -- Master Port
-         mAxisMaster => pgpTxMaster,
-         mSideBand   => open,
-         mAxisSlave  => pgpTxSlave);
+   -- SparkPix-S
+   --U_Gearbox : entity surf.AxiStreamGearbox
+   --   generic map(
+   --      -- General Configurations
+   --      TPD_G               => TPD_G,
+   --      RST_POLARITY_G      => RST_POLARITY_G,
+   --      RST_ASYNC_G         => RST_ASYNC_G,
+   --      -- AXI Stream Port Configurations
+   --      SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
+   --      MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
+   --   port map(
+   --      -- Clock and reset
+   --      axisClk     => pgpClk,
+   --      axisRst     => pgpRst,
+   --      -- Slave Port
+   --      sAxisMaster => sAxisMaster,
+   --      sSideBand   => (others => '0'),
+   --      sAxisSlave  => sAxisSlave,
+   --      -- Master Port
+   --      mAxisMaster => pgpTxMaster,
+   --      mSideBand   => open,
+   --      mAxisSlave  => pgpTxSlave);
+
+   -- SparkPix-T
+   pgpTxMaster <= sAxisMaster;
+   sAxisSlave  <= pgpTxSlave;
 
 end rtl;

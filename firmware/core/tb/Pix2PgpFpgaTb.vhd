@@ -35,7 +35,7 @@ entity Pix2PgpFpgaTb is
       pgpDinReady : out sl;
       -- FPGA RX Interface
       pgpValid    : out sl;
-      pgpData     : out slv(39 downto 0));
+      pgpData     : out slv(DATABUS_DWIDTH_C-1 downto 0));
 end entity Pix2PgpFpgaTb;
 
 architecture test of Pix2PgpFpgaTb is
@@ -109,7 +109,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          SLAVE_WIDTH_G  => 64,
-         MASTER_WIDTH_G => 40)
+         MASTER_WIDTH_G => DATABUS_DWIDTH_C)
       port map (
          -- Clock and Reset
          clk            => clk,

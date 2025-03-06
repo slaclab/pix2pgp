@@ -106,9 +106,8 @@ package Pix2PgpPkg is
    -- Pix2Pgp data frame header
    ----------------------------
 
-   -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
-   -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
-   --
+   -- the Pix2Pgp data frame header *has* to be an equal to the databus width
+   -- i.e. = 64 for SparkPix-S
    -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
    -- the header has a standard trigger counter width that needs to be larger or equal
    -- to the actual trigger counter coming in from the columns;
@@ -121,24 +120,23 @@ package Pix2PgpPkg is
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1;
-   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWITDH_C-2;
-   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
-   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
-   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6;
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1; -- 63
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWITDH_C-2; -- 62
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3; -- 61
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4; -- 60
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5; -- 59
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6; -- 58
    --------------------------
-   -- reserved bits (only one left)
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
-                                              downto HEADER_DWITDH_C-8;
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7   -- [57:32]
+                                              downto HEADER_DWITDH_C-32;
    --------------------------
    -- col-bitmask
-   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
-                                              downto TRGCNT_HEADER_WIDTH_C;
+   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-33  -- [31:8]
+                                              downto HEADER_DWITDH_C-56;
    --------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1
-                                              downto 0;
+   subtype  TRG_CNT_POS_C          is natural range  HEADER_DWITDH_C-57 -- [7:0]
+                                              downto HEADER_DWITDH_C-64;
 
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
@@ -157,8 +155,6 @@ package Pix2PgpPkg is
 
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
-
-   constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
    -- functions
    function rightShift (inSlv: slv; count: natural) return slv;
