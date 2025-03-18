@@ -1,80 +1,25 @@
-# pix2pgp
-## How to Run the Simulation
-Based on GHDL. Navigate to the ghdl/ dir and execute this to simply analyze the files:
-```
-$ bash ghdlRun.sh
-```
+# Pix2Pgp
 
-If you want to run a testbench (here it is `Pix2PgpTopTb`), run:
-```
-$ bash ghdlRun.sh Pix2PgpTopTb
-```
-### Dependencies
-You should have the following two packages in your server to run the simulation:
-```
-* ghdl-llvm
-* gtkwave
-```
+Pix2PGP is a generic readout core designed to support Detector/Front-End ASICs that feature a sparsified readout scheme.
 
-## What to Include When Synthesizing
-### In a VHDL library called `pix2pgp` import the following files:
-```
-* firmware/rtl/Pix2PgpGearbox.vhd
-* firmware/rtl/Pix2PgpFifoCascade.vhd
-* firmware/rtl/Pix2PgpFifoMux.vhd
-* firmware/rtl/Pix2PgpFifo.vhd
-* firmware/rtl/Pix2PgpBridge.vhd
-* firmware/rtl/Pix2PgpColumnSupervisor.vhd
-* firmware/rtl/pkg/Pix2PgpPkg.vhd
-* firmware/rtl/Pix2PgpGearboxWrapper.vhd
-* firmware/rtl/Pix2PgpArbiter.vhd
-* firmware/rtl/Pix2PgpColumnManager.vhd
-* firmware/rtl/Pix2PgpTop.vhd
-* firmware/rtl/Pix2PgpFifoWrapper.vhd
-* firmware/rtl/Pix2PgpAdapter.vhd
-* firmware/rtl/Pix2PgpTopSparkPixS.vhd
-```
+For more info:
+[Google Doc Link](https://docs.google.com/document/d/1JWoombpoBZBulYuCbVD-M0LTDDdCfMX4FJ9Qwumctxg/edit?usp=sharing)
 
-### In a VHDL library called `surf` import the following files:
-```
-* firmware/submodules/surf/base/general/rtl/StdRtlPkg.vhd
-* firmware/submodules/surf/base/sync/rtl/RstSync.vhd
-* firmware/submodules/surf/base/sync/rtl/Synchronizer.vhd
-* firmware/submodules/surf/base/sync/rtl/SynchronizerOneShot.vhd
-* firmware/submodules/surf/base/sync/rtl/SynchronizerEdge.vhd
-* firmware/submodules/surf/base/sync/rtl/SynchronizerVector.vhd
-* firmware/submodules/surf/base/ram/inferred/SimpleDualPortRam.vhd
-* firmware/submodules/surf/base/fifo/rtl/FifoOutputPipeline.vhd
-* firmware/submodules/surf/base/fifo/rtl/inferred/FifoWrFsm.vhd
-* firmware/submodules/surf/base/fifo/rtl/inferred/FifoRdFsm.vhd
-* firmware/submodules/surf/base/fifo/rtl/inferred/FifoSync.vhd
-* firmware/submodules/surf/base/fifo/rtl/inferred/FifoAsync.vhd
-```
+Currently, Pix2PGP Suports the following two ASIC variants:
 
-Note that the FIFO/RAM related files of both libraries might not be needed, since we will import the DWare FIFOs for synthesis.
+* SparkPix-S
+* SparkPix-T
 
-### In a VHDL library called `dware` import the following files (afs paths):
-```
-* /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/packages/dware/src/DWpackages.vhd
-* /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_asymfifo_s2_sf.vhd
-* /afs/slac.stanford.edu/g/reseng/vol30/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf.vhd
-```
+## Important! How-To Import to Your Project
+In order to import pix2pgp to your project:
 
-## Other related info regarding Synthesis
-The top-level that is to be instantiated within the Verilog/SystemVerilog containing the columns/SARlogic/SparseItfLogic etc. is: `firmware/rtl/Pix2PgpTopSparkPixS.vhd`
+1. Add this repo as a submodule in your project ($ git clone --recurse-submodules ...thisRepo.git)
+2. Run `ghdlRun.sh` (run it while in the `ghdl` dir) at least *once*
+    1. To import SparkPix-S, run `$ bash ghdlRun.sh Pix2PgpSparkPixSTopTb`
+    2. To import SparkPix-T, run `$ bash ghdlRun.sh Pix2PgpSparkPixTTopTb`
+3. The command creates symbolic links the surf libraries and the VHDL package file (which is ASIC-specific) into `core/rtl`
+4. In your RTL analysis tool, parse everything inside the `core/rtl` director, including subdirectories
+    1. Do *not* link anything else (e.g. the contents of `vault`), as this might cause naming conflicts
 
-Note that apart from the column-related ports, the said file also contains the following PGP-related ports:
-
-```
-[...]
-  txReady   : in  std_logic;
-  txValid   : out std_logic;
-  txData    : out std_logic_vector(63 downto 0);
-  txSof     : out std_logic;
-  txEof     : out std_logic;
-  txEofe    : out std_logic);
-[...]
-```
-
-It is assumed that the module that is to be used to implement PGP4TxLite is the following:
-[Pgp4TxLiteWrapper](https://github.com/slaclab/surf/blob/master/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd)
+### How to simulate using GHDL
+In order to simulate via GHDL, run, e.g. `$ bash ghdlRun.sh Pix2PgpSparkPixSTopTb 50` to run the testbench for 50us.
