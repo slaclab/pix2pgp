@@ -17,8 +17,8 @@ In order to import pix2pgp to your project:
 2. Run `ghdlRun.sh` (run it while in the `ghdl` dir) at least *once*
     1. To import SparkPix-S, run `$ bash ghdlRun.sh Pix2PgpSparkPixSTopTb`
     2. To import SparkPix-T, run `$ bash ghdlRun.sh Pix2PgpSparkPixTTopTb`
-3. The command creates symbolic links the surf libraries and the VHDL package file (which is ASIC-specific) into `core/rtl`
-4. In your RTL analysis tool, parse everything inside the `core/rtl` director, including subdirectories
+3. The command creates symbolic links to the surf libraries and to the VHDL package file (which is ASIC-specific) into `core/rtl`
+4. In your RTL analysis tool, parse everything inside the `core/rtl` directory, including its subdirectories
     1. Do *not* link anything else (e.g. the contents of `vault`), as this might cause naming conflicts
 
 ### How to simulate using GHDL
