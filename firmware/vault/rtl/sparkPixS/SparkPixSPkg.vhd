@@ -145,6 +145,8 @@ package Pix2PgpPkg is
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
    -------------------------------------------
+   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
+
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
 
@@ -181,5 +183,18 @@ package body Pix2PgpPkg is
       end if;
       return result;
    end rightShift;
+
+   -- ASIC-related
+   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv is
+      variable retHeader: slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   begin
+      retHeader(DATABUS_DWIDTH_C-1 downto 24) := resize(flagsSel,  16);
+      retHeader(23 downto 16)                 := resize(colSel,     8);
+      retHeader(15 downto 8)                  := resize(trgCntSel,  8);
+      retHeader(7 downto 0)                   := resize(dataLenSel, 8);
+
+      return retHeader;
+   end colMeta;
+
 
 end package body Pix2PgpPkg;

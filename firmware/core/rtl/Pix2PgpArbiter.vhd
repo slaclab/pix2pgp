@@ -256,16 +256,10 @@ begin
 
                if r.waitColSel = '1' then
                   if v.sAxisMaster.tValid = '0' then
+                     -- column metadata mapping in pkg (changes with ASIC type)
+                     v.txData             := colMeta(flagsSel, r.colSel, trgCntSel, dataLenSel);
+                     v.sAxisMaster.tValid := '1';
                      --
-                     -- these look a bit too ASIC-specific for the time being...
-                     --v.txData(39 downto 24) := resize(flagsSel,  16); -- SparkPix-S
-                     v.txData(63 downto 24) := resize(flagsSel,  40); -- SparkPix-T
-                     v.txData(23 downto 16) := resize(r.colSel,   8);
-                     v.txData(15 downto 8)  := resize(trgCntSel,  8);
-                     v.txData(7 downto 0)   := resize(dataLenSel, 8);
-                     v.sAxisMaster.tValid   := '1';
-                     --
-
                      v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
 
                      -- have to divide the dataLen/hitLen by 2 (one FIFO word yields two hits)
@@ -396,30 +390,30 @@ begin
    -- Axi-Stream Gearbox (40:64)
    -----------------------------------------
    -- SparkPix-S
-   --U_Gearbox : entity surf.AxiStreamGearbox
-   --   generic map(
-   --      -- General Configurations
-   --      TPD_G               => TPD_G,
-   --      RST_POLARITY_G      => RST_POLARITY_G,
-   --      RST_ASYNC_G         => RST_ASYNC_G,
-   --      -- AXI Stream Port Configurations
-   --      SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
-   --      MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
-   --   port map(
-   --      -- Clock and reset
-   --      axisClk     => pgpClk,
-   --      axisRst     => pgpRst,
-   --      -- Slave Port
-   --      sAxisMaster => sAxisMaster,
-   --      sSideBand   => (others => '0'),
-   --      sAxisSlave  => sAxisSlave,
-   --      -- Master Port
-   --      mAxisMaster => pgpTxMaster,
-   --      mSideBand   => open,
-   --      mAxisSlave  => pgpTxSlave);
+   U_Gearbox : entity surf.AxiStreamGearbox
+      generic map(
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_POLARITY_G      => RST_POLARITY_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
+      port map(
+         -- Clock and reset
+         axisClk     => pgpClk,
+         axisRst     => pgpRst,
+         -- Slave Port
+         sAxisMaster => sAxisMaster,
+         sSideBand   => (others => '0'),
+         sAxisSlave  => sAxisSlave,
+         -- Master Port
+         mAxisMaster => pgpTxMaster,
+         mSideBand   => open,
+         mAxisSlave  => pgpTxSlave);
 
    -- SparkPix-T
-   pgpTxMaster <= sAxisMaster;
-   sAxisSlave  <= pgpTxSlave;
+   --pgpTxMaster <= sAxisMaster;
+   --sAxisSlave  <= pgpTxSlave;
 
 end rtl;
