@@ -53,9 +53,11 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal pgpClk    : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
+   signal sroDly    : sl := '0';
    signal sroFinal  : sl := '0';
    signal trg       : sl := '0';
    signal trgFinal  : sl := '0';
+   signal trgDly    : sl := '0';
 
    signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
    signal sof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
@@ -126,7 +128,8 @@ begin
   issueSroProcess: process(sparseClk)
   begin
     if (rising_edge(sparseClk)) then
-      if sro = '1' and sroFinal = '0' then
+      sroDly <= sro;
+      if sro = '1' and sroDly = '0' then
         sroFinal <= sro;
       else
         sroFinal <= '0';
@@ -137,13 +140,15 @@ begin
   issueTrgProcess: process(sparseClk)
   begin
     if (rising_edge(sparseClk)) then
-      if trg = '1' and trgFinal = '0' then
+      trgDly <= trg;
+      if trg = '1' and trgDly = '0' then
         trgFinal <= trg;
       else
         trgFinal <= '0';
       end if;
     end if;
   end process;
+
 
    --------
    -- Pixel
@@ -272,7 +277,11 @@ begin
     wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
       sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+      sro <= '0';
+    wait for CLK_PERIOD_SPARSE_C*85;
+      trg <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      trg <= '0';
     ----------------------------------------------
     ----------------------------------------------
     -- do not touch end
@@ -280,15 +289,32 @@ begin
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*93;
-       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(4, hitLen(col)'length);
-       end loop;
-         trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*7;
          sro <= '1';
      wait for CLK_PERIOD_SPARSE_C*2;
-         trg  <= '0';
-         sro  <= '0';
+         sro <= '0';
+     wait for CLK_PERIOD_SPARSE_C*85;
+         trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         trg <= '0';
+
+     wait for CLK_PERIOD_SPARSE_C*7;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '0';
+     wait for CLK_PERIOD_SPARSE_C*85;
+         trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         trg <= '0';
+
+     wait for CLK_PERIOD_SPARSE_C*7;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '0';
+     wait for CLK_PERIOD_SPARSE_C*85;
+         trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         trg <= '0';
 
     -- wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
@@ -396,10 +422,6 @@ begin
     -- regular stimuli end
 
     -- do not touch begin
-     wait for CLK_PERIOD_SPARSE_C*93;
-         trg <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
-         trg  <= '0';
     wait;
     -- do not touch end
 
