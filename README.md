@@ -3,12 +3,14 @@
 Pix2PGP is a generic readout core designed to support Detector/Front-End ASICs that feature a sparsified readout scheme.
 
 For more info:
-[Google Doc Link](https://docs.google.com/document/d/1JWoombpoBZBulYuCbVD-M0LTDDdCfMX4FJ9Qwumctxg/edit?usp=sharing)
+* [Google Doc Link](https://docs.google.com/document/d/1JWoombpoBZBulYuCbVD-M0LTDDdCfMX4FJ9Qwumctxg/edit?usp=sharing)
+
+* [Confluence Page](https://confluence.slac.stanford.edu/x/nIkaGg)
 
 As of `v2.2.0`, Pix2PGP supports the following two ASIC variants:
 
-* SparkPix-S
-* SparkPix-T
+* [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
+* [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
 
 ## Repository description
 In general, one should *only* import the contents of `firmware/core/` directory to their ASIC project. Note that when cloning the repo anew, the aforementioned directory is partially empty. This is because the importing step has to be executed first (described below). The importing step creates symbolic links from `surf` and `firmware/vault` to `firmware/core`. The `firmware/vault` directory contains some ASIC-specific files that vary depending on the implementation.
