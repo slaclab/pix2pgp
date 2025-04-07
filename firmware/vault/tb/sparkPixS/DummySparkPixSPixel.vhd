@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Dummy Pixel
+-- Description: Dummy SparkPix-S Pixel
 --              Accepts the 'start/trigger' and 'pulse' control signals,
 --              and outputs the relevant info to tixel_BE
 --
@@ -26,11 +26,11 @@ use surf.StdRtlPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity DummyPixel is
+entity DummySparkPixSPixel is
    generic (
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl       := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
+      RST_POLARITY_G : sl      := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
       WAIT_FB_G      : natural := 2; -- 2 cycles
       WAIT_ACKN_G    : natural := 2;
       WAIT_WREN_G    : natural := 3;
@@ -46,10 +46,10 @@ entity DummyPixel is
       tokFb    : out sl;
       ackN     : out sl;
       wrEn     : out sl;
-      dout     : out slv(SPARSE_DWIDTH_C-1 downto 0));
-end DummyPixel;
+      dout     : out slv(19 downto 0));
+end DummySparkPixSPixel;
 
-architecture rtl of DummyPixel is
+architecture rtl of DummySparkPixSPixel is
 
    type StateType is (
       IDLE_S,
@@ -68,7 +68,7 @@ architecture rtl of DummyPixel is
       pause   : sl;
       busy    : sl;
       pauseAck: sl;
-      dout    : slv(SPARSE_DWIDTH_C-1 downto 0);
+      dout    : slv(19 downto 0);
       --
       waitCnt : natural range 0 to 1023;
       ackCnt  : natural range 0 to 1023;

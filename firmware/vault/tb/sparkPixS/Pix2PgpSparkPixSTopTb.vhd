@@ -17,7 +17,7 @@ use surf.AxiStreamPacketizer2Pkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpTopTb is
+entity Pix2PgpSparkPixSTopTb is
    generic(
       TPD_G                     : time     := 1 ns;
       RST_ASYNC_G               : boolean  := true;
@@ -36,7 +36,7 @@ entity Pix2PgpTopTb is
     dummyIn : in sl
   );
 
-end entity Pix2PgpTopTb;
+end entity Pix2PgpSparkPixSTopTb;
 
 -- * about the AF_LVL_G flags:
 -- the surf-based fifos issue their almost-full/prog-full when wr_index = AF_LVL_G;
@@ -44,7 +44,7 @@ end entity Pix2PgpTopTb;
 -- i.e. for the synopsys fifos, the AF_LVL_G denotes the amount of empty memory spaces before
 -- the almost-full flag is asserted
 
-architecture test of Pix2PgpTopTb is
+architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
@@ -136,7 +136,7 @@ begin
    -- Pixel
    --------
    GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      U_DummyPixel : entity pix2pgp.DummyPixel
+      U_DummyPixel : entity pix2pgp.DummySparkPixSPixel
          generic map(
             TPD_G          => TPD_G,
             RST_ASYNC_G    => RST_ASYNC_G,
@@ -158,7 +158,7 @@ begin
             wrEn     => wrEn(col),
             dout     => din(col));
 
-      U_DummyFlowCtrl: entity pix2pgp.AsicFlowCtrl
+      U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
         generic map(
           RST_POLARITY_G => RST_POLARITY_G,
           COL_ID_G       => col)

@@ -40,4 +40,4 @@ loadConstraints -dir  "$::DIR_PATH/hdl"
 
 # Load the simulation testbed
 loadSource -sim_only -dir "$::DIR_PATH/tb"
-set_property top {Pix2PgpEmuTb} [get_filesets sim_1]
+set_property top {Pix2PgpSparkPixTEmuTb} [get_filesets sim_1]

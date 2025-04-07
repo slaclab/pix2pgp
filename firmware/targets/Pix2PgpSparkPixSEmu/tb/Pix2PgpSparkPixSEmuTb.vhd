@@ -8,7 +8,7 @@ use ieee.std_logic_arith.all;
 
 library pix2pgp;
 
-entity Pix2PgpEmuTb is
+entity Pix2PgpSparkPixSEmuTb is
    generic(
       TPD_G                     : time     := 1 ns;
       RST_ASYNC_G               : boolean  := true;
@@ -24,9 +24,9 @@ entity Pix2PgpEmuTb is
       STATUSFIFO_PIPE_G         : natural  := 1;
       NUM_VC_G                  : natural  := 1
    );
-end entity Pix2PgpEmuTb;
+end entity Pix2PgpSparkPixSEmuTb;
 
-architecture test of Pix2PgpEmuTb is
+architecture test of Pix2PgpSparkPixSEmuTb is
 
    -- dummy verilog module for vcs (testbench has to be vhdl+verilog)
    component DummyModule
@@ -47,7 +47,7 @@ architecture test of Pix2PgpEmuTb is
    ------
    -- UUT
    ------
-   U_Uut : entity pix2pgp.Pix2PgpTopTb
+   U_Uut : entity pix2pgp.Pix2PgpSparkPixSTopTb
       generic map(
          TPD_G                     => TPD_G,
          RST_ASYNC_G               => RST_ASYNC_G,

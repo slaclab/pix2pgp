@@ -1,4 +1,4 @@
--- SparkPixS Wrapper
+-- SparkPix-S Wrapper
 
 -- keeping it simple
 -- maybe can create a dinArray equivalent in systemVerilog?
@@ -96,34 +96,41 @@ architecture rtl of Pix2PgpSparkPixSTop is
 
 begin
 
+   -- check that we have sourced the correct Pkg file
+   assert (NUM_OF_COL_MANAGERS_C = 24)
+      report "[ERROR]: Pix2PgpSparkPixSTop; NUM_OF_COL_MANAGERS_C is *NOT* equal to 24! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixTPkg.vhd" severity failure;
+
+   assert (SPARSE_DWIDTH_C = 20)
+      report "[ERROR]: Pix2PgpSparkPixSTop; SPARSE_DWIDTH_C is *NOT* equal to 20! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixTPkg.vhd" severity failure;
+
    -- check the length equivalence with asserts
    -- avoid tying input port widths to generics; hardcode them instead
    -- ...ASIC flow tools can be annoying...
-   assert (timeoutLimit'length /= TIMEOUT_LIMIT_WIDTH_G-1)
+   assert (timeoutLimit'length = TIMEOUT_LIMIT_WIDTH_G)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match timeoutLimit port width with TIMEOUT_LIMIT_WIDTH_G generic" severity failure;
 
-   assert (columnEnable'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (columnEnable'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match columnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (sof'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (sof'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match sof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (eof'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (eof'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match eof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (overOcc'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (overOcc'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match overOcc port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (pauseAck'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (pauseAck'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match pauseAck port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (wrEn'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (wrEn'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match wrEn port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (busy'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (busy'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match busy port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
-   assert (pause'length /= NUM_OF_COL_MANAGERS_C-1)
+   assert (pause'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixSTop; Please match pause port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    --------------------------------------------------------------------------

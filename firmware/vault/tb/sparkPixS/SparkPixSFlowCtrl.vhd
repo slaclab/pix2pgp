@@ -10,7 +10,7 @@ use surf.StdRtlPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity AsicFlowCtrl is
+entity SparkPixSFlowCtrl is
     generic (
         RST_POLARITY_G      : sl      := '1';    -- '1' for active HIGH reset, '0' for active LOW reset
         TIMEOUT_CNT_LIMIT   : integer := 15; -- in decimal counts
@@ -30,7 +30,7 @@ entity AsicFlowCtrl is
     );
 end entity;
 
-architecture rtl of AsicFlowCtrl is
+architecture rtl of SparkPixSFlowCtrl is
     type state_type is (IDLE, IN_FRAME, IN_OVEROCC);
     signal state       : state_type := IDLE;
     signal tok_fb_dly  : std_logic := '0';

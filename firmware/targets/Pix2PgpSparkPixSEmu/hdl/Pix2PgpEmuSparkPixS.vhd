@@ -3,11 +3,11 @@
 -------------------------------------------------------------------------------
 -- Description: Firmware Target's Top Level
 -------------------------------------------------------------------------------
--- This file is part of 'pix2pgp-emu'.
+-- This file is part of 'pix2pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
 -- top-level directory of this distribution and at:
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
--- No part of 'pix2pgp-emu', including this file,
+-- No part of 'pix2pgp', including this file,
 -- may be copied, modified, propagated, or distributed except according to
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ use pix2pgp.Pix2PgpPkg.all;
 
 library work;
 
-entity Pix2PgpEmu is
+entity Pix2PgpSparkPixS is
    generic (
       TPD_G                : time                        := 1 ns;
       BUILD_INFO_G         : BuildInfoType;
@@ -170,9 +170,9 @@ entity Pix2PgpEmu is
       -- SYSMON Ports
       vPIn          : in    sl              := '0';
       vNIn          : in    sl              := '1');
-end Pix2PgpEmu;
+end Pix2PgpSparkPixS;
 
-architecture top_level of Pix2PgpEmu is
+architecture top_level of Pix2PgpSparkPixS is
 
    signal axilReadMaster  : AxiLiteReadMasterType;
    signal axilReadSlave   : AxiLiteReadSlaveType;

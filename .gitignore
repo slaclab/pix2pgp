@@ -22,9 +22,13 @@
 
 # tb executable names
 firmware/ghdl/pix2pgpgearboxwrappertb
-firmware/ghdl/pix2pgptoptb
+firmware/ghdl/pix2pgpsparkpixstoptb
+firmware/ghdl/pix2pgpsparkpixttoptb
 firmware/ghdl/pix2pgparbitertb
 firmware/ghdl/pgptb
+
+# pkg file (now linked over by ghdl script)
+firmware/core/pkg/Pix2PgpPkg.vhd
 
 # Matlab
 *.autosave
@@ -41,7 +45,7 @@ Thumps.db
 *.swp
 build.info
 
-# Build directories 
+# Build directories
 build*
 images*
 bin*

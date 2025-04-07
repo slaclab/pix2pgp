@@ -23,20 +23,36 @@ parser.add_argument(
     help     = "Set to true if data in testbench have upper 10 bits is ColID and lower as a cnt",
 )
 
+parser.add_argument(
+    "--asicType",
+    type     = str,
+    required = False,
+    default  = 'SparkPixS',
+    help     = "options: SparkPixS, SparkPixT",
+)
+
 # Get the arguments
 args = parser.parse_args()
 
-def headerEval(header):
+def headerEval(header, asicType):
     empty   = True
     bitmask = []
     trigger = 0
 
-    _overOcc     = (header >> np.uint8(39)) & np.uint8(0x01)
-    _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
-    _columnError = (header >> np.uint8(37)) & np.uint8(0x01)
-    _pauseError  = (header >> np.uint8(36)) & np.uint8(0x01)
-    _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
-    _timeout     = (header >> np.uint8(34)) & np.uint8(0x01)
+    if asicType == "SparkPixS":
+        _overOcc     = (header >> np.uint8(39)) & np.uint8(0x01)
+        _pause       = (header >> np.uint8(38)) & np.uint8(0x01)
+        _columnError = (header >> np.uint8(37)) & np.uint8(0x01)
+        _pauseError  = (header >> np.uint8(36)) & np.uint8(0x01)
+        _dummyHeader = (header >> np.uint8(35)) & np.uint8(0x01)
+        _timeout     = (header >> np.uint8(34)) & np.uint8(0x01)
+    elif asicType == "SparkPixT":
+        _overOcc     = (header >> np.uint8(63)) & np.uint8(0x01)
+        _pause       = (header >> np.uint8(62)) & np.uint8(0x01)
+        _columnError = (header >> np.uint8(61)) & np.uint8(0x01)
+        _pauseError  = (header >> np.uint8(60)) & np.uint8(0x01)
+        _dummyHeader = (header >> np.uint8(59)) & np.uint8(0x01)
+        _timeout     = (header >> np.uint8(58)) & np.uint8(0x01)
     # -------------
     # some reserved bits ..
     # -------------
@@ -57,17 +73,31 @@ def headerEval(header):
 
     return empty, bitmask, trigger
 
-def _hitPrinter(hits, decode, length):
-    hit0 = (hits >> np.uint8(20)) & np.uint32(0xFFFFF)
-    hit1 = (hits >> np.uint8(0)) & np.uint32(0xFFFFF)
+def _hitPrinter(hits, decode, length, asicType):
+
+    if asicType == "SparkPixS":
+        hit0 = (hits >> np.uint8(20)) & np.uint32(0xFFFFF)
+        hit1 = (hits >> np.uint8(0))  & np.uint32(0xFFFFF)
+    elif asicType == "SparkPixT":
+        hit0 = (hits >> np.uint8(32)) & np.uint32(0xFFFFFFFF)
+        hit1 = (hits >> np.uint8(0))  & np.uint32(0xFFFFFFFF)
 
     if decode:
-        hitCnt0 = (hit0 >> np.uint16(0))  & np.uint16(0x3FF)
-        colId0  = (hit0 >> np.uint16(10)) & np.uint16(0x3F)
-        hitTrg0 = (hit0 >> np.uint16(16)) & np.uint16(0x0F)
-        hitCnt1 = (hit1 >> np.uint16(0))  & np.uint16(0x3FF)
-        colId1  = (hit1 >> np.uint16(10)) & np.uint16(0x3F)
-        hitTrg1 = (hit1 >> np.uint16(16)) & np.uint16(0x0F)
+        if asicType == "SparkPixS":
+            hitCnt0 = (hit0 >> np.uint16(0))  & np.uint16(0x3FF)
+            colId0  = (hit0 >> np.uint16(10)) & np.uint16(0x3F)
+            hitTrg0 = (hit0 >> np.uint16(16)) & np.uint16(0x0F)
+            hitCnt1 = (hit1 >> np.uint16(0))  & np.uint16(0x3FF)
+            colId1  = (hit1 >> np.uint16(10)) & np.uint16(0x3F)
+            hitTrg1 = (hit1 >> np.uint16(16)) & np.uint16(0x0F)
+        elif asicType == "SparkPixT":
+            hitCnt0 = (hit0 >> np.uint16(0))  & np.uint16(0xFFFF)
+            colId0  = (hit0 >> np.uint16(16)) & np.uint16(0x3FF)
+            hitTrg0 = (hit0 >> np.uint16(26)) & np.uint16(0x3F)
+            hitCnt1 = (hit1 >> np.uint16(0))  & np.uint16(0xFFFF)
+            colId1  = (hit1 >> np.uint16(16)) & np.uint16(0x3FF)
+            hitTrg1 = (hit1 >> np.uint16(26)) & np.uint16(0x3F)
+
         _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d} ColId1={3:<%d} HitCnt1={4:<%d} hitTrg1={5:<%d}' % (4, 4, 4, 4, 4, 4)
         if length == 1:
             _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d}' % (4, 4, 4)
@@ -96,6 +126,10 @@ if __name__ == "__main__":
         click.secho(f"[ERROR]: {_file} not found!", bg='red')
         sys.exit()
 
+    if args.asicType != "SparkPixS" and args.asicType != "SparkPixT":
+        click.secho(f"[ERROR]: asicType flag not set properly! options: SparkPixS, SparkPixT", bg='red')
+        sys.exit()
+
     with open(_file) as f:
         _lineArray = [int(line.rstrip('\n'), 16) for line in f]
 
@@ -113,7 +147,7 @@ if __name__ == "__main__":
         ########################################################################################
         if state == "header_s":
             _colSel = 0
-            _isEmpty, _bitmask, _trigger = headerEval(_lineArray[_line])
+            _isEmpty, _bitmask, _trigger = headerEval(_lineArray[_line], args.asicType)
             _line += 1
             if not(_isEmpty):
                 state = "bitmaskCheck_s"
@@ -149,7 +183,7 @@ if __name__ == "__main__":
         ########################################################################################
         elif state == "hitDecode_s":
             # time.sleep(0.2)
-            _hitPrinter(_lineArray[_line], args.hitDecode, _lenCnt)
+            _hitPrinter(_lineArray[_line], args.hitDecode, _lenCnt, args.asicType)
             _lenCnt = _lenCnt - 2
             _line += 1
             if _lenCnt <= 0:
