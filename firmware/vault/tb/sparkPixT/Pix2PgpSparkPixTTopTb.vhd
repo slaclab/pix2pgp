@@ -316,107 +316,50 @@ begin
      wait for CLK_PERIOD_SPARSE_C*2;
          trg <= '0';
 
-    -- wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(1)  <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(4)  <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(5)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(2,  hitLen(7)'length);
-    --  hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-    --  hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(10) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(11) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(12) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(13) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(14) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(15) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(16) <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(17) <= toSlv(1,  hitLen(7)'length);
-    --  hitLen(18) <= toSlv(1,  hitLen(8)'length);
-    --  hitLen(19) <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(20) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(21) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(22) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(23) <= toSlv(0,  hitLen(5)'length);
-    --  trg <= '1';
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  trg <= '0';
-    --  sro  <= '0';
+     wait for CLK_PERIOD_SPARSE_C*7;
+      for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(4, hitLen(col)'length);
+      end loop;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '0';
+     wait for CLK_PERIOD_SPARSE_C*85;
+         trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         trg <= '0';
 
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(1)  <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(3)  <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(4)  <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(5)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(6)  <= toSlv(3,  hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(2,  hitLen(7)'length);
-    --  hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-    --  hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(10) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(11) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(12) <= toSlv(5,  hitLen(5)'length);
-    --  hitLen(13) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(14) <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(15) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(16) <= toSlv(3,  hitLen(6)'length);
-    --  hitLen(17) <= toSlv(3,  hitLen(7)'length);
-    --  hitLen(18) <= toSlv(1,  hitLen(8)'length);
-    --  hitLen(19) <= toSlv(4,  hitLen(9)'length);
-    --  hitLen(20) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(21) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(22) <= toSlv(6,  hitLen(5)'length);
-    --  hitLen(23) <= toSlv(0,  hitLen(5)'length);
-    --  trg <= '1';
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  trg <= '0';
-    --  sro  <= '0';
-
-    -- wait for CLK_PERIOD_SPARSE_C*93;
-    --   for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --     hitLen(col) <= toSlv(3, hitLen(col)'length);
-    --   end loop;
-    --     trg <= '1';
-    --     sro <= '1';
-    -- wait for CLK_PERIOD_SPARSE_C*2;
-    --     trg <= '0';
-    --     sro  <= '0';
-
-    -- wait for CLK_PERIOD_SPARSE_C*93;
-    --   for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --     hitLen(col) <= toSlv(1, hitLen(col)'length);
-    --   end loop;
-    --     trg <= '1';
-    --     sro <= '1';
-    -- wait for CLK_PERIOD_SPARSE_C*2;
-    --     trg <= '0';
-    --     sro  <= '0';
-
-    -- wait for CLK_PERIOD_SPARSE_C*93;
-    --   for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --   hitLen(col) <= toSlv(2, hitLen(col)'length);
-    -- end loop;
-    --   trg <= '1';
-    --   sro <= '1';
-    -- wait for CLK_PERIOD_SPARSE_C*2;
-    --   trg <= '0';
-    --   sro  <= '0';
-
-    -- wait for CLK_PERIOD_SPARSE_C*93;
-    --   for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --   hitLen(col) <= toSlv(0, hitLen(col)'length);
-    -- end loop;
-    --   trg <= '1';
-    --   sro <= '1';
-    -- wait for CLK_PERIOD_SPARSE_C*2;
-    --   trg <= '0';
-    --   sro  <= '0';
+     wait for CLK_PERIOD_SPARSE_C*7;
+      hitLen(0)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(1)  <= toSlv(3,  hitLen(5)'length);
+      hitLen(2)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(3)  <= toSlv(0,  hitLen(5)'length);
+      hitLen(4)  <= toSlv(1,  hitLen(5)'length);
+      hitLen(5)  <= toSlv(2,  hitLen(5)'length);
+      hitLen(6)  <= toSlv(0,  hitLen(6)'length);
+      hitLen(7)  <= toSlv(2,  hitLen(7)'length);
+      hitLen(8)  <= toSlv(0,  hitLen(8)'length);
+      hitLen(9)  <= toSlv(0,  hitLen(9)'length);
+      hitLen(10) <= toSlv(4,  hitLen(5)'length);
+      hitLen(11) <= toSlv(3,  hitLen(5)'length);
+      hitLen(12) <= toSlv(0,  hitLen(5)'length);
+      hitLen(13) <= toSlv(3,  hitLen(5)'length);
+      hitLen(14) <= toSlv(0,  hitLen(5)'length);
+      hitLen(15) <= toSlv(2,  hitLen(5)'length);
+      hitLen(16) <= toSlv(0,  hitLen(6)'length);
+      hitLen(17) <= toSlv(1,  hitLen(7)'length);
+      hitLen(18) <= toSlv(1,  hitLen(8)'length);
+      hitLen(19) <= toSlv(0,  hitLen(9)'length);
+      hitLen(20) <= toSlv(3,  hitLen(5)'length);
+      hitLen(21) <= toSlv(0,  hitLen(5)'length);
+      hitLen(22) <= toSlv(4,  hitLen(5)'length);
+      hitLen(23) <= toSlv(0,  hitLen(5)'length);
+      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+     wait for CLK_PERIOD_SPARSE_C*85;
+      trg <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+      trg <= '0';
     ----------------------------------------------
     ----------------------------------------------
     -- regular stimuli end

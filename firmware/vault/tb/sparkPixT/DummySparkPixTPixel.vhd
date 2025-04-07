@@ -151,7 +151,7 @@ comb : process (df_reset_n, r, hitLen, trigger, sro, pause) is
                v.dout(15 downto 0)  := r.hitCnt;
                v.waitCnt            := 0;
                v.wrEn               := '1';
-               if (r.hitCnt = unsigned(r.hitLen) - 1) then
+               if (r.hitCnt = r.hitLen) then
                   v.state := WAIT_TRG_S;
                else
                   v.hitCnt := r.hitCnt + 1;
@@ -174,6 +174,7 @@ comb : process (df_reset_n, r, hitLen, trigger, sro, pause) is
       dout     <= r.dout;
       sof      <= r.sof;
       eof      <= r.eof;
+      overOcc  <= r.overOcc;
 
       ----------------------------------------------------------------------
 

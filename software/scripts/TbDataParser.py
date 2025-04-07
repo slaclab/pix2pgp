@@ -93,10 +93,10 @@ def _hitPrinter(hits, decode, length, asicType):
         elif asicType == "SparkPixT":
             hitCnt0 = (hit0 >> np.uint16(0))  & np.uint16(0xFFFF)
             colId0  = (hit0 >> np.uint16(16)) & np.uint16(0x3FF)
-            hitTrg0 = (hit0 >> np.uint16(31)) & np.uint16(0x3F)
+            hitTrg0 = (hit0 >> np.uint16(26)) & np.uint16(0x3F)
             hitCnt1 = (hit1 >> np.uint16(0))  & np.uint16(0xFFFF)
-            colId1  = (hit1 >> np.uint16(10)) & np.uint16(0x3FF)
-            hitTrg1 = (hit1 >> np.uint16(16)) & np.uint16(0x3F)
+            colId1  = (hit1 >> np.uint16(16)) & np.uint16(0x3FF)
+            hitTrg1 = (hit1 >> np.uint16(26)) & np.uint16(0x3F)
 
         _format = 'ColId0={0:<%d} HitCnt0={1:<%d} hitTrg0={2:<%d} ColId1={3:<%d} HitCnt1={4:<%d} hitTrg1={5:<%d}' % (4, 4, 4, 4, 4, 4)
         if length == 1:
