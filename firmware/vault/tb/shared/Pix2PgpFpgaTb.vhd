@@ -147,29 +147,6 @@ begin
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
 
-     --U_FpgaGearbox : entity surf.Gearbox
-     -- generic map (
-     --    TPD_G          => TPD_G,
-     --    RST_POLARITY_G => RST_POLARITY_G,
-     --    RST_ASYNC_G    => RST_ASYNC_G,
-     --    SLAVE_WIDTH_G  => 64,
-     --    MASTER_WIDTH_G => DATABUS_DWIDTH_C)
-     -- port map (
-     --    -- Clock and Reset
-     --    clk            => clk,
-     --    rst            => rst,
-     --    -- Slave Interface
-     --    slaveValid     => pgpRxMasters(0).tvalid,
-     --    slaveReady     => open,
-     --    slaveData      => pgpRxMasters(0).tData(63 downto 0),
-     --    slaveBitOrder  => '0',
-     --    -- Master Interface
-     --    masterBitOrder => '0',
-     --    masterReady    => '1',
-     --    masterValid    => pgpValid,
-     --    masterData     => pgpData);
-
-
    pgpTxSlave.tReady <= '1';
    pgpValid          <= pgpTxMaster.tValid;
    pgpData           <= pgpTxMaster.tData(DATABUS_DWIDTH_C-1 downto 0);
