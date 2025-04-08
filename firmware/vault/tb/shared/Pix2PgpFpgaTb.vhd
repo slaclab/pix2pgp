@@ -53,7 +53,7 @@ architecture test of Pix2PgpFpgaTb is
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => 64,
+      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
       TKEEP_MODE_C       => TKEEP_NORMAL_C,
