@@ -47,6 +47,28 @@ architecture test of Pix2PgpFpgaTb is
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
    signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
 
+   signal pgpTxSlave   : AxiStreamSlaveType;
+   signal pgpTxMaster  : AxiStreamMasterType;
+
+   -- axi-stream gearbox configuration
+   constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => 64,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_NORMAL_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
+   constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_NORMAL_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
 begin
 
     U_SerializerReverseGearbox : entity surf.Gearbox
@@ -103,27 +125,54 @@ begin
         phyRxStartSeq => '0',
         phyRxSlip     => open);
 
-     U_FpgaGearbox : entity surf.Gearbox
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         SLAVE_WIDTH_G  => 64,
-         MASTER_WIDTH_G => DATABUS_DWIDTH_C)
-      port map (
-         -- Clock and Reset
-         clk            => clk,
-         rst            => rst,
-         -- Slave Interface
-         slaveValid     => pgpRxMasters(0).tvalid,
-         slaveReady     => open,
-         slaveData      => pgpRxMasters(0).tData(63 downto 0),
-         slaveBitOrder  => '0',
-         -- Master Interface
-         masterBitOrder => '0',
-         masterReady    => '1',
-         masterValid    => pgpValid,
-         masterData     => pgpData);
+   U_FpgaGearbox : entity surf.AxiStreamGearbox
+      generic map(
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_POLARITY_G      => RST_POLARITY_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
+      port map(
+         -- Clock and reset
+         axisClk     => clk,
+         axisRst     => rst,
+         -- Slave Port
+         sAxisMaster => pgpRxMasters(0),
+         sSideBand   => (others => '0'),
+         sAxisSlave  => open,
+         -- Master Port
+         mAxisMaster => pgpTxMaster,
+         mSideBand   => open,
+         mAxisSlave  => pgpTxSlave);
+
+     --U_FpgaGearbox : entity surf.Gearbox
+     -- generic map (
+     --    TPD_G          => TPD_G,
+     --    RST_POLARITY_G => RST_POLARITY_G,
+     --    RST_ASYNC_G    => RST_ASYNC_G,
+     --    SLAVE_WIDTH_G  => 64,
+     --    MASTER_WIDTH_G => DATABUS_DWIDTH_C)
+     -- port map (
+     --    -- Clock and Reset
+     --    clk            => clk,
+     --    rst            => rst,
+     --    -- Slave Interface
+     --    slaveValid     => pgpRxMasters(0).tvalid,
+     --    slaveReady     => open,
+     --    slaveData      => pgpRxMasters(0).tData(63 downto 0),
+     --    slaveBitOrder  => '0',
+     --    -- Master Interface
+     --    masterBitOrder => '0',
+     --    masterReady    => '1',
+     --    masterValid    => pgpValid,
+     --    masterData     => pgpData);
+
+
+   pgpTxSlave.tReady <= '1';
+   pgpValid          <= pgpTxMaster.tValid;
+   pgpData           <= pgpTxMaster.tData(DATABUS_DWIDTH_C-1 downto 0);
 
    -- Instantiate the design under test
 
