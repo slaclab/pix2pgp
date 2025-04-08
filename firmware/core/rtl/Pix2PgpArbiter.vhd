@@ -180,11 +180,11 @@ begin
       -- flow control check
       if sAxisSlave.tReady = '1' then
          v.sAxisMaster.tValid := '0';
+         v.sAxisMaster.tLast  := '0';
+         v.sAxisMaster.tUser  := (others => '0');
       end if;
 
       -- default flags
-      v.sAxisMaster.tLast  := '0';
-      v.sAxisMaster.tUser  := (others => '0');
       v.sAxisMaster.tKeep  := (others => '1');
 
       -- status Mux
@@ -318,9 +318,8 @@ begin
                   end if;
 
                   if r.dummyCnt = toSlv(5, r.dummyCnt'length) then
-                     v.sAxisMaster.tValid := '1';
-                     v.sAxisMaster.tLast  := '1';
-                     v.state              := IDLE_S;
+                     v.sAxisMaster.tLast := '1';
+                     v.state             := IDLE_S;
                   end if;
                end if;
             end if;
@@ -389,7 +388,6 @@ begin
    -----------------------------------------
    -- Axi-Stream Gearbox (40:64)
    -----------------------------------------
-   -- SparkPix-S
    U_Gearbox : entity surf.AxiStreamGearbox
       generic map(
          -- General Configurations
@@ -411,9 +409,5 @@ begin
          mAxisMaster => pgpTxMaster,
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
-
-   -- SparkPix-T
-   --pgpTxMaster <= sAxisMaster;
-   --sAxisSlave  <= pgpTxSlave;
 
 end rtl;
