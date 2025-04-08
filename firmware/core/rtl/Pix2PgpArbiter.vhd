@@ -317,8 +317,8 @@ begin
                      v.dummyCnt := r.dummyCnt + 1;
                   end if;
 
-                  if allBits(r.dummyCnt, '1') then
-                     v.sAxisMaster.tValid := '0';
+                  if r.dummyCnt = toSlv(5, r.dummyCnt'length) then
+                     v.sAxisMaster.tValid := '1';
                      v.sAxisMaster.tLast  := '1';
                      v.state              := IDLE_S;
                   end if;
