@@ -1,7 +1,11 @@
 # Ignore everything in this directory
 *
-# Except this file
+
+# Do not ignore the .gitignore file itself
 !.gitignore
 
-# Except this subdirectory
+# Do not ignore the directory 'shared'
+!shared/
+
+# Do not ignore contents within the 'shared' directory
 !shared/**

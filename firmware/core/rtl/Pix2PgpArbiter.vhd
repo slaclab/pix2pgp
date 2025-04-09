@@ -386,7 +386,7 @@ begin
    end process seq;
 
    -----------------------------------------
-   -- Axi-Stream Gearbox (40:64)
+   -- Axi-Stream Gearbox (if needed)
    -----------------------------------------
    U_Gearbox : entity surf.AxiStreamGearbox
       generic map(
