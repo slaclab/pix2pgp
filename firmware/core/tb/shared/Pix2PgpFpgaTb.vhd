@@ -34,6 +34,7 @@ entity Pix2PgpFpgaTb is
       pgpDinValid : in  sl;
       pgpDinReady : out sl;
       -- FPGA RX Interface
+      pgpReady    : in  sl := '1';
       pgpValid    : out sl;
       pgpData     : out slv(DATABUS_DWIDTH_C-1 downto 0));
 end entity Pix2PgpFpgaTb;
@@ -121,7 +122,7 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => '1',
+         masterReady    => pgpReady,
          masterValid    => pgpValid,
          masterData     => pgpData);
 
