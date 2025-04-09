@@ -168,6 +168,9 @@ package Pix2PgpPkg is
    function rightShift (inSlv: slv; count: natural) return slv;
    --
 
+   -- FPGA-RX related
+   constant LANE_RX_FIFO_ADDR_WIDTH_C : integer := 10;
+
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is

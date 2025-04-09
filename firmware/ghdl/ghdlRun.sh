@@ -143,6 +143,7 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerEdge.vhd                   ${SURF_DIR}/SynchronizerEdge.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd                 ${SURF_DIR}/SynchronizerVector.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/SimpleDualPortRam.vhd              ${SURF_DIR}/SimpleDualPortRam.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/Fifo.vhd                               ${SURF_DIR}/Fifo.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/FifoOutputPipeline.vhd                 ${SURF_DIR}/FifoOutputPipeline.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoWrFsm.vhd                 ${SURF_DIR}/FifoWrFsm.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoRdFsm.vhd                 ${SURF_DIR}/FifoRdFsm.vhd

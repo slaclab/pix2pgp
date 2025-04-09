@@ -32,11 +32,12 @@ entity Pix2PgpLaneRx is
    );
    port(
       -- General Interface
-      clk      : in  sl;
-      rst      : in  sl := not(RST_POLARITY_G);
+      pgpClk   : in  sl;
+      pgpRst   : in  sl := not(RST_POLARITY_G);
+      sysClk   : in  sl;
+      sysRst   : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpEmpty : in  sl;
-      pgpFull  : in  sl;
+      pgpValid : in  sl;
       pgpData  : in  slv(DATABUS_DWIDTH_C-1 downto 0);
       pgpRd    : out sl;
       -- Framer Interface
@@ -71,6 +72,30 @@ architecture rtl of Pix2PgpLaneRx is
    signal rin : RegType;
 
 begin
+
+   -----------------------------
+   -- First Buffer Level
+   -----------------------------
+   U_dataFifo : entity surf.Fifo
+      generic map (
+         TPD_G           => TPD_G,
+         GEN_SYNC_FIFO_G => false, -- false = dual-clock FIFO
+         MEMORY_TYPE_G   => "block",
+         FWFT_EN_G       => true,
+         DATA_WIDTH_G    => DATABUS_DWIDTH_C,
+         ADDR_WIDTH_G    => LANE_RX_FIFO_ADDR_WIDTH_C)
+      port map (
+         rst      => sysRst,
+         -- Write Ports
+         wr_clk   => pgpClk,
+         wr_en    => pgpValid,
+         din      => pgpData,
+         overflow => pgpFifoFull,
+         -- Read Ports
+         rd_clk   => sysClk,
+         rd_en    => pgpFifoRd,
+         dout     => pgpFifoDout,
+         valid    => pgpFifoValid);
 
    comb : process (din, r, rst, ibValid) is
       variable v : RegType;
