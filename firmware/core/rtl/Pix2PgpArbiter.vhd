@@ -387,9 +387,8 @@ begin
    end process seq;
 
    -----------------------------------------
-   -- Axi-Stream Gearbox (40:64)
+   -- Axi-Stream Gearbox (if needed)
    -----------------------------------------
-   -- SparkPix-S
    U_Gearbox : entity surf.AxiStreamGearbox
       generic map(
          -- General Configurations
@@ -411,9 +410,4 @@ begin
          mAxisMaster => pgpTxMaster,
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
-
-   -- SparkPix-T
-   --pgpTxMaster <= sAxisMaster;
-   --sAxisSlave  <= pgpTxSlave;
-
 end rtl;
