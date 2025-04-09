@@ -22,6 +22,8 @@ GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 RTL_DIR=${ROOT_DIR}/firmware/core/rtl
 TB_DIR=${ROOT_DIR}/firmware/core/tb
+TB_SHARED_DIR=${TB_DIR}/shared
+TB_SHARED=${TB_SHARED_DIR}/*.vhd
 
 RTL=${RTL_DIR}/*.vhd
 
@@ -33,28 +35,29 @@ PIX2PGP_ASIC_TOP=${PIX2PGP_ASIC_TOP_DIR}/*Top.vhd
 PIX2PGP_PKG_DIR=${RTL_DIR}/pkg
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 
-# Vault stuff
-VAULT_DIR=${ROOT_DIR}/firmware/vault
-VAULT_RTL_DIR=${VAULT_DIR}/rtl
-VAULT_TB_DIR=${VAULT_DIR}/tb
+# these are only used by GHDL
+GHDL_FIFO_DIR=${GHDL_DIR}/ghdlFifo
+GHDL_FIFO=${GHDL_FIFO_DIR}/*.vhd
 
-VAULT_SHARED_TB_DIR=${VAULT_TB_DIR}/shared
-VAULT_FIFO_DIR=${VAULT_DIR}/ghdlFifo
-VAULT_FIFO=${VAULT_FIFO_DIR}/*.vhd
+# Vault stuff
+VAULT_DIR=${ROOT_DIR}/firmware/asicVault
 
 # ASIC-specific
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SPARKPIX_S_DIR=${VAULT_RTL_DIR}/sparkPixS
-SPARKPIX_T_DIR=${VAULT_RTL_DIR}/sparkPixT
+SPARKPIX_S_DIR=${VAULT_DIR}/sparkPixS
+SPARKPIX_T_DIR=${VAULT_DIR}/sparkPixT
 
-SPARKPIX_S_PKG=${SPARKPIX_S_DIR}/SparkPixSPkg.vhd
-SPARKPIX_T_PKG=${SPARKPIX_T_DIR}/SparkPixTPkg.vhd
+SPARKPIX_S_RTL_DIR=${SPARKPIX_S_DIR}/rtl
+SPARKPIX_T_RTL_DIR=${SPARKPIX_T_DIR}/rtl
 
-SPARKPIX_S_TOP=${SPARKPIX_S_DIR}/Pix2PgpSparkPixSTop.vhd
-SPARKPIX_T_TOP=${SPARKPIX_T_DIR}/Pix2PgpSparkPixTTop.vhd
+SPARKPIX_S_TB_DIR=${SPARKPIX_S_DIR}/tb
+SPARKPIX_T_TB_DIR=${SPARKPIX_T_DIR}/tb
 
-SPARKPIX_S_TB_DIR=${VAULT_TB_DIR}/sparkPixS
-SPARKPIX_T_TB_DIR=${VAULT_TB_DIR}/sparkPixT
+SPARKPIX_S_PKG=${SPARKPIX_S_RTL_DIR}/SparkPixSPkg.vhd
+SPARKPIX_T_PKG=${SPARKPIX_T_RTL_DIR}/SparkPixTPkg.vhd
+
+SPARKPIX_S_TOP=${SPARKPIX_S_RTL_DIR}/Pix2PgpSparkPixSTop.vhd
+SPARKPIX_T_TOP=${SPARKPIX_T_RTL_DIR}/Pix2PgpSparkPixTTop.vhd
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Surf stuff
@@ -210,7 +213,7 @@ ghdlPrepare()
   # the command below deletes the ghdl output file(s). Acts as a cleanup
   cleanFiles "$OUT"
 
-  # the command below deletes the tb linked files...!
+  # the command below deletes the tb linked files
   cleanFiles "$TB"
 
   # add the vhd surf packages files into a new .cf file library named surf
@@ -282,7 +285,7 @@ linkManyFiles()
 }
 
 ##########################################################################
-# links the corresponding ASIC files from the vault/ dir
+# links the corresponding ASIC files from the asicVault/ dir
 ghdlLink()
 {
   checkFileExists ${RTL}
@@ -315,12 +318,11 @@ ghdlLink()
       rm ${TB}
     fi
 
-    echo "[INFO]: linking firmware/vault/rtl/sparkPixS/SparkPixSPkg.vhd"
+    echo "[INFO]: linking SparkPixSPkg.vhd"
     ln -s ${SPARKPIX_S_PKG} ${PIX2PGP_PKG}
-    echo "[INFO]: linking firmware/vault/rtl/sparkPixS/Pix2PgpSparkPixSTop.vhd"
+    echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
     ln -s ${SPARKPIX_S_TOP} ${PIX2PGP_ASIC_TOP_DIR}
     echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${VAULT_SHARED_TB_DIR} ${TB_DIR}
     linkManyFiles ${SPARKPIX_S_TB_DIR} ${TB_DIR}
 
 
@@ -342,12 +344,11 @@ ghdlLink()
       rm ${TB}
     fi
 
-    echo "[INFO]: linking firmware/vault/rtl/sparkPixS/SparkPixSPkg.vhd"
+    echo "[INFO]: linking SparkPixSPkg.vhd"
     ln -s ${SPARKPIX_T_PKG} ${PIX2PGP_PKG}
-    echo "[INFO]: linking firmware/vault/rtl/sparkPixS/Pix2PgpSparkPixSTop.vhd"
+    echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
     ln -s ${SPARKPIX_T_TOP} ${PIX2PGP_ASIC_TOP_DIR}
     echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${VAULT_SHARED_TB_DIR} ${TB_DIR}
     linkManyFiles ${SPARKPIX_T_TB_DIR} ${TB_DIR}
 
   else
@@ -371,21 +372,23 @@ ghdlAnalyze()
   echo "$(ls ${PIX2PGP_PKG})"
   echo "$(ls ${PIX2PGP_ASIC_TOP})"
   echo "$(ls ${TB})"
-  echo "$(ls ${VAULT_FIFO})"
+  echo "$(ls ${GHDL_FIFO})"
 
   echo "[INFO]: Importing RTL Files..."
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${RTL}
   ${GHDL_IMPORT_PIX2PGP} ${TB}
+  ${GHDL_IMPORT_PIX2PGP} ${TB_SHARED}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_TOP}
-  ${GHDL_IMPORT_PIX2PGP} ${VAULT_FIFO}
+  ${GHDL_IMPORT_PIX2PGP} ${GHDL_FIFO}
 
   echo "[INFO]: Analyzing RTL Files..."
   ${GHDL_ANALYZE} ${PIX2PGP_PKG}
   ${GHDL_ANALYZE} ${RTL}
   ${GHDL_ANALYZE} ${TB}
+  ${GHDL_ANALYZE} ${TB_SHARED}
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_TOP}
-  ${GHDL_ANALYZE} ${VAULT_FIFO}
+  ${GHDL_ANALYZE} ${GHDL_FIFO}
   echo "[INFO]: Success!"
 }
 
