@@ -13,16 +13,17 @@ As of `v2.2.0`, Pix2PGP supports the following two ASIC variants:
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
 
 ## Repository Description
-In general, one should *only* import the contents of `firmware/core/` directory to their ASIC project. Note that when cloning the repo anew, the aforementioned directory is partially empty. This is because the importing step has to be executed first (described below). The importing step creates symbolic links from `surf` and `firmware/asicVault` to `firmware/core`. The `firmware/asicVault` directory contains ASIC-specific files that vary depending on the implementation.
+In general, one should *only* import the contents of `firmware/asic/` directory to their ASIC project. Note that when cloning the repo anew, the aforementioned directory is partially empty. This is because the importing step has to be executed first (described below). The importing step creates symbolic links from `surf` and `firmware/vault` to `firmware/asic`. The `firmware/vault` directory contains ASIC-specific files that vary depending on the implementation.
 
 ## Important First Step: How To Import to Your Project
 1. Add this repo as a submodule in your project ($ git clone --recurse-submodules git@github.com:slaclab/pix2pgp.git)
 2. Run `ghdlRun.sh` (run it while in the `firmware/ghdl` directory) at least *once*
     1. To import SparkPix-S, run `$ bash ghdlRun.sh Pix2PgpSparkPixSTopTb`
     2. To import SparkPix-T, run `$ bash ghdlRun.sh Pix2PgpSparkPixTTopTb`
-3. The command creates symbolic links to the surf libraries and to the VHDL package file (which is ASIC-specific) into `firmware/core/rtl`
-4. In your RTL analysis tool, parse everything inside the `firmware/core/rtl` directory, including its subdirectories
-    1. Do *not* link anything else (e.g. the contents of `firmware/asicVault`), as this might cause naming conflicts
+3. The command creates symbolic links to the surf libraries and to the VHDL package file (which is ASIC-specific) into `firmware/asic/rtl`
+4. In your RTL analysis tool, parse everything inside the `firmware/asic/rtl` directory, including its subdirectories
+    1. Do *not* link anything else (e.g. the contents of `firmware/vault`), as this might cause naming conflicts
+5. If you need to import FPGA receiver design files, parse-in the contents of `firmware/fpga` accordingly
 
 ### How to simulate using VCS
 1. Run the import step described in the section above
