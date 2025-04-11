@@ -129,23 +129,42 @@ package Pix2PgpPkg is
    constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
    constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
    constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6;
-   --------------------------
+   ---------------------------------------------------------------------------
    -- reserved bits (only one left)
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
                                               downto HEADER_DWITDH_C-8;
-   --------------------------
+   ---------------------------------------------------------------------------
    -- col-bitmask
    subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
                                               downto TRGCNT_HEADER_WIDTH_C;
-   --------------------------
+   ---------------------------------------------------------------------------
    -- trigger counter
    subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1
                                               downto 0;
-
+   ---------------------------------------------------------------------------
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
    -------------------------------------------
-   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
+
+   -------------------------------------------
+   -- Pix2Pgp column metadata bitmapping begin
+   -------------------------------------------
+   ---------------------------------------------------------------------------
+   subtype  META_FLAGS_POS_C   is natural range  DATABUS_DWIDTH_C-1 downto 24;
+   ---------------------------------------------------------------------------
+   subtype  META_COL_POS_C     is natural range  23 downto 16;
+   ---------------------------------------------------------------------------
+   subtype  META_TRG_CNT_POS_C is natural range  15 downto 8;
+   ---------------------------------------------------------------------------
+   subtype  META_DATALEN_POS_C is natural range  15 downto 0;
+   ---------------------------------------------------------------------------
+   -----------------------------------------
+   -- Pix2Pgp column metadata bitmapping end
+   -----------------------------------------
+
+
+   function colMeta  (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
+   function isDummy  (din : slv) return boolean;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
@@ -164,8 +183,10 @@ package Pix2PgpPkg is
 
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
-   -- functions
+   -- functions stolen from numeric_std
+   function xsll (arg: slv; count: natural) return slv;
    function rightShift (inSlv: slv; count: natural) return slv;
+   function leftShift  (inArg: unsigned; count: natural) return unsigned;
    --
 
    -- FPGA-RX related
@@ -175,29 +196,84 @@ end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
 
-   -- stolen from numberic_std
+   -- stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv is
-      constant inSlvLen: integer := inSlv'LENGTH-1;
-      alias xarg: slv(inSlvLen downto 0) is inSlv;
-      variable result: slv(inSlvLen downto 0) := (others => '0');
+      constant inSlvLen : integer := inSlv'LENGTH-1;
+      alias    xarg     : slv(inSlvLen downto 0) is inSlv;
+      variable result   : slv(inSlvLen downto 0) := (others => '0');
    begin
+
       if count <= inSlvLen then
          result(inSlvLen-count downto 0) := xarg(inSlvLen downto count);
       end if;
+
       return result;
+
    end rightShift;
 
+   function xsll (inArg: slv; count: natural) return slv is
+      constant argL   : integer := inArg'length-1;
+      alias    xarg   : slv(argL downto 0) is inArg;
+      variable result : slv(argL downto 0) := (others => '0');
+   begin
+
+      if count <= argL then
+         result(argL downto count) := xarg(argL-count downto 0);
+      end if;
+
+      return result;
+
+   end xsll;
+
+   function leftShift (inArg: unsigned; count: natural) return unsigned is
+   begin
+
+      if (inArg'length < 1) then return NAU;
+      end if;
+
+      return unsigned(xsll(slv(inArg), count));
+   end leftShift;
+
    -- ASIC-related
-   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv is
+   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
       variable retHeader: slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
-      retHeader(DATABUS_DWIDTH_C-1 downto 24) := resize(flagsSel,  16);
-      retHeader(23 downto 16)                 := resize(colSel,     8);
-      retHeader(15 downto 8)                  := resize(trgCntSel,  8);
-      retHeader(7 downto 0)                   := resize(dataLenSel, 8);
+
+      retHeader(META_FLAGS_POS_C)   := resize(flags,  16);
+      retHeader(META_COL_POS_C)     := resize(col,     8);
+      retHeader(META_TRG_CNT_POS_C) := resize(trgCnt,  8);
+      retHeader(META_DATALEN_POS_C) := resize(dataLen, 8);
 
       return retHeader;
    end colMeta;
 
+   -- FPGA-related
+   function isDummy (din: slv) return boolean is
+      variable retBool : boolean := False;
+   begin
+
+      if onesCountU(din) = 1 and din(DUMMY_HEADER_POS_C) = '1' then
+         retBool := True;
+      end if;
+
+      return retBool;
+
+   end isDummy;
+
+   function lsbSet(lsbToSet : positive; retLen: integer) return slv is
+      variable retSlv : slv(retLen-1 downto 0) := (others => '0');
+   begin
+
+      for i in 0 to retLen - 1 loop
+         if i < lsbToSet then
+            retSlv(i) := '1';
+         else
+            retSlv(i) := '0';
+         end if;
+      end loop;
+
+      return retSlv;
+
+   end function;
 
 end package body Pix2PgpPkg;
