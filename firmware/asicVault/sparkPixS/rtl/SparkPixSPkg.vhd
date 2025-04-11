@@ -163,8 +163,8 @@ package Pix2PgpPkg is
    -----------------------------------------
 
 
-   function colMeta  (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
-   function isDummy  (din : slv) return boolean;
+   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
+   function isDummy (din : slv) return boolean;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
@@ -184,13 +184,16 @@ package Pix2PgpPkg is
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
    -- functions stolen from numeric_std
-   function xsll (arg: slv; count: natural) return slv;
+   function xsll       (arg: slv; count: natural) return slv;
    function rightShift (inSlv: slv; count: natural) return slv;
    function leftShift  (inArg: unsigned; count: natural) return unsigned;
    --
 
    -- FPGA-RX related
-   constant LANE_RX_FIFO_ADDR_WIDTH_C : integer := 10;
+   constant LANERX_FIFO_ADDR_WIDTH_C     : integer := 10;
+   constant LANERX_FRAMELEN_WIDTH_C      : integer := 20;
+   constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
+   constant LANERX_FIFO_PIPE_C           : integer := 2;
 
 end Pix2PgpPkg;
 
