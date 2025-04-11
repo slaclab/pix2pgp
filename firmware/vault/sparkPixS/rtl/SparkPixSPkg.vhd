@@ -156,14 +156,14 @@ package Pix2PgpPkg is
    ---------------------------------------------------------------------------
    subtype  META_TRG_CNT_POS_C is natural range  15 downto 8;
    ---------------------------------------------------------------------------
-   subtype  META_DATALEN_POS_C is natural range  15 downto 0;
+   subtype  META_DATALEN_POS_C is natural range  7 downto 0;
    ---------------------------------------------------------------------------
    -----------------------------------------
    -- Pix2Pgp column metadata bitmapping end
    -----------------------------------------
 
-
-   function colMeta (flagsSel: slv; colSel: slv; trgCntSel: slv; dataLenSel: slv) return slv;
+   -- functions
+   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
    function isDummy (din : slv) return boolean;
 
    -- the receiver can deduce which columns have data from the bitmask
@@ -184,9 +184,10 @@ package Pix2PgpPkg is
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
    -- functions stolen from numeric_std
-   function xsll       (arg: slv; count: natural) return slv;
+   function xsll       (inArg: slv; count: natural) return slv;
    function rightShift (inSlv: slv; count: natural) return slv;
    function leftShift  (inArg: unsigned; count: natural) return unsigned;
+   constant nau: unsigned(1 downto 0) := (others => '0');
    --
 
    -- FPGA-RX related
@@ -231,7 +232,7 @@ package body Pix2PgpPkg is
    function leftShift (inArg: unsigned; count: natural) return unsigned is
    begin
 
-      if (inArg'length < 1) then return NAU;
+      if (inArg'length < 1) then return nau;
       end if;
 
       return unsigned(xsll(slv(inArg), count));
@@ -255,7 +256,7 @@ package body Pix2PgpPkg is
       variable retBool : boolean := False;
    begin
 
-      if onesCountU(din) = 1 and din(DUMMY_HEADER_POS_C) = '1' then
+      if onesCount(din) = conv_std_logic_vector(1, din'length) and din(DUMMY_HEADER_POS_C) = '1' then
          retBool := True;
       end if;
 

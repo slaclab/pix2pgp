@@ -20,19 +20,26 @@ ROOT_DIR=${PWD}/../../
 
 GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
-RTL_DIR=${ROOT_DIR}/firmware/core/rtl
-TB_DIR=${ROOT_DIR}/firmware/core/tb
-TB_SHARED_DIR=${TB_DIR}/shared
-TB_SHARED=${TB_SHARED_DIR}/*.vhd
 
-RTL=${RTL_DIR}/*.vhd
+ASIC_RTL_DIR=${ROOT_DIR}/firmware/asic/rtl
+ASIC_TB_DIR=${ROOT_DIR}/firmware/asic/tb
+# --
+ASIC_RTL=${ASIC_RTL_DIR}/*.vhd
+ASIC_TB=${ASIC_TB_DIR}/*.vhd
+
+
+FPGA_RTL_DIR=${ROOT_DIR}/firmware/fpga/rtl
+FPGA_TB_DIR=${ROOT_DIR}/firmware/fpga/tb
+# --
+FPGA_RTL=${FPGA_RTL_DIR}/*.vhd
+FPGA_TB=${FPGA_TB_DIR}/*.vhd
 
 # ASIC Top-level
-PIX2PGP_ASIC_TOP_DIR=${RTL_DIR}/asicTop
+PIX2PGP_ASIC_TOP_DIR=${ASIC_RTL_DIR}/asicTop
 PIX2PGP_ASIC_TOP=${PIX2PGP_ASIC_TOP_DIR}/*Top.vhd
 
 # note that the package has to be declared separately in order to be imported first
-PIX2PGP_PKG_DIR=${RTL_DIR}/pkg
+PIX2PGP_PKG_DIR=${ASIC_RTL_DIR}/pkg
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 
 # these are only used by GHDL
@@ -40,7 +47,7 @@ GHDL_FIFO_DIR=${GHDL_DIR}/ghdlFifo
 GHDL_FIFO=${GHDL_FIFO_DIR}/*.vhd
 
 # Vault stuff
-VAULT_DIR=${ROOT_DIR}/firmware/asicVault
+VAULT_DIR=${ROOT_DIR}/firmware/vault
 
 # ASIC-specific
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,7 +68,7 @@ SPARKPIX_T_TOP=${SPARKPIX_T_RTL_DIR}/Pix2PgpSparkPixTTop.vhd
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Surf stuff
-SURF_DIR=${RTL_DIR}/surf
+SURF_DIR=${ASIC_RTL_DIR}/surf
 SURF=${SURF_DIR}/*.vhd
 SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
@@ -81,7 +88,6 @@ CF=${GHDL_DIR}/*.cf
 GTKW=${GHDL_DIR}/*.gtkw
 GHW=${GHDL_DIR}/*.ghw
 VCD=${GHDL_DIR}/*.vcd
-TB=${TB_DIR}/*.vhd
 FST=${GHDL_DIR}/*.fst
 OUT=${GHDL_DIR}/*.o
 
@@ -289,7 +295,7 @@ linkManyFiles()
 # links the corresponding ASIC files from the asicVault/ dir
 ghdlLink()
 {
-  checkFileExists ${RTL}
+  checkFileExists ${ASIC_RTL}
   rtl_exists=$?
 
   checkFileExists ${PIX2PGP_PKG}
@@ -298,7 +304,7 @@ ghdlLink()
   checkFileExists ${PIX2PGP_ASIC_TOP}
   top_exists=$?
 
-  checkFileExists ${TB}
+  checkFileExists ${ASIC_TB}
   tb_exists=$?
 
   if [[ $1 == *"SparkPixS"* ]]; then
@@ -316,7 +322,7 @@ ghdlLink()
 
     if [[ $tb_exists -eq 1 ]]; then
       echo "[INFO]: Tb-Stuff exist! Removing files..."
-      rm ${TB}
+      rm ${ASIC_TB}
     fi
 
     echo "[INFO]: linking SparkPixSPkg.vhd"
@@ -324,7 +330,7 @@ ghdlLink()
     echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
     ln -s ${SPARKPIX_S_TOP} ${PIX2PGP_ASIC_TOP_DIR}
     echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${SPARKPIX_S_TB_DIR} ${TB_DIR}
+    linkManyFiles ${SPARKPIX_S_TB_DIR} ${ASIC_TB_DIR}
 
 
   elif [[ $1 == *"SparkPixT"* ]]; then
@@ -342,7 +348,7 @@ ghdlLink()
 
     if [[ $tb_exists -eq 1 ]]; then
       echo "[INFO]: Tb-Stuff exist! Removing files..."
-      rm ${TB}
+      rm ${ASIC_TB}
     fi
 
     echo "[INFO]: linking SparkPixSPkg.vhd"
@@ -350,7 +356,7 @@ ghdlLink()
     echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
     ln -s ${SPARKPIX_T_TOP} ${PIX2PGP_ASIC_TOP_DIR}
     echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${SPARKPIX_T_TB_DIR} ${TB_DIR}
+    linkManyFiles ${SPARKPIX_T_TB_DIR} ${ASIC_TB_DIR}
 
   else
     echo "[ERROR]: Not sourcing any ASIC-specific tesbench!"
@@ -369,24 +375,32 @@ ghdlAnalyze()
 ##########################################################################
   # analyze the files to make sure their syntax is correct
   echo "List of Files:"
-  echo "$(ls ${RTL})"
+  echo "$(ls ${ASIC_RTL})"
+  echo "$(ls ${ASIC_TB})"
+  echo "$(ls ${FPGA_RTL})"
+  echo "$(ls ${FPGA_TB})"
   echo "$(ls ${PIX2PGP_PKG})"
   echo "$(ls ${PIX2PGP_ASIC_TOP})"
-  echo "$(ls ${TB})"
+  echo "$(ls ${FPGA_RTL})"
+  echo "$(ls ${FPGA_TB})"
   echo "$(ls ${GHDL_FIFO})"
 
   echo "[INFO]: Importing RTL Files..."
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
-  ${GHDL_IMPORT_PIX2PGP} ${RTL}
-  ${GHDL_IMPORT_PIX2PGP} ${TB}
+  ${GHDL_IMPORT_PIX2PGP} ${ASIC_RTL}
+  ${GHDL_IMPORT_PIX2PGP} ${ASIC_TB}
+  ${GHDL_IMPORT_PIX2PGP} ${FPGA_RTL}
+  ${GHDL_IMPORT_PIX2PGP} ${FPGA_TB}
   ${GHDL_IMPORT_PIX2PGP} ${TB_SHARED}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_TOP}
   ${GHDL_IMPORT_PIX2PGP} ${GHDL_FIFO}
 
   echo "[INFO]: Analyzing RTL Files..."
   ${GHDL_ANALYZE} ${PIX2PGP_PKG}
-  ${GHDL_ANALYZE} ${RTL}
-  ${GHDL_ANALYZE} ${TB}
+  ${GHDL_ANALYZE} ${ASIC_RTL}
+  ${GHDL_ANALYZE} ${ASIC_TB}
+  ${GHDL_ANALYZE} ${FPGA_RTL}
+  ${GHDL_ANALYZE} ${FPGA_TB}
   ${GHDL_ANALYZE} ${TB_SHARED}
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_TOP}
   ${GHDL_ANALYZE} ${GHDL_FIFO}
@@ -395,7 +409,7 @@ ghdlAnalyze()
 
 ghdlTestbench()
 {
-  tbFilePath="${TB_DIR}/${1}.vhd"
+  tbFilePath="${ASIC_TB_DIR}/${1}.vhd"
   tbFileName="${1}.vhd"
   checkFileExists ${tbFilePath}
   tbExists=$?
@@ -450,7 +464,7 @@ main()
     exit 1
   fi
 
-  checkFileExists "$RTL"
+  checkFileExists "${ASIC_RTL}"
   rtlExists=$?
   if [[ $rtlExists -eq 0 ]]; then
     echo "[ERROR]: There are no .vhd files in rtl/."

@@ -4,7 +4,7 @@ source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 # Load submodules and shared source code
 loadRuckusTcl $::env(TOP_DIR)/submodules/surf
 loadRuckusTcl $::env(TOP_DIR)/submodules/epix-hr-core
-loadRuckusTcl $::env(TOP_DIR)/core
+loadRuckusTcl $::env(TOP_DIR)/asic
 loadRuckusTcl $::env(TOP_DIR)/fpga
 
 # the paths below contain the proprietary Synopsys stuff that are instantiated by pix2pgp
