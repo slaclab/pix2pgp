@@ -32,20 +32,21 @@ entity Pix2PgpLaneRx is
    );
    port(
       -- General Interface
-      pgpClk        : in  sl;
-      pgpRst        : in  sl := not(RST_POLARITY_G);
-      sysClk        : in  sl;
-      sysRst        : in  sl := not(RST_POLARITY_G);
+      pgpClk         : in  sl;
+      pgpRst         : in  sl := not(RST_POLARITY_G);
+      sysClk         : in  sl;
+      sysRst         : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpValid      : in  sl;
-      pgpData       : in  slv(DATABUS_DWIDTH_C-1 downto 0);
-      pgpReady      : out sl;
+      pgpValid       : in  sl;
+      pgpData        : in  slv(DATABUS_DWIDTH_C-1 downto 0);
+      pgpReady       : out sl;
       -- Adapter Interface
-      frameDataRd   : in  sl;
-      frameDataDout : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
-      frameDataFull : out sl;
-      frameMetaRd   : in  sl;
-      frameMetaDout : out slv(DATABUS_DWIDTH_C-1 downto 0)
+      frameDataRd    : in  sl;
+      frameDataDout  : out slv(DATABUS_DWIDTH_C-1 downto 0);
+      frameDataFull  : out sl;
+      frameMetaRd    : in  sl;
+      frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
+      frameMetaValid : out sl
    );
 end Pix2PgpLaneRx;
 
@@ -127,6 +128,8 @@ begin
    U_protoBuffer : entity surf.Fifo
       generic map (
          TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
          GEN_SYNC_FIFO_G => false, -- false = dual-clock FIFO
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
@@ -141,7 +144,7 @@ begin
          overflow => pgpFull,
          -- Read Ports
          rd_clk   => sysClk,
-         rd_en    => protoBufValid, -- always stream data
+         rd_en    => '1',
          dout     => protoBufDout,
          valid    => protoBufValid);
 
@@ -149,14 +152,13 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => LANERX_FIFO_PIPE_C)
+         DELAY_G        => 1) -- a value of 1 aligns the r.dout with the r.valid
       port map (
          clk     => sysClk,
          din(0)  => protoBufValid,
          dout(0) => protoBufValidDly);
 
-   comb : process (r, sysRst, protoBufDout, protoBufValidDly,
-                   pgpFull, frameMetaEmptyDly) is
+   comb : process (r, sysRst, protoBufDout, protoBufValidDly, pgpFull, frameMetaEmptyDly) is
 
       -- omnipresent
       variable v : RegType;
@@ -197,13 +199,13 @@ begin
       v.valid := '0';            -- disable by default; enable one level below
 
       if r.protoBufValid = '1' then
-         if r.decError = '1' and isDummy(r.protoBufDout) then
+         if r.decError = '1' and isDummy(v.protoBufDout) then
             -- dummy header; useful when wanting to get out of error state
             v.isDummy := '1';
          elsif r.waitHeader = '0' and r.decError = '0' then
             -- regular data
             v.valid := '1';
-         elsif r.waitHeader = '1' and not(isDummy(r.protoBufDout)) then
+         elsif r.waitHeader = '1' and not(isDummy(v.protoBufDout)) then
             -- regular header
             v.valid := '1';
          end if;
@@ -339,6 +341,8 @@ begin
    U_frameMetaBuffer : entity surf.Fifo
       generic map (
          TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
@@ -353,7 +357,8 @@ begin
          -- Read Ports
          rd_clk   => sysClk,
          rd_en    => frameMetaRd,
-         dout     => frameMetaDout);
+         dout     => frameMetaDout,
+         valid    => frameMetaValid);
 
    U_PipelineMetaRst : entity surf.SlvDelay
       generic map (
@@ -402,6 +407,8 @@ begin
    U_frameDataBuffer : entity surf.Fifo
       generic map (
          TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => DATABUS_DWIDTH_C,
@@ -442,7 +449,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => LANERX_FRAMELEN_BUFF_WIDTH_C,
+         WIDTH_G        => DATABUS_DWIDTH_C,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
          clk  => sysClk,
