@@ -60,14 +60,14 @@ architecture rtl of Pix2PgpLaneRx is
    type RegType is record
       protoBufDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
       protoBufValid  : sl;
-      decError       : sl;
       isDummy        : sl;
       din            : slv(DATABUS_DWIDTH_C-1 downto 0);
       valid          : sl;
-      inError        : sl;
+      decError       : sl;
       waitHeader     : sl;
       frameMetaWr    : sl;
       frameMetaEmpty : sl;
+      frameMetaDin   : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
       frameMetaCnt   : slv(LANERX_FRAMELEN_WIDTH_C-1 downto 0);
       errorRstDone   : sl;
       inPause        : sl;
@@ -82,14 +82,14 @@ architecture rtl of Pix2PgpLaneRx is
    constant REG_INIT_C : RegType := (
       protoBufDout   => (others => '0'),
       protoBufValid  => '0',
-      decError       => '0',
       isDummy        => '0',
       din            => (others => '0'),
       valid          => '0',
-      inError        => '0',
+      decError       => '0',
       waitHeader     => '1',
       frameMetaWr    => '0',
       frameMetaEmpty => '0',
+      frameMetaDin   => (others => '0'),
       frameMetaCnt   => (others => '0'),
       errorRstDone   => '0',
       inPause        => '0',
@@ -188,7 +188,6 @@ begin
 
       -- Defaults
       v.frameMetaWr  := '0';
-      v.decError     := '0';
       v.isDummy      := '0';
       v.frameMetaRst := '0';
       v.frameDataRst := '0';
@@ -198,10 +197,10 @@ begin
       v.valid := '0';            -- disable by default; enable one level below
 
       if r.protoBufValid = '1' then
-         if r.inError = '1' and isDummy(r.protoBufDout) then
+         if r.decError = '1' and isDummy(r.protoBufDout) then
             -- dummy header; useful when wanting to get out of error state
             v.isDummy := '1';
-         elsif r.waitHeader = '0' and r.inError = '0' then
+         elsif r.waitHeader = '0' and r.decError = '0' then
             -- regular data
             v.valid := '1';
          elsif r.waitHeader = '1' and not(isDummy(r.protoBufDout)) then
@@ -235,7 +234,7 @@ begin
          when WAIT_HEADER_S =>
             v.waitHeader   := '1';
             v.errorRstDone := '0';
-            v.inError      := '0';
+            v.decError     := '0';
 
             if r.valid = '1' then
                v.inPause := pause;
@@ -259,8 +258,8 @@ begin
                if r.activeColCnt > 0 then
                   -- data check
                   if metaTrgCnt /= r.trgCntHeader or
-                     metaDataLen >= leftShift(1, DATALEN_WIDTH_C) then
-                     v.inError     := '1';
+                     metaDataLen >= slv(leftShift(conv_unsigned(1, 1), DATALEN_WIDTH_C)) then
+                     v.decError    := '1';
                      v.frameMetaWr := '1';  -- close data frame
                      v.state       := ERROR_S;
                   end if;
@@ -310,7 +309,10 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      pgpReady <= not(pgpFull); -- not registered
+      v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-1)          := r.decError;
+      v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-2 downto 0) := r.frameMetaCnt;
+
+      pgpReady <= not(pgpFull); -- not registered (on pgp domain)
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
@@ -390,9 +392,9 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk  => sysClk,
-         din  => frameMetaEmpty,
-         dout => frameMetaEmptyDly);
+         clk     => sysClk,
+         din(0)  => frameMetaEmpty,
+         dout(0) => frameMetaEmptyDly);
 
    ----------------------------------------
    -- Main Data Buffer
