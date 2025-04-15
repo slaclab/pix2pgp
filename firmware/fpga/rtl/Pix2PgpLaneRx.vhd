@@ -54,7 +54,6 @@ architecture rtl of Pix2PgpLaneRx is
 
    type StateType is (
       WAIT_HEADER_S,
-      PARSE_COL_METADATA_S,
       PARSE_DATA_S,
       ERROR_S);
 
@@ -66,6 +65,7 @@ architecture rtl of Pix2PgpLaneRx is
       valid          : sl;
       decError       : sl;
       waitHeader     : sl;
+      colMeta        : sl;
       frameMetaWr    : sl;
       frameMetaEmpty : sl;
       frameMetaDin   : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
@@ -87,6 +87,7 @@ architecture rtl of Pix2PgpLaneRx is
       valid          => '0',
       decError       => '0',
       waitHeader     => '1',
+      colMeta        => '0',
       frameMetaWr    => '0',
       frameMetaEmpty => '0',
       frameMetaDin   => (others => '0'),
@@ -236,20 +237,20 @@ begin
                   v.waitHeader   := '0';
                   v.trgCntHeader := trgCnt;
                   v.activeColCnt := onesCount(colBitmask);
-                  v.state        := PARSE_COL_METADATA_S;
+                  v.colMeta      := '1';
+                  v.state        := PARSE_DATA_S;
                end if;
             end if;
 
          ----------------------------------------------------------------------
-         -- parse column metadata
-         when PARSE_COL_METADATA_S =>
+         -- parse column metadata and data
+         when PARSE_DATA_S =>
             if r.valid = '1' then
 
-               -- still more columns to go
-               if r.activeColCnt > 0 then
+               -- column metadata parsing here
+               if r.colMeta = '1' then
                   v.activeColCnt := r.activeColCnt - 1;
                   v.dataLenCnt   := metaDataLen;
-                  v.state        := PARSE_DATA_S;
 
                   -- data check; override data parsing if in error
                   if metaTrgCnt /= r.trgCntHeader then
@@ -259,24 +260,29 @@ begin
                      v.state       := ERROR_S;
                   end if;
 
-               else
-                  v.state := WAIT_HEADER_S;
-                  if r.inPause = '0' then
-                     v.frameMetaWr := '1'; -- close data frame
-                  end if;
-               end if;
-            end if;
+                  v.colMeta := '0'; -- drop the flag
 
-         ----------------------------------------------------------------------
-         -- parse column data
-         when PARSE_DATA_S =>
-            if r.valid = '1' then
-               -- data parsing
-               if r.dataLenCnt > 1 then
-                  v.dataLenCnt := r.dataLenCnt - 2;
                else
-                  v.state := PARSE_COL_METADATA_S;
+                  -- actual data parsing here
+
+                  -- still more data for this column
+                  if r.dataLenCnt > 1 then
+                     v.dataLenCnt := r.dataLenCnt - 1;
+                  else
+
+                     -- column done; what about the overall event though?
+                     if r.activeColCnt > 0 then
+                        -- more columns to go...
+                        v.colMeta := '1';
+                     else
+                        -- done!
+                        v.frameMetaWr := not(r.inPause); -- close data frame if not a paused frame
+                        v.state       := WAIT_HEADER_S;
+                     end if;
+                  end if;
+
                end if;
+
             end if;
 
          ----------------------------------------------------------------------
