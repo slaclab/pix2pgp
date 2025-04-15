@@ -137,6 +137,7 @@ begin
 
       -- Defaults
       v.frameMetaRd := '0';
+      v.frameDataRd := '0';
 
       -- flow control check
       if v.sAxisSlave.tReady = '1' then
@@ -154,6 +155,9 @@ begin
       ---------------------------------------------------------------------------
          -- stay here until a valid metadata value is available
          when IDLE_S =>
+            v.dataRdCnt := (others => '0');
+            v.dataWrCnt := (others => '0');
+
             if frameMetaValid = '1' then
                v.frameLen    := frameLen; -- register the frame length
                v.laneError   := decError; -- register the decoding error
@@ -173,9 +177,8 @@ begin
                v.dataRdCnt   := r.dataRdCnt + 1;
                v.frameDataRd := '1';
 
-               -- hold the value of counter and ground the read if hit the limit
-               if r.dataRdCnt = r.frameLen then
-                  v.dataRdCnt   := r.dataRdCnt;
+               -- ground the read if hit the limit
+               if r.dataRdCnt >= r.frameLen then
                   v.frameDataRd := '0';
                end if;
 
@@ -183,12 +186,17 @@ begin
                if r.dataRdCnt >= WRITE_DELAY_C then
                   v.dataWrCnt          := r.dataWrCnt + 1;
                   v.sAxisMaster.tValid := '1';
-               end if;
 
-               -- done reading of lane
-               if r.dataWrCnt = r.frameLen - 1 then
-                  v.sAxisMaster.tLast := '1';
-                  v.state             := IDLE_S;
+                  -- issue SoF if first word that is written
+                  if r.dataRdCnt = WRITE_DELAY_C then
+                     v.sAxisMaster.tUser(1) := '1';
+                  end if;
+
+                  -- done reading of lane
+                  if r.dataWrCnt = r.frameLen - 1 then
+                     v.sAxisMaster.tLast := '1';
+                     v.state             := IDLE_S;
+                  end if;
                end if;
             end if;
 

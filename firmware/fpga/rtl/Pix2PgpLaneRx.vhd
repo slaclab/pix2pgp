@@ -97,8 +97,8 @@ architecture rtl of Pix2PgpLaneRx is
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
       dataLenCnt     => (others => '0'),
-      frameMetaRst   => '1',
-      frameDataRst   => '1',
+      frameMetaRst   => not(RST_POLARITY_G),
+      frameDataRst   => not(RST_POLARITY_G),
       state          => WAIT_HEADER_S
    );
 
@@ -109,13 +109,13 @@ architecture rtl of Pix2PgpLaneRx is
    signal protoBufValid     : sl := '0';
    signal protoBufDout      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
-   signal frameMetaRst      : sl := '0';
+   signal frameMetaRst      : sl := not(RST_POLARITY_G);
    signal frameMetaWr       : sl := '0';
    signal frameMetaDin      : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaEmpty    : sl := '0';
    signal frameMetaEmptyDly : sl := '0';
 
-   signal frameDataRst      : sl := '0';
+   signal frameDataRst      : sl := not(RST_POLARITY_G);
    signal frameDataWr       : sl := '0';
    signal frameDataDin      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
@@ -180,8 +180,8 @@ begin
       -- Defaults
       v.frameMetaWr  := '0';
       v.isDummy      := '0';
-      v.frameMetaRst := '0';
-      v.frameDataRst := '0';
+      v.frameMetaRst := not(RST_POLARITY_G);
+      v.frameDataRst := not(RST_POLARITY_G);
 
       -- First layer of dataRx
       v.din   := r.protoBufDout; -- register the data
@@ -287,8 +287,8 @@ begin
          --
          when ERROR_S =>
             if r.frameMetaEmpty = '1' and r.ErrorRstDone = '0' then
-               v.frameMetaRst := '1';
-               v.frameDataRst := '1';
+               v.frameMetaRst := RST_POLARITY_G;
+               v.frameDataRst := RST_POLARITY_G;
                v.errorRstDone := '1';
             end if;
 

@@ -114,7 +114,7 @@ begin
          clkP => sparseClk,
          clkN => open);
 
-    writeDataProcess: process(pgpClk)
+  writeDataProcess: process(pgpClk)
 
     -- variables for file-writing
     file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
@@ -128,6 +128,25 @@ begin
           -- justification(right/left), trailing_whitespaces);
           -- writeline(file_variable, row_variable);
           hwrite(row, pgpData, right, 0);
+          writeline(myFile,row);
+        end if;
+      end if;
+  end process;
+
+  writeAxiProcess: process(pgpClk)
+
+    -- variables for file-writing
+    file myFile  : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable row : line;
+
+  begin
+    if (rising_edge(pgpClk)) then
+        -- check if the valid flag is high
+        if laneTxMaster.tValid = '1' then
+          -- syntax: write(row_variable,what_to_write,
+          -- justification(right/left), trailing_whitespaces);
+          -- writeline(file_variable, row_variable);
+          hwrite(row, laneTxMaster.tData, right, 0);
           writeline(myFile,row);
         end if;
       end if;
@@ -341,6 +360,46 @@ begin
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
+    wait for CLK_PERIOD_SPARSE_C*2;
+      sro  <= '0';
+
     wait for CLK_PERIOD_SPARSE_C*93;
       sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
