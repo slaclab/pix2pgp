@@ -107,7 +107,6 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal pgpFull           : sl := '0';
    signal protoBufValid     : sl := '0';
-   signal protoBufValidDly  : sl := '0';
    signal protoBufDout      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    signal frameMetaRst      : sl := '0';
@@ -148,17 +147,7 @@ begin
          dout     => protoBufDout,
          valid    => protoBufValid);
 
-   U_PipelineBufValid : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 1) -- a value of 1 aligns the r.dout with the r.valid
-      port map (
-         clk     => sysClk,
-         din(0)  => protoBufValid,
-         dout(0) => protoBufValidDly);
-
-   comb : process (r, sysRst, protoBufDout, protoBufValidDly, pgpFull, frameMetaEmptyDly) is
+   comb : process (r, sysRst, protoBufDout, protoBufValid, pgpFull, frameMetaEmptyDly) is
 
       -- omnipresent
       variable v : RegType;
@@ -185,7 +174,7 @@ begin
 
       -- Register inputs
       v.protoBufDout   := protoBufDout;
-      v.protoBufValid  := protoBufValidDly;
+      v.protoBufValid  := protoBufValid;
       v.frameMetaEmpty := frameMetaEmptyDly;
 
       -- Defaults
@@ -199,13 +188,13 @@ begin
       v.valid := '0';            -- disable by default; enable one level below
 
       if r.protoBufValid = '1' then
-         if r.decError = '1' and isDummy(v.protoBufDout) then
+         if r.decError = '1' and isDummy(r.protoBufDout) then
             -- dummy header; useful when wanting to get out of error state
             v.isDummy := '1';
          elsif r.waitHeader = '0' and r.decError = '0' then
             -- regular data
             v.valid := '1';
-         elsif r.waitHeader = '1' and not(isDummy(v.protoBufDout)) then
+         elsif r.waitHeader = '1' and not(isDummy(r.protoBufDout)) then
             -- regular header
             v.valid := '1';
          end if;
