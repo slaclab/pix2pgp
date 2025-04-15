@@ -37,9 +37,6 @@ entity Pix2PgpLaneRx is
       sysClk        : in  sl;
       sysRst        : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpError      : in  sl; -- CRC Error
-      pgpEof        : in  sl; -- EoF
-      pgpSof        : in  sl; -- SoF
       pgpValid      : in  sl;
       pgpData       : in  slv(DATABUS_DWIDTH_C-1 downto 0);
       pgpReady      : out sl;
@@ -63,7 +60,6 @@ architecture rtl of Pix2PgpLaneRx is
    type RegType is record
       protoBufDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
       protoBufValid  : sl;
-      pgpEof         : sl;
       decError       : sl;
       isDummy        : sl;
       din            : slv(DATABUS_DWIDTH_C-1 downto 0);
@@ -86,7 +82,6 @@ architecture rtl of Pix2PgpLaneRx is
    constant REG_INIT_C : RegType := (
       protoBufDout   => (others => '0'),
       protoBufValid  => '0',
-      pgpEof         => '0',
       decError       => '0',
       isDummy        => '0',
       din            => (others => '0'),
@@ -161,7 +156,7 @@ begin
          dout(0) => protoBufValidDly);
 
    comb : process (r, sysRst, protoBufDout, protoBufValidDly,
-                   pgpFull, pgpEof, frameMetaEmptyDly) is
+                   pgpFull, frameMetaEmptyDly) is
 
       -- omnipresent
       variable v : RegType;
@@ -189,13 +184,14 @@ begin
       -- Register inputs
       v.protoBufDout   := protoBufDout;
       v.protoBufValid  := protoBufValidDly;
-      v.pgpEof         := pgpEof;
       v.frameMetaEmpty := frameMetaEmptyDly;
 
       -- Defaults
-      v.frameMetaWr := '0';
-      v.decError    := '0';
-      v.isDummy     := '0';
+      v.frameMetaWr  := '0';
+      v.decError     := '0';
+      v.isDummy      := '0';
+      v.frameMetaRst := '0';
+      v.frameDataRst := '0';
 
       -- First layer of dataRx
       v.din   := r.protoBufDout; -- register the data
@@ -296,20 +292,17 @@ begin
          -- 1st stage: wait for data consumer to grab the error from the
          -- frame metadata buffer; -> reset the main data buffer
 
-         -- 2nd stage: wait here until a dummy *and* an EoF are detected;
+         -- 2nd stage: wait here until a dummy is detected;
          -- i.e. avoid writing any more garbage to the buffers
          --
-         -- To-Do!!
-         -- need to check the alignment between the EoF signal and isDummy
-         -- To-Do!!
          when ERROR_S =>
             if r.frameMetaEmpty = '1' and r.ErrorRstDone = '0' then
-               v.frameMetaRst := '1'; -- To-Do: stretch me
-               v.frameDataRst := '1'; -- To-Do: stretch me
+               v.frameMetaRst := '1';
+               v.frameDataRst := '1';
                v.errorRstDone := '1';
             end if;
 
-            if r.isDummy = '1' and r.pgpEof = '1' and r.errorRstDone = '1' then
+            if r.isDummy = '1' and r.errorRstDone = '1' then
                v.state := WAIT_HEADER_S;
             end if;
 
@@ -337,6 +330,28 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   ----------------------------------------
+   -- Metadata Buffer
+   ----------------------------------------
+   U_frameMetaBuffer : entity surf.Fifo
+      generic map (
+         TPD_G           => TPD_G,
+         MEMORY_TYPE_G   => "block",
+         FWFT_EN_G       => true,
+         DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
+         ADDR_WIDTH_G    => 4)
+      port map (
+         rst      => frameMetaRst,
+         -- Write Ports
+         wr_clk   => sysClk,
+         wr_en    => frameMetaWr,
+         din      => frameMetaDin,
+         empty    => frameMetaEmpty,
+         -- Read Ports
+         rd_clk   => sysClk,
+         rd_en    => frameMetaRd,
+         dout     => frameMetaDout);
 
    U_PipelineMetaRst : entity surf.SlvDelay
       generic map (
@@ -379,23 +394,27 @@ begin
          din  => frameMetaEmpty,
          dout => frameMetaEmptyDly);
 
-   U_frameMetaBuffer : entity surf.Fifo
+   ----------------------------------------
+   -- Main Data Buffer
+   ----------------------------------------
+   U_frameDataBuffer : entity surf.Fifo
       generic map (
          TPD_G           => TPD_G,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
-         ADDR_WIDTH_G    => 4)
+         DATA_WIDTH_G    => DATABUS_DWIDTH_C,
+         ADDR_WIDTH_G    => LANERX_FIFO_ADDR_WIDTH_C)
       port map (
-         rst      => frameMetaRst,
+         rst      => frameDataRst,
          -- Write Ports
          wr_clk   => sysClk,
-         wr_en    => frameMetaWr,
-         din      => frameMetaDin,
-         empty    => frameMetaEmpty,
+         wr_en    => frameDataWr,
+         din      => frameDataDin,
+         overflow => frameDataFull,
          -- Read Ports
-         rd_en    => frameMetaRd,
-         dout     => frameMetaDout);
+         rd_clk   => sysClk,
+         rd_en    => frameDataRd,
+         dout     => frameDataDout);
 
    U_PipelineDataRst : entity surf.SlvDelay
       generic map (
@@ -427,23 +446,5 @@ begin
          clk  => sysClk,
          din  => r.din,
          dout => frameDataDin);
-
-   U_frameDataBuffer : entity surf.Fifo
-      generic map (
-         TPD_G           => TPD_G,
-         MEMORY_TYPE_G   => "block",
-         FWFT_EN_G       => true,
-         DATA_WIDTH_G    => DATABUS_DWIDTH_C,
-         ADDR_WIDTH_G    => LANERX_FIFO_ADDR_WIDTH_C)
-      port map (
-         rst      => frameDataRst,
-         -- Write Ports
-         wr_clk   => sysClk,
-         wr_en    => frameDataWr,
-         din      => frameDataDin,
-         overflow => frameDataFull,
-         -- Read Ports
-         rd_en    => frameDataRd,
-         dout     => frameDataDout);
 
 end rtl;
