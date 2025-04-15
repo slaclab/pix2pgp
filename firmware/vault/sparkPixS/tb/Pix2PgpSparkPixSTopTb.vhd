@@ -85,7 +85,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal frameMetaValid : sl := '0';
 
    signal laneError      : sl := '0';
-   signal laneErrorAck   : sl := '0';
+   signal laneErrorAck   : sl := '1';
    signal laneTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal laneTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
@@ -360,73 +360,14 @@ begin
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*93;
-      sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
-
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-     --  end loop;
-     --    sro <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --    sro  <= '0';
+     wait for CLK_PERIOD_SPARSE_C*93;
+       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(col) <= toSlv(2, hitLen(col)'length);
+       end loop;
+         sro  <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
 
     -- wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);

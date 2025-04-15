@@ -75,7 +75,6 @@ architecture rtl of Pix2PgpLaneRx is
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt   : slv(BITMAX_COL_MANAGERS_C downto 0);
       dataLenCnt     : slv(7 downto 0);
-      frameMetaRst   : sl;
       frameDataRst   : sl;
       state          : StateType;
    end record RegType;
@@ -97,7 +96,6 @@ architecture rtl of Pix2PgpLaneRx is
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
       dataLenCnt     => (others => '0'),
-      frameMetaRst   => not(RST_POLARITY_G),
       frameDataRst   => not(RST_POLARITY_G),
       state          => WAIT_HEADER_S
    );
@@ -109,15 +107,18 @@ architecture rtl of Pix2PgpLaneRx is
    signal protoBufValid     : sl := '0';
    signal protoBufDout      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
-   signal frameMetaRst      : sl := not(RST_POLARITY_G);
    signal frameMetaWr       : sl := '0';
    signal frameMetaDin      : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaEmpty    : sl := '0';
    signal frameMetaEmptyDly : sl := '0';
+   signal frameDataEmpty    : sl := '0';
 
    signal frameDataRst      : sl := not(RST_POLARITY_G);
    signal frameDataWr       : sl := '0';
    signal frameDataDin      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+
+   signal dbgTrg            : slv(7 downto 0) := (others => '0');
+   signal dbgLen            : slv(7 downto 0) := (others => '0');
 
 begin
 
@@ -180,7 +181,6 @@ begin
       -- Defaults
       v.frameMetaWr  := '0';
       v.isDummy      := '0';
-      v.frameMetaRst := not(RST_POLARITY_G);
       v.frameDataRst := not(RST_POLARITY_G);
 
       -- First layer of dataRx
@@ -247,17 +247,18 @@ begin
 
                -- still more columns to go
                if r.activeColCnt > 0 then
-                  -- data check
-                  if metaTrgCnt /= r.trgCntHeader or
-                     metaDataLen >= slv(leftShift(conv_unsigned(1, 1), DATALEN_WIDTH_C)) then
+                  v.activeColCnt := r.activeColCnt - 1;
+                  v.dataLenCnt   := metaDataLen;
+                  v.state        := PARSE_DATA_S;
+
+                  -- data check; override data parsing if in error
+                  if metaTrgCnt /= r.trgCntHeader then
+                     --metaDataLen >= slv(leftShift(conv_unsigned(1, 1), DATALEN_WIDTH_C)) then
                      v.decError    := '1';
                      v.frameMetaWr := '1';  -- close data frame
                      v.state       := ERROR_S;
                   end if;
 
-                  v.activeColCnt := r.activeColCnt - 1;
-                  v.dataLenCnt   := metaDataLen;
-                  v.state        := PARSE_DATA_S;
                else
                   v.state := WAIT_HEADER_S;
                   if r.inPause = '0' then
@@ -287,7 +288,6 @@ begin
          --
          when ERROR_S =>
             if r.frameMetaEmpty = '1' and r.ErrorRstDone = '0' then
-               v.frameMetaRst := RST_POLARITY_G;
                v.frameDataRst := RST_POLARITY_G;
                v.errorRstDone := '1';
             end if;
@@ -304,6 +304,9 @@ begin
       v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-2 downto 0) := r.frameMetaCnt;
 
       pgpReady <= not(pgpFull); -- not registered (on pgp domain)
+
+      dbgTrg <= metaTrgCnt;
+      dbgLen <= metaDataLen;
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
@@ -337,7 +340,7 @@ begin
          DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
          ADDR_WIDTH_G    => 4)
       port map (
-         rst      => frameMetaRst,
+         rst      => sysRst,
          -- Write Ports
          wr_clk   => sysClk,
          wr_en    => frameMetaWr,
@@ -348,16 +351,6 @@ begin
          rd_en    => frameMetaRd,
          dout     => frameMetaDout,
          valid    => frameMetaValid);
-
-   U_PipelineMetaRst : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => LANERX_FIFO_PIPE_C)
-      port map (
-         clk     => sysClk,
-         din(0)  => r.frameMetaRst,
-         dout(0) => frameMetaRst);
 
    U_PipelineMetaWr : entity surf.SlvDelay
       generic map (
@@ -408,6 +401,7 @@ begin
          wr_clk   => sysClk,
          wr_en    => frameDataWr,
          din      => frameDataDin,
+         empty    => frameDataEmpty,
          overflow => frameDataFull,
          -- Read Ports
          rd_clk   => sysClk,
