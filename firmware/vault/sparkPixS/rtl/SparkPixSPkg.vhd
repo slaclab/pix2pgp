@@ -183,11 +183,10 @@ package Pix2PgpPkg is
 
    constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
-   -- functions stolen from numeric_std
-   function xsll       (inArg: slv; count: natural) return slv;
+   --
+   function powerOfTwo(N: natural) return slv;
+   -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
-   function leftShift  (inArg: unsigned; count: natural) return unsigned;
-   constant nau: unsigned(1 downto 0) := (others => '0');
    --
 
    -- FPGA-RX related
@@ -199,6 +198,14 @@ package Pix2PgpPkg is
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
+
+   function powerOfTwo(N: natural) return slv is
+      variable result : slv(N downto 0);
+   begin
+      result := (others => '0');
+      result(N) := '1';
+      return result;
+   end function powerOfTwo;
 
    -- stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv is
@@ -214,29 +221,6 @@ package body Pix2PgpPkg is
       return result;
 
    end rightShift;
-
-   function xsll (inArg: slv; count: natural) return slv is
-      constant argL   : integer := inArg'length-1;
-      alias    xarg   : slv(argL downto 0) is inArg;
-      variable result : slv(argL downto 0) := (others => '0');
-   begin
-
-      if count <= argL then
-         result(argL downto count) := xarg(argL-count downto 0);
-      end if;
-
-      return result;
-
-   end xsll;
-
-   function leftShift (inArg: unsigned; count: natural) return unsigned is
-   begin
-
-      if (inArg'length < 1) then return nau;
-      end if;
-
-      return unsigned(xsll(slv(inArg), count));
-   end leftShift;
 
    -- ASIC-related
    function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
