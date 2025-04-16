@@ -150,7 +150,7 @@ begin
             if laneTxMaster.tKeep(i) = '1' then
                hwrite(row, laneTxMaster.tData((i*8+7) downto (i*8)), right, 0);
                writeline(myFile,row);
-          end if;
+            end if;
           end loop;
         end if;
       end if;
