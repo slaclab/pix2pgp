@@ -146,8 +146,12 @@ begin
           -- syntax: write(row_variable,what_to_write,
           -- justification(right/left), trailing_whitespaces);
           -- writeline(file_variable, row_variable);
-          hwrite(row, laneTxMaster.tData, right, 0);
-          writeline(myFile,row);
+          for i in 127 downto 0 loop
+            if laneTxMaster.tKeep(i) = '1' then
+               hwrite(row, laneTxMaster.tData((i*8+7) downto (i*8)), right, 0);
+               writeline(myFile,row);
+          end if;
+          end loop;
         end if;
       end if;
   end process;

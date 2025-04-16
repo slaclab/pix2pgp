@@ -52,7 +52,7 @@ end Pix2PgpLaneAdapter;
 architecture rtl of Pix2PgpLaneAdapter is
 
    -- delay between reading of FIFO and writing into bus
-   constant WRITE_DELAY_C : positive := 3;
+   constant WRITE_DELAY_C : positive := 1;
 
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (

@@ -61,11 +61,11 @@ architecture rtl of Pix2PgpLaneRx is
    type RegType is record
       protoBufDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
       protoBufValid  : sl;
-      isDummy        : sl;
       din            : slv(DATABUS_DWIDTH_C-1 downto 0);
       valid          : sl;
+      preDin         : slv(DATABUS_DWIDTH_C-1 downto 0);
+      preValid       : sl;
       decError       : sl;
-      waitHeader     : sl;
       frameMetaWr    : sl;
       frameMetaEmpty : sl;
       frameMetaDin   : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
@@ -82,15 +82,15 @@ architecture rtl of Pix2PgpLaneRx is
    constant REG_INIT_C : RegType := (
       protoBufDout   => (others => '0'),
       protoBufValid  => '0',
-      isDummy        => '0',
       din            => (others => '0'),
       valid          => '0',
+      preDin         => (others => '0'),
+      preValid       => '0',
       decError       => '0',
-      waitHeader     => '1',
       frameMetaWr    => '0',
       frameMetaEmpty => '0',
       frameMetaDin   => (others => '0'),
-      frameMetaCnt   => (others => '0'),
+      frameMetaCnt   => toSlv(1, LANERX_FRAMELEN_WIDTH_C),
       errorRstDone   => '0',
       inPause        => '0',
       trgCntHeader   => (others => '0'),
@@ -158,6 +158,7 @@ begin
       variable colError   : sl := '0';
       variable pauseError : sl := '0';
       variable timeout    : sl := '0';
+      variable dummy      : sl := '0';
       variable colBitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
       variable trgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
 
@@ -177,60 +178,48 @@ begin
 
       -- Defaults
       v.frameMetaWr  := '0';
-      v.isDummy      := '0';
       v.frameDataRst := not(RST_POLARITY_G);
 
       -- First layer of dataRx
-      v.din   := r.protoBufDout; -- register the data
-      v.valid := '0';            -- disable by default; enable one level below
-
-      if r.protoBufValid = '1' then
-         if r.decError = '1' and isDummy(r.protoBufDout) then
-            -- dummy header; useful when wanting to get out of error state
-            v.isDummy := '1';
-         elsif r.waitHeader = '0' and r.decError = '0' then
-            -- regular data
-            v.valid := '1';
-         elsif r.waitHeader = '1' and not(isDummy(r.protoBufDout)) then
-            -- regular header
-            v.valid := '1';
-         end if;
-      end if;
+      v.preDin   := r.protoBufDout;
+      v.preValid := r.protoBufValid;
+      -- Second Layer
+      v.din      := r.preDin;
+      v.valid    := '0'; -- disable by default
 
       -- header variables
-      overOcc     := r.din(OVEROCC_FLAG_POS_C);
-      pause       := r.din(PAUSE_FLAG_POS_C);
-      colError    := r.din(COLUMN_ERROR_FLAG_POS_C);
-      pauseError  := r.din(PAUSE_ERROR_FLAG_POS_C);
-      timeout     := r.din(TIMEOUT_FLAG_POS_C);
-      colBitmask  := r.din(COL_BITMASK_POS_C);
-      trgCnt      := resize(r.din(TRG_CNT_POS_C), TRGCNT_WIDTH_C);
+      overOcc     := r.preDin(OVEROCC_FLAG_POS_C);
+      pause       := r.preDin(PAUSE_FLAG_POS_C);
+      colError    := r.preDin(COLUMN_ERROR_FLAG_POS_C);
+      pauseError  := r.preDin(PAUSE_ERROR_FLAG_POS_C);
+      timeout     := r.preDin(TIMEOUT_FLAG_POS_C);
+      dummy       := toSl(isDummy(r.preDin));
+      colBitmask  := r.preDin(COL_BITMASK_POS_C);
+      trgCnt      := resize(r.preDin(TRG_CNT_POS_C), TRGCNT_WIDTH_C);
       -- column metadata variables
-      metaTrgCnt  := r.din(META_TRG_CNT_POS_C);
-      metaDataLen := r.din(META_DATALEN_POS_C);
-
-      if r.frameMetaWr = '1' then
-         v.frameMetaCnt := (others => '0');
-      elsif r.valid = '1' then
-         v.frameMetaCnt := r.frameMetaCnt + 1;
-      end if;
+      metaTrgCnt  := r.preDin(META_TRG_CNT_POS_C);
+      metaDataLen := r.preDin(META_DATALEN_POS_C);
 
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
          -- stay here until a valid header comes in
          when WAIT_HEADER_S =>
-            v.waitHeader   := '1';
             v.errorRstDone := '0';
             v.decError     := '0';
 
-            if r.valid = '1' then
+            -- only reset the counter if not in pause (i.e. expecting more data for this frame)
+            if r.inPause = '0' then
+               v.frameMetaCnt := toSlv(1, LANERX_FRAMELEN_WIDTH_C);
+            end if;
+
+            if r.preValid = '1' and dummy = '0' then
+               v.valid   := '1'; -- write data word into the main data FIFO
                v.inPause := pause;
 
                if uOr(colBitmask) = '0' then
                   v.frameMetaWr  := '1'; -- close data frame
                else
-                  v.waitHeader   := '0';
                   v.trgCntHeader := trgCnt;
                   v.activeColCnt := onesCount(colBitmask);
                   v.state        := PARSE_COL_METADATA_S;
@@ -240,9 +229,11 @@ begin
          ----------------------------------------------------------------------
          -- parse column metadata
          when PARSE_COL_METADATA_S =>
-            if r.valid = '1' then
-               v.dataLenCnt := metaDataLen;
-               v.state      := PARSE_DATA_S;
+            if r.preValid = '1' then
+               v.valid        := '1';                -- write data word into the main data FIFO
+               v.frameMetaCnt := r.frameMetaCnt + 1; -- incr the frame length counter
+               v.dataLenCnt   := metaDataLen;
+               v.state        := PARSE_DATA_S;
 
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
@@ -250,7 +241,8 @@ begin
                if metaTrgCnt /= r.trgCntHeader or
                   metaDataLen >= powerOfTwo(DATALEN_WIDTH_C) then
                   v.decError    := '1';
-                  v.frameMetaWr := '1';  -- close data frame
+                  v.frameMetaWr := '1'; -- close data frame
+                  v.valid       := '0'; -- don't write data word into the main data FIFO
                   v.state       := ERROR_S;
                end if;
             end if;
@@ -258,12 +250,14 @@ begin
          ----------------------------------------------------------------------
          -- parse column data
          when PARSE_DATA_S =>
-            if r.valid = '1' then
+            if r.preValid = '1' then
+               v.valid        := '1';                -- write data word into the main data FIFO
+               v.frameMetaCnt := r.frameMetaCnt + 1; -- incr the frame length counter
+
                -- still more data for this column remaining
                if r.dataLenCnt > 2 then
                   v.dataLenCnt := r.dataLenCnt - 1;
                else
-
                   -- data for this column done; what about more columns though?
                   if r.activeColCnt > 1 then
                      v.activeColCnt := r.activeColCnt - 1;
@@ -289,7 +283,7 @@ begin
                v.errorRstDone := '1';
             end if;
 
-            if r.isDummy = '1' and r.errorRstDone = '1' then
+            if dummy = '1' and r.errorRstDone = '1' then
                v.state := WAIT_HEADER_S;
             end if;
 
