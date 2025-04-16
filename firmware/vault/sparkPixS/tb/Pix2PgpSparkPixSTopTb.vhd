@@ -133,27 +133,31 @@ begin
       end if;
   end process;
 
-  writeAxiProcess: process(pgpClk)
-
-    -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpAxiDataDump.dat";
+  -- Process to Monitor AXI Stream and Write to File
+  FileWriteProcess : process(pgpClk)
+    file myFile     : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable tmp : std_logic_vector(39 downto 0);
     variable row : line;
-
+    variable keep_mask : slv(7 downto 0);
   begin
-    if (rising_edge(pgpClk)) then
-        -- check if the valid flag is high
-        if laneTxMaster.tValid = '1' then
-          -- syntax: write(row_variable,what_to_write,
-          -- justification(right/left), trailing_whitespaces);
-          -- writeline(file_variable, row_variable);
-          for i in 127 downto 0 loop
-            if laneTxMaster.tKeep(i) = '1' then
-               hwrite(row, laneTxMaster.tData((i*8+7) downto (i*8)), right, 0);
-               writeline(myFile,row);
+    if rising_edge(pgpClk) then
+      if laneTxMaster.tValid = '1' then
+         tmp := (others => '0');
+        -- Write only valid data bytes according to tKeep using 40-bit words
+        for i in 0 to 127 loop
+          if laneTxMaster.tKeep(i) = '1' then
+            keep_mask := laneTxMaster.tData((i*8+7) downto (i*8));
+            tmp       := keep_mask & tmp(39 downto 8);
+
+            if (i + 1) mod 5 = 0 then
+              -- Write every 5 bytes as one 40-bit word
+              hwrite(row, tmp, right, 0);
+              writeline(myFile, row);
             end if;
-          end loop;
-        end if;
+          end if;
+        end loop;
       end if;
+    end if;
   end process;
 
   issueSroProcess: process(sparseClk)
