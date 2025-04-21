@@ -34,7 +34,7 @@ entity Pix2PgpFpgaTb is
       pgpDinValid : in  sl;
       pgpDinReady : out sl;
       -- FPGA RX Interface
-      pgpReady    : in  sl := '1';
+      pgpReady    : in  sl;
       pgpValid    : out sl;
       pgpData     : out slv(ASIC_DATABUS_DWIDTH_C-1 downto 0));
 end entity Pix2PgpFpgaTb;

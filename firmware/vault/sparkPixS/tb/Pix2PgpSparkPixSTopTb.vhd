@@ -77,7 +77,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpDataAsicReady : sl;
 
    signal pgpValid  : sl := '0';
-   signal pgpData   : slv(39 downto 0) := (others => '0');
+   signal pgpReady  : sl := '0';
+   signal pgpData   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    signal laneError      : sl := '0';
    signal laneErrorAck   : sl := '1';
@@ -297,7 +298,8 @@ begin
        pgpDinReady => pgpDataAsicReady, -- does not have to be connected
        -- FPGA RX Interface
        pgpValid    => pgpValid,
-       pgpData     => pgpData);
+       pgpData     => pgpData,
+       pgpReady    => pgpReady);
 
 U_LANE_RX : entity pix2pgp.Pix2PgpLaneRxWrapper
    generic map(
@@ -313,7 +315,7 @@ U_LANE_RX : entity pix2pgp.Pix2PgpLaneRxWrapper
       -- RX FIFO Interface
       pgpValid       => pgpValid,
       pgpData        => pgpData,
-      pgpReady       => open,
+      pgpReady       => pgpReady,
       -- ASIC Rx Interface
       laneError      => laneError,
       laneErrorAck   => laneErrorAck,
