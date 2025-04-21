@@ -48,7 +48,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
-   constant CLK_PERIOD_SYS_C    : time := 5.0    ns;
+   constant CLK_PERIOD_SYS_C    : time := 6.25   ns;
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
@@ -141,13 +141,13 @@ begin
   end process;
 
   -- Process to Monitor AXI Stream and Write to File
-  FileWriteProcess : process(pgpClk)
+  FileWriteProcess : process(sysClk)
     file myFile     : text open write_mode is "pix2pgpAxiDataDump.dat";
     variable tmp : std_logic_vector(39 downto 0);
     variable row : line;
     variable keep_mask : slv(7 downto 0);
   begin
-    if rising_edge(pgpClk) then
+    if rising_edge(sysClk) then
       if laneTxMaster.tValid = '1' then
          tmp := (others => '0');
         -- Write only valid data bytes according to tKeep using 40-bit words
