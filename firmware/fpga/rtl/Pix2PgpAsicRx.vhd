@@ -58,9 +58,9 @@ architecture rtl of Pix2PgpAsicRx is
    signal frameMetaDout  : Pix2PgpFpgaRxMetaArray := (others => DEFAULT_PIX2PGP_FPGARX_METABUS_C);
    signal frameMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal laneTxMaster   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+   signal laneTxMasters  : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                          := (others => AXI_STREAM_MASTER_INIT_C);
-   signal laneTxSlave    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+   signal laneTxSlaves   : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                          := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal laneError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -112,9 +112,24 @@ begin
             -- ASIC Rx Interface
             laneError      => laneError(lane),
             laneErrorAck   => laneErrorAck(lane),
-            laneTxMaster   => laneTxMaster(lane),
-            laneTxSlave    => laneTxSlave(lane));
+            laneTxMaster   => laneTxMasters(lane),
+            laneTxSlave    => laneTxSlaves(lane));
 
    end generate GEN_LANE;
+
+   U_AxiStreamMux : entity surf.AxiStreamMux
+      generic map (
+         TPD_G        => TPD_G,
+         NUM_SLAVES_G => NUM_OF_SERIALIZERS_C)
+      port map (
+         -- Clock and reset
+         axisClk      => sysClk,
+         axisRst      => sysRst,
+         -- Slaves
+         sAxisMasters => laneTxMasters,
+         sAxisSlaves  => laneTxSlaves,
+         -- Master
+         mAxisMaster  => asicTxMaster,
+         mAxisSlave   => asicTxSlave);
 
 end rtl;

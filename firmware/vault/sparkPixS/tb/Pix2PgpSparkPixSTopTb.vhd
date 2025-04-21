@@ -76,14 +76,14 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpDataAsicValid : sl;
    signal pgpDataAsicReady : sl;
 
-   signal pgpValid  : sl := '0';
-   signal pgpReady  : sl := '0';
-   signal pgpData   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal pgpValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpData   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
 
    signal laneError      : sl := '0';
    signal laneErrorAck   : sl := '1';
-   signal laneTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal laneTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
+   signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
 begin
 
@@ -130,11 +130,11 @@ begin
   begin
     if (rising_edge(pgpClk)) then
         -- check if the valid flag is high
-        if pgpValid = '1' then
+        if pgpValid(0) = '1' then
           -- syntax: write(row_variable,what_to_write,
           -- justification(right/left), trailing_whitespaces);
           -- writeline(file_variable, row_variable);
-          hwrite(row, pgpData, right, 0);
+          hwrite(row, pgpData(0).data, right, 0);
           writeline(myFile,row);
         end if;
       end if;
@@ -142,18 +142,18 @@ begin
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcess : process(sysClk)
-    file myFile     : text open write_mode is "pix2pgpAxiDataDump.dat";
-    variable tmp : std_logic_vector(39 downto 0);
-    variable row : line;
+    file myFile        : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable tmp       : std_logic_vector(39 downto 0);
+    variable row       : line;
     variable keep_mask : slv(7 downto 0);
   begin
     if rising_edge(sysClk) then
-      if laneTxMaster.tValid = '1' then
+      if asicTxMaster.tValid = '1' then
          tmp := (others => '0');
         -- Write only valid data bytes according to tKeep using 40-bit words
         for i in 0 to 127 loop
-          if laneTxMaster.tKeep(i) = '1' then
-            keep_mask := laneTxMaster.tData((i*8+7) downto (i*8));
+          if asicTxMaster.tKeep(i) = '1' then
+            keep_mask := asicTxMaster.tData((i*8+7) downto (i*8));
             tmp       := keep_mask & tmp(39 downto 8);
 
             if (i + 1) mod 5 = 0 then
@@ -281,46 +281,54 @@ begin
    -------
    -- FPGA
    -------
-   U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
-    generic map(
-       TPD_G          => TPD_G,
-       RST_ASYNC_G    => false,
-       RST_POLARITY_G => RST_POLARITY_G,
-       FPGA_SYNTH_G   => FPGA_SYNTH_G,
-       NUM_VC_G       => NUM_VC_G)
-    port map(
-       -- General Interface
-       clk         => pgpClk,
-       rst         => rst,
-       -- Pix2Pgp Interface
-       pgpDin      => pgpDataAsic,
-       pgpDinValid => pgpDataAsicValid, -- has to be connected; otherwise pgp does not align
-       pgpDinReady => pgpDataAsicReady, -- does not have to be connected
-       -- FPGA RX Interface
-       pgpValid    => pgpValid,
-       pgpData     => pgpData,
-       pgpReady    => pgpReady);
 
-U_LANE_RX : entity pix2pgp.Pix2PgpLaneRxWrapper
-   generic map(
-      TPD_G          => TPD_G,
-      RST_ASYNC_G    => false,
-      RST_POLARITY_G => RST_POLARITY_G)
-   port map(
-      -- General Interface
-      pgpClk         => pgpClk,
-      pgpRst         => rst,
-      sysClk         => sysClk,
-      sysRst         => rst,
-      -- RX FIFO Interface
-      pgpValid       => pgpValid,
-      pgpData        => pgpData,
-      pgpReady       => pgpReady,
-      -- ASIC Rx Interface
-      laneError      => laneError,
-      laneErrorAck   => laneErrorAck,
-      laneTxMaster   => laneTxMaster,
-      laneTxSlave    => laneTxSlave);
+   -- same stream on all lanes
+   GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+      -- pgp4 wrapper
+      U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
+       generic map(
+          TPD_G          => TPD_G,
+          RST_ASYNC_G    => false,
+          RST_POLARITY_G => RST_POLARITY_G,
+          FPGA_SYNTH_G   => FPGA_SYNTH_G,
+          NUM_VC_G       => NUM_VC_G)
+       port map(
+          -- General Interface
+          clk         => pgpClk,
+          rst         => rst,
+          -- Pix2Pgp Interface
+          pgpDin      => pgpDataAsic,
+          pgpDinValid => pgpDataAsicValid, -- has to be connected; otherwise pgp does not align
+          pgpDinReady => open,             -- does not have to be connected
+          -- FPGA RX Interface
+          pgpValid    => pgpValid(lane),
+          pgpData     => pgpData(lane).data,
+          pgpReady    => pgpReady(lane));
+
+   end generate GEN_LANE;
+
+   -- asic stream receiver and merger
+   U_ASIC_RX : entity pix2pgp.Pix2PgpAsicRx
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => false,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map(
+         -- General Interface
+         asicClk      => sparseClk,
+         asicRst      => rst,
+         pgpClk       => pgpClk,
+         pgpRst       => rst,
+         sysClk       => sysClk,
+         sysRst       => rst,
+         -- PGP4Rx Interface
+         pgpValid     => pgpValid,
+         pgpData      => pgpData,
+         pgpReady     => pgpReady,
+         -- AXI-Stream Rx Interface
+         asicTxMaster => asicTxMaster,
+         asicTxSlave  => asicTxSlave);
 
   -- Generate the test stimulus
   stimulus: process begin
