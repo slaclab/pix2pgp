@@ -48,9 +48,11 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
+   constant CLK_PERIOD_SYS_C    : time := 5.0    ns;
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
+   signal sysClk    : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
@@ -76,13 +78,6 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    signal pgpValid  : sl := '0';
    signal pgpData   : slv(39 downto 0) := (others => '0');
-
-   signal frameDataRd    : sl := '0';
-   signal frameDataDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
-   signal frameDataFull  : sl := '0';
-   signal frameMetaRd    : sl := '0';
-   signal frameMetaDout  : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
-   signal frameMetaValid : sl := '0';
 
    signal laneError      : sl := '0';
    signal laneErrorAck   : sl := '1';
@@ -112,6 +107,17 @@ begin
          SYNC_RESET_G      => true)
       port map (
          clkP => sparseClk,
+         clkN => open);
+
+   U_ClkRst_sysClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SYS_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sysClk,
          clkN => open);
 
   writeDataProcess: process(pgpClk)
@@ -293,51 +299,26 @@ begin
        pgpValid    => pgpValid,
        pgpData     => pgpData);
 
-
-   U_FPGA_LANE: entity pix2pgp.Pix2PgpLaneRx
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => false,
-         RST_POLARITY_G => RST_POLARITY_G)
-      port map(
-         -- General Interface
-         pgpClk         => pgpClk,
-         pgpRst         => rst,
-         sysClk         => pgpClk,
-         sysRst         => rst,
-         -- RX FIFO Interface
-         pgpValid       => pgpValid,
-         pgpData        => pgpData,
-         pgpReady       => open,
-         -- Adapter Interface
-         frameDataRd    => frameDataRd,
-         frameDataDout  => frameDataDout,
-         frameDataFull  => frameDataFull,
-         frameMetaRd    => frameMetaRd,
-         frameMetaDout  => frameMetaDout,
-         frameMetaValid => frameMetaValid);
-
-   U_FPGA_ADAPTER: entity pix2pgp.Pix2PgpLaneAdapter
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => false,
-         RST_POLARITY_G => RST_POLARITY_G)
-      port map(
-         -- General Interface
-         sysClk         => pgpClk,
-         sysRst         => rst,
-         -- Lane Interface
-         frameDataRd    => frameDataRd,
-         frameDataDout  => frameDataDout,
-         frameDataFull  => frameDataFull,
-         frameMetaRd    => frameMetaRd,
-         frameMetaDout  => frameMetaDout,
-         frameMetaValid => frameMetaValid,
-         -- ASIC Rx Interface
-         laneError      => laneError,
-         laneErrorAck   => laneErrorAck,
-         laneTxMaster   => laneTxMaster,
-         laneTxSlave    => laneTxSlave);
+U_LANE_RX : entity pix2pgp.Pix2PgpLaneRxWrapper
+   generic map(
+      TPD_G          => TPD_G,
+      RST_ASYNC_G    => false,
+      RST_POLARITY_G => RST_POLARITY_G)
+   port map(
+      -- General Interface
+      pgpClk         => pgpClk,
+      pgpRst         => rst,
+      sysClk         => sysClk,
+      sysRst         => rst,
+      -- RX FIFO Interface
+      pgpValid       => pgpValid,
+      pgpData        => pgpData,
+      pgpReady       => open,
+      -- ASIC Rx Interface
+      laneError      => laneError,
+      laneErrorAck   => laneErrorAck,
+      laneTxMaster   => laneTxMaster,
+      laneTxSlave    => laneTxSlave);
 
   -- Generate the test stimulus
   stimulus: process begin

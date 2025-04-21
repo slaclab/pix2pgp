@@ -46,8 +46,7 @@ entity Pix2PgpLaneRx is
       frameDataFull  : out sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
-      frameMetaValid : out sl
-   );
+      frameMetaValid : out sl);
 end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
