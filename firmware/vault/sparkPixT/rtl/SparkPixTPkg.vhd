@@ -196,6 +196,17 @@ package Pix2PgpPkg is
    constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
    constant LANERX_FIFO_PIPE_C           : integer := 2;
 
+   type Pix2PgpFpgaRxMetaBusType is record
+      -- flags begin
+      metaData : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_FPGARX_METABUS_C : Pix2PgpFpgaRxMetaBusType := (
+      metaData => (others => '0'));
+
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpDataBusType;
+   type Pix2PgpFpgaRxMetaArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpFpgaRxMetaBusType;
+
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is

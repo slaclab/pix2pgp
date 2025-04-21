@@ -33,19 +33,19 @@ entity Pix2PgpLaneRxWrapper is
    );
    port(
       -- General Interface
-      pgpClk         : in  sl;
-      pgpRst         : in  sl := not(RST_POLARITY_G);
-      sysClk         : in  sl;
-      sysRst         : in  sl := not(RST_POLARITY_G);
+      pgpClk       : in  sl;
+      pgpRst       : in  sl := not(RST_POLARITY_G);
+      sysClk       : in  sl;
+      sysRst       : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpValid       : in  sl;
-      pgpData        : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      pgpReady       : out sl;
+      pgpValid     : in  sl;
+      pgpData      : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      pgpReady     : out sl;
       -- ASIC Rx Interface
-      laneError      : out sl;
-      laneErrorAck   : in  sl;
-      laneTxMaster   : out AxiStreamMasterType;
-      laneTxSlave    : in  AxiStreamSlaveType);
+      laneError    : out sl;
+      laneErrorAck : in  sl;
+      laneTxMaster : out AxiStreamMasterType;
+      laneTxSlave  : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
 
 architecture rtl of Pix2PgpLaneRxWrapper is
