@@ -46,7 +46,8 @@ entity Pix2PgpLaneRx is
       frameDataFull  : out sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
-      frameMetaValid : out sl);
+      frameMetaValid : out sl
+   );
 end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
@@ -126,25 +127,24 @@ begin
          TPD_G           => TPD_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
-         GEN_SYNC_FIFO_G => false, -- false = dual-clock FIFO
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => ASIC_DATABUS_DWIDTH_C,
          ADDR_WIDTH_G    => 4)
       port map (
-         rst      => sysRst,
+         rst      => pgpRst,
          -- Write Ports
          wr_clk   => pgpClk,
          wr_en    => pgpValid,
          din      => pgpData,
          overflow => pgpFull,
          -- Read Ports
-         rd_clk   => sysClk,
+         rd_clk   => pgpClk,
          rd_en    => '1',
          dout     => protoBufDout,
          valid    => protoBufValid);
 
-   comb : process (r, sysRst, protoBufDout, protoBufValid, pgpFull, frameMetaEmptyDly) is
+   comb : process (r, pgpRst, protoBufDout, protoBufValid, pgpFull, frameMetaEmptyDly) is
 
       -- omnipresent
       variable v : RegType;
@@ -293,10 +293,10 @@ begin
       v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-1)          := r.decError;
       v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-2 downto 0) := r.frameMetaCnt;
 
-      pgpReady <= not(pgpFull); -- not registered (on pgp domain)
+      pgpReady <= not(pgpFull); -- on pgp domain
 
       -- Reset
-      if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -305,11 +305,11 @@ begin
 
    end process comb;
 
-   seq : process (sysClk, sysRst) is
+   seq : process (pgpClk, pgpRst) is
    begin
-      if (RST_ASYNC_G and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(sysClk) then
+      elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
@@ -323,13 +323,14 @@ begin
          RST_POLARITY_G  => RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
+         GEN_SYNC_FIFO_G => false, -- false = clock-domain-crossing FIFO
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
          ADDR_WIDTH_G    => 4)
       port map (
          rst      => sysRst,
          -- Write Ports
-         wr_clk   => sysClk,
+         wr_clk   => pgpClk,
          wr_en    => frameMetaWr,
          din      => frameMetaDin,
          empty    => frameMetaEmpty,
@@ -345,7 +346,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => LANERX_FIFO_PIPE_C+1) -- plus one! avoid writing zero length to the buff
       port map (
-         clk     => sysClk,
+         clk     => pgpClk,
          din(0)  => r.frameMetaWr,
          dout(0) => frameMetaWr);
 
@@ -356,7 +357,7 @@ begin
          WIDTH_G        => LANERX_FRAMELEN_BUFF_WIDTH_C,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk  => sysClk,
+         clk  => pgpClk,
          din  => r.frameMetaDin,
          dout => frameMetaDin);
 
@@ -366,7 +367,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk     => sysClk,
+         clk     => pgpClk,
          din(0)  => frameMetaEmpty,
          dout(0) => frameMetaEmptyDly);
 
@@ -379,13 +380,14 @@ begin
          RST_POLARITY_G  => RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
+         GEN_SYNC_FIFO_G => false, -- false = clock-domain-crossing FIFO
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => ASIC_DATABUS_DWIDTH_C,
          ADDR_WIDTH_G    => LANERX_FIFO_ADDR_WIDTH_C)
       port map (
          rst      => frameDataRst,
          -- Write Ports
-         wr_clk   => sysClk,
+         wr_clk   => pgpClk,
          wr_en    => frameDataWr,
          din      => frameDataDin,
          empty    => frameDataEmpty,
@@ -401,7 +403,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk     => sysClk,
+         clk     => pgpClk,
          din(0)  => r.frameDataRst,
          dout(0) => frameDataRst);
 
@@ -411,7 +413,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk     => sysClk,
+         clk     => pgpClk,
          din(0)  => r.valid,
          dout(0) => frameDataWr);
 
@@ -422,7 +424,7 @@ begin
          WIDTH_G        => ASIC_DATABUS_DWIDTH_C,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
-         clk  => sysClk,
+         clk  => pgpClk,
          din  => r.din,
          dout => frameDataDin);
 
