@@ -62,7 +62,7 @@ architecture rtl of Pix2PgpArbiter is
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => DATABUS_DWIDTH_C/8,
+      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
       TKEEP_MODE_C       => TKEEP_NORMAL_C,
@@ -101,9 +101,9 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   : sl;
       dummyHeader  : sl;
       waitColSel   : sl;
-      txData       : slv(DATABUS_DWIDTH_C-1 downto 0);
+      txData       : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
-      dataHeader   : slv(HEADER_DWITDH_C-1 downto 0);
+      dataHeader   : slv(HEADER_DWIDTH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
       state        : StateType;
@@ -160,7 +160,7 @@ begin
       variable dataLenSel   : slv(DATALEN_WIDTH_C-1 downto 0);
       variable trgCntSel    : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- temp variables for data bus
-      variable dataBusSel   : slv(DATABUS_DWIDTH_C-1 downto 0);
+      variable dataBusSel   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 
@@ -257,7 +257,7 @@ begin
                if r.waitColSel = '1' then
                   if v.sAxisMaster.tValid = '0' then
                      -- column metadata mapping in pkg (changes with ASIC type)
-                     v.txData             := colMeta(flagsSel, r.colSel, trgCntSel, dataLenSel);
+                     v.txData             := colMetaMap(flagsSel, r.colSel, trgCntSel, dataLenSel);
                      v.sAxisMaster.tValid := '1';
                      --
                      v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
@@ -340,18 +340,10 @@ begin
       end loop;
       --
       --
-      v.dataHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(v.dummyHeader);
-      v.dataHeader(PAUSE_FLAG_POS_C)        := colPause      and not(v.dummyHeader);
-      v.dataHeader(COLUMN_ERROR_FLAG_POS_C) := colFifoError  and not(v.dummyHeader);
-      v.dataHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(v.dummyHeader);
-      v.dataHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(v.dummyHeader);
-      v.dataHeader(DUMMY_HEADER_POS_C)      := v.dummyHeader;
-      v.dataHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
-      v.dataHeader(COL_BITMASK_POS_C)       := v.colBitmask;
-      v.dataHeader(TRG_CNT_POS_C)           := resize(v.trgCntGlbl, 8);
-
+      v.dataHeader := headerMap(overOccError, colPause, colFifoError, colPauseError,
+                                timeoutError, v.dummyHeader, v.colBitmask, v.trgCntGlbl);
       --
-      v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := v.txData;
+      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
       --
 
       -- Outputs

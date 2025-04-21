@@ -38,11 +38,11 @@ entity Pix2PgpLaneRx is
       sysRst         : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
       pgpValid       : in  sl;
-      pgpData        : in  slv(DATABUS_DWIDTH_C-1 downto 0);
+      pgpData        : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       pgpReady       : out sl;
       -- Adapter Interface
       frameDataRd    : in  sl;
-      frameDataDout  : out slv(DATABUS_DWIDTH_C-1 downto 0);
+      frameDataDout  : out slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameDataFull  : out sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
@@ -59,11 +59,11 @@ architecture rtl of Pix2PgpLaneRx is
       ERROR_S);
 
    type RegType is record
-      protoBufDout   : slv(DATABUS_DWIDTH_C-1 downto 0);
+      protoBufDout   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       protoBufValid  : sl;
-      din            : slv(DATABUS_DWIDTH_C-1 downto 0);
+      din            : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       valid          : sl;
-      preDin         : slv(DATABUS_DWIDTH_C-1 downto 0);
+      preDin         : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       preValid       : sl;
       decError       : sl;
       frameMetaWr    : sl;
@@ -105,7 +105,7 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal pgpFull           : sl := '0';
    signal protoBufValid     : sl := '0';
-   signal protoBufDout      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal protoBufDout      : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
    signal frameMetaWr       : sl := '0';
    signal frameMetaDin      : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
@@ -115,7 +115,7 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal frameDataRst      : sl := not(RST_POLARITY_G);
    signal frameDataWr       : sl := '0';
-   signal frameDataDin      : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal frameDataDin      : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
 begin
 
@@ -130,7 +130,7 @@ begin
          GEN_SYNC_FIFO_G => false, -- false = dual-clock FIFO
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => DATABUS_DWIDTH_C,
+         DATA_WIDTH_G    => ASIC_DATABUS_DWIDTH_C,
          ADDR_WIDTH_G    => 4)
       port map (
          rst      => sysRst,
@@ -381,7 +381,7 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => DATABUS_DWIDTH_C,
+         DATA_WIDTH_G    => ASIC_DATABUS_DWIDTH_C,
          ADDR_WIDTH_G    => LANERX_FIFO_ADDR_WIDTH_C)
       port map (
          rst      => frameDataRst,
@@ -420,7 +420,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => DATABUS_DWIDTH_C,
+         WIDTH_G        => ASIC_DATABUS_DWIDTH_C,
          DELAY_G        => LANERX_FIFO_PIPE_C)
       port map (
          clk  => sysClk,

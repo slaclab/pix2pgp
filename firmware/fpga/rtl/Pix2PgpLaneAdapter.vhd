@@ -37,7 +37,7 @@ entity Pix2PgpLaneAdapter is
       sysRst         : in  sl := not(RST_POLARITY_G);
       -- Lane Interface
       frameDataRd    : out sl;
-      frameDataDout  : in  slv(DATABUS_DWIDTH_C-1 downto 0);
+      frameDataDout  : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameDataFull  : in  sl;
       frameMetaRd    : out sl;
       frameMetaDout  : in  slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
@@ -57,7 +57,7 @@ architecture rtl of Pix2PgpLaneAdapter is
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => DATABUS_DWIDTH_C/8,
+      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
       TKEEP_MODE_C       => TKEEP_NORMAL_C,
@@ -67,7 +67,7 @@ architecture rtl of Pix2PgpLaneAdapter is
    -- note that the bus becomes wider to have enough bandwidth to read-out all lanes fast enough
    constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => (DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C)/8,
+      TDATA_BYTES_C      => FPGA_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
       TKEEP_MODE_C       => TKEEP_NORMAL_C,
@@ -148,7 +148,7 @@ begin
 
       -- default flags
       v.sAxisMaster.tKeep                              := (others => '1');
-      v.sAxisMaster.tData(DATABUS_DWIDTH_C-1 downto 0) := frameDataDout;
+      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := frameDataDout;
 
       ---------------------------------------------------------------------------
       case r.state is

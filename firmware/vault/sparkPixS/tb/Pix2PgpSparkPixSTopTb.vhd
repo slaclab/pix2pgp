@@ -78,7 +78,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpData   : slv(39 downto 0) := (others => '0');
 
    signal frameDataRd    : sl := '0';
-   signal frameDataDout  : slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal frameDataDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    signal frameDataFull  : sl := '0';
    signal frameMetaRd    : sl := '0';
    signal frameMetaDout  : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');

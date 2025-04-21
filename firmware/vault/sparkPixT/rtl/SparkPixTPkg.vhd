@@ -47,7 +47,10 @@ package Pix2PgpPkg is
 
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
-   constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+   constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+
+   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
+   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
 
    constant PGP_DWIDTH_C : natural := 64;
    constant SER_DWIDTH_C : natural := 32;
@@ -94,7 +97,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusType is record
       -- flags begin
-      data : slv(DATABUS_DWIDTH_C-1 downto 0);
+      data : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_DATABUS_C : Pix2PgpDataBusType := (
@@ -112,7 +115,7 @@ package Pix2PgpPkg is
    -- the header has a standard trigger counter width that needs to be larger or equal
    -- to the actual trigger counter coming in from the columns;
    -- (the inbound trigger counter from the columns gets resized to fit)
-   constant HEADER_DWITDH_C       : natural := DATABUS_DWIDTH_C;
+   constant HEADER_DWIDTH_C       : natural := ASIC_DATABUS_DWIDTH_C;
    constant TRGCNT_HEADER_WIDTH_C : natural := 8;                        -- 8
    -- constant FLAGS_WIDTH_C         : natural := 8;                     -- 8  (unused)
    -- constant COL_BITMASK_WIDTH_C   : natural := NUM_OF_COL_MANAGERS_C; -- 24 (unused)
@@ -120,23 +123,23 @@ package Pix2PgpPkg is
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1; -- 63
-   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWITDH_C-2; -- 62
-   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3; -- 61
-   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4; -- 60
-   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5; -- 59
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6; -- 58
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 63
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 62
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 61
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 60
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 59
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 58
    --------------------------
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7   -- [57:32]
-                                              downto HEADER_DWITDH_C-32;
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7   -- [57:32]
+                                              downto HEADER_DWIDTH_C-32;
    --------------------------
    -- col-bitmask
-   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-33  -- [31:8]
-                                              downto HEADER_DWITDH_C-56;
+   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWIDTH_C-33  -- [31:8]
+                                              downto HEADER_DWIDTH_C-56;
    --------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  HEADER_DWITDH_C-57 -- [7:0]
-                                              downto HEADER_DWITDH_C-64;
+   subtype  TRG_CNT_POS_C          is natural range  HEADER_DWIDTH_C-57 -- [7:0]
+                                              downto HEADER_DWIDTH_C-64;
 
    -------------------------------------------
    -- Pix2Pgp data frame header bitmapping end
@@ -146,7 +149,7 @@ package Pix2PgpPkg is
    -- Pix2Pgp column metadata bitmapping begin
    -------------------------------------------
    ---------------------------------------------------------------------------
-   subtype  META_FLAGS_POS_C   is natural range  DATABUS_DWIDTH_C-1 downto 24;
+   subtype  META_FLAGS_POS_C   is natural range  ASIC_DATABUS_DWIDTH_C-1 downto 24;
    ---------------------------------------------------------------------------
    subtype  META_COL_POS_C     is natural range  23 downto 16;
    ---------------------------------------------------------------------------
@@ -159,7 +162,10 @@ package Pix2PgpPkg is
    -----------------------------------------
 
    -- functions
-   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function headerMap  (overOccError: sl; colPause: sl; colFifoError : sl;
+                        colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                        colBitmask: slv; trgCntGlbl: slv) return slv;
    function isDummy (din : slv) return boolean;
 
    -- the receiver can deduce which columns have data from the bitmask
@@ -176,8 +182,6 @@ package Pix2PgpPkg is
 
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
-
-   constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
    -- functions stolen from numeric_std
    function xsll       (inArg: slv; count: natural) return slv;
@@ -235,17 +239,36 @@ package body Pix2PgpPkg is
    end leftShift;
 
    -- ASIC-related
-   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
-      variable retHeader: slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
+      variable retMeta: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
-      retHeader(META_FLAGS_POS_C)   := resize(flags,  40);
-      retHeader(META_COL_POS_C)     := resize(col,     8);
-      retHeader(META_TRG_CNT_POS_C) := resize(trgCnt,  8);
-      retHeader(META_DATALEN_POS_C) := resize(dataLen, 8);
+      retMeta(META_FLAGS_POS_C)   := resize(flags,  40);
+      retMeta(META_COL_POS_C)     := resize(col,     8);
+      retMeta(META_TRG_CNT_POS_C) := resize(trgCnt,  8);
+      retMeta(META_DATALEN_POS_C) := resize(dataLen, 8);
+
+      return retMeta;
+   end colMetaMap;
+
+   function headerMap (overOccError: sl; colPause: sl; colFifoError : sl;
+                       colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                       colBitmask: slv; trgCntGlbl: slv) return slv is
+      variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   begin
+
+      retHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(dummyHeader);
+      retHeader(PAUSE_FLAG_POS_C)        := colPause      and not(dummyHeader);
+      retHeader(COLUMN_ERROR_FLAG_POS_C) := colFifoError  and not(dummyHeader);
+      retHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(dummyHeader);
+      retHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(dummyHeader);
+      retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
+      retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
+      retHeader(COL_BITMASK_POS_C)       := colBitmask;
+      retHeader(TRG_CNT_POS_C)           := resize(trgCntGlbl, 8);
 
       return retHeader;
-   end colMeta;
+   end headerMap;
 
    -- FPGA-related
    function isDummy (din: slv) return boolean is

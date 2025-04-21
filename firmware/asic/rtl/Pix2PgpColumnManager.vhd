@@ -383,7 +383,7 @@ begin
          FWFT_EN_G       => true,
          DWARE_AF_LVL_G  => 1,
          WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
-         RD_DATA_WIDTH_G => DATABUS_DWIDTH_C,
+         RD_DATA_WIDTH_G => ASIC_DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DATA_DEPTH_G,
          FULL_THRES_G    => 6, -- only for ghdl sim
          ADDR_WIDTH_G    => 4) -- only for ghdl sim

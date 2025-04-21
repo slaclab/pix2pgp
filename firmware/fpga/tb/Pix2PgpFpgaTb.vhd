@@ -36,7 +36,7 @@ entity Pix2PgpFpgaTb is
       -- FPGA RX Interface
       pgpReady    : in  sl := '1';
       pgpValid    : out sl;
-      pgpData     : out slv(DATABUS_DWIDTH_C-1 downto 0));
+      pgpData     : out slv(ASIC_DATABUS_DWIDTH_C-1 downto 0));
 end entity Pix2PgpFpgaTb;
 
 architecture test of Pix2PgpFpgaTb is
@@ -63,7 +63,7 @@ architecture test of Pix2PgpFpgaTb is
 
    constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => DATABUS_DWIDTH_C/8,
+      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
       TKEEP_MODE_C       => TKEEP_NORMAL_C,
@@ -150,6 +150,6 @@ begin
 
    pgpTxSlave.tReady <= pgpReady;
    pgpValid          <= pgpTxMaster.tValid;
-   pgpData           <= pgpTxMaster.tData(DATABUS_DWIDTH_C-1 downto 0);
+   pgpData           <= pgpTxMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
 end architecture;
