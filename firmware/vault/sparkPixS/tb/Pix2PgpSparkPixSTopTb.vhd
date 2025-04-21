@@ -57,24 +57,31 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
 
-   signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal sof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal eof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal overOcc   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal busy      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal ackN      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal wrEn      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal pause     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal pauseAck  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal sparseBusy: slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal din       : Pix2PgpSparseDinArray := (others => (others => '0'));
+   type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+
+   signal tokFb     : asicArray := (others => (others => '1'));
+   signal sof       : asicArray := (others => (others => '1'));
+   signal eof       : asicArray := (others => (others => '0'));
+   signal overOcc   : asicArray := (others => (others => '0'));
+   signal busy      : asicArray := (others => (others => '0'));
+   signal ackN      : asicArray := (others => (others => '1'));
+   signal wrEn      : asicArray := (others => (others => '0'));
+   signal pause     : asicArray := (others => (others => '0'));
+   signal pauseAck  : asicArray := (others => (others => '0'));
+   signal sparseBusy: asicArray := (others => (others => '0'));
+
+
+   type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
+   signal din : asicDinArray := (others => (others =>  (others => '0')));
 
    type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
    signal hitLen  : hitLenArray := (others => (others => '0'));
 
-   signal pgpDataAsic      : slv(31 downto 0) := (others => '0');
-   signal pgpDataAsicValid : sl;
-   signal pgpDataAsicReady : sl;
+   type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(31 downto 0);
+
+   signal pgpDataAsic      : pgpDataAsicType := (others => (others => '0'));
+   signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpDataAsicReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -183,102 +190,106 @@ begin
    --------
    -- Pixel
    --------
-   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      U_DummyPixel : entity pix2pgp.DummySparkPixSPixel
+   GEN_SERIALIZER: for ser in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+      GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+         U_DummyPixel : entity pix2pgp.DummySparkPixSPixel
+            generic map(
+               TPD_G          => TPD_G,
+               RST_ASYNC_G    => RST_ASYNC_G,
+               RST_POLARITY_G => RST_POLARITY_G,
+               WAIT_FB_G      => 4,
+               WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
+               WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
+               COL_ID_G       => col)
+            port map(
+               clk      => sparseClk,
+               rst      => rst,
+               sro      => sroFinal,
+               pause    => pause(ser)(col),
+               hitLen   => hitLen(col),
+               pauseAck => pauseAck(ser)(col),
+               tok      => open,
+               tokFb    => tokFb(ser)(col),
+               ackN     => ackN(ser)(col),
+               wrEn     => wrEn(ser)(col),
+               dout     => din(ser)(col));
+
+         U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
+           generic map(
+             RST_POLARITY_G => RST_POLARITY_G,
+             COL_ID_G       => col)
+           port map(
+               clk             => sparseClk,
+               df_reset_n      => rst,
+               sro             => sroFinal,
+               tok_fb          => tokFb(ser)(col),
+               sparse_itf_busy => sparseBusy(ser)(col),
+               pix2pgp_busy    => busy(ser)(col),
+               sof             => sof(ser)(col),
+               eof             => eof(ser)(col),
+               over_occ        => overOcc(ser)(col));
+      end generate GEN_DUMMY_PIXEL;
+
+      ------
+      -- UUT
+      ------
+      U_Uut : entity pix2pgp.Pix2PgpSparkPixSTop
          generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            WAIT_FB_G      => 4,
-            WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
-            WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
-            COL_ID_G       => col)
+            TPD_G                      => TPD_G,
+            RST_ASYNC_G                => RST_ASYNC_G,
+            RST_POLARITY_G             => RST_POLARITY_G,
+            DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+            STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+            TIMEOUT_LIMIT_WIDTH_G      => TIMEOUT_LIMIT_WIDTH_G,
+            PIPELINE_DATA_G            => PIPELINE_DATA_G,
+            PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
+            COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+            COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
          port map(
-            clk      => sparseClk,
-            rst      => rst,
-            sro      => sroFinal,
-            pause    => pause(col),
-            hitLen   => hitLen(col),
-            pauseAck => pauseAck(col),
-            tok      => open,
-            tokFb    => tokFb(col),
-            ackN     => ackN(col),
-            wrEn     => wrEn(col),
-            dout     => din(col));
+            sparseClk    => sparseClk,
+            sparseRst    => rst,
+            pgpClk       => pgpClk,
+            pgpRst       => rst,
+            sel          => '1',
+            timeoutLimit => x"0FF",
+            columnEnable => x"FFFFFF",
+            pause        => pause(ser),
+            sof          => sof(ser),
+            eof          => eof(ser),
+            busy         => busy(ser),
+            overOcc      => overOcc(ser),
+            pauseAck     => pauseAck(ser),
+            wrEn         => wrEn(ser),
+            din0         => din(ser)(0),
+            din1         => din(ser)(1),
+            din2         => din(ser)(2),
+            din3         => din(ser)(3),
+            din4         => din(ser)(4),
+            din5         => din(ser)(5),
+            din6         => din(ser)(6),
+            din7         => din(ser)(7),
+            din8         => din(ser)(8),
+            din9         => din(ser)(9),
+            din10        => din(ser)(10),
+            din11        => din(ser)(11),
+            din12        => din(ser)(12),
+            din13        => din(ser)(13),
+            din14        => din(ser)(14),
+            din15        => din(ser)(15),
+            din16        => din(ser)(16),
+            din17        => din(ser)(17),
+            din18        => din(ser)(18),
+            din19        => din(ser)(19),
+            din20        => din(ser)(20),
+            din21        => din(ser)(21),
+            din22        => din(ser)(22),
+            din23        => din(ser)(23),
+            pgpDout      => pgpDataAsic(ser),
+            pgpDoutValid => pgpDataAsicValid(ser),
+            pgpDoutReady => pgpDataAsicReady(ser));
 
-      U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
-        generic map(
-          RST_POLARITY_G => RST_POLARITY_G,
-          COL_ID_G       => col)
-        port map(
-            clk             => sparseClk,
-            df_reset_n      => rst,
-            sro             => sroFinal,
-            tok_fb          => tokFb(col),
-            sparse_itf_busy => sparseBusy(col),
-            pix2pgp_busy    => busy(col),
-            sof             => sof(col),
-            eof             => eof(col),
-            over_occ        => overOcc(col));
-   end generate GEN_DUMMY_PIXEL;
-
-   ------
-   -- UUT
-   ------
-   U_Uut : entity pix2pgp.Pix2PgpSparkPixSTop
-      generic map(
-         TPD_G                      => TPD_G,
-         RST_ASYNC_G                => RST_ASYNC_G,
-         RST_POLARITY_G             => RST_POLARITY_G,
-         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         TIMEOUT_LIMIT_WIDTH_G      => TIMEOUT_LIMIT_WIDTH_G,
-         PIPELINE_DATA_G            => PIPELINE_DATA_G,
-         PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
-         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
-      port map(
-         sparseClk    => sparseClk,
-         sparseRst    => rst,
-         pgpClk       => pgpClk,
-         pgpRst       => rst,
-         sel          => '1',
-         timeoutLimit => x"0FF",
-         columnEnable => x"FFFFFF",
-         pause        => pause,
-         sof          => sof,
-         eof          => eof,
-         busy         => busy,
-         overOcc      => overOcc,
-         pauseAck     => pauseAck,
-         wrEn         => wrEn,
-         din0         => din(0),
-         din1         => din(1),
-         din2         => din(2),
-         din3         => din(3),
-         din4         => din(4),
-         din5         => din(5),
-         din6         => din(6),
-         din7         => din(7),
-         din8         => din(8),
-         din9         => din(9),
-         din10        => din(10),
-         din11        => din(11),
-         din12        => din(12),
-         din13        => din(13),
-         din14        => din(14),
-         din15        => din(15),
-         din16        => din(16),
-         din17        => din(17),
-         din18        => din(18),
-         din19        => din(19),
-         din20        => din(20),
-         din21        => din(21),
-         din22        => din(22),
-         din23        => din(23),
-         pgpDout      => pgpDataAsic,
-         pgpDoutValid => pgpDataAsicValid,
-         pgpDoutReady => pgpDataAsicReady);
+   end generate GEN_SERIALIZER;
 
    -------
    -- FPGA
@@ -286,9 +297,6 @@ begin
 
    -- same stream on all lanes
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
-
-      -- same for everyone
-      pgpDataAsicValidVec(lane) <= pgpDataAsicValid;
 
       -- pgp4 wrapper
       U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
@@ -303,9 +311,9 @@ begin
           clk         => pgpClk,
           rst         => rst,
           -- Pix2Pgp Interface
-          pgpDin      => pgpDataAsic,
-          pgpDinValid => pgpDataAsicValidVec(lane), -- has to be connected; otherwise pgp does not align
-          pgpDinReady => open,                -- does not have to be connected
+          pgpDin      => pgpDataAsic(lane),
+          pgpDinValid => pgpDataAsicValid(lane),
+          pgpDinReady => pgpDataAsicReady(lane),
           -- FPGA RX Interface
           pgpValid    => pgpValid(lane),
           pgpData     => pgpData(lane).data,
