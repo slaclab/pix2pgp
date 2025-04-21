@@ -76,6 +76,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpDataAsicValid : sl;
    signal pgpDataAsicReady : sl;
 
+   signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
    signal pgpValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpData   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
@@ -285,6 +287,9 @@ begin
    -- same stream on all lanes
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
+      -- same for everyone
+      pgpDataAsicValidVec(lane) <= pgpDataAsicValid;
+
       -- pgp4 wrapper
       U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
        generic map(
@@ -299,8 +304,8 @@ begin
           rst         => rst,
           -- Pix2Pgp Interface
           pgpDin      => pgpDataAsic,
-          pgpDinValid => pgpDataAsicValid, -- has to be connected; otherwise pgp does not align
-          pgpDinReady => open,             -- does not have to be connected
+          pgpDinValid => pgpDataAsicValidVec(lane), -- has to be connected; otherwise pgp does not align
+          pgpDinReady => open,                -- does not have to be connected
           -- FPGA RX Interface
           pgpValid    => pgpValid(lane),
           pgpData     => pgpData(lane).data,
