@@ -21,12 +21,13 @@ use ieee.std_logic_arith.all;
 
 library surf;
 use surf.StdRtlPkg.all;
+use surf.AxiLitePkg.all;
 use surf.AxiStreamPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpAsicRx is
+entity Pix2PgpAsicStreamRx is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
@@ -34,22 +35,33 @@ entity Pix2PgpAsicRx is
    );
    port(
       -- General Interface
-      asicClk      : in  sl;
-      asicRst      : in  sl := not(RST_POLARITY_G);
-      pgpClk       : in  sl;
-      pgpRst       : in  sl := not(RST_POLARITY_G);
-      sysClk       : in  sl;
-      sysRst       : in  sl := not(RST_POLARITY_G);
+      asicClk         : in  sl;
+      asicRst         : in  sl := not(RST_POLARITY_G);
+      asicSro         : in  sl;
+      asicSroEna      : in  sl;
+      pgpClk          : in  sl;
+      pgpRst          : in  sl := not(RST_POLARITY_G);
+      sysClk          : in  sl;
+      sysRst          : in  sl := not(RST_POLARITY_G);
       -- PGP4Rx Interface
-      pgpValid     : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpData      : in  Pix2PgpFpgaRxDataArray;
-      pgpReady     : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      -- AXI-Stream Rx Interface
-      asicTxMaster : out AxiStreamMasterType;
-      asicTxSlave  : in  AxiStreamSlaveType);
-end Pix2PgpAsicRx;
+      pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpData         : in  Pix2PgpFpgaRxDataArray;
+      pgpReady        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      -- AXI-Stream Interface
+      asicTxMaster    : out AxiStreamMasterType;
+      asicTxSlave     : in  AxiStreamSlaveType;
+      -- AXI-Lite Interface
+      axilClk         : in  sl;
+      axilRst         : in  sl;
+      axilReadMaster  : in  AxiLiteReadMasterType;
+      axilReadSlave   : out AxiLiteReadSlaveType;
+      axilWriteMaster : in  AxiLiteWriteMasterType;
+      axilWriteSlave  : out AxiLiteWriteSlaveType);
+end Pix2PgpAsicStreamRx;
 
-architecture rtl of Pix2PgpAsicRx is
+architecture rtl of Pix2PgpAsicStreamRx is
+
+   constant FPGA_ID_DEFAULT_C : slv(31 downto 0) := x"C0CAC01A";
 
    signal frameDataRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal frameDataDout  : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
@@ -66,8 +78,104 @@ architecture rtl of Pix2PgpAsicRx is
    signal laneError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneErrorAck   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
+   signal readMaster  : AxiLiteReadMasterType;
+   signal readSlave   : AxiLiteReadSlaveType;
+   signal writeMaster : AxiLiteWriteMasterType;
+   signal writeSlave  : AxiLiteWriteSlaveType;
+
+   type RegType is record
+      -- Registers
+      fpgaId     : slv(31 downto 0);
+      -- AXI-Lite
+      readSlave  : AxiLiteReadSlaveType;
+      writeSlave : AxiLiteWriteSlaveType;
+   end record RegType;
+
+   constant REG_INIT_C : RegType := (
+      -- Registers
+      fpgaId     => FPGA_ID_DEFAULT_C,
+      -- AXI-Lite
+      readSlave  => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave => AXI_LITE_WRITE_SLAVE_INIT_C);
+
+   signal r   : RegType := REG_INIT_C;
+   signal rin : RegType;
+
 begin
 
+   U_AxiLiteAsync : entity surf.AxiLiteAsync
+      generic map (
+         TPD_G           => TPD_G,
+         NUM_ADDR_BITS_G => 12)
+      port map (
+         -- Slave Interface
+         sAxiClk         => axilClk,
+         sAxiClkRst      => axilRst,
+         sAxiReadMaster  => axilReadMaster,
+         sAxiReadSlave   => axilReadSlave,
+         sAxiWriteMaster => axilWriteMaster,
+         sAxiWriteSlave  => axilWriteSlave,
+         -- Master Interface
+         mAxiClk         => sysClk,
+         mAxiClkRst      => sysRst,
+         mAxiReadMaster  => readMaster,
+         mAxiReadSlave   => readSlave,
+         mAxiWriteMaster => writeMaster,
+         mAxiWriteSlave  => writeSlave);
+
+   comb : process (readMaster, sysRst, writeMaster, r) is
+
+      variable v      : RegType;
+      variable axilEp : AxiLiteEndpointType;
+
+   begin
+      -- Latch the current value
+      v := r;
+
+      ----------------------------------------------------------------------------------------------
+      -- AXI-Lite Transactions
+      ----------------------------------------------------------------------------------------------
+
+      -- Determine the transaction type
+      axiSlaveWaitTxn(axilEp, writeMaster, readMaster, v.writeSlave, v.readSlave);
+
+      axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
+
+      -- Closeout the transaction
+      axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
+      ----------------------------------------------------------------------------------------------
+      ----------------------------------------------------------------------------------------------
+
+      ----------------------------------------------------------------------------------------------
+      -- Outputs
+      ----------------------------------------------------------------------------------------------
+
+      -- AXI-Lite Outputs
+      writeSlave <= r.writeSlave;
+      readSlave  <= r.readSlave;
+
+      -- Reset
+      if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
+         v := REG_INIT_C;
+      end if;
+
+      -- Register the variable for next clock cycle
+      rin <= v;
+
+   end process comb;
+
+   seq : process (sysClk, sysRst) is
+   begin
+      if (RST_ASYNC_G and sysRst = RST_POLARITY_G) then
+         r <= REG_INIT_C after TPD_G;
+      elsif rising_edge(sysClk) then
+         r <= rin after TPD_G;
+      end if;
+   end process seq;
+
+   -----------------
+   -- Lane Receivers
+   -----------------
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
       U_Lane: entity pix2pgp.Pix2PgpLaneRx
@@ -116,20 +224,5 @@ begin
             laneTxSlave    => laneTxSlaves(lane));
 
    end generate GEN_LANE;
-
-   U_AxiStreamMux : entity surf.AxiStreamMux
-      generic map (
-         TPD_G        => TPD_G,
-         NUM_SLAVES_G => NUM_OF_SERIALIZERS_C)
-      port map (
-         -- Clock and reset
-         axisClk      => sysClk,
-         axisRst      => sysRst,
-         -- Slaves
-         sAxisMasters => laneTxMasters,
-         sAxisSlaves  => laneTxSlaves,
-         -- Master
-         mAxisMaster  => asicTxMaster,
-         mAxisSlave   => asicTxSlave);
 
 end rtl;

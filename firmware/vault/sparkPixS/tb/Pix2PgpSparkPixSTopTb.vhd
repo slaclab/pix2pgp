@@ -13,6 +13,7 @@ use surf.AxiStreamPkg.all;
 use surf.SsiPkg.all;
 use surf.Pgp4Pkg.all;
 use surf.AxiStreamPacketizer2Pkg.all;
+use surf.AxiLitePkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -322,26 +323,35 @@ begin
    end generate GEN_LANE;
 
    -- asic stream receiver and merger
-   U_ASIC_RX : entity pix2pgp.Pix2PgpAsicRx
+   U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => false,
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         asicClk      => sparseClk,
-         asicRst      => rst,
-         pgpClk       => pgpClk,
-         pgpRst       => rst,
-         sysClk       => sysClk,
-         sysRst       => rst,
+         asicClk          => sparseClk,
+         asicRst          => rst,
+         asicSro          => sroFinal,
+         asicSroEna       => '1',
+         pgpClk           => pgpClk,
+         pgpRst           => rst,
+         sysClk           => sysClk,
+         sysRst           => rst,
          -- PGP4Rx Interface
-         pgpValid     => pgpValid,
-         pgpData      => pgpData,
-         pgpReady     => pgpReady,
+         pgpValid         => pgpValid,
+         pgpData          => pgpData,
+         pgpReady         => pgpReady,
          -- AXI-Stream Rx Interface
-         asicTxMaster => asicTxMaster,
-         asicTxSlave  => asicTxSlave);
+         asicTxMaster     => asicTxMaster,
+         asicTxSlave      => asicTxSlave,
+         -- AXI-Lite Interface
+         axilClk          => sysClk,
+         axilRst          => rst,
+         axilReadMaster   => AXI_LITE_READ_MASTER_INIT_C,
+         axilReadSlave    => open,
+         axilWriteMaster  => AXI_LITE_WRITE_MASTER_INIT_C,
+         axilWriteSlave   => open);
 
   -- Generate the test stimulus
   stimulus: process begin
