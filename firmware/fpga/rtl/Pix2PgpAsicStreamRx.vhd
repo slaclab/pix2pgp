@@ -29,10 +29,11 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpAsicStreamRx is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      ASIC_ID_G      : natural := 0);
+      TPD_G                 : time     := 1 ns;
+      RST_ASYNC_G           : boolean  := false;
+      RST_POLARITY_G        : sl       := '1';  -- '1' for active high rst, '0' for active low
+      ASIC_ID_G             : natural  := 0;
+      TIMEOUT_LIMIT_WIDTH_G : positive := 16);
    port(
       -- General Interface
       pgpClk          : in  sl;
@@ -62,7 +63,10 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   constant FPGA_TRGCNT_DEFAULT_C : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '1');
+   constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '1');
+   constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
+
+   type timeoutArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
 
    signal frameDataRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal frameDataDout   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
@@ -90,6 +94,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal trgBuffDoutDly  : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffValid    : sl := '0';
    signal trgBuffValidDly : sl := '0';
+   signal timeoutLimit    : timeoutArray := (others => (others => '1'));
+   signal timeoutLimitDly : timeoutArray := (others => (others => '1'));
+   signal armTimeout      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal armTimeoutDly   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal timeout         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal timeoutDly      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal readMaster      : AxiLiteReadMasterType;
    signal readSlave       : AxiLiteReadSlaveType;
@@ -110,10 +120,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffRd    : sl;
       trgCntBuff   : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffValid : sl;
+      armTimeout   : sl;
       asicTxMaster : AxiStreamMasterType;
       state        : StateType;
       -- Registers
       fpgaId       : slv(31 downto 0);
+      timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       -- AXI-Lite
       readSlave    : AxiLiteReadSlaveType;
       writeSlave   : AxiLiteWriteSlaveType;
@@ -127,10 +139,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffRd    => '0',
       trgCntBuff   => (others => '0'),
       trgBuffValid => '0',
+      armTimeout   => '0',
       asicTxMaster => AXI_STREAM_MASTER_INIT_C,
       state        => IDLE_S,
       -- Registers
       fpgaId       => FPGA_ID_DEFAULT_C,
+      timeoutLimit => TIMEOUT_LIMIT_DEFAULT_C,
       -- AXI-Lite
       readSlave    => AXI_LITE_READ_SLAVE_INIT_C,
       writeSlave   => AXI_LITE_WRITE_SLAVE_INIT_C);
@@ -213,9 +227,9 @@ begin
       end if;
 
       -- default flags
-      v.asicTxMaster.tLast  := '0';
-      v.asicTxMaster.tUser  := (others => '0');
-      v.asicTxMaster.tKeep  := (others => '1');
+      v.asicTxMaster.tLast := '0';
+      v.asicTxMaster.tUser := (others => '0');
+      v.asicTxMaster.tKeep := (others => '1');
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
@@ -225,6 +239,7 @@ begin
       axiSlaveWaitTxn(axilEp, writeMaster, readMaster, v.writeSlave, v.readSlave);
 
       axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
+      axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -260,7 +275,8 @@ begin
             if trgBuffValidDly = '1' then
                v.trgCntBuff := trgBuffDoutDly;
                v.trgBuffRd  := '1';
-               v.state      := TX_PREAMBLE_S;
+               v.armTimeout := '1';
+               v.state := TX_PREAMBLE_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -291,6 +307,11 @@ begin
       ----------------------------------------------------------------------------------------------
       -- Outputs
       ----------------------------------------------------------------------------------------------
+
+      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         timeoutLimit(lane) <= r.timeoutLimit;
+         armTimeout(lane)   <= r.armTimeout;
+      end loop;
 
       -- AXI-Stream Output
       asicTxMaster <= r.asicTxMaster;
@@ -443,6 +464,55 @@ begin
             laneErrorAck   => laneErrorAck(lane),
             laneTxMaster   => laneTxMasters(lane),
             laneTxSlave    => laneTxSlaves(lane));
+
+      -- Watchdog (on a per-lane basis)
+      U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+         generic map(
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+         port map(
+            -- General Interface
+            clk     => sysClk,
+            rst     => sysRst,
+            limit   => timeoutLimitDly(lane),
+            -- Control Interface
+            set     => armTimeoutDly(lane),
+            timeout => timeout(lane));
+
+      U_PipelineWatchdogTimeout : entity surf.SlvDelay
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            WIDTH_G        => TIMEOUT_LIMIT_WIDTH_G,
+            DELAY_G        => 2)
+         port map (
+            clk  => sysClk,
+            din  => timeoutLimit(lane),
+            dout => timeoutLimitDly(lane));
+
+      U_PipelineArmTimeout : entity surf.SlvDelay
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            WIDTH_G        => NUM_OF_SERIALIZERS_C,
+            DELAY_G        => 2)
+         port map (
+            clk  => sysClk,
+            din  => armTimeout,
+            dout => armTimeoutDly);
+
+      U_PipelineTimeout : entity surf.SlvDelay
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            WIDTH_G        => NUM_OF_SERIALIZERS_C,
+            DELAY_G        => 2)
+         port map (
+            clk  => sysClk,
+            din  => timeout,
+            dout => timeoutDly);
 
    end generate GEN_LANE;
 
