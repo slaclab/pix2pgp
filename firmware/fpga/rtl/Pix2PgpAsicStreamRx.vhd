@@ -121,11 +121,13 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgCntBuff   : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffValid : sl;
       armTimeout   : sl;
-      asicTxMaster : AxiStreamMasterType;
       state        : StateType;
       -- Registers
       fpgaId       : slv(31 downto 0);
       timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      -- AXI-Stream
+      asicTxMaster : AxiStreamMasterType;
+      laneTxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Lite
       readSlave    : AxiLiteReadSlaveType;
       writeSlave   : AxiLiteWriteSlaveType;
@@ -140,11 +142,13 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgCntBuff   => (others => '0'),
       trgBuffValid => '0',
       armTimeout   => '0',
-      asicTxMaster => AXI_STREAM_MASTER_INIT_C,
       state        => IDLE_S,
       -- Registers
       fpgaId       => FPGA_ID_DEFAULT_C,
       timeoutLimit => TIMEOUT_LIMIT_DEFAULT_C,
+      -- AXI-Stream
+      asicTxMaster => AXI_STREAM_MASTER_INIT_C,
+      laneTxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
       -- AXI-Lite
       readSlave    => AXI_LITE_READ_SLAVE_INIT_C,
       writeSlave   => AXI_LITE_WRITE_SLAVE_INIT_C);
@@ -205,13 +209,16 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, writeMaster, asicSroSync, asicSroEnaSync,
-                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave, r) is
+                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave,
+                   timeoutDly, laneError, laneTxMasters, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
 
-      -- preamble
-      variable preamble : slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
+      -- internal variables
+      variable preamble      : slv(FPGA_PREAMPLE_LEN_C-1 downto 0)  := (others => '0');
+      variable dataReady     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable allLanesReady : sl := '0';
 
    begin
       -- Latch the current value
@@ -230,6 +237,10 @@ begin
       v.asicTxMaster.tLast := '0';
       v.asicTxMaster.tUser := (others => '0');
       v.asicTxMaster.tKeep := (others => '1');
+
+      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         v.laneTxSlaves(lane).tReady := '0'; -- disable by default
+      end loop;
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
@@ -265,6 +276,13 @@ begin
 
       preamble := preambleSet(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
 
+      -- global status loop
+      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         dataReady(lane) := laneTxMasters(lane).tValid;
+      end loop;
+
+      allLanesReady := toSl(allBits(dataReady, '1'));
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -293,6 +311,9 @@ begin
          ----------------------------------------------------------------------
          -- wait for lanes to present data
          when TX_HEADER_S =>
+
+
+
             v.state := PARSE_DATA_S;
 
          ----------------------------------------------------------------------
@@ -313,7 +334,8 @@ begin
          armTimeout(lane)   <= r.armTimeout;
       end loop;
 
-      -- AXI-Stream Output
+      -- AXI-Stream Outputs
+      laneTxSlaves <= r.laneTxSlaves;
       asicTxMaster <= r.asicTxMaster;
 
       -- AXI-Lite Outputs
