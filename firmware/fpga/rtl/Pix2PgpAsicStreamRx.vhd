@@ -35,14 +35,15 @@ entity Pix2PgpAsicStreamRx is
       ASIC_ID_G      : natural := 0);
    port(
       -- General Interface
-      asicClk         : in  sl;
-      asicRst         : in  sl := not(RST_POLARITY_G);
-      asicSro         : in  sl;
-      asicSroEna      : in  sl;
       pgpClk          : in  sl;
       pgpRst          : in  sl := not(RST_POLARITY_G);
       sysClk          : in  sl;
       sysRst          : in  sl := not(RST_POLARITY_G);
+      -- ASIC Domain Interface
+      asicClk         : in  sl;
+      asicRst         : in  sl; -- active-low always
+      asicSro         : in  sl;
+      asicSroEna      : in  sl;
       -- PGP4Rx Interface
       pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgpData         : in  Pix2PgpFpgaRxDataArray;
@@ -61,45 +62,103 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   signal frameDataRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameDataDout  : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal frameDataFull  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameMetaRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameMetaDout  : Pix2PgpFpgaRxMetaArray := (others => DEFAULT_PIX2PGP_FPGARX_METABUS_C);
-   signal frameMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   constant FPGA_TRGCNT_DEFAULT_C : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '1');
 
-   signal laneTxMasters  : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
-                         := (others => AXI_STREAM_MASTER_INIT_C);
-   signal laneTxSlaves   : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
-                         := (others => AXI_STREAM_SLAVE_INIT_C);
+   signal frameDataRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal frameDataDout   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
+   signal frameDataFull   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal frameMetaRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal frameMetaDout   : Pix2PgpFpgaRxMetaArray := (others => DEFAULT_PIX2PGP_FPGARX_METABUS_C);
+   signal frameMetaValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal laneError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneErrorAck   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneTxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                          := (others => AXI_STREAM_MASTER_INIT_C);
+   signal laneTxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                          := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal readMaster     : AxiLiteReadMasterType;
-   signal readSlave      : AxiLiteReadSlaveType;
-   signal writeMaster    : AxiLiteWriteMasterType;
-   signal writeSlave     : AxiLiteWriteSlaveType;
+   signal laneError       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneErrorAck    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal asicSroSync     : sl := '0';
+   signal asicSroEnaSync  : sl := '0';
+   signal asicRstSync     : sl := '0';
+
+   signal trgBuffWr       : sl := '0';
+   signal trgBuffDin      : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffRd       : sl := '0';
+   signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffDoutDly  : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffValid    : sl := '0';
+   signal trgBuffValidDly : sl := '0';
+
+   signal readMaster      : AxiLiteReadMasterType;
+   signal readSlave       : AxiLiteReadSlaveType;
+   signal writeMaster     : AxiLiteWriteMasterType;
+   signal writeSlave      : AxiLiteWriteSlaveType;
 
    type RegType is record
+      -- Internal
+      asicSro      : sl;
+      fpgaTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffWr    : sl;
+      trgBuffRd    : sl;
+      trgBuffDout  : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffValid : sl;
       -- Registers
-      fpgaId     : slv(31 downto 0);
+      fpgaId       : slv(31 downto 0);
       -- AXI-Lite
-      readSlave  : AxiLiteReadSlaveType;
-      writeSlave : AxiLiteWriteSlaveType;
+      readSlave    : AxiLiteReadSlaveType;
+      writeSlave   : AxiLiteWriteSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
+      -- Internal
+      asicSro      => '0',
+      fpgaTrgCnt   => FPGA_TRGCNT_DEFAULT_C,
+      trgBuffWr    => '0',
+      trgBuffRd    => '0',
+      trgBuffDout  => (others => '0'),
+      trgBuffValid => '0',
       -- Registers
-      fpgaId     => FPGA_ID_DEFAULT_C,
+      fpgaId       => FPGA_ID_DEFAULT_C,
       -- AXI-Lite
-      readSlave  => AXI_LITE_READ_SLAVE_INIT_C,
-      writeSlave => AXI_LITE_WRITE_SLAVE_INIT_C);
+      readSlave    => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave   => AXI_LITE_WRITE_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
 begin
+
+   U_SyncSro : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => asicSro,
+         dataOut => asicSroSync);
+
+   U_SyncSroEna : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => asicSroEna,
+         dataOut => asicSroEnaSync);
+
+   U_SyncRst : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => asicRst,
+         dataOut => asicRstSync);
 
    U_AxiLiteAsync : entity surf.AxiLiteAsync
       generic map (
@@ -121,7 +180,8 @@ begin
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, sysRst, writeMaster, r) is
+   comb : process (readMaster, sysRst, writeMaster, asicSroSync, asicSroEnaSync,
+                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -129,6 +189,9 @@ begin
    begin
       -- Latch the current value
       v := r;
+
+      -- Defaults
+      v.trgBuffWr := '0';
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
@@ -143,6 +206,23 @@ begin
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
       ----------------------------------------------------------------------------------------------
       ----------------------------------------------------------------------------------------------
+
+      -- Register inputs
+      v.asicSro := asicSroSync;
+
+      if asicRstSync = '0' then
+         v.fpgaTrgCnt := FPGA_TRGCNT_DEFAULT_C;
+      end if;
+
+      -- posedge detection
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' then
+         v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+      end if;
+
+      -- negedge detection
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' then
+         v.trgBuffWr := '1';
+      end if;
 
       ----------------------------------------------------------------------------------------------
       -- Outputs
@@ -170,6 +250,82 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   ----------------------------------------
+   -- Trigger/SRO Buffer
+   ----------------------------------------
+   U_TriggerBuffer : entity surf.Fifo
+      generic map (
+         TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         MEMORY_TYPE_G   => "block",
+         FWFT_EN_G       => true,
+         DATA_WIDTH_G    => TRGCNT_WIDTH_C,
+         ADDR_WIDTH_G    => 6)
+      port map (
+         rst      => sysRst,
+         -- Write Ports
+         wr_clk   => sysClk,
+         wr_en    => trgBuffWr,
+         din      => trgBuffDin,
+         -- Read Ports
+         rd_clk   => sysClk,
+         rd_en    => trgBuffRd,
+         dout     => trgBuffDout,
+         valid    => trgBuffValid);
+
+   U_PipelineTriggerBufferWr : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 2)
+      port map (
+         clk     => sysClk,
+         din(0)  => r.trgBuffWr,
+         dout(0) => trgBuffWr);
+
+   U_PipelineTriggerBufferDin : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => TRGCNT_WIDTH_C,
+         DELAY_G        => 2)
+      port map (
+         clk  => sysClk,
+         din  => r.fpgaTrgCnt,
+         dout => trgBuffDin);
+
+   U_PipelineTriggerBufferRd : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 2)
+      port map (
+         clk     => sysClk,
+         din(0)  => r.trgBuffRd,
+         dout(0) => trgBuffRd);
+
+   U_PipelineTriggerBufferDout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => TRGCNT_WIDTH_C,
+         DELAY_G        => 2)
+      port map (
+         clk  => sysClk,
+         din  => trgBuffDout,
+         dout => trgBuffDoutDly);
+
+   U_PipelineTriggerBufferValid : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 2)
+      port map (
+         clk     => sysClk,
+         din(0)  => trgBuffValid,
+         dout(0) => trgBuffValidDly);
 
    -----------------
    -- Lane Receivers
