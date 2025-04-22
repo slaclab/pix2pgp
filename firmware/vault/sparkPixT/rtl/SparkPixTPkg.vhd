@@ -108,7 +108,7 @@ package Pix2PgpPkg is
    ----------------------------
 
    -- the Pix2Pgp data frame header *has* to be an equal to the databus width
-   -- i.e. = 64 for SparkPix-S
+   -- i.e. = 64 for SparkPix-T
    -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
    -- the header has a standard trigger counter width that needs to be larger or equal
    -- to the actual trigger counter coming in from the columns;
@@ -183,11 +183,10 @@ package Pix2PgpPkg is
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
    --
-   -- functions stolen from numeric_std
-   function xsll       (inArg: slv; count: natural) return slv;
+   --
+   function powerOfTwo(N: natural) return slv;
+   -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
-   function leftShift  (inArg: unsigned; count: natural) return unsigned;
-   constant nau: unsigned(1 downto 0) := (others => '0');
    --
 
    -- FPGA-RX related
@@ -225,6 +224,14 @@ end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
 
+   function powerOfTwo(N: natural) return slv is
+      variable result : slv(N downto 0);
+   begin
+      result := (others => '0');
+      result(N) := '1';
+      return result;
+   end function powerOfTwo;
+
    -- stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv is
       constant inSlvLen : integer := inSlv'LENGTH-1;
@@ -239,29 +246,6 @@ package body Pix2PgpPkg is
       return result;
 
    end rightShift;
-
-   function xsll (inArg: slv; count: natural) return slv is
-      constant argL   : integer := inArg'length-1;
-      alias    xarg   : slv(argL downto 0) is inArg;
-      variable result : slv(argL downto 0) := (others => '0');
-   begin
-
-      if count <= argL then
-         result(argL downto count) := xarg(argL-count downto 0);
-      end if;
-
-      return result;
-
-   end xsll;
-
-   function leftShift (inArg: unsigned; count: natural) return unsigned is
-   begin
-
-      if (inArg'length < 1) then return nau;
-      end if;
-
-      return unsigned(xsll(slv(inArg), count));
-   end leftShift;
 
    -- ASIC-related
    function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is

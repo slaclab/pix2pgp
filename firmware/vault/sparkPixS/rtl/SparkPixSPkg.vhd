@@ -110,8 +110,7 @@ package Pix2PgpPkg is
    ----------------------------
 
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
-   -- 8+8+24=40 -> ASIC_DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
-   --
+   -- i.e. = 40 for SparkPix-S
    -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
    -- the header has a standard trigger counter width that needs to be larger or equal
    -- to the actual trigger counter coming in from the columns;
@@ -124,23 +123,23 @@ package Pix2PgpPkg is
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1;
-   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2;
-   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3;
-   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4;
-   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5;
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6;
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 39
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 38
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 37
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 36
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 35
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 34
    ---------------------------------------------------------------------------
    -- reserved bits (only one left)
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7 -- [33:32]
                                               downto HEADER_DWIDTH_C-8;
    ---------------------------------------------------------------------------
    -- col-bitmask
-   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWIDTH_C-9
+   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWIDTH_C-9 -- [31:8]
                                               downto TRGCNT_HEADER_WIDTH_C;
    ---------------------------------------------------------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1
+   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1 -- [7:0]
                                               downto 0;
    ---------------------------------------------------------------------------
    -------------------------------------------
