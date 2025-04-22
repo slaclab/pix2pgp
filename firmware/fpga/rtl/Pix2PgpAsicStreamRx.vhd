@@ -96,14 +96,22 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal writeMaster     : AxiLiteWriteMasterType;
    signal writeSlave      : AxiLiteWriteSlaveType;
 
+   type StateType is (
+      IDLE_S,
+      TX_PREAMBLE_S,
+      TX_HEADER_S,
+      PARSE_DATA_S);
+
    type RegType is record
       -- Internal
       asicSro      : sl;
       fpgaTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffWr    : sl;
       trgBuffRd    : sl;
-      trgBuffDout  : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgCntBuff   : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffValid : sl;
+      asicTxMaster : AxiStreamMasterType;
+      state        : StateType;
       -- Registers
       fpgaId       : slv(31 downto 0);
       -- AXI-Lite
@@ -117,8 +125,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
       fpgaTrgCnt   => FPGA_TRGCNT_DEFAULT_C,
       trgBuffWr    => '0',
       trgBuffRd    => '0',
-      trgBuffDout  => (others => '0'),
+      trgCntBuff   => (others => '0'),
       trgBuffValid => '0',
+      asicTxMaster => AXI_STREAM_MASTER_INIT_C,
+      state        => IDLE_S,
       -- Registers
       fpgaId       => FPGA_ID_DEFAULT_C,
       -- AXI-Lite
@@ -181,10 +191,13 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, writeMaster, asicSroSync, asicSroEnaSync,
-                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, r) is
+                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
+
+      -- preamble
+      variable preamble : slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
 
    begin
       -- Latch the current value
@@ -192,6 +205,17 @@ begin
 
       -- Defaults
       v.trgBuffWr := '0';
+      v.trgBuffRd := '0';
+
+      -- flow control check
+      if asicTxSlave.tReady = '1' then
+         v.asicTxMaster.tValid := '0';
+      end if;
+
+      -- default flags
+      v.asicTxMaster.tLast  := '0';
+      v.asicTxMaster.tUser  := (others => '0');
+      v.asicTxMaster.tKeep  := (others => '1');
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
@@ -224,9 +248,52 @@ begin
          v.trgBuffWr := '1';
       end if;
 
+      preamble := preambleSet(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
+
+      -------------------------------------------------------------------------
+      case r.state is
+      -------------------------------------------------------------------------
+         -- wait for a word to be written into the sro/trigger buffer
+         when IDLE_S =>
+
+            -- new trigger in queue; register and pop the value
+            if trgBuffValidDly = '1' then
+               v.trgCntBuff := trgBuffDoutDly;
+               v.trgBuffRd  := '1';
+               v.state      := TX_PREAMBLE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- transmit the pix2pgp preamble via axi
+         when TX_PREAMBLE_S =>
+            if v.asicTxMaster.tValid = '0' then
+               v.asicTxMaster.tKeep    := tKeepPreambleSet(FPGA_PREAMPLE_LEN_C);
+               v.asicTxMaster.tUser(1) := '1'; -- SoF
+               v.asicTxMaster.tValid   := '1';
+               v.asicTxMaster.tData(FPGA_PREAMPLE_LEN_C-1 downto 0) := preamble;
+               v.state := TX_HEADER_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- wait for lanes to present data
+         when TX_HEADER_S =>
+            v.state := PARSE_DATA_S;
+
+         ----------------------------------------------------------------------
+         -- arbitrate through lanes
+         when PARSE_DATA_S =>
+            v.state := IDLE_S;
+
+      end case;
+      -----------------------------------------------------------------------
+
+
       ----------------------------------------------------------------------------------------------
       -- Outputs
       ----------------------------------------------------------------------------------------------
+
+      -- AXI-Stream Output
+      asicTxMaster <= r.asicTxMaster;
 
       -- AXI-Lite Outputs
       writeSlave <= r.writeSlave;
