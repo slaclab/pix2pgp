@@ -99,7 +99,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal armTimeout      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal armTimeoutDly   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal timeout         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal timeoutDly      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal readMaster      : AxiLiteReadMasterType;
    signal readSlave       : AxiLiteReadSlaveType;
@@ -110,6 +110,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       IDLE_S,
       TX_PREAMBLE_S,
       TX_HEADER_S,
+      CHECK_BITMASK_S,
       PARSE_DATA_S);
 
    type RegType is record
@@ -210,15 +211,16 @@ begin
 
    comb : process (readMaster, sysRst, writeMaster, asicSroSync, asicSroEnaSync,
                    asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave,
-                   timeoutDly, laneError, laneTxMasters, r) is
+                   laneTimeout, laneError, laneTxMasters, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
 
       -- internal variables
       variable preamble      : slv(FPGA_PREAMPLE_LEN_C-1 downto 0)  := (others => '0');
-      variable dataReady     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-      variable allLanesReady : sl := '0';
+      variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)    := (others => '0');
+      variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    begin
       -- Latch the current value
@@ -274,14 +276,16 @@ begin
          v.trgBuffWr := '1';
       end if;
 
-      preamble := preambleSet(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
-
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         dataReady(lane) := laneTxMasters(lane).tValid;
+         laneValid(lane) := laneTxMasters(lane).tValid;
       end loop;
 
-      allLanesReady := toSl(allBits(dataReady, '1'));
+      allLanesReady := laneError or laneTimeout or laneValid;
+
+
+      preamble := fpgaPreambleMap(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
+      header   := fpgaHeaderMap(laneError, laneTimeout, laneValid);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -301,7 +305,7 @@ begin
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
             if v.asicTxMaster.tValid = '0' then
-               v.asicTxMaster.tKeep    := tKeepPreambleSet(FPGA_PREAMPLE_LEN_C);
+               v.asicTxMaster.tKeep    := tKeepSet(FPGA_PREAMPLE_LEN_C);
                v.asicTxMaster.tUser(1) := '1'; -- SoF
                v.asicTxMaster.tValid   := '1';
                v.asicTxMaster.tData(FPGA_PREAMPLE_LEN_C-1 downto 0) := preamble;
@@ -311,13 +315,20 @@ begin
          ----------------------------------------------------------------------
          -- wait for lanes to present data
          when TX_HEADER_S =>
+            if allBits(allLanesReady, '1') then
+               v.asicTxMaster.tKeep    := tKeepSet(FPGA_HEADER_LEN_C);
+               v.asicTxMaster.tValid   := '1';
+               v.asicTxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.state := CHECK_BITMASK_S;
+            end if;
 
-
-
+         ----------------------------------------------------------------------
+         -- check if the current lane has any valid data
+         when CHECK_BITMASK_S =>
             v.state := PARSE_DATA_S;
 
          ----------------------------------------------------------------------
-         -- arbitrate through lanes
+         -- switch mux to the lane with the valid data until done
          when PARSE_DATA_S =>
             v.state := IDLE_S;
 
@@ -534,7 +545,7 @@ begin
          port map (
             clk  => sysClk,
             din  => timeout,
-            dout => timeoutDly);
+            dout => laneTimeout);
 
    end generate GEN_LANE;
 

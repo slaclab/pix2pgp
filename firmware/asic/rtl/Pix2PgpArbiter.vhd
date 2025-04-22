@@ -340,8 +340,8 @@ begin
       end loop;
       --
       --
-      v.dataHeader := headerMap(overOccError, colPause, colFifoError, colPauseError,
-                                timeoutError, v.dummyHeader, v.colBitmask, v.trgCntGlbl);
+      v.dataHeader := asicHeaderMap(overOccError, colPause, colFifoError, colPauseError,
+                                    timeoutError, v.dummyHeader, v.colBitmask, v.trgCntGlbl);
       --
       v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
       --

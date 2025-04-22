@@ -160,13 +160,16 @@ package Pix2PgpPkg is
    -----------------------------------------
 
    -- functions
-   function colMetaMap  (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
-   function headerMap   (overOccError: sl; colPause: sl; colFifoError : sl;
-                        colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                        colBitmask: slv; trgCntGlbl: slv) return slv;
-   function isDummy     (din : slv) return boolean;
-   function preambleSet (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv;
-   function tKeepPreambleSet (preambleLen : natural) return slv;
+   -- asic
+   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
+                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                          colBitmask: slv; trgCntGlbl: slv) return slv;
+   -- fpga
+   function isDummy        (din : slv) return boolean;
+   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv;
+   function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
+   function tKeepSet       (dataLen : natural) return slv;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
@@ -208,6 +211,8 @@ package Pix2PgpPkg is
                                                      & x"70"  -- p
                                                      & x"67"  -- g
                                                      & x"70"; -- p
+
+   constant FPGA_HEADER_LEN_C : natural := 3*NUM_OF_SERIALIZERS_C;
 
    type Pix2PgpFpgaRxMetaBusType is record
       -- flags begin
@@ -260,7 +265,7 @@ package body Pix2PgpPkg is
       return retMeta;
    end colMetaMap;
 
-   function headerMap (overOccError: sl; colPause: sl; colFifoError : sl;
+   function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
                        colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                        colBitmask: slv; trgCntGlbl: slv) return slv is
       variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
@@ -277,7 +282,7 @@ package body Pix2PgpPkg is
       retHeader(TRG_CNT_POS_C)           := resize(trgCntGlbl, 8);
 
       return retHeader;
-   end headerMap;
+   end asicHeaderMap;
 
    -- FPGA-related
    function isDummy (din: slv) return boolean is
@@ -309,7 +314,7 @@ package body Pix2PgpPkg is
    end function;
 
    -- pretty much fixed
-   function preambleSet (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
+   function fpgaPreambleMap (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
       variable retPreamble: slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
@@ -320,14 +325,14 @@ package body Pix2PgpPkg is
 
       return retPreamble;
 
-   end preambleSet;
+   end fpgaPreambleMap;
 
-   function tKeepPreambleSet (preambleLen : natural) return slv is
+   function tKeepSet (dataLen : natural) return slv is
       variable retTkeep: slv(AXI_STREAM_MAX_TKEEP_WIDTH_C-1 downto 0) := (others => '0');
       variable preambleBytes : natural := 1;
    begin
 
-      preambleBytes := preambleLen/8;
+      preambleBytes := dataLen/8;
 
       for i in 0 to preambleBytes-1 loop
          retTkeep(i) := '1';
@@ -335,6 +340,18 @@ package body Pix2PgpPkg is
 
       return retTkeep;
 
-   end tKeepPreambleSet;
+   end tKeepSet;
+
+   function fpgaHeaderMap (laneError: slv; laneTimeout: slv; laneValid: slv) return slv is
+      variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
+   begin
+
+      retHeader(FPGA_HEADER_LEN_C-1 downto 16) := resize(laneError, 8);
+      retHeader(15 downto  8) := resize(laneTimeout, 8);
+      retHeader(7  downto  0) := resize(laneValid,   8);
+
+      return retHeader;
+
+   end fpgaHeaderMap;
 
 end package body Pix2PgpPkg;
