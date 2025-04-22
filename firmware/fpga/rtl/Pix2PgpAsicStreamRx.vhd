@@ -31,8 +31,8 @@ entity Pix2PgpAsicStreamRx is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1'  -- '1' for active high rst, '0' for active low
-   );
+      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
+      ASIC_ID_G      : natural := 0);
    port(
       -- General Interface
       asicClk         : in  sl;
@@ -61,8 +61,6 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   constant FPGA_ID_DEFAULT_C : slv(31 downto 0) := x"C0CAC01A";
-
    signal frameDataRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal frameDataDout  : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
    signal frameDataFull  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -78,10 +76,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneErrorAck   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal readMaster  : AxiLiteReadMasterType;
-   signal readSlave   : AxiLiteReadSlaveType;
-   signal writeMaster : AxiLiteWriteMasterType;
-   signal writeSlave  : AxiLiteWriteSlaveType;
+   signal readMaster     : AxiLiteReadMasterType;
+   signal readSlave      : AxiLiteReadSlaveType;
+   signal writeMaster    : AxiLiteWriteMasterType;
+   signal writeSlave     : AxiLiteWriteSlaveType;
 
    type RegType is record
       -- Registers

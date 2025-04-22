@@ -20,6 +20,7 @@ use ieee.std_logic_arith.all;
 
 library surf;
 use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
 
 package Pix2PgpPkg is
 
@@ -163,11 +164,13 @@ package Pix2PgpPkg is
    -----------------------------------------
 
    -- functions
-   function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
-   function headerMap  (overOccError: sl; colPause: sl; colFifoError : sl;
+   function colMetaMap  (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function headerMap   (overOccError: sl; colPause: sl; colFifoError : sl;
                         colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                         colBitmask: slv; trgCntGlbl: slv) return slv;
-   function isDummy    (din : slv) return boolean;
+   function isDummy     (din : slv) return boolean;
+   function preambleSet (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv;
+   function tKeepPreambleSet (preambleLen : natural) return slv;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
@@ -198,6 +201,17 @@ package Pix2PgpPkg is
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+
+   constant FPGA_PREAMPLE_LEN_C : natural := 160;
+   constant ASIC_TYPE_C         : slv(31 downto  0) := toSlv(0, 32); -- SparPix-S = 0
+   constant FPGA_ID_DEFAULT_C   : slv(31 downto  0) := x"C0CAC01A";
+   constant PIX2PGP_ID_C        : slv(55 downto  0) := x"70"  -- p
+                                                     & x"69"  -- i
+                                                     & x"78"  -- x
+                                                     & x"32"  -- 2
+                                                     & x"70"  -- p
+                                                     & x"67"  -- g
+                                                     & x"70"; -- p
 
    type Pix2PgpFpgaRxMetaBusType is record
       -- flags begin
@@ -297,5 +311,34 @@ package body Pix2PgpPkg is
       return retSlv;
 
    end function;
+
+   -- pretty much fixed
+   function preambleSet (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
+      variable retPreamble: slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
+   begin
+
+      retPreamble(FPGA_PREAMPLE_LEN_C-1 downto 96) := resize(pix2pgpId, 64);
+      retPreamble(95 downto 64) := resize(asicType, 32);
+      retPreamble(63 downto 32) := resize(asicId,   32);
+      retPreamble(31 downto  0) := resize(fpgaId,   32);
+
+      return retPreamble;
+
+   end preambleSet;
+
+   function tKeepPreambleSet (preambleLen : natural) return slv is
+      variable retTkeep: slv(AXI_STREAM_MAX_TKEEP_WIDTH_C-1 downto 0) := (others => '0');
+      variable preambleBytes : natural := 1;
+   begin
+
+      preambleBytes := preambleLen/8;
+
+      for i in 0 to preambleBytes-1 loop
+         retTkeep(i) := '1';
+      end loop;
+
+      return retTkeep;
+
+   end tKeepPreambleSet;
 
 end package body Pix2PgpPkg;
