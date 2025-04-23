@@ -215,7 +215,8 @@ package Pix2PgpPkg is
                                                      & x"67"  -- g
                                                      & x"70"; -- p
 
-   constant FPGA_HEADER_LEN_C : natural := 3*NUM_OF_SERIALIZERS_C;
+   constant FPGA_HEADER_LEN_C  : natural := 3*NUM_OF_SERIALIZERS_C;
+   constant FPGA_TRAILER_LEN_C : natural := 64;
 
    type Pix2PgpFpgaRxMetaBusType is record
       -- flags begin

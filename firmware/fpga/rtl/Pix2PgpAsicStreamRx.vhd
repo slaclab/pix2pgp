@@ -109,7 +109,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
-      TX_HEADER_S,
+      WAIT_LANES_S,
       SWITCH_MUX_S,
       WAIT_TLAST_S,
       TX_TRAILER_S);
@@ -246,7 +246,8 @@ begin
       -- default flags
       v.asicTxMaster.tLast := '0';
       v.asicTxMaster.tUser := (others => '0');
-      v.asicTxMaster.tKeep := (others => '1');
+      v.asicTxMaster.tData := (others => '0');
+      v.asicTxMaster.tKeep := (others => '0');
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          v.laneTxSlaves(lane).tReady := '0'; -- disable by default
@@ -305,9 +306,8 @@ begin
             v.laneSel      := (others => '0');
             v.laneErrorAck := (others => '0');
 
-            -- new trigger in queue; register and pop the value;
-            -- always check if the lanes are still in timeout from before
-            if trgBuffValidDly = '1' and allBits(laneTimeout, '0') then
+            -- new trigger in queue; register and pop the value
+            if trgBuffValidDly = '1' then
                v.trgCntBuff := trgBuffDoutDly;
                v.trgBuffRd  := '1';
                v.armTimeout := '1';
@@ -322,16 +322,17 @@ begin
                v.asicTxMaster.tUser(1) := '1'; -- SoF
                v.asicTxMaster.tValid   := '1';
                v.asicTxMaster.tData(FPGA_PREAMPLE_LEN_C-1 downto 0) := preamble;
-               v.state := TX_HEADER_S;
+               v.state := WAIT_LANES_S;
             end if;
 
          ----------------------------------------------------------------------
          -- wait for lanes to present data
-         when TX_HEADER_S =>
+         when WAIT_LANES_S =>
             if allBits(allLanesReady, '1') then
-               v.asicTxMaster.tKeep    := tKeepSet(FPGA_HEADER_LEN_C);
-               v.asicTxMaster.tValid   := '1';
+               v.asicTxMaster.tKeep  := tKeepSet(FPGA_HEADER_LEN_C);
+               v.asicTxMaster.tValid := '1';
                v.asicTxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.armTimeout := '0';
                v.state := SWITCH_MUX_S;
             end if;
 
@@ -348,30 +349,19 @@ begin
 
             else
 
-               -- TO-DO: investigate. is this correct?
-               v.asicTxMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
-                     := laneTxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
-               v.asicTxMaster.tValid
-                     := laneTxMasters(laneIdx).tValid;
-               v.asicTxMaster.tKeep
-                     := laneTxMasters(laneIdx).tKeep;
-               v.laneTxSlaves(laneIdx).tReady
-                     := asicTxSlave.tReady;
-
-               v.waitLaneSel := '1'; -- wait one cycle for mux/demuxes to stabilize
-
-               if r.waitLaneSel = '1' then
-                  v.state := WAIT_TLAST_S;
-               end if;
+               v.state := WAIT_TLAST_S;
 
             end if;
 
          ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done
          when WAIT_TLAST_S =>
-            v.waitLaneSel := '0';
+            v.asicTxMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
+                  := laneTxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
+            v.asicTxMaster.tKeep           := laneTxMasters(laneIdx).tKeep;
+            v.asicTxMaster.tValid          := laneTxMasters(laneIdx).tValid;
+            v.laneTxSlaves(laneIdx).tReady := asicTxSlave.tReady;
 
-            -- TO-DO: investigate. is this correct?
             if laneTxMasters(laneIdx).tLast = '1' and
                v.asicTxMaster.tValid        = '1' and
                asicTxSlave.tReady           = '1' then
@@ -392,10 +382,10 @@ begin
          -- also acknowledge any errors and reset the timeout watchdog
          when TX_TRAILER_S =>
             if v.asicTxMaster.tValid = '0' then
-               v.asicTxMaster.tData(63 downto 0) := resize(PIX2PGP_ID_C, 64);
+               v.asicTxMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
+               v.asicTxMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) := resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
                v.asicTxMaster.tValid := '1';
                v.asicTxMaster.tLast  := '1';
-               v.armTimeout          := '0';
                v.laneErrorAck        := laneError;
                v.state               := IDLE_S;
             end if;

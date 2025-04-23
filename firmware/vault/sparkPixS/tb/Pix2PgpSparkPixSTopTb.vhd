@@ -152,25 +152,18 @@ begin
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcess : process(sysClk)
-    file myFile        : text open write_mode is "pix2pgpAxiDataDump.dat";
-    variable tmp       : std_logic_vector(39 downto 0);
-    variable row       : line;
-    variable keep_mask : slv(7 downto 0);
+    file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable row : line;
+    variable byte : std_logic_vector(7 downto 0);
   begin
     if rising_edge(sysClk) then
       if asicTxMaster.tValid = '1' then
-         tmp := (others => '0');
-        -- Write only valid data bytes according to tKeep using 40-bit words
-        for i in 0 to 127 loop
+        for i in 127 downto 0 loop
           if asicTxMaster.tKeep(i) = '1' then
-            keep_mask := asicTxMaster.tData((i*8+7) downto (i*8));
-            tmp       := keep_mask & tmp(39 downto 8);
-
-            if (i + 1) mod 5 = 0 then
-              -- Write every 5 bytes as one 40-bit word
-              hwrite(row, tmp, right, 0);
-              writeline(myFile, row);
-            end if;
+            byte := asicTxMaster.tData((i*8+7) downto (i*8));
+            hwrite(row, byte, LEFT, 0);
+            writeline(myFile, row);
+            row.all := "";
           end if;
         end loop;
       end if;
