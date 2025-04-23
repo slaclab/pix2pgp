@@ -325,19 +325,22 @@ begin
    -- asic stream receiver and merger
    U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
       generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => false,
-         RST_POLARITY_G => RST_POLARITY_G)
+         TPD_G                => TPD_G,
+         RST_ASYNC_G          => false,
+         RST_POLARITY_G       => RST_POLARITY_G,
+         ASIC_ID_G            => 0,
+         TIMEOUT_LIMIT_WIDTH_G => 16)
       port map(
          -- General Interface
-         asicClk          => sparseClk,
-         asicRst          => rst,
-         asicSro          => sroFinal,
-         asicSroEna       => '1',
          pgpClk           => pgpClk,
          pgpRst           => rst,
          sysClk           => sysClk,
          sysRst           => rst,
+         -- ASIC Domain Interface
+         asicClk          => sparseClk,
+         asicRst          => rst,
+         asicSro          => sroFinal,
+         asicSroEna       => '1',
          -- PGP4Rx Interface
          pgpValid         => pgpValid,
          pgpData          => pgpData,
@@ -383,13 +386,13 @@ begin
     ----------------------------------------------
     ----------------------------------------------
 
-     wait for CLK_PERIOD_SPARSE_C*93;
-       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(2, hitLen(col)'length);
-       end loop;
-         sro  <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro  <= '0';
+     --wait for CLK_PERIOD_SPARSE_C*93;
+     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+     --    hitLen(col) <= toSlv(2, hitLen(col)'length);
+     --  end loop;
+     --    sro  <= '1';
+     --wait for CLK_PERIOD_SPARSE_C*2;
+     --    sro  <= '0';
 
     -- wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
