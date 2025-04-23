@@ -110,8 +110,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
       IDLE_S,
       TX_PREAMBLE_S,
       TX_HEADER_S,
-      CHECK_BITMASK_S,
-      PARSE_DATA_S);
+      SWITCH_MUX_S,
+      WAIT_TLAST_S,
+      TX_TRAILER_S);
 
    type RegType is record
       -- Internal
@@ -122,6 +123,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgCntBuff   : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffValid : sl;
       armTimeout   : sl;
+      laneSel      : slv(BITMAX_SERIALIZERS_C downto 0);
+      laneErrorAck : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      waitLaneSel  : sl;
       state        : StateType;
       -- Registers
       fpgaId       : slv(31 downto 0);
@@ -143,6 +147,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgCntBuff   => (others => '0'),
       trgBuffValid => '0',
       armTimeout   => '0',
+      laneSel      => (others => '0'),
+      laneErrorAck => (others => '0'),
+      waitLaneSel  => '0',
       state        => IDLE_S,
       -- Registers
       fpgaId       => FPGA_ID_DEFAULT_C,
@@ -221,6 +228,7 @@ begin
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)    := (others => '0');
       variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable laneIdx       : natural := 0;
 
    begin
       -- Latch the current value
@@ -287,14 +295,19 @@ begin
       preamble := fpgaPreambleMap(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
       header   := fpgaHeaderMap(laneError, laneTimeout, laneValid);
 
+      laneIdx := conv_integer(unsigned(r.laneSel));
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
          -- wait for a word to be written into the sro/trigger buffer
          when IDLE_S =>
+            v.armTimeout   := '0';
+            v.laneSel      := (others => '0');
+            v.laneErrorAck := (others => '0');
 
-            -- new trigger in queue; register and pop the value
-            if trgBuffValidDly = '1' then
+            -- new trigger in queue; register and pop the value;
+            -- always check if the lanes are still in timeout from before
+            if trgBuffValidDly = '1' and allBits(laneTimeout, '0') then
                v.trgCntBuff := trgBuffDoutDly;
                v.trgBuffRd  := '1';
                v.armTimeout := '1';
@@ -319,18 +332,73 @@ begin
                v.asicTxMaster.tKeep    := tKeepSet(FPGA_HEADER_LEN_C);
                v.asicTxMaster.tValid   := '1';
                v.asicTxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
-               v.state := CHECK_BITMASK_S;
+               v.state := SWITCH_MUX_S;
             end if;
 
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
-         when CHECK_BITMASK_S =>
-            v.state := PARSE_DATA_S;
+         when SWITCH_MUX_S =>
+            if laneValid(laneIdx) = '0' then
+
+               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                  v.state := TX_TRAILER_S;
+               else
+                  v.laneSel := r.laneSel + 1;
+               end if;
+
+            else
+
+               -- TO-DO: investigate. is this correct?
+               v.asicTxMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
+                     := laneTxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
+               v.asicTxMaster.tValid
+                     := laneTxMasters(laneIdx).tValid;
+               v.asicTxMaster.tKeep
+                     := laneTxMasters(laneIdx).tKeep;
+               v.laneTxSlaves(laneIdx).tReady
+                     := asicTxSlave.tReady;
+
+               v.waitLaneSel := '1'; -- wait one cycle for mux/demuxes to stabilize
+
+               if r.waitLaneSel = '1' then
+                  v.state := WAIT_TLAST_S;
+               end if;
+
+            end if;
 
          ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done
-         when PARSE_DATA_S =>
-            v.state := IDLE_S;
+         when WAIT_TLAST_S =>
+            v.waitLaneSel := '0';
+
+            -- TO-DO: investigate. is this correct?
+            if laneTxMasters(laneIdx).tLast = '1' and
+               v.asicTxMaster.tValid        = '1' and
+               asicTxSlave.tReady           = '1' then
+
+               v.state := SWITCH_MUX_S;
+
+               -- that was it; transmit trailer
+               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                  v.state := TX_TRAILER_S;
+               else
+                  v.laneSel := r.laneSel + 1;
+               end if;
+
+            end if;
+
+         ----------------------------------------------------------------------
+         -- transmit trailer;
+         -- also acknowledge any errors and reset the timeout watchdog
+         when TX_TRAILER_S =>
+            if v.asicTxMaster.tValid = '0' then
+               v.asicTxMaster.tData(63 downto 0) := resize(PIX2PGP_ID_C, 64);
+               v.asicTxMaster.tValid := '1';
+               v.asicTxMaster.tLast  := '1';
+               v.armTimeout          := '0';
+               v.laneErrorAck        := laneError;
+               v.state               := IDLE_S;
+            end if;
 
       end case;
       -----------------------------------------------------------------------
@@ -342,8 +410,10 @@ begin
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          timeoutLimit(lane) <= r.timeoutLimit;
-         armTimeout(lane)   <= r.armTimeout;
+         armTimeout(lane)   <= r.armTimeout and not(laneValid(lane));
       end loop;
+
+      laneErrorAck <= r.laneErrorAck;
 
       -- AXI-Stream Outputs
       laneTxSlaves <= r.laneTxSlaves;
