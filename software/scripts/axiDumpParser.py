@@ -49,4 +49,5 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
-    asicParser = pix2pgp.AsicData(verbose=True, data=_dataArray)
+    asicParser = pix2pgp.AsicData(asicType=args.asicType, verbose=True)
+    asicParser.Formatter(data=_dataArray)

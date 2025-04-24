@@ -16,51 +16,52 @@ class AsicData(object):
     def __init__(self,
                  asicType = "SparkPixS",
                  verbose  = False,
-                 data     = None,
                  **kwargs):
         """
-        Initializes the data
+        Class for the entire ASIC dataset.
+        Container for all datapoints associated with the ASIC.
         """
 
-        # expand as necessary
+        # expand as necessary; should match the associated value in the VHDL pkg
         self.asicTypeDict = {
             0: "SparkPixS",
             1: "SparkPixT",
         }
 
-        # class parameters
+        # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
         self._verbose     = verbose
-        self._data        = np.array(data)
 
-        # populated by FrameParamSet
-        self.numOfLanes   = None
-        self.numOfCols    = None
-        self.validLanes   = None
-        self.timeoutLanes = None
-        self.errorLanes   = None
-        self.preambleLen  = None
-        self.headerLen    = None
-        self.trailerLen   = None
+        # populated by FrameParamSet (parameters have _ prefix)
+        self._numOfLanes   = None
+        self._numOfCols    = None
+        self._preambleLen  = None
+        self._headerLen    = None
+        self._trailerLen   = None
 
         # populated by the data themselves
         # preamble
-        self.preambleErr = False
-        self.asicType    = 0
-        self.asicId      = 0
-        self.fpgaId      = 0
+        self.preambleErr  = False
+        self.validLanes   = None
+        self.timeoutLanes = None
+        self.errorLanes   = None
+        self.asicType     = 0
+        self.asicId       = 0
+        self.fpgaId       = 0
         # header
         # [...]
 
         # initialize the values
         self.FrameParamSet()
 
-        # call the Formatting function
-        self.Formatter()
+        # call after self.FrameParamSet
+        self.validLanes   = [None] * self._numOfLanes
+        self.timeoutLanes = [None] * self._numOfLanes
+        self.errorLanes   = [None] * self._numOfLanes
 
     #################################################################
     #################################################################
-    def Formatter(self):
+    def Formatter(self, data):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
@@ -74,7 +75,9 @@ class AsicData(object):
         """
 
         # Convert input data to 64-bit unsigned integers for consistent processing
-        dat = self._data.view(np.uint64)
+        _dat = np.array(data)
+
+        dat = self._dat.view(np.uint64)
 
         # Determine the total number of words (64-bit entries) in the frame
         self.wordSize = len(dat)
@@ -91,26 +94,21 @@ class AsicData(object):
         Sets the parameters of the frame length depending on the ASIC type
         """
         if self._asicTypeSet == 'SparkPixS':
-            self.numOfLanes   = 8
-            self.numOfCols    = 24
-            self.validLanes   = [None] * self.numOfLanes
-            self.timeoutLanes = [None] * self.numOfLanes
-            self.errorLanes   = [None] * self.numOfLanes
-            self.preambleLen  = 20
-            self.headerLen    = 3
-            self.trailerLen   = 8
+            self._numOfLanes  = 8
+            self._numOfCols   = 24
+            self._preambleLen = 20
+            self._headerLen   = 3
+            self._trailerLen  = 8
         elif self._asicTypeSet == 'SparkPixT':
-            self.numOfLanes   = 8
-            self.numOfCols    = 24
-            self.validLanes   = [None] * self.numOfLanes
-            self.timeoutLanes = [None] * self.numOfLanes
-            self.errorLanes   = [None] * self.numOfLanes
-            self.preambleLen  = 20
-            self.headerLen    = 3
-            self.trailerLen   = 8
+            self._numOfLanes  = 8
+            self._numOfCols   = 24
+            self._preambleLen = 20
+            self._headerLen   = 3
+            self._trailerLen  = 8
         else:
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
+
     #################################################################
 
     #################################################################
@@ -223,7 +221,7 @@ class AsicData(object):
             if state == "preamble_s":
 
                 # accumulate the entire preamble
-                while preamIndex < self.preambleLen:
+                while preamIndex < self._preambleLen:
                     preamble.append(frame[index])
                     preamIndex += 1
                     index += 1
