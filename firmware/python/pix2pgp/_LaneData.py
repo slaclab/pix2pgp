@@ -14,26 +14,56 @@ import click
 
 class LaneData(object):
     def __init__(self,
-                 verbose  = False,
-                 maxAsics = 8,
+                 asicType  = "SparkPixS",
+                 verbose   = False,
                  **kwargs):
-        """
-        Initializes the data
-        """
-        self.headers     = []
-        self.samples     = np.zeros((maxAsics, 64, 32))
-        self.trailers    = []
-        self._asicId     = 0
-        self._frameCnt   = 0
-        self._eventCnt   = 0
-        self._headerErr  = False
-        self._trailerErr = False
 
-        self.verbose     = verbose
+        """
+        Class for the lane/serializer data
+        """
+
+        # class parameters (parameters have _ prefix)
+        self._asicTypeSet = asicType
+        self._verbose     = verbose
+
+        # header contents
+        self.overOcc  = False
+        self.pause    = False
+        self.colErr   = False
+        self.pauseErr = False
+        self.dummy    = False
+        self.timeout  = False
+        self.trgCnt   = 0
+
+        # populated by asicParamSet() (parameters have _ prefix)
+        self._numOfCols = None
+        self._dataLen   = None
+
+        # initialize the values
+        self.asicParamSet()
+
+        self.colBitmask = [False] * self._numOfCols
+        self.colOverOcc = [False] * self._numOfCols
+        self.colPause   = [False] * self._numOfCols
+        self.colId      = [0]     * self._numOfCols
+        self.colTrgCnt  = [0]     * self._numOfCols
+        self.colLen     = [0]     * self._numOfCols
+
+        self.colHits    = [None]  * self._numOfCols
+
+        # evaluated by this class
+        self.headerErr = False
+        self.decErr    = False
+
+        # data index
+        self._dataIndexStart = 0
+        self._dataIndexEnd   = 0
+
+        # flag indicating that we are done processing
+        self.done      = False
 
     #################################################################
-    #################################################################
-    def Formatter(self, data):
+    def formatter(self, data):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
@@ -47,172 +77,278 @@ class LaneData(object):
         """
 
         # Convert input data to 64-bit unsigned integers for consistent processing
-        dat = data.view(np.uint64)
+        _dat = np.array(data)
+
+        dat = _dat.view(np.uint64)
 
         # Determine the total number of words (64-bit entries) in the frame
         self.wordSize = len(dat)
 
-        self.EventParseFsm(frame=dat, size=self.wordSize)
+        # Parse them in
+        self.eventParseFsm(frame=dat, size=self.wordSize)
+    #################################################################
 
     #################################################################
+    def dataIndexStartSet(self, dataIndex):
+        """
+        Externally set the data index
+        """
+        self._dataIndexStart = dataIndex
     #################################################################
 
+    #################################################################
+    def doneReset(self):
+        """
+        Externally reset the done flag
+        """
+        self.done = False
+    #################################################################
 
     #################################################################
-    def HeaderEval(self, header):
+    def asicParamSet(self):
+        """
+        Sets the parameters of the frame length depending on the ASIC type
+        """
+        if self._asicTypeSet == 'SparkPixS':
+            self._numOfCols = 24
+            self._dataLen   = 5
+        elif self._asicTypeSet == 'SparkPixT':
+            self._numOfCols = 24
+            self._dataLen   = 8
+        else:
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
+            sys.exit()
+    #################################################################
+
+    #################################################################
+    def headerEval(self, header):
         """
         Parses-in the header and determines if there is an error or not
         Also prints-out the header metadata if needed
         """
-        _asicId       = (header >> np.uint8(48)) & np.uint16(0xFFFF)
-        _timeout      = (header >> np.uint8(47)) & np.uint8(0x01)
-        _overflow     = (header >> np.uint8(46)) & np.uint8(0x01)
-        _underflow    = (header >> np.uint8(45)) & np.uint8(0x01)
-        _decodeError  = (header >> np.uint8(44)) & np.uint8(0x01)
-        _glblTrgError = (header >> np.uint8(43)) & np.uint8(0x01)
-        _frameCnt     = (header >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
+        _header     = int(header, 16)
+        _colBitmask = 0
+        _dummyPrint = "~~~~~~~~~~~~~~~~~~~~~~~~~~~ Dummy Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-        self._headerErr = _timeout or _overflow or _underflow or _decodeError or _glblTrgError
-        self._asicId    = int(_asicId)
-        self._frameCnt  = int(_frameCnt)
+        # there's gotta be a better way to code this...
+        if self._asicTypeSet == 'SparkPixS':
+            self.overOcc  = (_header >> 39) & 0x1
+            self.pause    = (_header >> 38) & 0x1
+            self.colErr   = (_header >> 37) & 0x1
+            self.pauseErr = (_header >> 36) & 0x1
+            self.dummy    = (_header >> 35) & 0x1
+            self.timeout  = (_header >> 34) & 0x1
+            _colBitmask   = (_header >>  8) & 0xFFFFFF
+            self.trgCnt   = (_header >>  0) & 0xFF
+        elif self._asicTypeSet == 'SparkPixT':
+            self.overOcc  = (_header >> 63) & 0x1
+            self.pause    = (_header >> 62) & 0x1
+            self.colErr   = (_header >> 61) & 0x1
+            self.pauseErr = (_header >> 60) & 0x1
+            self.dummy    = (_header >> 59) & 0x1
+            self.timeout  = (_header >> 58) & 0x1
+            _colBitmask   = (_header >>  8) & 0xFFFFFF
+            self.trgCnt   = (_header >>  0) & 0xFF
 
-        _format = 'AsicID={0:<%d} FrameCnt={1:<%d} Timeout={2:<%d} Overflow={3:<%d} Underflow={4:<%d} DecodeError={5:<%d} GlblTrgError={6:<%d} ' % (2, 11, 1, 1, 1, 1, 1)
+        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self._numOfCols)]
 
-        if self._headerErr or self.verbose:
-            print(f"/////////////////////////////////////////////////////////////////////////////////////////////")
-            print(_format.format(_asicId, _frameCnt, _timeout, _overflow, _underflow, _decodeError, _glblTrgError))
-            print(f"/////////////////////////////////////////////////////////////////////////////////////////////")
-            if self._headerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: Error Flag Raised!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+        self.headerErr = self.colErr or self.pauseErr or self.timeout
 
-    #################################################################
-    def TrailerEval(self, trailer):
-        _timeoutErrCnt  = (trailer >> np.uint8(56)) & np.uint8(0xFF)
-        _frameErrCnt    = (trailer >> np.uint8(48)) & np.uint8(0xFF)
-        _overflowErrCnt = (trailer >> np.uint8(40)) & np.uint8(0xFF)
-        _decodeErrCnt   = (trailer >> np.uint8(32)) & np.uint8(0xFF)
-        _eventCnt       = (trailer >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
-
-        self._eventCnt = int(_eventCnt)
-
-        # mismatch between internal-to-FPGA counter and ASIC frame counter
-        if self._eventCnt != self._frameCnt:
-            self._trailerErr = True
-
-        _format = 'AsicID={0:<%d} EventCnt={1:<%d} TimeoutErrCnt={2:<%d} FrameErrCnt={3:<%d} OverflowErrCnt={4:<%d} DecodeErrCnt={5:<%d} ' % (2, 11, 4, 4, 4, 4)
-
-        if self._trailerErr or self.verbose:
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-            print(_format.format(self._asicId, _eventCnt, _timeoutErrCnt, _frameErrCnt, _overflowErrCnt, _decodeErrCnt))
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-            if self._trailerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: EventCnt and FrameCnt Mismatch!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-
+        if self.preambleErr or self._verbose:
+            _format = 'OverOcc={0:<1} Pause={1:<1} ColumnError={2:<1} PauseError={3:<1} Timeout={4:<1} Bitmask={5:<%24x} Trigger={6:<4}'
+            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            if not(self.dummy):
+                print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
+            else:
+                print(_dummyPrint)
+            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if self.preambleErr:
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+            click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
 
     #################################################################
-    def HitAlloc(self, data, frameCnt, samplesHex, samplesInt):
+
+    #################################################################
+    def colMetaEval(self, colBmskId, colMeta):
         """
-        Allocates hits in the sample matrix
-        Every row represents a channel
-        Every column represents an ADC sample from that channel
-        Returns Hex
-        Also converts to Int and returns that as well
+        Parses-in the column metadata
+        To-Do: *not* asic-specific for the time being
         """
-        _sampleIndex = frameCnt
+        _colMeta    = int(colMeta, 16)
+        _colOverOcc = 0
+        _colPause   = 0
+        _colId      = 0
+        _colTrgCnt  = 0
+        _colLen     = 0
+        _mismatch   = False
 
-        for dataIndex in range(32):
-            _channelIndex = dataIndex
+        _colOverOcc = (_colMeta >> 25) & 0x1
+        _colPause   = (_colMeta >> 24) & 0x1
+        _colId      = (_colMeta >> 16) & 0xFF
+        _colTrgCnt  = (_colMeta >>  8) & 0xFF
+        _colLen     = (_colMeta >>  0) & 0xFF
 
-            if frameCnt > 31:
-                _sampleIndex  = frameCnt  - 32
-                _channelIndex = dataIndex + 32
+        if _colId != colBmskId:
+            self.decErr = True
 
-            samplesHex[abs(_channelIndex-63)][_sampleIndex] = data[dataIndex*3:dataIndex*3+3]
-            samplesInt[abs(_channelIndex-63)][_sampleIndex] = int(data[dataIndex*3:dataIndex*3+3], 16)
+        if _colTrgCnt != self.colTrgCnt
+            _mismatch = True
 
-        return samplesHex, samplesInt
+        self.colOverOcc[colBmskId] = bool(_colOverOcc)
+        self.colPause[colBmskId]   = bool(_colPause)
+        self.colId[colBmskId]      = _colId
+        self.colTrgCnt[colBmskId]  = _colTrgCnt
+        self.colLen[colBmskId]     = _colLen
+
+        if self.decErr:
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+            click.secho(f"[ERROR]: Column ID Decoding Error!", bg='red', blink=True)
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+
+        if _mismatch:
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
+            click.secho(f"[WARNING]: Column Trigger Counter Mismatch!", bg='yellow')
+            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
     #################################################################
 
     #################################################################
-    def HitPrinter(self, header, sampleMatrix):
-        _format = 'AsicID={0:<%d} FrameCnt={1:<%d} SampleID={2:<%d} ChannelID={3:<%d} ADC={4:<%d} {5:<%d}' % (2, 11, 3, 3, 5, 5)
-
-        _asicId   = (header >> np.uint8(48)) & np.uint16(0xFFFF)
-        _frameCnt = (header >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
-
-        for row in range(64):
-            for col in range(32):
-                _channelId = row
-                _sampleId  = col
-                _sample = sampleMatrix[row][col]
-                print(_format.format(_asicId, _frameCnt, _sampleId, _channelId, str(int(str(_sample), 16)), "(" + "0x"+str(_sample)) + ")")
-            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    #################################################################
-
-
-    #################################################################
-    def EventParseFsm(self, frame, size):
+    def hitAlloc(self, colBmskId, hitData, hitLen):
         """
-        Not a simple data packet -> an FSM-style logic is needed
-        Data Format:
-        First an FPGA-generated header arrives...
-        If that header does not have an error, the samples follow...
-        64 repetitions of 6x64-bit words is the entire data frame that follows the header;
-        An FPGA-generated trailer closes the sub-frame.
-        If there are more than one ASICs in the system, more headers/data follow
+        Populates the associated data type with the hits
+        What happens to those hits and how they are decoded is determined later
+        """
+        if self._asicTypeSet == 'SparkPixS':
+            hit0 = (hitData >> 20) & 0xFFFFF
+            hit1 = (hitData >> 0)  & 0xFFFFF
+        elif self._asicTypeSet == 'SparkPixT':
+            hit0 = (hitData >> 32) & 0xFFFFFFFF
+            hit1 = (hitData >> 0)  & 0xFFFFFFFF
+
+        self.colHits[colBmskId].append(hit0)
+
+        if hitLen > 1:
+            self.colHits[colBmskId].append(hit1)
+
+    #################################################################
+
+    #################################################################
+    # def HitPrinter(self, header, sampleMatrix):
+    #     _format = 'AsicID={0:<%d} FrameCnt={1:<%d} SampleID={2:<%d} ChannelID={3:<%d} ADC={4:<%d} {5:<%d}' % (2, 11, 3, 3, 5, 5)
+
+    #     _asicId   = (header >> np.uint8(48)) & np.uint16(0xFFFF)
+    #     _frameCnt = (header >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
+
+    #     for row in range(64):
+    #         for col in range(32):
+    #             _channelId = row
+    #             _sampleId  = col
+    #             _sample = sampleMatrix[row][col]
+    #             print(_format.format(_asicId, _frameCnt, _sampleId, _channelId, str(int(str(_sample), 16)), "(" + "0x"+str(_sample)) + ")")
+    #         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    #################################################################
+
+
+    #################################################################
+    def eventParseFsm(self, frame, size):
+        """
+        Parsing the data in stages
+        Fist is the ASIC-generated header
+        if that header indicates that some columns have hits,
+        the FSM will parse in the column Metadata and the associated hit data;
+        for all columns with hits
         """
 
-        state = "header_s"
-        _word = 0
+        state    = "header_s"
+        index    = self._dataIndexStart
+        subIndex = 0
+        colSel   = 0
+        subLen   = 0
+        word     = []
 
-        while _word < size:
-        # ------------------------------------------------------------------------------------------
+        while index < size and not(self.done):
+            # --------------------------------------------------------------------------------------
             if state == "header_s":
-                self.HeaderEval(header=frame[_word])
+                # accumulate the entire header
+                while subIndex < self._dataLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
 
-                if not(self._headerErr):
-                    _frameCnt = 0
-                    self.headers.append(frame[_word])
-                    samplesHex = [[0] * 32 for _ in range(64)]
-                    samplesInt = np.zeros((64, 32))
-                    _word += 1
-                    state = "parseData_s"
+                headerHex = ''.join(format(x, '02x') for x in word)
+                self.headerEval(headerHex)
+
+                word.clear() # clear and reset
+                subIndex = 0
+
+                if self.colBitmask != 0 and self.dummy == False:
+                    state = "bitmaskCheck_s"
                 else:
-                    _word += 1
-                    state == "trailer_s"
+                    self.done = True
 
             # --------------------------------------------------------------------------------------
-            elif state == "parseData_s":
-                _hitSlice   = []
-                _allDataHex = 0
-
-                for i in range(6):
-                    _hitSlice.insert(0, frame[_word]) # prepend!
-                    _word += 1
-
-                _allDataHex = ''.join([hex(num)[2:].zfill(16) for num in _hitSlice])
-                samplesHex, samplesInt = self.HitAlloc(_allDataHex, _frameCnt, samplesHex, samplesInt)
-
-                _frameCnt += 1
-                if _frameCnt == 64:
-                    self.samples[self._asicId] = samplesInt
-
-                    if self.verbose and len(samplesHex) > 0:
-                        self.HitPrinter(header=self.headers[-1], sampleMatrix=samplesHex)
-
-                    state = "trailer_s"
+            elif state == "bitmaskCheck_s":
+                if colSel < self._numOfCols:
+                    if self.colBitmask[colSel]:
+                        state = "colMetaParse_s"
+                    else:
+                        colSel += 1
                 else:
-                    state = "parseData_s"
+                    self.done = True
 
             # --------------------------------------------------------------------------------------
-            elif state == "trailer_s":
-                self.TrailerEval(trailer=frame[_word])
-                self.trailers.append(frame[_word])
-                _word += 1
-                state = "header_s"
+            elif state == "colMetaParse_s":
+                # accumulate the entire column metadata word
+                while subIndex < self._dataLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
+
+                colMetaHex = ''.join(format(x, '02x') for x in word)
+                self.colMetaEval(colSel, colMetaHex)
+
+                word.clear() # clear and reset
+                subIndex = 0
+
+                subLen = self.colLen[colSel]
+
+                # check this! there is a chance that after a post-pause-release,
+                # a column does not have more hits and writes dataLen = 0
+                if subLen > 0:
+                    state = "parseHits_s"
+                else:
+                    colSel += 1
+                    state = "bitmaskCheck_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "parseHits_s"
+                # accumulate the entire column data word
+                while subIndex < self._dataLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
+
+                dataHex = ''.join(format(x, '02x') for x in word)
+                self.hitAlloc(colSel, dataHex, subLen)
+
+                word.clear() # clear and reset
+                subIndex = 0
+
+                subLen -= 2
+
+                if subLen <= 0 and colSel < self._numOfCols:
+                    colSel += 1
+                    subLen = 0
+                    state  = "bitmaskCheck_s"
+
+            #################################################################
+
+        if self.done:
+            self._dataIndexEnd = index
+
+        if self.done and self._verbose and not(self.dummy):
+            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            print(f"Trigger = {self.trgCnt} decoding Done. Next Event...")
+            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
     #################################################################

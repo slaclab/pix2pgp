@@ -270,8 +270,8 @@ package body Pix2PgpPkg is
    end colMetaMap;
 
    function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
-                       colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                       colBitmask: slv; trgCntGlbl: slv) return slv is
+                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                           colBitmask: slv; trgCntGlbl: slv) return slv is
       variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 

@@ -32,12 +32,12 @@ class AsicData(object):
         self._asicTypeSet = asicType
         self._verbose     = verbose
 
-        # populated by FrameParamSet (parameters have _ prefix)
-        self._numOfLanes   = None
-        self._numOfCols    = None
-        self._preambleLen  = None
-        self._headerLen    = None
-        self._trailerLen   = None
+        # populated by asicParamSet() (parameters have _ prefix)
+        self._numOfLanes  = None
+        self._numOfCols   = None
+        self._preambleLen = None
+        self._headerLen   = None
+        self._trailerLen  = None
 
         # populated by the data themselves
         # preamble
@@ -48,20 +48,25 @@ class AsicData(object):
         self.asicType     = 0
         self.asicId       = 0
         self.fpgaId       = 0
-        # header
-        # [...]
 
         # initialize the values
-        self.FrameParamSet()
+        self.asicParamSet()
 
-        # call after self.FrameParamSet
+        # call after self.asicParamSet
+        # header
+        self.headerErr    = False
         self.validLanes   = [None] * self._numOfLanes
         self.timeoutLanes = [None] * self._numOfLanes
         self.errorLanes   = [None] * self._numOfLanes
 
+        # data
+
+        # trailer
+        self.trailerErr = False
+
+
     #################################################################
-    #################################################################
-    def Formatter(self, data):
+    def formatter(self, data):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
@@ -77,19 +82,17 @@ class AsicData(object):
         # Convert input data to 64-bit unsigned integers for consistent processing
         _dat = np.array(data)
 
-        dat = self._dat.view(np.uint64)
+        dat = _dat.view(np.uint64)
 
         # Determine the total number of words (64-bit entries) in the frame
         self.wordSize = len(dat)
 
         # Parse them in
-        self.EventParseFsm(frame=dat, size=self.wordSize)
-
-    #################################################################
+        self.eventParseFsm(frame=dat, size=self.wordSize)
     #################################################################
 
     #################################################################
-    def FrameParamSet(self):
+    def asicParamSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type
         """
@@ -108,15 +111,13 @@ class AsicData(object):
         else:
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
-
     #################################################################
 
     #################################################################
-    def PreambleEval(self, preamble):
+    def preambleEval(self, preamble):
         """
-        Parses in the preamble
+        Parses in the preamble and returns
         """
-
         _preamble     = int(preamble, 16)
         _pix2pgpId    = (_preamble >> 96) & 0xFFFFFFFFFFFFFFFF
         self.asicType = (_preamble >> 64) & 0xFFFFFFFF
@@ -129,9 +130,8 @@ class AsicData(object):
         elif self._asicTypeSet != self.asicTypeDict.get(self.asicType):
             self.preambleErr = True
 
-        _format = 'Pix2Pgp Frame Begin ~ AsicType={0:<10} AsicId={1:<10} FpgaId={2:<10x}~'
-
         if self.preambleErr or self._verbose:
+            _format = 'Pix2Pgp Frame Begin | AsicType={0:<10} AsicId={1:<10} FpgaId={2:<8x} |'
             print(f"//////////////////////////////////////////////////////////////////////////////")
             print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
             print(f"//////////////////////////////////////////////////////////////////////////////")
@@ -139,96 +139,104 @@ class AsicData(object):
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-
     #################################################################
 
 
     #################################################################
-    def HeaderEval(self, header):
+    def headerEval(self, header):
         """
-        Parses-in the header and determines if there is an error or not
-        Also prints-out the header metadata if needed
+        Parses in the FPGA header, and returns the status of the lanes
         """
-        _asicId       = (header >> np.uint8(48)) & np.uint16(0xFFFF)
-        _timeout      = (header >> np.uint8(47)) & np.uint8(0x01)
-        _overflow     = (header >> np.uint8(46)) & np.uint8(0x01)
-        _underflow    = (header >> np.uint8(45)) & np.uint8(0x01)
-        _decodeError  = (header >> np.uint8(44)) & np.uint8(0x01)
-        _glblTrgError = (header >> np.uint8(43)) & np.uint8(0x01)
-        _frameCnt     = (header >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
+        _header = int(header, 16)
 
-        self._headerErr = _timeout or _overflow or _underflow or _decodeError or _glblTrgError
-        self._asicId    = int(_asicId)
-        self._frameCnt  = int(_frameCnt)
+        self.laneError   = (_header >> 16) & 0xFF
+        self.laneTimeout = (_header >>  8) & 0xFF
+        self.laneValid   = (_header >>  0) & 0xFF
 
-        _format = 'AsicID={0:<%d} FrameCnt={1:<%d} Timeout={2:<%d} Overflow={3:<%d} Underflow={4:<%d} DecodeError={5:<%d} GlblTrgError={6:<%d} ' % (2, 11, 1, 1, 1, 1, 1)
+        self.headerErr  = self.laneError > 0 or self.laneTimeout > 0
 
-        if self._headerErr or self.verbose:
-            print(f"/////////////////////////////////////////////////////////////////////////////////////////////")
-            print(_format.format(_asicId, _frameCnt, _timeout, _overflow, _underflow, _decodeError, _glblTrgError))
-            print(f"/////////////////////////////////////////////////////////////////////////////////////////////")
-            if self._headerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: Error Flag Raised!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+        if self.headerErr or self._verbose:
+            _format = 'LaneError={0:08b}    LaneTimeout={1:08b}    LaneValid={2:08b}'
+            print(_format.format(self.laneError, self.laneTimeout, self.laneValid))
+            print(f"//////////////////////////////////////////////////////////////////////////////")
+            if self.headerErr:
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+    #################################################################
 
     #################################################################
-    def TrailerEval(self, trailer):
-        _timeoutErrCnt  = (trailer >> np.uint8(56)) & np.uint8(0xFF)
-        _frameErrCnt    = (trailer >> np.uint8(48)) & np.uint8(0xFF)
-        _overflowErrCnt = (trailer >> np.uint8(40)) & np.uint8(0xFF)
-        _decodeErrCnt   = (trailer >> np.uint8(32)) & np.uint8(0xFF)
-        _eventCnt       = (trailer >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
+    def trailerEval(self, trailer):
+        """
+        Parses in the trailer
+        """
+        _trailer   = int(trailer, 16)
+        _pix2pgpId = (_trailer >> 96) & 0xFFFFFFFFFFFFFFFF
 
-        self._eventCnt = int(_eventCnt)
+        if toAscii(_pix2pgpId) != "pix2pgp":
+            self.trailerErr = True
 
-        # mismatch between internal-to-FPGA counter and ASIC frame counter
-        if self._eventCnt != self._frameCnt:
-            self._trailerErr = True
-
-        _format = 'AsicID={0:<%d} EventCnt={1:<%d} TimeoutErrCnt={2:<%d} FrameErrCnt={3:<%d} OverflowErrCnt={4:<%d} DecodeErrCnt={5:<%d} ' % (2, 11, 4, 4, 4, 4)
-
-        if self._trailerErr or self.verbose:
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-            print(_format.format(self._asicId, _eventCnt, _timeoutErrCnt, _frameErrCnt, _overflowErrCnt, _decodeErrCnt))
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-            if self._trailerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: EventCnt and FrameCnt Mismatch!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-
+        if self.trailerErr or self.verbose:
+            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            if self.trailerErr:
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                click.secho(f"[ERROR]: Trailer Error!", bg='red', blink=True)
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+    #################################################################
 
     #################################################################
-    def EventParseFsm(self, frame, size):
+    def eventParseFsm(self, frame, size):
         """
-        Not a simple data packet -> an FSM-style logic is needed
-        Data Format:
-        First an FPGA-generated header arrives...
-        If that header does not have an error, the samples follow...
-        64 repetitions of 6x64-bit words is the entire data frame that follows the header;
-        An FPGA-generated trailer closes the sub-frame.
-        If there are more than one ASICs in the system, more headers/data follow
+        Parsing the data in stages
+        Fist is the preamble
+        Then the FPGA-generated header
+        Then the Lane Contents, where a sub-class is used
+        Then the trailer
         """
 
-        state = "preamble_s"
-        index = 0
-        preamIndex = 0
-        preamble = []
-        header   = []
-        trailer  = []
+        state    = "preamble_s"
+        index    = 0
+        subIndex = 0
+        word     = []
 
         while index < size:
+            # --------------------------------------------------------------------------------------
             if state == "preamble_s":
-
                 # accumulate the entire preamble
-                while preamIndex < self._preambleLen:
-                    preamble.append(frame[index])
-                    preamIndex += 1
-                    index += 1
+                while subIndex < self._preambleLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
 
-                preambleHex = ''.join(format(x, '02x') for x in preamble)
-                self.PreambleEval(preambleHex)
-                break
+                preambleHex = ''.join(format(x, '02x') for x in word)
+                self.preambleEval(preambleHex)
+
+                word.clear() # clear and reset
+                subIndex = 0
+                state = "header_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "header_s":
+                # accumulate the entire header
+                while subIndex < self._headerLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
+
+                headerHex = ''.join(format(x, '02x') for x in word)
+                self.headerEval(headerHex)
+
+                word.clear() # clear and reset
+                subIndex = 0
+                if self.laneValid > 0:
+                    state = "lane_s"
+                else:
+                    state = "trailer_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "lane_s":
 
             # --------------------------------------------------------------------------------------
             # elif state == "parseData_s":
@@ -253,12 +261,21 @@ class AsicData(object):
             #     else:
             #         state = "parseData_s"
 
-            # # --------------------------------------------------------------------------------------
-            # elif state == "trailer_s":
-            #     self.TrailerEval(trailer=frame[index])
-            #     self.trailers.append(frame[index])
-            #     index += 1
-            #     state = "header_s"
+            # --------------------------------------------------------------------------------------
+            elif state == "trailer_s":
+                # accumulate the entire trailer
+                while subIndex < self._trailerLen:
+                    word.append(frame[index])
+                    subIndex += 1
+                    index    += 1
+
+                trailerHex = ''.join(format(x, '02x') for x in word)
+                self.trailerEval(trailerHex)
+                word.clear() # clear and reset
+                subIndex = 0
+
+                # will go to next state if there are more data
+                state = "header_s"
 
     #################################################################
 
