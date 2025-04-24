@@ -45,6 +45,9 @@ package Pix2PgpPkg is
 
    constant TRGCNT_WIDTH_C  : natural := 6; -- 6-bit counter to double-check alignment
 
+   -- in some ASIC implementations, the trigger counter should not increment upon receiving overOcc
+   constant INCR_TRGCNT_OVEROCC_C : boolean := False;
+
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
    constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;

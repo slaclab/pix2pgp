@@ -173,7 +173,7 @@ begin
       -- note that over-occ acts as an eof and a sof, and is always single-cycle wide
       if v.sof = '1' and r.sof = '0' then
          v.trgCnt := r.trgCnt + 1;
-      elsif r.overOcc = '1' then
+      elsif INCR_TRGCNT_OVEROCC_C and r.overOcc = '1' then
          v.trgCnt := r.trgCnt + 1;
       end if;
 
