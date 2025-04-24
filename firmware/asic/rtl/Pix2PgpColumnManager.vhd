@@ -167,10 +167,13 @@ begin
 
       -- trigger counter control; essentially increments once per SRO
       -- sof is easy...just increment on rising-edge. this is the nominal case
-      -- note how the trigger counter is incremented on over-Occ;
-      -- upon reception of over-occ, the trgCnt increments one cycle later,
-      -- since the *previous* trgCnt should be written into the status FIFO;
-      -- note that over-occ acts as an eof and a sof, and is always single-cycle wide
+      -- if INCR_TRGCNT_OVEROCC_C:
+         -- note how the trigger counter is incremented on over-Occ;
+         -- upon reception of over-occ, the trgCnt increments one cycle later,
+         -- since the *previous* trgCnt should be written into the status FIFO;
+         -- note that over-occ acts as an eof and a sof, and is always single-cycle wide
+      -- elsif not(INCR_TRGCNT_OVEROCC_C):
+         -- overOcc acts as an Eof Only and does NOT increment the trigger counter
       if v.sof = '1' and r.sof = '0' then
          v.trgCnt := r.trgCnt + 1;
       elsif INCR_TRGCNT_OVEROCC_C and r.overOcc = '1' then
