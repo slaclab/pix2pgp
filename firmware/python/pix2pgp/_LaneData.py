@@ -159,13 +159,10 @@ class LaneData(object):
 
         self.headerErr = self.colErr or self.pauseErr or self.timeout
 
-        if self.headerErr or self._verbose:
+        if (self.headerErr or self._verbose) and not(self.dummy):
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            if not(self.dummy):
-                print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
-            else:
-                print(_dummyPrint)
+            print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         if self.headerErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)

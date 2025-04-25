@@ -56,10 +56,17 @@ if __name__ == "__main__":
             byte = (word >> (8 * (4 - i))) & 0xFF
             _dataArrayBytes.append(byte)
 
+    _eventSize   = len(_dataArrayBytes)
+    currentIndex = 0
+
     laneDecoder = pix2pgp.LaneData(asicType=args.asicType, verbose=True)
-    laneDecoder.formatter(data=_dataArrayBytes, dataLen=len(_dataArrayBytes))
 
-    while not(laneDecoder.done):
-        time.sleep(0.1) # crude; sleep before checking again
+    while _eventSize > currentIndex:
+        laneDecoder.dataIndexStartSet(dataIndex=currentIndex)
+        laneDecoder.formatter(data=_dataArrayBytes, dataLen=_eventSize)
 
-    laneDecoder.reset()
+        while not(laneDecoder.done):
+            time.sleep(0.1) # crude; sleep before checking again
+
+        currentIndex = laneDecoder.dataIndexEnd
+        laneDecoder.reset()
