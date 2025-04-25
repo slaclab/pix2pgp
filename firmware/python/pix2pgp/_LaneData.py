@@ -14,12 +14,21 @@ import click
 
 class LaneData(object):
     def __init__(self,
-                 asicType  = "SparkPixS",
-                 verbose   = False,
+                 asicType = "SparkPixS",
+                 verbose  = False,
                  **kwargs):
 
         """
         Class for the lane/serializer data
+        """
+
+        self.reset(asicType=asicType, verbose=verbose)
+
+
+    #################################################################
+    def reset(self, asicType, verbose):
+        """
+        Easily accesible
         """
 
         # class parameters (parameters have _ prefix)
@@ -27,40 +36,41 @@ class LaneData(object):
         self._verbose     = verbose
 
         # header contents
-        self.overOcc  = False
-        self.pause    = False
-        self.colErr   = False
-        self.pauseErr = False
-        self.dummy    = False
-        self.timeout  = False
-        self.trgCnt   = 0
+        self.overOcc        = False
+        self.pause          = False
+        self.colErr         = False
+        self.pauseErr       = False
+        self.dummy          = False
+        self.timeout        = False
+        self.trgCnt         = 0
 
         # populated by asicParamSet() (parameters have _ prefix)
-        self._numOfCols = None
-        self._dataLen   = None
+        self._numOfCols     = None
+        self._dataLen       = None
 
         # initialize the values
         self.asicParamSet()
 
-        self.colBitmask = [False] * self._numOfCols
-        self.colOverOcc = [False] * self._numOfCols
-        self.colPause   = [False] * self._numOfCols
-        self.colId      = [0]     * self._numOfCols
-        self.colTrgCnt  = [0]     * self._numOfCols
-        self.colLen     = [0]     * self._numOfCols
-
-        self.colHits    = [None]  * self._numOfCols
+        self.colBitmask     = [False] * self._numOfCols
+        self.colOverOcc     = [False] * self._numOfCols
+        self.colPause       = [False] * self._numOfCols
+        self.colId          = [0]     * self._numOfCols
+        self.colTrgCnt      = [0]     * self._numOfCols
+        self.colLen         = [0]     * self._numOfCols
+        self.laneHits       = [None]  * self._numOfCols
 
         # evaluated by this class
-        self.headerErr = False
-        self.decErr    = False
+        self.headerErr      = False
+        self.decErr         = False
 
         # data index
-        self._dataIndexStart = 0
-        self._dataIndexEnd   = 0
+        self.dataIndexStart = 0
+        self.dataIndexEnd   = 0
 
         # flag indicating that we are done processing
-        self.done      = False
+        self.done           = False
+
+    #################################################################
 
     #################################################################
     def formatter(self, data):
@@ -93,15 +103,7 @@ class LaneData(object):
         """
         Externally set the data index
         """
-        self._dataIndexStart = dataIndex
-    #################################################################
-
-    #################################################################
-    def doneReset(self):
-        """
-        Externally reset the done flag
-        """
-        self.done = False
+        self.dataIndexStart = dataIndex
     #################################################################
 
     #################################################################
@@ -225,10 +227,10 @@ class LaneData(object):
             hit0 = (hitData >> 32) & 0xFFFFFFFF
             hit1 = (hitData >> 0)  & 0xFFFFFFFF
 
-        self.colHits[colBmskId].append(hit0)
+        self.laneHits[colBmskId].append(hit0)
 
         if hitLen > 1:
-            self.colHits[colBmskId].append(hit1)
+            self.laneHits[colBmskId].append(hit1)
 
     #################################################################
 
@@ -260,7 +262,7 @@ class LaneData(object):
         """
 
         state    = "header_s"
-        index    = self._dataIndexStart
+        index    = self.dataIndexStart
         subIndex = 0
         colSel   = 0
         subLen   = 0
@@ -344,7 +346,7 @@ class LaneData(object):
             #################################################################
 
         if self.done:
-            self._dataIndexEnd = index
+            self.dataIndexEnd = index
 
         if self.done and self._verbose and not(self.dummy):
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")

@@ -12,6 +12,9 @@ import sys
 import numpy as np
 import click
 
+import copy
+import pix2pgp
+
 class AsicData(object):
     def __init__(self,
                  asicType = "SparkPixS",
@@ -31,6 +34,9 @@ class AsicData(object):
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
         self._verbose     = verbose
+
+        # initialize the lane decoding class
+        laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
 
         # populated by asicParamSet() (parameters have _ prefix)
         self._numOfLanes  = None
@@ -60,6 +66,7 @@ class AsicData(object):
         self.errorLanes   = [None] * self._numOfLanes
 
         # data
+        self.asicHits     = [None] * self._numOfLanes
 
         # trailer
         self.trailerErr = False
@@ -199,6 +206,7 @@ class AsicData(object):
         state    = "preamble_s"
         index    = 0
         subIndex = 0
+        laneSel  = 0
         word     = []
 
         while index < size:
@@ -231,35 +239,35 @@ class AsicData(object):
                 word.clear() # clear and reset
                 subIndex = 0
                 if self.laneValid > 0:
-                    state = "lane_s"
+                    state = "bitmaskCheck_s"
                 else:
                     state = "trailer_s"
 
             # --------------------------------------------------------------------------------------
-            elif state == "lane_s":
+            elif state == "bitmaskCheck_s":
+
+                laneDecoder.reset()
+
+                if laneSel < self._numOfLanes:
+                    if self.laneValid[laneSel]:
+                        state = "lane_s"
+                    else:
+                        laneSel += 1
+                else:
+                    state == "trailer_s"
 
             # --------------------------------------------------------------------------------------
-            # elif state == "parseData_s":
-            #     _hitSlice   = []
-            #     _allDataHex = 0
+            elif state == "lane_s":
+                laneDecoder.dataIndexStartSet(dataIndex=index)
+                laneDecoder.formatter(data=frame[index])
 
-            #     for i in range(6):
-            #         _hitSlice.insert(0, frame[index]) # prepend!
-            #         index += 1
+                while not(laneDecoder.done):
+                    time.sleep(0.1) # crude; sleep before checking again
 
-            #     _allDataHex = ''.join([hex(num)[2:].zfill(16) for num in _hitSlice])
-            #     samplesHex, samplesInt = self.HitAlloc(_allDataHex, _frameCnt, samplesHex, samplesInt)
-
-            #     _frameCnt += 1
-            #     if _frameCnt == 64:
-            #         self.samples[self._asicId] = samplesInt
-
-            #         if self.verbose and len(samplesHex) > 0:
-            #             self.HitPrinter(header=self.headers[-1], sampleMatrix=samplesHex)
-
-            #         state = "trailer_s"
-            #     else:
-            #         state = "parseData_s"
+                self.asicHits[laneSel] = copy.deepcopy(laneDecoder.laneHits)
+                index = copy.deepcopy(laneDecoder.dataIndexEnd)
+                laneSel += 1
+                state = "bitmaskCheck_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
