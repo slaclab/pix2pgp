@@ -133,9 +133,9 @@ class AsicData(object):
 
         if self.preambleErr or self._verbose:
             _format = 'Pix2Pgp Frame Begin | AsicType={0:<10} AsicId={1:<10} FpgaId={2:<8x} |'
-            print(f"//////////////////////////////////////////////////////////////////////////////")
+            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
-            print(f"//////////////////////////////////////////////////////////////////////////////")
+            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
         if self.preambleErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
@@ -163,7 +163,7 @@ class AsicData(object):
         if self.headerErr or self._verbose:
             _format = 'LaneError={0:08b}    LaneTimeout={1:08b}    LaneValid={2:08b}'
             print(_format.format(_laneError, _laneTimeout, _laneValid))
-            print(f"//////////////////////////////////////////////////////////////////////////////")
+            print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
                 click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
@@ -176,12 +176,12 @@ class AsicData(object):
         Parses in the trailer
         """
         _trailer   = int(trailer, 16)
-        _pix2pgpId = (_trailer >> 96) & 0xFFFFFFFFFFFFFFFF
+        _pix2pgpId = (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF
 
         if toAscii(_pix2pgpId) != "pix2pgp":
             self.trailerErr = True
 
-        if self.trailerErr or self.verbose:
+        if self.trailerErr or self._verbose:
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
@@ -243,27 +243,27 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
-
-                self.laneDecoder.reset()
-
                 if laneSel < self._numOfLanes:
                     if self.laneValid[laneSel]:
                         state = "lane_s"
                     else:
                         laneSel += 1
                 else:
-                    state == "trailer_s"
+                    state = "trailer_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
                 self.laneDecoder.dataIndexStartSet(dataIndex=index)
-                self.laneDecoder.formatter(data=frame[index], dataLen=size)
+                self.laneDecoder.formatter(data=frame, dataLen=size)
 
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
 
-                self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+                if not(self.laneDecoder.isEmpty):
+                    self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+
                 index = copy.deepcopy(self.laneDecoder.dataIndexEnd)
+                self.laneDecoder.reset()
                 laneSel += 1
                 state = "bitmaskCheck_s"
 

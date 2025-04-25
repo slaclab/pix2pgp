@@ -67,6 +67,9 @@ class LaneData(object):
         self.dataIndexStart = 0
         self.dataIndexEnd   = 0
 
+        # empty event
+        self.isEmpty        = False
+
         # flag indicating that we are done processing
         self.done           = False
 
@@ -151,17 +154,20 @@ class LaneData(object):
 
         self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self._numOfCols)]
 
+        if _colBitmask == 0:
+            self.isEmpty = True
+
         self.headerErr = self.colErr or self.pauseErr or self.timeout
 
-        if self.preambleErr or self._verbose:
-            _format = 'OverOcc={0:<1} Pause={1:<1} ColumnError={2:<1} PauseError={3:<1} Timeout={4:<1} Bitmask={5:<%24x} Trigger={6:<4}'
+        if self.headerErr or self._verbose:
+            _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             if not(self.dummy):
                 print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
             else:
                 print(_dummyPrint)
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        if self.preambleErr:
+        if self.headerErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
@@ -263,7 +269,7 @@ class LaneData(object):
                 word.clear() # clear and reset
                 subIndex = 0
 
-                if self.colBitmask != 0 and self.dummy == False:
+                if not(self.isEmpty) and self.dummy == False:
                     state = "bitmaskCheck_s"
                 else:
                     self.done = True
@@ -328,7 +334,7 @@ class LaneData(object):
         if self.done:
             self.dataIndexEnd = index
 
-        if self.done and self._verbose and not(self.dummy):
+        if self.done and self._verbose and not(self.dummy) and not(self.isEmpty):
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             print(f"Trigger = {self.trgCnt} decoding Done. Next Event...")
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
