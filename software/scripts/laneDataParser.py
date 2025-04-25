@@ -62,7 +62,7 @@ if __name__ == "__main__":
     laneDecoder = pix2pgp.LaneData(asicType=args.asicType, verbose=True)
 
     while _eventSize > currentIndex:
-        laneDecoder.dataIndexStartSet(dataIndex=currentIndex)
+        laneDecoder.dataIndexStartSet(dataIndexStart=currentIndex)
         laneDecoder.formatter(data=_dataArrayBytes, dataLen=_eventSize)
 
         while not(laneDecoder.done):
