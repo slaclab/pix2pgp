@@ -36,7 +36,7 @@ class AsicData(object):
         self._verbose     = verbose
 
         # initialize the lane decoding class
-        laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
 
         # populated by asicParamSet() (parameters have _ prefix)
         self._numOfLanes  = None
@@ -48,9 +48,6 @@ class AsicData(object):
         # populated by the data themselves
         # preamble
         self.preambleErr  = False
-        self.validLanes   = None
-        self.timeoutLanes = None
-        self.errorLanes   = None
         self.asicType     = 0
         self.asicId       = 0
         self.fpgaId       = 0
@@ -60,10 +57,10 @@ class AsicData(object):
 
         # call after self.asicParamSet
         # header
-        self.headerErr    = False
-        self.validLanes   = [None] * self._numOfLanes
-        self.timeoutLanes = [None] * self._numOfLanes
-        self.errorLanes   = [None] * self._numOfLanes
+        self.headerErr   = False
+        self.laneValid   = [None] * self._numOfLanes
+        self.laneTimeout = [None] * self._numOfLanes
+        self.laneError   = [None] * self._numOfLanes
 
         # data
         self.asicHits     = [None] * self._numOfLanes
@@ -73,7 +70,7 @@ class AsicData(object):
 
 
     #################################################################
-    def formatter(self, data):
+    def formatter(self, data, dataLen):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
@@ -91,11 +88,8 @@ class AsicData(object):
 
         dat = _dat.view(np.uint64)
 
-        # Determine the total number of words (64-bit entries) in the frame
-        self.wordSize = len(dat)
-
         # Parse them in
-        self.eventParseFsm(frame=dat, size=self.wordSize)
+        self.eventParseFsm(frame=dat, size=dataLen)
     #################################################################
 
     #################################################################
@@ -156,15 +150,19 @@ class AsicData(object):
         """
         _header = int(header, 16)
 
-        self.laneError   = (_header >> 16) & 0xFF
-        self.laneTimeout = (_header >>  8) & 0xFF
-        self.laneValid   = (_header >>  0) & 0xFF
+        _laneError   = (_header >> 16) & 0xFF
+        _laneTimeout = (_header >>  8) & 0xFF
+        _laneValid   = (_header >>  0) & 0xFF
 
-        self.headerErr  = self.laneError > 0 or self.laneTimeout > 0
+        self.laneError   = [(_laneError >> i) & 1 == 1 for i in range(self._numOfLanes)]
+        self.laneTimeout = [(_laneTimeout >> i) & 1 == 1 for i in range(self._numOfLanes)]
+        self.laneValid   = [(_laneValid >> i) & 1 == 1 for i in range(self._numOfLanes)]
+
+        self.headerErr  = _laneError > 0 or _laneTimeout > 0
 
         if self.headerErr or self._verbose:
             _format = 'LaneError={0:08b}    LaneTimeout={1:08b}    LaneValid={2:08b}'
-            print(_format.format(self.laneError, self.laneTimeout, self.laneValid))
+            print(_format.format(_laneError, _laneTimeout, _laneValid))
             print(f"//////////////////////////////////////////////////////////////////////////////")
             if self.headerErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
@@ -238,7 +236,7 @@ class AsicData(object):
 
                 word.clear() # clear and reset
                 subIndex = 0
-                if self.laneValid > 0:
+                if any(self.laneValid):
                     state = "bitmaskCheck_s"
                 else:
                     state = "trailer_s"
@@ -246,7 +244,7 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
 
-                laneDecoder.reset()
+                self.laneDecoder.reset()
 
                 if laneSel < self._numOfLanes:
                     if self.laneValid[laneSel]:
@@ -258,14 +256,14 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
-                laneDecoder.dataIndexStartSet(dataIndex=index)
-                laneDecoder.formatter(data=frame[index])
+                self.laneDecoder.dataIndexStartSet(dataIndex=index)
+                self.laneDecoder.formatter(data=frame[index], dataLen=size)
 
-                while not(laneDecoder.done):
+                while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
 
-                self.asicHits[laneSel] = copy.deepcopy(laneDecoder.laneHits)
-                index = copy.deepcopy(laneDecoder.dataIndexEnd)
+                self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+                index = copy.deepcopy(self.laneDecoder.dataIndexEnd)
                 laneSel += 1
                 state = "bitmaskCheck_s"
 

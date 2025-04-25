@@ -22,19 +22,19 @@ class LaneData(object):
         Class for the lane/serializer data
         """
 
-        self.reset(asicType=asicType, verbose=verbose)
-
-
-    #################################################################
-    def reset(self, asicType, verbose):
-        """
-        Easily accesible
-        """
-
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
         self._verbose     = verbose
 
+        # the real initialization method
+        self.reset()
+
+
+    #################################################################
+    def reset(self):
+        """
+        Easily accesible
+        """
         # header contents
         self.overOcc        = False
         self.pause          = False
@@ -73,7 +73,7 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def formatter(self, data):
+    def formatter(self, data, dataLen):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
@@ -91,11 +91,8 @@ class LaneData(object):
 
         dat = _dat.view(np.uint64)
 
-        # Determine the total number of words (64-bit entries) in the frame
-        self.wordSize = len(dat)
-
         # Parse them in
-        self.eventParseFsm(frame=dat, size=self.wordSize)
+        self.eventParseFsm(frame=dat, size=dataLen)
     #################################################################
 
     #################################################################
@@ -194,7 +191,7 @@ class LaneData(object):
         if _colId != colBmskId:
             self.decErr = True
 
-        if _colTrgCnt != self.colTrgCnt
+        if _colTrgCnt != self.colTrgCnt:
             _mismatch = True
 
         self.colOverOcc[colBmskId] = bool(_colOverOcc)
@@ -233,23 +230,6 @@ class LaneData(object):
             self.laneHits[colBmskId].append(hit1)
 
     #################################################################
-
-    #################################################################
-    # def HitPrinter(self, header, sampleMatrix):
-    #     _format = 'AsicID={0:<%d} FrameCnt={1:<%d} SampleID={2:<%d} ChannelID={3:<%d} ADC={4:<%d} {5:<%d}' % (2, 11, 3, 3, 5, 5)
-
-    #     _asicId   = (header >> np.uint8(48)) & np.uint16(0xFFFF)
-    #     _frameCnt = (header >> np.uint8( 0)) & np.uint32(0xFFFFFFFF)
-
-    #     for row in range(64):
-    #         for col in range(32):
-    #             _channelId = row
-    #             _sampleId  = col
-    #             _sample = sampleMatrix[row][col]
-    #             print(_format.format(_asicId, _frameCnt, _sampleId, _channelId, str(int(str(_sample), 16)), "(" + "0x"+str(_sample)) + ")")
-    #         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    #################################################################
-
 
     #################################################################
     def eventParseFsm(self, frame, size):
@@ -323,7 +303,7 @@ class LaneData(object):
                     state = "bitmaskCheck_s"
 
             # --------------------------------------------------------------------------------------
-            elif state == "parseHits_s"
+            elif state == "parseHits_s":
                 # accumulate the entire column data word
                 while subIndex < self._dataLen:
                     word.append(frame[index])

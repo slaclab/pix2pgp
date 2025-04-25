@@ -50,4 +50,4 @@ if __name__ == "__main__":
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
     asicParser = pix2pgp.AsicData(asicType=args.asicType, verbose=True)
-    asicParser.formatter(data=_dataArray)
+    asicParser.formatter(data=_dataArray, dataLen=len(_dataArray))
