@@ -132,10 +132,11 @@ class AsicData(object):
             self.preambleErr = True
 
         if self.preambleErr or self._verbose:
-            _format = 'Pix2Pgp Frame Begin | AsicType={0:<10} AsicId={1:<10} FpgaId={2:<8x} |'
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
             print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
-            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
         if self.preambleErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
@@ -162,6 +163,7 @@ class AsicData(object):
 
         if self.headerErr or self._verbose:
             _format = 'LaneError={0:08b}    LaneTimeout={1:08b}    LaneValid={2:08b}'
+            print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(_laneError, _laneTimeout, _laneValid))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
