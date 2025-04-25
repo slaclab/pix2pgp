@@ -140,7 +140,7 @@ class LaneData(object):
         _header     = int(header, 16)
         _colBitmask = 0
         _dummyPrint = "~~~~~~~~~~~~~~~~~~~~~~~~~~~ Dummy Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
         # there's gotta be a better way to code this...
         if self._asicTypeSet == 'SparkPixS':
