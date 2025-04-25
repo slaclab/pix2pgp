@@ -33,7 +33,7 @@ class LaneData(object):
     #################################################################
     def reset(self):
         """
-        Easily accesible
+        Reset Class variables
         """
         # header contents
         self.overOcc        = False
@@ -72,7 +72,6 @@ class LaneData(object):
 
         # flag indicating that we are done processing
         self.done           = False
-
     #################################################################
 
     #################################################################
@@ -244,27 +243,19 @@ class LaneData(object):
         for all columns with hits
         """
 
-        state    = "header_s"
-        index    = self.dataIndexStart
-        subIndex = 0
-        colSel   = 0
-        subLen   = 0
-        word     = []
+        state  = "header_s"
+        index  = self.dataIndexStart
+        colSel = 0
+        subLen = 0
 
         while index < size and not(self.done):
             # --------------------------------------------------------------------------------------
             if state == "header_s":
-                # accumulate the entire header
-                while subIndex < self._dataLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
 
-                headerHex = ''.join(format(x, '02x') for x in word)
-                self.headerEval(headerHex)
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                self.headerEval(wordHex)
 
-                word.clear() # clear and reset
-                subIndex = 0
+                index += self._dataLen
 
                 if not(self.isEmpty) and self.dummy == False:
                     state = "bitmaskCheck_s"
@@ -283,17 +274,11 @@ class LaneData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
-                # accumulate the entire column metadata word
-                while subIndex < self._dataLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
 
-                colMetaHex = ''.join(format(x, '02x') for x in word)
-                self.colMetaEval(colSel, colMetaHex)
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                self.colMetaEval(colSel, wordHex)
 
-                word.clear() # clear and reset
-                subIndex = 0
+                index += self._dataLen
 
                 subLen = self.colLen[colSel]
 
@@ -307,17 +292,11 @@ class LaneData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
-                # accumulate the entire column data word
-                while subIndex < self._dataLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
 
-                dataHex = ''.join(format(x, '02x') for x in word)
-                self.hitAlloc(colSel, dataHex, subLen)
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                self.hitAlloc(colSel, wordHex, subLen)
 
-                word.clear() # clear and reset
-                subIndex = 0
+                index += self._dataLen
 
                 subLen -= 2
 

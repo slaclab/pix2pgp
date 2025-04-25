@@ -35,6 +35,15 @@ class AsicData(object):
         self._asicTypeSet = asicType
         self._verbose     = verbose
 
+        # the real initialization method
+        self.reset()
+
+    #################################################################
+    def reset(self):
+        """
+        Reset Class variables
+        """
+
         # initialize the lane decoding class
         self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
 
@@ -63,10 +72,14 @@ class AsicData(object):
         self.laneError   = [None] * self._numOfLanes
 
         # data
-        self.asicHits     = [None] * self._numOfLanes
+        self.asicHits    = [None] * self._numOfLanes
 
         # trailer
         self.trailerErr = False
+
+        # flag indicating that we are done processing
+        self.done       = False
+    #################################################################
 
 
     #################################################################
@@ -126,17 +139,18 @@ class AsicData(object):
         self.fpgaId   = (_preamble >>  0) & 0xFFFFFFFF
 
         # error-checking
-        if toAscii(_pix2pgpId) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_pix2pgpId) != "pix2pgp":
             self.preambleErr = True
         elif self._asicTypeSet != self.asicTypeDict.get(self.asicType):
             self.preambleErr = True
 
         if self.preambleErr or self._verbose:
-            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
-            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            print(f"")
             _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
             print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
+            print(f"")
         if self.preambleErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
@@ -162,7 +176,7 @@ class AsicData(object):
         self.headerErr  = _laneError > 0 or _laneTimeout > 0
 
         if self.headerErr or self._verbose:
-            _format = 'LaneError={0:08b}    LaneTimeout={1:08b}    LaneValid={2:08b}'
+            _format = 'LaneError={0:08b}           LaneTimeout={1:08b}           LaneValid={2:08b}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(_laneError, _laneTimeout, _laneValid))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
@@ -180,13 +194,13 @@ class AsicData(object):
         _trailer   = int(trailer, 16)
         _pix2pgpId = (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF
 
-        if toAscii(_pix2pgpId) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_pix2pgpId) != "pix2pgp":
             self.trailerErr = True
 
         if self.trailerErr or self._verbose:
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            print(f"")
             if self.trailerErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
                 click.secho(f"[ERROR]: Trailer Error!", bg='red', blink=True)
@@ -203,41 +217,29 @@ class AsicData(object):
         Then the trailer
         """
 
-        state    = "preamble_s"
-        index    = 0
-        subIndex = 0
-        laneSel  = 0
-        word     = []
+        state   = "preamble_s"
+        index   = 0
+        laneSel = 0
 
         while index < size:
             # --------------------------------------------------------------------------------------
             if state == "preamble_s":
-                # accumulate the entire preamble
-                while subIndex < self._preambleLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
+                laneSel = 0
 
-                preambleHex = ''.join(format(x, '02x') for x in word)
-                self.preambleEval(preambleHex)
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._preambleLen])
+                self.preambleEval(wordHex)
 
-                word.clear() # clear and reset
-                subIndex = 0
+                index += self._preambleLen
                 state = "header_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "header_s":
-                # accumulate the entire header
-                while subIndex < self._headerLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
 
-                headerHex = ''.join(format(x, '02x') for x in word)
-                self.headerEval(headerHex)
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._headerLen])
+                self.headerEval(wordHex)
 
-                word.clear() # clear and reset
-                subIndex = 0
+                index += self._headerLen
+
                 if any(self.laneValid):
                     state = "bitmaskCheck_s"
                 else:
@@ -245,6 +247,7 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
+
                 if laneSel < self._numOfLanes:
                     if self.laneValid[laneSel]:
                         state = "lane_s"
@@ -255,6 +258,7 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
+
                 self.laneDecoder.dataIndexStartSet(dataIndex=index)
                 self.laneDecoder.formatter(data=frame, dataLen=size)
 
@@ -271,41 +275,12 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
-                # accumulate the entire trailer
-                while subIndex < self._trailerLen:
-                    word.append(frame[index])
-                    subIndex += 1
-                    index    += 1
 
-                trailerHex = ''.join(format(x, '02x') for x in word)
-                self.trailerEval(trailerHex)
-                word.clear() # clear and reset
-                subIndex = 0
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._trailerLen])
+                self.trailerEval(wordHex)
+                index += self._trailerLen
 
-                # will go to next state if there are more data
-                state = "header_s"
+                # will re-evaluate the preamble if there are more data
+                state = "preamble_s"
 
-    #################################################################
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def toAscii(inputArg):
-
-    asciiChars = []
-
-    # first convert to hex (and remove the "0x" prefix)
-    hexString = hex(inputArg)[2:]
-
-    # ensure the hex string length is even
-    if len(hexString) % 2 != 0:
-        hexString = '0' + hexString
-
-    for i in range(0, len(hexString), 2):
-        _byteHex = hexString[i:i+2]
-        _byteInt = int(_byteHex, 16)
-        _char    = chr(_byteInt)
-        asciiChars.append(_char)
-
-    retString = ''.join(asciiChars)
-
-    return retString
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ################################################################
