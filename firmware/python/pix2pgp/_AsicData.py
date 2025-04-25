@@ -75,10 +75,10 @@ class AsicData(object):
         self.asicHits    = [None] * self._numOfLanes
 
         # trailer
-        self.trailerErr = False
+        self.trailerErr  = False
 
         # flag indicating that we are done processing
-        self.done       = False
+        self.done        = False
     #################################################################
 
 
@@ -259,7 +259,8 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
 
-                self.laneDecoder.dataIndexStartSet(dataIndex=index)
+                self.laneDecoder.dataIndexStartSet(dataIndexStart=index)
+                self.laneDecoder.laneIdSet(laneId=laneSel)
                 self.laneDecoder.formatter(data=frame, dataLen=size)
 
                 while not(self.laneDecoder.done):

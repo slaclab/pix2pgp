@@ -16,6 +16,7 @@ class LaneData(object):
     def __init__(self,
                  asicType = "SparkPixS",
                  verbose  = False,
+                 laneId   = 0,
                  **kwargs):
 
         """
@@ -25,6 +26,7 @@ class LaneData(object):
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
         self._verbose     = verbose
+        self._laneId      = laneId
 
         # the real initialization method
         self.reset()
@@ -98,11 +100,19 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def dataIndexStartSet(self, dataIndex):
+    def dataIndexStartSet(self, dataIndexStart):
         """
         Externally set the data index
         """
-        self.dataIndexStart = dataIndex
+        self.dataIndexStart = dataIndexStart
+    #################################################################
+
+    #################################################################
+    def laneIdSet(self, laneId):
+        """
+        Externally set the data index
+        """
+        self._laneId = laneId
     #################################################################
 
     #################################################################
@@ -130,6 +140,7 @@ class LaneData(object):
         _header     = int(header, 16)
         _colBitmask = 0
         _dummyPrint = "~~~~~~~~~~~~~~~~~~~~~~~~~~~ Dummy Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
         # there's gotta be a better way to code this...
         if self._asicTypeSet == 'SparkPixS':
@@ -160,7 +171,7 @@ class LaneData(object):
 
         if (self.headerErr or self._verbose) and not(self.dummy):
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
-            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            print(_lanePrint)
             print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         if self.headerErr:
@@ -312,7 +323,7 @@ class LaneData(object):
 
         if self.done and self._verbose and not(self.dummy) and not(self.isEmpty):
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            print(f"Trigger = {self.trgCnt} decoding Done. Next Event...")
+            print(f"Trigger = {self.trgCnt} decoding done for current Lane. Next Event...")
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
     #################################################################
