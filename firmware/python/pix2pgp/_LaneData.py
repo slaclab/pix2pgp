@@ -59,7 +59,7 @@ class LaneData(object):
         self.colId          = [0]     * self._numOfCols
         self.colTrgCnt      = [0]     * self._numOfCols
         self.colLen         = [0]     * self._numOfCols
-        self.laneHits       = [None]  * self._numOfCols
+        self.laneHits       = [[] for _ in range(self._numOfCols)]
 
         # evaluated by this class
         self.headerErr      = False
@@ -172,7 +172,7 @@ class LaneData(object):
         if (self.headerErr or self._verbose) and not(self.dummy):
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
             print(_lanePrint)
-            print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, _colBitmask, self.trgCnt))
+            print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         if self.headerErr:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
@@ -204,7 +204,7 @@ class LaneData(object):
         if _colId != colBmskId:
             self.decErr = True
 
-        if _colTrgCnt != self.colTrgCnt:
+        if _colTrgCnt != self.trgCnt:
             _mismatch = True
 
         self.colOverOcc[colBmskId] = bool(_colOverOcc)
@@ -214,11 +214,15 @@ class LaneData(object):
         self.colLen[colBmskId]     = _colLen
 
         if self.decErr:
+            print(f"_colId = {_colId}")
+            print(f"colBmskId = {colBmskId}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Column ID Decoding Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
 
         if _mismatch:
+            print(f"_colTrgCnt = {_colTrgCnt}")
+            print(f"self.trgCnt = {self.trgCnt}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
             click.secho(f"[WARNING]: Column Trigger Counter Mismatch!", bg='yellow')
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
@@ -230,12 +234,14 @@ class LaneData(object):
         Populates the associated data type with the hits
         What happens to those hits and how they are decoded is determined later
         """
+        _hitData = int(hitData, 16)
+
         if self._asicTypeSet == 'SparkPixS':
-            hit0 = (hitData >> 20) & 0xFFFFF
-            hit1 = (hitData >> 0)  & 0xFFFFF
+            hit0 = (_hitData >> 20) & 0xFFFFF
+            hit1 = (_hitData >> 0)  & 0xFFFFF
         elif self._asicTypeSet == 'SparkPixT':
-            hit0 = (hitData >> 32) & 0xFFFFFFFF
-            hit1 = (hitData >> 0)  & 0xFFFFFFFF
+            hit0 = (_hitData >> 32) & 0xFFFFFFFF
+            hit1 = (_hitData >> 0)  & 0xFFFFFFFF
 
         self.laneHits[colBmskId].append(hit0)
 
@@ -265,6 +271,8 @@ class LaneData(object):
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
                 self.headerEval(wordHex)
+
+                print(f"headerWord = {wordHex}")
 
                 index += self._dataLen
 

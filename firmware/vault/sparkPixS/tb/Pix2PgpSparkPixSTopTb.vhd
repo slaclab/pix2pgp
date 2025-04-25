@@ -71,6 +71,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pauseAck  : asicArray := (others => (others => '0'));
    signal sparseBusy: asicArray := (others => (others => '0'));
 
+   signal singleAsicLane : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -134,27 +135,52 @@ begin
          clkP => sysClk,
          clkN => open);
 
-  writeDataProcess: process(pgpClk)
+
+writeDataProcess: process(pgpClk)
 
     -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
+    file myFile  : text open write_mode is "pix2pgpWordDataDump.dat";
     variable row : line;
+    variable byte_data : std_logic_vector(7 downto 0);  -- 8-bit wide variable to hold each byte
 
   begin
     if (rising_edge(pgpClk)) then
         -- check if the valid flag is high
         if pgpValid(0) = '1' then
-          -- syntax: write(row_variable,what_to_write,
-          -- justification(right/left), trailing_whitespaces);
-          -- writeline(file_variable, row_variable);
-          hwrite(row, pgpData(0).data, right, 0);
-          writeline(myFile,row);
+          -- Extract each of the 5 bytes from the 40-bit word
+          for i in 4 downto 0 loop
+            byte_data := pgpData(0).data(i*8+7 downto i*8);
+            -- Write the byte to the file
+            hwrite(row, byte_data, right, 0);
+            writeline(myFile,row);
+          end loop;
         end if;
       end if;
   end process;
 
+
   -- Process to Monitor AXI Stream and Write to File
-  FileWriteProcess : process(sysClk)
+  FileWriteProcessSingle : process(sysClk)
+    file myFile : text open write_mode is "pix2pgpRxDataDump.dat";
+    variable row : line;
+    variable byte : std_logic_vector(7 downto 0);
+  begin
+    if rising_edge(sysClk) then
+      if singleAsicLane.tValid = '1' then
+        for i in 127 downto 0 loop
+          if singleAsicLane.tKeep(i) = '1' then
+            byte := singleAsicLane.tData((i*8+7) downto (i*8));
+            hwrite(row, byte, LEFT, 0);
+            writeline(myFile, row);
+            row.all := "";
+          end if;
+        end loop;
+      end if;
+    end if;
+  end process;
+
+  -- Process to Monitor AXI Stream and Write to File
+  FileWriteProcessAsic : process(sysClk)
     file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
     variable row : line;
     variable byte : std_logic_vector(7 downto 0);
@@ -341,6 +367,8 @@ begin
          pgpValid         => pgpValid,
          pgpData          => pgpData,
          pgpReady         => pgpReady,
+         -- Debugging
+         singleAsicLane   => singleAsicLane,
          -- AXI-Stream Rx Interface
          asicTxMaster     => asicTxMaster,
          asicTxSlave      => asicTxSlave,
@@ -395,11 +423,11 @@ begin
       sro  <= '0';
 
      --wait for CLK_PERIOD_SPARSE_C*93;
-       --for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
-       --   for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-       --     hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
-       --   end loop;
-       --end loop;
+     --  for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+     --     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+     --       hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
+     --     end loop;
+     --  end loop;
      --    sro  <= '1';
      --wait for CLK_PERIOD_SPARSE_C*2;
      --    sro  <= '0';

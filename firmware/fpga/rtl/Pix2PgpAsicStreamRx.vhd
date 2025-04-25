@@ -33,6 +33,7 @@ entity Pix2PgpAsicStreamRx is
       RST_ASYNC_G           : boolean  := false;
       RST_POLARITY_G        : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G             : natural  := 0;
+      SINGLE_LANE_ID_G      : natural  := 0;
       TIMEOUT_LIMIT_WIDTH_G : positive := 16);
    port(
       -- General Interface
@@ -52,6 +53,8 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Interface
       asicTxMaster    : out AxiStreamMasterType;
       asicTxSlave     : in  AxiStreamSlaveType;
+      -- Single Axi Lane
+      singleAsicLane  : out AxiStreamMasterType;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -608,5 +611,7 @@ begin
             dout => laneTimeout);
 
    end generate GEN_LANE;
+
+   singleAsicLane <= laneTxMasters(SINGLE_LANE_ID_G);
 
 end rtl;
