@@ -198,6 +198,7 @@ begin
          pgpRst       => rst,
          sel          => '1',
          timeoutLimit => x"0FF",
+         pauseLimit   => x"00C",
          columnEnable => x"FFFFFF",
          pause        => pause,
          sof          => sof,
