@@ -37,6 +37,7 @@ entity Pix2PgpColumnSupervisor is
       pgpClk        : in  sl;
       pgpRst        : in  sl;
       timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      pauseLimit    : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       colBusy       : in  sl;
@@ -67,77 +68,84 @@ architecture rtl of Pix2PgpColumnSupervisor is
 
    type RegType is record
       -- i/o
-      statusRd       : sl;
-      arbiterBusy    : sl;
-      arbiterStart   : sl;
-      colFifoError   : sl;
-      overOccError   : sl;
-      timeoutError   : sl;
-      colPause       : sl;
-      statusBus      : Pix2PgpStatusBusArray;
-      colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
+      statusRd        : sl;
+      arbiterBusy     : sl;
+      arbiterStart    : sl;
+      colFifoError    : sl;
+      overOccError    : sl;
+      timeoutError    : sl;
+      colPause        : sl;
+      statusBus       : Pix2PgpStatusBusArray;
+      colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      trgCntGlbl      : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
-      pause          : sl;
-      pauseError     : sl;
-      lastErrorRead  : sl;
-      setWatchdog    : sl;
-      timeout        : sl;
-      allColsReady   : sl;
-      hitmaskAll     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      dataReady      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colOverOccErr  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      colFifoErr     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      columnPause    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      statusRdBmsk   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      columnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      pauseErrorBmsk : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      waitCnt        : slv(bitsize(STATUS_EVAL_DELAY_ERROR_C)-1 downto 0);
-      state          : StateType;
+      pause           : sl;
+      pauseError      : sl;
+      lastErrorRead   : sl;
+      setTimeout      : sl;
+      setTimeoutPause : sl;
+      timeout         : sl;
+      timeoutPause    : sl;
+      allColsReady    : sl;
+      hitmaskAll      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      dataReady       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colOverOccErr   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colFifoErr      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnPause     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      statusRdBmsk    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnEnable    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      pauseErrorBmsk  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      waitCnt         : slv(bitsize(STATUS_EVAL_DELAY_ERROR_C)-1 downto 0);
+      state           : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      statusRd       => '0',
-      arbiterBusy    => '0',
-      arbiterStart   => '0',
-      colFifoError   => '0',
-      overOccError   => '0',
-      timeoutError   => '0',
-      colPause       => '0',
-      statusBus      => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
-      colBitmask     => (others => '0'),
-      trgCntGlbl     => (others => '1'),
+      statusRd        => '0',
+      arbiterBusy     => '0',
+      arbiterStart    => '0',
+      colFifoError    => '0',
+      overOccError    => '0',
+      timeoutError    => '0',
+      colPause        => '0',
+      statusBus       => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
+      colBitmask      => (others => '0'),
+      trgCntGlbl      => (others => '1'),
       -- internal
-      pause          => '0',
-      pauseError     => '0',
-      lastErrorRead  => '0',
-      setWatchdog    => '0',
-      timeout        => '0',
-      allColsReady   => '0',
-      hitmaskAll     => (others => '0'),
-      dataReady      => (others => '0'),
-      colOverOccErr  => (others => '0'),
-      colFifoErr     => (others => '0'),
-      columnPause    => (others => '0'),
-      statusRdBmsk   => (others => '1'),
-      columnEnable   => (others => '1'),
-      pauseErrorBmsk => (others => '0'),
-      waitCnt        => (others => '0'),
-      state          => IDLE_S);
+      pause           => '0',
+      pauseError      => '0',
+      lastErrorRead   => '0',
+      setTimeout      => '0',
+      setTimeoutPause => '0',
+      timeout         => '0',
+      timeoutPause    => '0',
+      allColsReady    => '0',
+      hitmaskAll      => (others => '0'),
+      dataReady       => (others => '0'),
+      colOverOccErr   => (others => '0'),
+      colFifoErr      => (others => '0'),
+      columnPause     => (others => '0'),
+      statusRdBmsk    => (others => '1'),
+      columnEnable    => (others => '1'),
+      pauseErrorBmsk  => (others => '0'),
+      waitCnt         => (others => '0'),
+      state           => IDLE_S);
 
    signal r   : RegType;
    signal rin : RegType;
 
-   signal setWatchdog : sl;
-   signal timeout     : sl;
-   signal colBusySync : sl;
+   signal setTimeout      : sl;
+   signal setTimeoutPause : sl;
+   signal timeout         : sl;
+   signal timeoutPause    : sl;
+   signal colBusySync     : sl;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable, timeout, colBusySync) is
+   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable,
+                   timeout, colBusySync, timeoutPause) is
 
       variable v             : RegType;
       variable statusBusInt  : Pix2PgpStatusBusArray;
@@ -157,13 +165,15 @@ begin
       end if;
 
       -- Strobes and Defaults
-      v.statusRd    := '0';
-      v.setWatchdog := '0';
+      v.statusRd        := '0';
+      v.setTimeout      := '0';
+      v.setTimeoutPause := '0';
 
       -- Register inputs
       v.arbiterBusy  := arbiterBusy;
       v.columnEnable := columnEnable;
       v.timeout      := timeout;
+      v.timeoutPause := timeoutPause;
 
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
@@ -233,9 +243,10 @@ begin
             v.timeoutError := '0';
             v.pauseError   := '0';
 
-            -- pause flag
+            -- pause flag and (short) timeout if needed
             if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
-               v.pause := '1';
+               v.pause           := '1';
+               v.setTimeoutPause := toSl(ENA_PAUSE_TIMEOUT_C);
             end if;
 
             -- set-watchdog flag.
@@ -245,13 +256,13 @@ begin
             -- (if the state of the bus changes, the watchdog will reset itself)
             if (uOr(v.dataReady) = '1' and v.allColsReady = '0') and
                ((v.dataReady and v.columnEnable) = (r.dataReady and v.columnEnable)) then
-               v.setWatchdog := '1';
+               v.setTimeout := '1';
             end if;
 
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- nominal operation
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            if v.allColsReady = '1' then
+            if v.allColsReady = '1' or v.timeoutPause = '1' then
 
                -- raise the pause flag if necessary;
                -- override the columns that will be read;
@@ -367,16 +378,17 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      colFifoError  <= r.colFifoError;
-      overOccError  <= r.overOccError;
-      colPause      <= r.pause;
-      colPauseError <= r.pauseError;
-      colBitmask    <= r.colBitmask;
-      arbiterStart  <= r.arbiterStart; -- delay for one cycle
-      trgCntGlbl    <= r.trgCntGlbl;
-      timeoutError  <= r.timeoutError;
+      colFifoError    <= r.colFifoError;
+      overOccError    <= r.overOccError;
+      colPause        <= r.pause;
+      colPauseError   <= r.pauseError;
+      colBitmask      <= r.colBitmask;
+      arbiterStart    <= r.arbiterStart; -- delay for one cycle
+      trgCntGlbl      <= r.trgCntGlbl;
+      timeoutError    <= r.timeoutError;
 
-      setWatchdog   <= r.setWatchdog;
+      setTimeout      <= r.setTimeout;
+      setTimeoutPause <= r.setTimeoutPause;
 
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
          -- distribute the statusFifo rdEn
@@ -416,7 +428,7 @@ begin
          dataIn  => colBusy,
          dataOut => colBusySync);
 
-   U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+   U_TimeoutWatchdog : entity pix2pgp.Pix2PgpWatchdog
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
@@ -428,7 +440,26 @@ begin
          rst     => pgpRst,
          limit   => timeoutLimit,
          -- Control Interface
-         set     => setWatchdog,
+         set     => setTimeout,
          timeout => timeout);
+
+   GEN_PAUSE_WATCHDOG: if ENA_PAUSE_TIMEOUT_C generate
+
+      U_PauseWatchdog : entity pix2pgp.Pix2PgpWatchdog
+         generic map(
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+         port map(
+            -- General Interface
+            clk     => pgpClk,
+            rst     => pgpRst,
+            limit   => pauseLimit,
+            -- Control Interface
+            set     => setTimeoutPause,
+            timeout => timeoutPause);
+
+   end generate GEN_PAUSE_WATCHDOG;
 
 end rtl;

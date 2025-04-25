@@ -36,6 +36,7 @@ entity Pix2PgpSparkPixTTop is
       pgpRst       : in  std_logic;
       sel          : in  std_logic;
       timeoutLimit : in  std_logic_vector(11 downto 0);
+      pauseLimit   : in  std_logic_vector(11 downto 0);
       columnEnable : in  std_logic_vector(23 downto 0);
       -- Column Manager Interface
       -- dataIn
@@ -81,6 +82,7 @@ architecture rtl of Pix2PgpSparkPixTTop is
 
    signal din               : Pix2PgpSparseDinArray;
    signal timeoutLimitMuxed : std_logic_vector(11 downto 0);
+   signal pauseLimitMuxed   : std_logic_vector(11 downto 0);
    signal columnEnableMuxed : std_logic_vector(23 downto 0);
 
    signal pgpTxMaster       : AxiStreamMasterType;
@@ -155,6 +157,7 @@ begin
          sparseRst    => sparseRst,
          pgpRst       => pgpRst,
          timeoutLimit => timeoutLimitMuxed,
+         pauseLimit   => pauseLimitMuxed,
          columnEnable => columnEnableMuxed,
          -- Column Manager Interface
          sof          => sof,
@@ -273,13 +276,16 @@ begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          timeoutLimitMuxed <= (others => '0');
          columnEnableMuxed <= (others => '0');
+         pauseLimitMuxed   <= (others => '0');
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
             timeoutLimitMuxed <= (others => '0');
             columnEnableMuxed <= (others => '0');
+            pauseLimitMuxed   <= (others => '0');
          elsif sel = '1' then
             timeoutLimitMuxed <= timeoutLimit;
             columnEnableMuxed <= columnEnable;
+            pauseLimitMuxed   <= pauseLimit;
          end if;
       end if;
    end process;

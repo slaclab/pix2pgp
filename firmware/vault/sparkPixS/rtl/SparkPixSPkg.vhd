@@ -107,6 +107,8 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpDataBusType;
 
+   constant ENA_PAUSE_TIMEOUT_C : boolean := False;
+
    ----------------------------
    -- Pix2Pgp data frame header
    ----------------------------
