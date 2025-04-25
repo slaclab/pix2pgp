@@ -49,5 +49,17 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
-    # laneParser = pix2pgp.LaneData(asicType=args.asicType, verbose=True)
-    # asicParser.formatter(data=_dataArray, dataLen=len(_dataArray))
+    _dataArrayBytes = []
+
+    for word in _dataArray:
+        for i in range(5):  # 5 bytes in a 40-bit word
+            byte = (word >> (8 * (4 - i))) & 0xFF
+            _dataArrayBytes.append(byte)
+
+    laneDecoder = pix2pgp.LaneData(asicType=args.asicType, verbose=True)
+    laneDecoder.formatter(data=_dataArrayBytes, dataLen=len(_dataArrayBytes))
+
+    while not(laneDecoder.done):
+        time.sleep(0.1) # crude; sleep before checking again
+
+    laneDecoder.reset()
