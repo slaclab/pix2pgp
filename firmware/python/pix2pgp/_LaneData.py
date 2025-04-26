@@ -329,9 +329,4 @@ class LaneData(object):
         if self.done:
             self.dataIndexEnd = index
 
-        if self.done and self._verbose and not(self.dummy) and not(self.isEmpty):
-            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            print(f"Trigger = {self.trgCnt} decoding done for current Lane. Next Event...")
-            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-
     #################################################################

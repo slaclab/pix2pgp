@@ -56,23 +56,23 @@ architecture rtl of Pix2PgpLaneAdapter is
 
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    -- note that the bus becomes wider to have enough bandwidth to read-out all lanes fast enough
    constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => FPGA_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    type StateType is (
       IDLE_S,

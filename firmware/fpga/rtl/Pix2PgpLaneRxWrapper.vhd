@@ -108,11 +108,12 @@ begin
 
    U_Reverse: entity pix2pgp.AxiStreamReverse
       generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         IB_DWIDTH_G    => ASIC_DATABUS_DWIDTH_C,
-         OB_DWIDTH_G    => FPGA_DATABUS_DWIDTH_C)
+         TPD_G             => TPD_G,
+         RST_ASYNC_G       => RST_ASYNC_G,
+         RST_POLARITY_G    => RST_POLARITY_G,
+         AXIS_FIFO_WIDTH_G => AXIS_FIFO_WIDTH_C,
+         IB_DWIDTH_G       => ASIC_DATABUS_DWIDTH_C/8,
+         OB_DWIDTH_G       => FPGA_DATABUS_DWIDTH_C/8)
       port map(
          -- General Interface
          sysClk     => sysClk,

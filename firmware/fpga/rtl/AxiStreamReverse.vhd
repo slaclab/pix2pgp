@@ -27,11 +27,12 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity AxiStreamReverse is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      IB_DWIDTH_G    : natural := 40;   -- in bits
-      OB_DWIDTH_G    : natural := 320   -- in bits
+      TPD_G             : time    := 1 ns;
+      RST_ASYNC_G       : boolean := false;
+      RST_POLARITY_G    : sl      := '1';  -- '1' for active high rst, '0' for active low
+      AXIS_FIFO_WIDTH_G : natural := 4;
+      IB_DWIDTH_G       : natural := 5; -- in bytes
+      OB_DWIDTH_G       : natural := 40 -- in bytes
    );
    port(
       -- General Interface
@@ -48,14 +49,13 @@ end AxiStreamReverse;
 architecture rtl of AxiStreamReverse is
 
    constant AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => OB_DWIDTH_G/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
-
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => OB_DWIDTH_G,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    type RegType is record
       sAxisMaster : AxiStreamMasterType;
@@ -77,32 +77,39 @@ architecture rtl of AxiStreamReverse is
 
    function reverse(din : slv; tKeep : slv; dataBusWidth : natural) return slv is
       variable dout          : slv(AXI_STREAM_MAX_TDATA_WIDTH_C-1 downto 0) := (others => '0');
-      variable validBytesCnt : integer := 0;
+      variable tKeepBytesCnt : integer := 0;
       variable validWordsCnt : integer := 0;
-      variable dataBusBytes  : integer := dataBusWidth/8;
       variable wordIndex     : integer := 0;
+      variable dataBusBits   : integer := dataBusWidth * 8; -- Calculate bits from bytes
    begin
 
-      -- how many valid bytes?
-      for i in 0 to 127 loop
-         if tKeep(i) = '1' then
-            validBytesCnt := validBytesCnt + 1;
-         end if;
-      end loop;
+      tKeepBytesCnt := conv_integer(unsigned(onesCount(tKeep)));
 
-      validWordsCnt := validBytesCnt / dataBusBytes;
+      -- always check if the tKeep has a valid value for this conversion
 
-      -- Reverse the input order
-      for i in 0 to validWordsCnt - 1 loop
-         wordIndex := validWordsCnt - 1 - i;
-         dout((i * dataBusWidth) + dataBusWidth-1 downto (i * dataBusWidth))
-            := din((wordIndex * dataBusWidth) + dataBusWidth-1 downto (wordIndex * dataBusWidth));
-      end loop;
+      if tKeepBytesCnt mod dataBusWidth = 0 then
+         -- Calculate the number of valid words
+         validWordsCnt := tKeepBytesCnt / dataBusWidth;
 
-        return dout; -- Return the reversed array
-    end function reverse;
+         -- Reverse the input order
+         for i in 0 to validWordsCnt - 1 loop
+            wordIndex := validWordsCnt - 1 - i;
+            dout((i*dataBusBits) + dataBusBits - 1 downto (i*dataBusBits))
+               := din((wordIndex*dataBusBits) + dataBusBits - 1 downto (wordIndex*dataBusBits));
+         end loop;
+
+      else
+         dout := resize(din, din'length);
+      end if;
+
+      return dout;
+
+   end function reverse;
 
 begin
+
+   assert (OB_DWIDTH_G mod IB_DWIDTH_G = 0)
+      report "[ERROR]: AxiStreamReverse.vhd; The Output Data Width (OB_DWIDTH_G) is *NOT* a multiple of the Input Data Width (IB_DWIDTH_G)! Please check the values of the generics." severity failure;
 
    comb : process (r, sysRst, sAxisSlave, ibTxMaster) is
 
