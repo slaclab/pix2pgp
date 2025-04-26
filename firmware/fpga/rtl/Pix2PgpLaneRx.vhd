@@ -255,7 +255,7 @@ begin
 
                -- still more data for this column remaining
                if r.dataLenCnt > 2 then
-                  v.dataLenCnt := r.dataLenCnt - 1;
+                  v.dataLenCnt := r.dataLenCnt - 2;
                else
                   -- data for this column done; what about more columns though?
                   if r.activeColCnt > 1 then
