@@ -73,8 +73,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pauseAck  : asicArray := (others => (others => '0'));
    signal sparseBusy: asicArray := (others => (others => '0'));
 
-   signal singleLaneMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal singleLaneSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal allLanesMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal allLanesSlave  : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1)  := (others => AXI_STREAM_SLAVE_INIT_C);
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -101,6 +101,15 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal laneErrorAck   : sl := '1';
    signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
+
+   file myFile0 : text open write_mode is "pix2pgpLaneDataDump0.dat";
+   file myFile1 : text open write_mode is "pix2pgpLaneDataDump1.dat";
+   file myFile2 : text open write_mode is "pix2pgpLaneDataDump2.dat";
+   file myFile3 : text open write_mode is "pix2pgpLaneDataDump3.dat";
+   file myFile4 : text open write_mode is "pix2pgpLaneDataDump4.dat";
+   file myFile5 : text open write_mode is "pix2pgpLaneDataDump5.dat";
+   file myFile6 : text open write_mode is "pix2pgpLaneDataDump6.dat";
+   file myFile7 : text open write_mode is "pix2pgpLaneDataDump7.dat";
 
 begin
 
@@ -137,46 +146,6 @@ begin
       port map (
          clkP => sysClk,
          clkN => open);
-
-  -- Process to Monitor AXI Stream and Write to File for single lane
-  FileWriteProcessSingle : process(sysClk)
-    file myFile : text open write_mode is "pix2pgpRxDataDump.dat";
-    variable row : line;
-    variable byte : std_logic_vector(7 downto 0);
-  begin
-    if rising_edge(sysClk) then
-      if singleLaneMaster.tValid = '1' and singleLaneSlave.tReady = '1' then
-        for i in 127 downto 0 loop
-          if singleLaneMaster.tKeep(i) = '1' then
-            byte := singleLaneMaster.tData((i*8+7) downto (i*8));
-            hwrite(row, byte, LEFT, 0);
-            writeline(myFile, row);
-            row.all := "";
-          end if;
-        end loop;
-      end if;
-    end if;
-  end process;
-
-  -- Process to Monitor AXI Stream and Write to File
-  FileWriteProcessAsic : process(sysClk)
-    file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
-    variable row : line;
-    variable byte : std_logic_vector(7 downto 0);
-  begin
-    if rising_edge(sysClk) then
-      if asicTxMaster.tValid = '1' then
-        for i in 127 downto 0 loop
-          if asicTxMaster.tKeep(i) = '1' then
-            byte := asicTxMaster.tData((i*8+7) downto (i*8));
-            hwrite(row, byte, LEFT, 0);
-            writeline(myFile, row);
-            row.all := "";
-          end if;
-        end loop;
-      end if;
-    end if;
-  end process;
 
   issueSroProcess: process(sparseClk)
   begin
@@ -334,32 +303,32 @@ begin
          TIMEOUT_LIMIT_WIDTH_G => 16)
       port map(
          -- General Interface
-         pgpClk           => pgpClk,
-         pgpRst           => revRst,
-         sysClk           => sysClk,
-         sysRst           => revRst,
+         pgpClk          => pgpClk,
+         pgpRst          => revRst,
+         sysClk          => sysClk,
+         sysRst          => revRst,
          -- ASIC Domain Interface
-         asicClk          => sparseClk,
-         asicRst          => rst,
-         asicSro          => sroFinal,
-         asicSroEna       => '1',
+         asicClk         => sparseClk,
+         asicRst         => rst,
+         asicSro         => sroFinal,
+         asicSroEna      => '1',
          -- PGP4Rx Interface
-         pgpValid         => pgpValid,
-         pgpData          => pgpData,
-         pgpReady         => pgpReady,
-         -- Single Axi Lane for Debugging
-         singleLaneMaster => singleLaneMaster,
-         singleLaneSlave  => singleLaneSlave,
+         pgpValid        => pgpValid,
+         pgpData         => pgpData,
+         pgpReady        => pgpReady,
+         -- Individual Axi Lanes for Debugging
+         allLanesMaster  => allLanesMaster,
+         allLanesSlave   => allLanesSlave,
          -- AXI-Stream Rx Interface
-         asicTxMaster     => asicTxMaster,
-         asicTxSlave      => asicTxSlave,
+         asicTxMaster    => asicTxMaster,
+         asicTxSlave     => asicTxSlave,
          -- AXI-Lite Interface
-         axilClk          => sysClk,
-         axilRst          => revRst,
-         axilReadMaster   => AXI_LITE_READ_MASTER_INIT_C,
-         axilReadSlave    => open,
-         axilWriteMaster  => AXI_LITE_WRITE_MASTER_INIT_C,
-         axilWriteSlave   => open);
+         axilClk         => sysClk,
+         axilRst         => revRst,
+         axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
+         axilReadSlave   => open,
+         axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
+         axilWriteSlave  => open);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -406,7 +375,7 @@ begin
      wait for CLK_PERIOD_SPARSE_C*93;
        for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
           for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-            hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
+            hitLen(ser)(col) <= toSlv(50, hitLen(ser)(col)'length);
           end loop;
        end loop;
          sro  <= '1';
@@ -564,5 +533,137 @@ begin
   end process stimulus;
 
   revRst <= not(rst);
+
+
+  -- Process to Monitor AXI Stream and Write to File
+  FileWriteProcessAsic : process(sysClk)
+    file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable row : line;
+    variable byte : std_logic_vector(7 downto 0);
+  begin
+    if rising_edge(sysClk) then
+      if asicTxMaster.tValid = '1' then
+        for i in 127 downto 0 loop
+          if asicTxMaster.tKeep(i) = '1' then
+            byte := asicTxMaster.tData((i*8+7) downto (i*8));
+            hwrite(row, byte, LEFT, 0);
+            writeline(myFile, row);
+            row.all := "";
+          end if;
+        end loop;
+      end if;
+    end if;
+  end process;
+
+
+ FileWriteProcessSingle : process(sysClk)
+   variable row : line;
+   variable byte : std_logic_vector(7 downto 0);
+   begin
+        if rising_edge(sysClk) then
+            for laneIndex in 0 to 7 loop
+                case laneIndex is
+                    when 0 =>
+                        if allLanesMaster(0).tValid = '1' and allLanesSlave(0).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(0).tKeep(i) = '1' then
+                                    byte := allLanesMaster(0).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile0, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 1 =>
+                        if allLanesMaster(1).tValid = '1' and allLanesSlave(1).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(1).tKeep(i) = '1' then
+                                    byte := allLanesMaster(1).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile1, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 2 =>
+                        if allLanesMaster(2).tValid = '1' and allLanesSlave(2).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(2).tKeep(i) = '1' then
+                                    byte := allLanesMaster(2).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile2, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 3 =>
+                        if allLanesMaster(3).tValid = '1' and allLanesSlave(3).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(3).tKeep(i) = '1' then
+                                    byte := allLanesMaster(3).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile3, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 4 =>
+                        if allLanesMaster(4).tValid = '1' and allLanesSlave(4).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(4).tKeep(i) = '1' then
+                                    byte := allLanesMaster(4).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile4, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 5 =>
+                        if allLanesMaster(5).tValid = '1' and allLanesSlave(5).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(5).tKeep(i) = '1' then
+                                    byte := allLanesMaster(5).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile5, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 6 =>
+                        if allLanesMaster(6).tValid = '1' and allLanesSlave(6).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(6).tKeep(i) = '1' then
+                                    byte := allLanesMaster(6).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile6, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 7 =>
+                        if allLanesMaster(7).tValid = '1' and allLanesSlave(7).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(7).tKeep(i) = '1' then
+                                    byte := allLanesMaster(7).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile7, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when others =>
+                        -- Handle unexpected index if needed
+                end case;
+            end loop;
+        end if;
+    end process;
 
 end architecture;

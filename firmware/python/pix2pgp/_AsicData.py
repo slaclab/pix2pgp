@@ -293,7 +293,7 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def laneDataPrinter(self, laneSel):
+    def asicDataPrinter(self, laneSel):
         """
         Prints out all the data
         """
@@ -376,6 +376,9 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
 
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + 5])
+                print(f"wordHex = {wordHex}")
+
                 self.laneDecoder.dataIndexStartSet(dataIndexStart=index)
                 self.laneDecoder.laneIdSet(laneId=laneSel)
                 self.laneDecoder.formatter(data=frame, dataLen=size)
@@ -389,8 +392,9 @@ class AsicData(object):
 
                 self.laneDecoder.reset()
 
-                if not(self.laneGlblPause[laneSel]):
-                    self.laneDataPrinter(laneSel=laneSel)
+                # check if this was a pause
+                if not(self.laneDecoder.pause):
+                    self.asicDataPrinter(laneSel=laneSel)
                     laneSel += 1
                     state = "bitmaskCheck_s"
                 else:

@@ -37,32 +37,32 @@ entity Pix2PgpAsicStreamRx is
       TIMEOUT_LIMIT_WIDTH_G : positive := 16);
    port(
       -- General Interface
-      pgpClk           : in  sl;
-      pgpRst           : in  sl := not(RST_POLARITY_G);
-      sysClk           : in  sl;
-      sysRst           : in  sl := not(RST_POLARITY_G);
+      pgpClk          : in  sl;
+      pgpRst          : in  sl := not(RST_POLARITY_G);
+      sysClk          : in  sl;
+      sysRst          : in  sl := not(RST_POLARITY_G);
       -- ASIC Domain Interface
-      asicClk          : in  sl;
-      asicRst          : in  sl; -- active-low always
-      asicSro          : in  sl;
-      asicSroEna       : in  sl;
+      asicClk         : in  sl;
+      asicRst         : in  sl; -- active-low always
+      asicSro         : in  sl;
+      asicSroEna      : in  sl;
       -- PGP4Rx Interface
-      pgpValid         : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpData          : in  Pix2PgpFpgaRxDataArray;
-      pgpReady         : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpData         : in  Pix2PgpFpgaRxDataArray;
+      pgpReady        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream Interface
-      asicTxMaster     : out AxiStreamMasterType;
-      asicTxSlave      : in  AxiStreamSlaveType;
-      -- Single Axi Lane for Debugging
-      singleLaneMaster : out AxiStreamMasterType;
-      singleLaneSlave  : out AxiStreamSlaveType;
+      asicTxMaster    : out AxiStreamMasterType;
+      asicTxSlave     : in  AxiStreamSlaveType;
+      -- Individual Axi Lanes for Debugging
+      allLanesMaster  : out AxiStreamMasterArray;
+      allLanesSlave   : out AxiStreamSlaveArray;
       -- AXI-Lite Interface
-      axilClk          : in  sl;
-      axilRst          : in  sl;
-      axilReadMaster   : in  AxiLiteReadMasterType;
-      axilReadSlave    : out AxiLiteReadSlaveType;
-      axilWriteMaster  : in  AxiLiteWriteMasterType;
-      axilWriteSlave   : out AxiLiteWriteSlaveType);
+      axilClk         : in  sl;
+      axilRst         : in  sl;
+      axilReadMaster  : in  AxiLiteReadMasterType;
+      axilReadSlave   : out AxiLiteReadSlaveType;
+      axilWriteMaster : in  AxiLiteWriteMasterType;
+      axilWriteSlave  : out AxiLiteWriteSlaveType);
 end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
@@ -612,9 +612,11 @@ begin
             din  => timeout,
             dout => laneTimeout);
 
+   allLanesMaster(lane) <= laneTxMasters(lane);
+   allLanesSlave(lane)  <= laneTxSlaves(lane);
+
    end generate GEN_LANE;
 
-   singleLaneMaster <= laneTxMasters(SINGLE_LANE_ID_G);
-   singleLaneSlave  <= laneTxSlaves(SINGLE_LANE_ID_G);
+
 
 end rtl;
