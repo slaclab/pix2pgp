@@ -80,18 +80,19 @@ class AsicData(object):
         self.laneGlblPauseErr   = [False] * self._numOfLanes
         self.laneGlblDummy      = [False] * self._numOfLanes
         self.laneGlblColTimeout = [False] * self._numOfLanes
-        self.laneColBitmask     = [[] for _ in range(self._numOfLanes)]
+        self.laneColBitmask     = [[False] for _ in range(self._numOfLanes)]
         self.laneGlblTrgCnt     = [0]     * self._numOfLanes
 
         # lane column metadata
-        self.laneColOverOcc = [[] for _ in range(self._numOfLanes)]
-        self.laneColPause   = [[] for _ in range(self._numOfLanes)]
-        self.laneColId      = [[] for _ in range(self._numOfLanes)]
-        self.laneColTrgCnt  = [[] for _ in range(self._numOfLanes)]
-        self.laneColLen     = [[] for _ in range(self._numOfLanes)]
+        self.laneColOverOcc = [[False] for _ in range(self._numOfLanes)]
+        self.laneColPause   = [[False] for _ in range(self._numOfLanes)]
+        self.laneColId      = [[0]     for _ in range(self._numOfLanes)]
+        self.laneColTrgCnt  = [[0]     for _ in range(self._numOfLanes)]
+        self.laneColLen     = [0       for _ in range(self._numOfLanes)]
 
         # lane data
-        self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
+        #self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
+        self.asicHits = [[] for _ in range(self._numOfLanes)]
 
         # lane-decoder-assigned flags
         self.laneHeaderErr = [False] * self._numOfLanes
@@ -239,37 +240,62 @@ class AsicData(object):
         """
         if laneSel < self._numOfLanes:
 
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # header data
-            self.laneGlblOverOcc[laneSel]    = copy.deepcopy(self.laneDecoder.overOcc)
-            self.laneGlblPause[laneSel]      = copy.deepcopy(self.laneDecoder.pause)
-            self.laneGlblColErr[laneSel]     = copy.deepcopy(self.laneDecoder.colErr)
-            self.laneGlblPauseErr[laneSel]   = copy.deepcopy(self.laneDecoder.pauseErr)
-            self.laneGlblDummy[laneSel]      = copy.deepcopy(self.laneDecoder.dummy)
-            self.laneGlblColTimeout[laneSel] = copy.deepcopy(self.laneDecoder.timeout)
-            self.laneGlblTrgCnt[laneSel]     = copy.deepcopy(self.laneDecoder.trgCnt)
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~
+            # flags are cumulative in case we are in pause
             self.laneColBitmask[laneSel]     = copy.deepcopy(self.laneDecoder.colBitmask)
 
-            # column metadata
-            self.laneColOverOcc[laneSel] = copy.deepcopy(self.laneDecoder.colOverOcc)
-            self.laneColPause[laneSel]   = copy.deepcopy(self.laneDecoder.colPause)
-            self.laneColId[laneSel]      = copy.deepcopy(self.laneDecoder.colId)
-            self.laneColTrgCnt[laneSel]  = copy.deepcopy(self.laneDecoder.colTrgCnt)
-            self.laneColLen[laneSel]     = copy.deepcopy(self.laneDecoder.colLen)
+            self.laneGlblOverOcc[laneSel]    = (self.laneGlblOverOcc[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.overOcc))
+            self.laneGlblPause[laneSel]      = (self.laneGlblPause[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.pause))
+            self.laneGlblColErr[laneSel]     = (self.laneGlblColErr[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.colErr))
+            self.laneGlblPauseErr[laneSel]   = (self.laneGlblPauseErr[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.pauseErr))
+            self.laneGlblDummy[laneSel]      = (self.laneGlblDummy[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.dummy))
+            self.laneGlblColTimeout[laneSel] = (self.laneGlblColTimeout[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.timeout))
+            self.laneColBitmask[laneSel]     = (self.laneColBitmask[laneSel] or
+                                               copy.deepcopy(self.laneDecoder.timeout))
 
-            # flags
+            # gets the last trgCnt (hopefully does not change within pauses)
+            self.laneGlblTrgCnt[laneSel] = copy.deepcopy(self.laneDecoder.trgCnt)
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~
+            # column metadata
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~
+            # flags are cumulative in case we are in pause
+            self.laneColOverOcc[laneSel] =  (self.laneColOverOcc[laneSel] or
+                                            copy.deepcopy(self.laneDecoder.colOverOcc))
+            self.laneColPause[laneSel]   =  (self.laneColPause[laneSel] or
+                                            copy.deepcopy(self.laneDecoder.colPause))
+
+
+            # gets the last colId (hopefully does not change within pauses)
+            self.laneColId[laneSel]      = copy.deepcopy(self.laneDecoder.colId)
+            # gets the last trgCnt (hopefully does not change within pauses)
+            self.laneColTrgCnt[laneSel]  = copy.deepcopy(self.laneDecoder.colTrgCnt)
+            # increments the column Length
+            for idx in range(len(self.laneColLen)):
+                self.laneColLen[laneSel] += copy.deepcopy(self.laneDecoder.colLen[idx])
+
+            # gets the last flags
             self.laneHeaderErr[laneSel]  = copy.deepcopy(self.laneDecoder.headerErr)
             self.laneDecErr[laneSel]     = copy.deepcopy(self.laneDecoder.decErr)
             self.laneIsEmpty[laneSel]    = copy.deepcopy(self.laneDecoder.isEmpty)
 
             # actual hits
             if not self.laneIsEmpty[laneSel]:
-                self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+                self.asicHits[laneSel].extend(copy.deepcopy(self.laneDecoder.laneHits))
     #################################################################
 
     #################################################################
     def laneDataPrinter(self, laneSel):
         """
-        Prints-out
+        Prints out all the data
         """
         if laneSel < self._numOfLanes and self._verbose:
             print(f"self.laneGlblOverOcc[{laneSel}]    = {self.laneGlblOverOcc[laneSel]}")
@@ -363,9 +389,13 @@ class AsicData(object):
 
                 self.laneDecoder.reset()
 
-                self.laneDataPrinter(laneSel=laneSel)
-                laneSel += 1
-                state = "bitmaskCheck_s"
+                if not(self.laneGlblPause[laneSel]):
+                    self.laneDataPrinter(laneSel=laneSel)
+                    laneSel += 1
+                    state = "bitmaskCheck_s"
+                else:
+                    # in pause, more data for this lane -> re-evaluate
+                    state == "lane_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
@@ -376,5 +406,8 @@ class AsicData(object):
 
                 # will re-evaluate the preamble if there are more data
                 state = "preamble_s"
+
+        if index >= size:
+            self.done = True
 
     ################################################################
