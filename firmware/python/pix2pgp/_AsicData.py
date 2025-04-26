@@ -44,9 +44,6 @@ class AsicData(object):
         Reset Class variables
         """
 
-        # initialize the lane decoding class
-        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
-
         # populated by asicParamSet() (parameters have _ prefix)
         self._numOfLanes  = None
         self._numOfCols   = None
@@ -64,15 +61,42 @@ class AsicData(object):
         # initialize the values
         self.asicParamSet()
 
+        # initialize the lane decoding class
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
+
         # call after self.asicParamSet
-        # header
+        # fpga header
         self.headerErr   = False
         self.laneValid   = [None] * self._numOfLanes
         self.laneTimeout = [None] * self._numOfLanes
         self.laneError   = [None] * self._numOfLanes
 
-        # data
-        self.asicHits    = [None] * self._numOfLanes
+        # data from lane decoder
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # lane header data
+        self.laneGlblOverOcc    = [False] * self._numOfLanes
+        self.laneGlblPause      = [False] * self._numOfLanes
+        self.laneGlblColErr     = [False] * self._numOfLanes
+        self.laneGlblPauseErr   = [False] * self._numOfLanes
+        self.laneGlblDummy      = [False] * self._numOfLanes
+        self.laneGlblColTimeout = [False] * self._numOfLanes
+        self.laneGlblTrgCnt     = [0]     * self._numOfLanes
+
+        # lane column metadata
+        self.laneColBitmask = [[] for _ in range(self._numOfLanes)]
+        self.laneColOverOcc = [[] for _ in range(self._numOfLanes)]
+        self.laneColPause   = [[] for _ in range(self._numOfLanes)]
+        self.laneColId      = [[] for _ in range(self._numOfLanes)]
+        self.laneColTrgCnt  = [[] for _ in range(self._numOfLanes)]
+        self.laneColLen     = [[] for _ in range(self._numOfLanes)]
+
+        # lane data
+        self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
+
+        # lane-decoder-assigned errors
+        self.laneHeaderErr = [False] * self._numOfLanes
+        self.laneDecErr    = [False] * self._numOfLanes
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # trailer
         self.trailerErr  = False
@@ -208,6 +232,39 @@ class AsicData(object):
     #################################################################
 
     #################################################################
+    def extractLaneData(self, laneSel):
+        """
+        Extracts lane data from the lane decoder into the AsicData class arrays.
+        """
+        if laneSel < self._numOfLanes:
+
+            # header data
+            self.laneGlblOverOcc[laneSel]    = copy.deepcopy(self.laneDecoder.overOcc)
+            self.laneGlblPause[laneSel]      = copy.deepcopy(self.laneDecoder.pause)
+            self.laneGlblColErr[laneSel]     = copy.deepcopy(self.laneDecoder.colErr)
+            self.laneGlblPauseErr[laneSel]   = copy.deepcopy(self.laneDecoder.pauseErr)
+            self.laneGlblDummy[laneSel]      = copy.deepcopy(self.laneDecoder.dummy)
+            self.laneGlblColTimeout[laneSel] = copy.deepcopy(self.laneDecoder.timeout)
+            self.laneGlblTrgCnt[laneSel]     = copy.deepcopy(self.laneDecoder.trgCnt)
+
+            # column metadata
+            self.laneColBitmask[laneSel] = copy.deepcopy(self.laneDecoder.colBitmask)
+            self.laneColOverOcc[laneSel] = copy.deepcopy(self.laneDecoder.colOverOcc)
+            self.laneColPause[laneSel]   = copy.deepcopy(self.laneDecoder.colPause)
+            self.laneColId[laneSel]      = copy.deepcopy(self.laneDecoder.colId)
+            self.laneColTrgCnt[laneSel]  = copy.deepcopy(self.laneDecoder.colTrgCnt)
+            self.laneColLen[laneSel]     = copy.deepcopy(self.laneDecoder.colLen)
+
+            # decoding errors
+            self.laneHeaderErr = copy.deepcopy(self.laneDecoder.headerErr)
+            self.laneDecErr    = copy.deepcopy(self.laneDecoder.decErr)
+
+            # actual hits
+            if not self.laneDecoder.isEmpty:
+                self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+    #################################################################
+
+    #################################################################
     def eventParseFsm(self, frame, size):
         """
         Parsing the data in stages
@@ -266,10 +323,10 @@ class AsicData(object):
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
 
-                if not(self.laneDecoder.isEmpty):
-                    self.asicHits[laneSel] = copy.deepcopy(self.laneDecoder.laneHits)
+                self.extractLaneData(laneSel=laneSel)
 
                 index = copy.deepcopy(self.laneDecoder.dataIndexEnd)
+
                 self.laneDecoder.reset()
                 laneSel += 1
                 state = "bitmaskCheck_s"
