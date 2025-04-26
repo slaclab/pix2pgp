@@ -71,7 +71,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pauseAck  : asicArray := (others => (others => '0'));
    signal sparseBusy: asicArray := (others => (others => '0'));
 
-   signal singleAsicLane : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal singleLaneMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal singleLaneSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -135,41 +136,17 @@ begin
          clkP => sysClk,
          clkN => open);
 
-
-writeDataProcess: process(pgpClk)
-
-    -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpWordDataDump.dat";
-    variable row : line;
-    variable byte_data : std_logic_vector(7 downto 0);  -- 8-bit wide variable to hold each byte
-
-  begin
-    if (rising_edge(pgpClk)) then
-        -- check if the valid flag is high
-        if pgpValid(0) = '1' then
-          -- Extract each of the 5 bytes from the 40-bit word
-          for i in 4 downto 0 loop
-            byte_data := pgpData(0).data(i*8+7 downto i*8);
-            -- Write the byte to the file
-            hwrite(row, byte_data, right, 0);
-            writeline(myFile,row);
-          end loop;
-        end if;
-      end if;
-  end process;
-
-
-  -- Process to Monitor AXI Stream and Write to File
+  -- Process to Monitor AXI Stream and Write to File for single lane
   FileWriteProcessSingle : process(sysClk)
     file myFile : text open write_mode is "pix2pgpRxDataDump.dat";
     variable row : line;
     variable byte : std_logic_vector(7 downto 0);
   begin
     if rising_edge(sysClk) then
-      if singleAsicLane.tValid = '1' then
+      if singleLaneMaster.tValid = '1' and singleLaneSlave.tReady = '1' then
         for i in 127 downto 0 loop
-          if singleAsicLane.tKeep(i) = '1' then
-            byte := singleAsicLane.tData((i*8+7) downto (i*8));
+          if singleLaneMaster.tKeep(i) = '1' then
+            byte := singleLaneMaster.tData((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);
             writeline(myFile, row);
             row.all := "";
@@ -368,8 +345,9 @@ writeDataProcess: process(pgpClk)
          pgpValid         => pgpValid,
          pgpData          => pgpData,
          pgpReady         => pgpReady,
-         -- Debugging
-         singleAsicLane   => singleAsicLane,
+         -- Single Axi Lane for Debugging
+         singleLaneMaster => singleLaneMaster,
+         singleLaneSlave  => singleLaneSlave,
          -- AXI-Stream Rx Interface
          asicTxMaster     => asicTxMaster,
          asicTxSlave      => asicTxSlave,
@@ -423,15 +401,15 @@ writeDataProcess: process(pgpClk)
     wait for CLK_PERIOD_SPARSE_C*2;
       sro  <= '0';
 
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
-     --     for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --       hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
-     --     end loop;
-     --  end loop;
-     --    sro  <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --    sro  <= '0';
+     wait for CLK_PERIOD_SPARSE_C*93;
+       for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+          for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+            hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
+          end loop;
+       end loop;
+         sro  <= '1';
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
 
     -- wait for CLK_PERIOD_SPARSE_C*93;
     --  hitLen(0)(0)  <= toSlv(0,  hitLen(0)(5)'length);

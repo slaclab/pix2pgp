@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Pix2Pgp Lane Adapter to AXI
+-- Description: Pix2Pgp Lane Adapter; converts lane data to AXI-Stream
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -147,7 +147,7 @@ begin
       end if;
 
       -- default flags
-      v.sAxisMaster.tKeep                              := (others => '1');
+      v.sAxisMaster.tKeep := (others => '1');
       v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := frameDataDout;
 
       ---------------------------------------------------------------------------

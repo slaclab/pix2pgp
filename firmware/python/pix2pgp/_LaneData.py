@@ -272,8 +272,6 @@ class LaneData(object):
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
                 self.headerEval(wordHex)
 
-                print(f"headerWord = {wordHex}")
-
                 index += self._dataLen
 
                 if not(self.isEmpty) and self.dummy == False:
@@ -319,12 +317,14 @@ class LaneData(object):
 
                 subLen -= 2
 
-                if subLen <= 0 and colSel < self._numOfCols:
+                if subLen <= 0:
                     colSel += 1
                     subLen = 0
                     state  = "bitmaskCheck_s"
-
             #################################################################
+
+        if index >= size:
+            self.done = True
 
         if self.done:
             self.dataIndexEnd = index

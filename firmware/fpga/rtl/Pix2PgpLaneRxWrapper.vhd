@@ -50,12 +50,14 @@ end Pix2PgpLaneRxWrapper;
 
 architecture rtl of Pix2PgpLaneRxWrapper is
 
-   signal frameDataRd    : sl := '0';
-   signal frameDataDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
-   signal frameDataFull  : sl := '0';
-   signal frameMetaRd    : sl := '0';
-   signal frameMetaDout  : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
-   signal frameMetaValid : sl := '0';
+   signal frameDataRd     : sl := '0';
+   signal frameDataDout   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal frameDataFull   : sl := '0';
+   signal frameMetaRd     : sl := '0';
+   signal frameMetaDout   : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal frameMetaValid  : sl := '0';
+   signal reverseTxMaster : AxiStreamMasterType;
+   signal reverseTxSlave  : AxiStreamSlaveType;
 
 begin
 
@@ -101,7 +103,25 @@ begin
          -- ASIC Rx Interface
          laneError      => laneError,
          laneErrorAck   => laneErrorAck,
-         laneTxMaster   => laneTxMaster,
-         laneTxSlave    => laneTxSlave);
+         laneTxMaster   => reverseTxMaster,
+         laneTxSlave    => reverseTxSlave);
+
+   U_Reverse: entity pix2pgp.AxiStreamReverse
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         IB_DWIDTH_G    => ASIC_DATABUS_DWIDTH_C,
+         OB_DWIDTH_G    => FPGA_DATABUS_DWIDTH_C)
+      port map(
+         -- General Interface
+         sysClk     => sysClk,
+         sysRst     => sysRst,
+         -- Inbound Interface
+         ibTxMaster => reverseTxMaster,
+         ibTxSlave  => reverseTxSlave,
+         -- Outbound Interface
+         obTxMaster => laneTxMaster,
+         obTxSlave  => laneTxSlave);
 
 end rtl;

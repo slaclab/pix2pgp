@@ -205,6 +205,7 @@ package Pix2PgpPkg is
    constant LANERX_FRAMELEN_WIDTH_C      : integer := 20;
    constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
    constant LANERX_FIFO_PIPE_C           : integer := 2;
+   constant AXIS_FIFO_WIDTH_C            : integer := 10;
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;

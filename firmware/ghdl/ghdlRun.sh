@@ -180,6 +180,7 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd    ${SURF_DIR}/Pgp4TxLiteWrapper.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-lite/rtl/AxiLiteAsync.vhd                    ${SURF_DIR}/AxiLiteAsync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamMux.vhd                  ${SURF_DIR}/AxiStreamMux.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamFifoV2.vhd               ${SURF_DIR}/AxiStreamFifoV2.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamDeMux.vhd                ${SURF_DIR}/AxiStreamDeMux.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamGearbox.vhd              ${SURF_DIR}/AxiStreamGearbox.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamResize.vhd               ${SURF_DIR}/AxiStreamResize.vhd

@@ -37,31 +37,32 @@ entity Pix2PgpAsicStreamRx is
       TIMEOUT_LIMIT_WIDTH_G : positive := 16);
    port(
       -- General Interface
-      pgpClk          : in  sl;
-      pgpRst          : in  sl := not(RST_POLARITY_G);
-      sysClk          : in  sl;
-      sysRst          : in  sl := not(RST_POLARITY_G);
+      pgpClk           : in  sl;
+      pgpRst           : in  sl := not(RST_POLARITY_G);
+      sysClk           : in  sl;
+      sysRst           : in  sl := not(RST_POLARITY_G);
       -- ASIC Domain Interface
-      asicClk         : in  sl;
-      asicRst         : in  sl; -- active-low always
-      asicSro         : in  sl;
-      asicSroEna      : in  sl;
+      asicClk          : in  sl;
+      asicRst          : in  sl; -- active-low always
+      asicSro          : in  sl;
+      asicSroEna       : in  sl;
       -- PGP4Rx Interface
-      pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpData         : in  Pix2PgpFpgaRxDataArray;
-      pgpReady        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpValid         : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpData          : in  Pix2PgpFpgaRxDataArray;
+      pgpReady         : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream Interface
-      asicTxMaster    : out AxiStreamMasterType;
-      asicTxSlave     : in  AxiStreamSlaveType;
-      -- Single Axi Lane
-      singleAsicLane  : out AxiStreamMasterType;
+      asicTxMaster     : out AxiStreamMasterType;
+      asicTxSlave      : in  AxiStreamSlaveType;
+      -- Single Axi Lane for Debugging
+      singleLaneMaster : out AxiStreamMasterType;
+      singleLaneSlave  : out AxiStreamSlaveType;
       -- AXI-Lite Interface
-      axilClk         : in  sl;
-      axilRst         : in  sl;
-      axilReadMaster  : in  AxiLiteReadMasterType;
-      axilReadSlave   : out AxiLiteReadSlaveType;
-      axilWriteMaster : in  AxiLiteWriteMasterType;
-      axilWriteSlave  : out AxiLiteWriteSlaveType);
+      axilClk          : in  sl;
+      axilRst          : in  sl;
+      axilReadMaster   : in  AxiLiteReadMasterType;
+      axilReadSlave    : out AxiLiteReadSlaveType;
+      axilWriteMaster  : in  AxiLiteWriteMasterType;
+      axilWriteSlave   : out AxiLiteWriteSlaveType);
 end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
@@ -70,13 +71,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
 
    type timeoutArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-
-   signal frameDataRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameDataDout   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
-   signal frameDataFull   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameMetaRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal frameMetaDout   : Pix2PgpFpgaRxMetaArray := (others => DEFAULT_PIX2PGP_FPGARX_METABUS_C);
-   signal frameMetaValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal laneTxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_MASTER_INIT_C);
@@ -409,7 +403,7 @@ begin
       laneErrorAck <= r.laneErrorAck;
 
       -- AXI-Stream Outputs
-      laneTxSlaves <= r.laneTxSlaves;
+      laneTxSlaves <= v.laneTxSlaves;
       asicTxMaster <= r.asicTxMaster;
 
       -- AXI-Lite Outputs
@@ -516,7 +510,7 @@ begin
    -----------------
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
-      U_Lane: entity pix2pgp.Pix2PgpLaneRx
+      U_Lane: entity pix2pgp.Pix2PgpLaneRxWrapper
          generic map(
             TPD_G          => TPD_G,
             RST_ASYNC_G    => RST_ASYNC_G,
@@ -531,30 +525,6 @@ begin
             pgpValid       => pgpValid(lane),
             pgpData        => pgpData(lane).data,
             pgpReady       => pgpReady(lane),
-            -- Adapter Interface
-            frameDataRd    => frameDataRd(lane),
-            frameDataDout  => frameDataDout(lane).data,
-            frameDataFull  => frameDataFull(lane),
-            frameMetaRd    => frameMetaRd(lane),
-            frameMetaDout  => frameMetaDout(lane).metaData,
-            frameMetaValid => frameMetaValid(lane));
-
-      U_Adapter: entity pix2pgp.Pix2PgpLaneAdapter
-         generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G)
-         port map(
-            -- General Interface
-            sysClk         => sysClk,
-            sysRst         => sysRst,
-            -- Lane Interface
-            frameDataRd    => frameDataRd(lane),
-            frameDataDout  => frameDataDout(lane).data,
-            frameDataFull  => frameDataFull(lane),
-            frameMetaRd    => frameMetaRd(lane),
-            frameMetaDout  => frameMetaDout(lane).metaData,
-            frameMetaValid => frameMetaValid(lane),
             -- ASIC Rx Interface
             laneError      => laneError(lane),
             laneErrorAck   => laneErrorAck(lane),
@@ -612,6 +582,7 @@ begin
 
    end generate GEN_LANE;
 
-   singleAsicLane <= laneTxMasters(SINGLE_LANE_ID_G);
+   singleLaneMaster <= laneTxMasters(SINGLE_LANE_ID_G);
+   singleLaneSlave  <= laneTxSlaves(SINGLE_LANE_ID_G);
 
 end rtl;
