@@ -67,8 +67,9 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '1');
+   constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '1');
    constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
+   constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '1');
 
    type timeoutArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
 
@@ -127,6 +128,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       -- Registers
       fpgaId       : slv(31 downto 0);
       timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      laneEnable   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
       asicTxMaster : AxiStreamMasterType;
       laneTxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -151,6 +153,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       -- Registers
       fpgaId       => FPGA_ID_DEFAULT_C,
       timeoutLimit => TIMEOUT_LIMIT_DEFAULT_C,
+      laneEnable   => LANE_ENABLE_DEFAULT_C,
       -- AXI-Stream
       asicTxMaster => AXI_STREAM_MASTER_INIT_C,
       laneTxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -259,6 +262,7 @@ begin
 
       axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
       axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
+      axiSlaveRegister (axilEp, x"408", 0, v.laneEnable);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -284,7 +288,7 @@ begin
 
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane) := laneTxMasters(lane).tValid;
+         laneValid(lane) := laneTxMasters(lane).tValid and r.laneEnable(lane);
       end loop;
 
       allLanesReady := laneError or laneTimeout or laneValid;
