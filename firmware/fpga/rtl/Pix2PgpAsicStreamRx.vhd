@@ -69,7 +69,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '1');
    constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
-   constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '1');
+   constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
 
    type timeoutArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
 
@@ -84,6 +84,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal asicSroSync     : sl := '0';
    signal asicSroEnaSync  : sl := '0';
    signal asicRstSync     : sl := '0';
+   signal laneEnableSync  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '1');
 
    signal trgBuffWr       : sl := '0';
    signal trgBuffDin      : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
@@ -103,6 +104,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal readSlave       : AxiLiteReadSlaveType;
    signal writeMaster     : AxiLiteWriteMasterType;
    signal writeSlave      : AxiLiteWriteSlaveType;
+
+   signal pgpLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
+   signal sysLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
    type StateType is (
       IDLE_S,
@@ -196,6 +200,17 @@ begin
          dataIn  => asicRst,
          dataOut => asicRstSync);
 
+   U_SyncEnable : entity surf.SynchronizerVector
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => NUM_OF_SERIALIZERS_C)
+      port map (
+         clk     => pgpClk,
+         dataIn  => r.laneEnable,
+         dataOut => laneEnableSync);
+
    U_AxiLiteAsync : entity surf.AxiLiteAsync
       generic map (
          TPD_G           => TPD_G,
@@ -216,9 +231,9 @@ begin
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, sysRst, writeMaster, asicSroSync, asicSroEnaSync,
+   comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, asicSroEnaSync,
                    asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave,
-                   laneTimeout, laneError, laneTxMasters, r) is
+                   laneTimeout, laneError, laneTxMasters, laneEnableSync, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -286,13 +301,16 @@ begin
          v.trgBuffWr := '1';
       end if;
 
-      -- global status loop
+      -- global lane status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane) := laneTxMasters(lane).tValid and r.laneEnable(lane);
+         laneValid(lane) := laneTxMasters(lane).tValid;
+
+         if r.laneEnable(lane) = '1' then
+            allLanesReady(lane) := laneError(lane) or laneTimeout(lane) or laneValid(lane);
+         else
+            allLanesReady(lane) := '1';
+         end if;
       end loop;
-
-      allLanesReady := laneError or laneTimeout or laneValid;
-
 
       preamble := fpgaPreambleMap(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
       header   := fpgaHeaderMap(laneError, laneTimeout, laneValid);
@@ -308,7 +326,7 @@ begin
             v.laneErrorAck := (others => '0');
 
             -- new trigger in queue; register and pop the value
-            if trgBuffValidDly = '1' then
+            if trgBuffValidDly = '1' and toBoolean(uOr(r.laneEnable)) then
                v.trgCntBuff := trgBuffDoutDly;
                v.trgBuffRd  := '1';
                v.armTimeout := '1';
@@ -402,6 +420,16 @@ begin
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          timeoutLimit(lane) <= r.timeoutLimit;
          armTimeout(lane)   <= r.armTimeout and not(laneValid(lane));
+
+         -- enable mapping
+         if RST_POLARITY_G = '1' then
+            sysLaneRst(lane) <= sysRst or  not(r.laneEnable(lane));
+            pgpLaneRst(lane) <= pgpRst or  not(laneEnableSync(lane));
+         else
+            sysLaneRst(lane) <= sysRst and    (r.laneEnable(lane));
+            pgpLaneRst(lane) <= pgpRst and    (laneEnableSync(lane));
+         end if;
+
       end loop;
 
       laneErrorAck <= r.laneErrorAck;
@@ -522,9 +550,9 @@ begin
          port map(
             -- General Interface
             pgpClk         => pgpClk,
-            pgpRst         => pgpRst,
+            pgpRst         => pgpLaneRst(lane),
             sysClk         => sysClk,
-            sysRst         => sysRst,
+            sysRst         => sysLaneRst(lane),
             -- RX FIFO Interface
             pgpValid       => pgpValid(lane),
             pgpData        => pgpData(lane).data,

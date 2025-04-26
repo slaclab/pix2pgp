@@ -50,6 +50,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns;
+   constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
@@ -57,6 +58,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
+   signal revRst    : sl := '0';
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
@@ -304,13 +306,13 @@ begin
        generic map(
           TPD_G          => TPD_G,
           RST_ASYNC_G    => false,
-          RST_POLARITY_G => RST_POLARITY_G,
+          RST_POLARITY_G => REV_RST_POLARITY_C,
           FPGA_SYNTH_G   => FPGA_SYNTH_G,
           NUM_VC_G       => NUM_VC_G)
        port map(
           -- General Interface
           clk         => pgpClk,
-          rst         => rst,
+          rst         => revRst,
           -- Pix2Pgp Interface
           pgpDin      => pgpDataAsic(lane),
           pgpDinValid => pgpDataAsicValid(lane),
@@ -327,15 +329,15 @@ begin
       generic map(
          TPD_G                => TPD_G,
          RST_ASYNC_G          => false,
-         RST_POLARITY_G       => RST_POLARITY_G,
+         RST_POLARITY_G       => REV_RST_POLARITY_C,
          ASIC_ID_G            => 0,
          TIMEOUT_LIMIT_WIDTH_G => 16)
       port map(
          -- General Interface
          pgpClk           => pgpClk,
-         pgpRst           => rst,
+         pgpRst           => revRst,
          sysClk           => sysClk,
-         sysRst           => rst,
+         sysRst           => revRst,
          -- ASIC Domain Interface
          asicClk          => sparseClk,
          asicRst          => rst,
@@ -353,7 +355,7 @@ begin
          asicTxSlave      => asicTxSlave,
          -- AXI-Lite Interface
          axilClk          => sysClk,
-         axilRst          => rst,
+         axilRst          => revRst,
          axilReadMaster   => AXI_LITE_READ_MASTER_INIT_C,
          axilReadSlave    => open,
          axilWriteMaster  => AXI_LITE_WRITE_MASTER_INIT_C,
@@ -560,5 +562,7 @@ begin
     -- do not touch end
 
   end process stimulus;
+
+  revRst <= not(rst);
 
 end architecture;
