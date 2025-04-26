@@ -37,14 +37,6 @@ class LaneData(object):
         """
         Reset Class variables
         """
-        # header contents
-        self.overOcc        = False
-        self.pause          = False
-        self.colErr         = False
-        self.pauseErr       = False
-        self.dummy          = False
-        self.timeout        = False
-        self.trgCnt         = 0
 
         # populated by asicParamSet() (parameters have _ prefix)
         self._numOfCols     = None
@@ -53,12 +45,24 @@ class LaneData(object):
         # initialize the values
         self.asicParamSet()
 
+        # header contents
+        self.overOcc        = False
+        self.pause          = False
+        self.colErr         = False
+        self.pauseErr       = False
+        self.dummy          = False
+        self.timeout        = False
         self.colBitmask     = [False] * self._numOfCols
+        self.trgCnt         = 0
+
+        # column metadata
         self.colOverOcc     = [False] * self._numOfCols
         self.colPause       = [False] * self._numOfCols
         self.colId          = [0]     * self._numOfCols
         self.colTrgCnt      = [0]     * self._numOfCols
         self.colLen         = [0]     * self._numOfCols
+
+        # lane hits
         self.laneHits       = [[] for _ in range(self._numOfCols)]
 
         # evaluated by this class
@@ -144,21 +148,21 @@ class LaneData(object):
 
         # there's gotta be a better way to code this...
         if self._asicTypeSet == 'SparkPixS':
-            self.overOcc  = (_header >> 39) & 0x1
-            self.pause    = (_header >> 38) & 0x1
-            self.colErr   = (_header >> 37) & 0x1
-            self.pauseErr = (_header >> 36) & 0x1
-            self.dummy    = (_header >> 35) & 0x1
-            self.timeout  = (_header >> 34) & 0x1
+            self.overOcc  = bool((_header >> 39) & 0x1)
+            self.pause    = bool((_header >> 38) & 0x1)
+            self.colErr   = bool((_header >> 37) & 0x1)
+            self.pauseErr = bool((_header >> 36) & 0x1)
+            self.dummy    = bool((_header >> 35) & 0x1)
+            self.timeout  = bool((_header >> 34) & 0x1)
             _colBitmask   = (_header >>  8) & 0xFFFFFF
             self.trgCnt   = (_header >>  0) & 0xFF
         elif self._asicTypeSet == 'SparkPixT':
-            self.overOcc  = (_header >> 63) & 0x1
-            self.pause    = (_header >> 62) & 0x1
-            self.colErr   = (_header >> 61) & 0x1
-            self.pauseErr = (_header >> 60) & 0x1
-            self.dummy    = (_header >> 59) & 0x1
-            self.timeout  = (_header >> 58) & 0x1
+            self.overOcc  = bool((_header >> 63) & 0x1)
+            self.pause    = bool((_header >> 62) & 0x1)
+            self.colErr   = bool((_header >> 61) & 0x1)
+            self.pauseErr = bool((_header >> 60) & 0x1)
+            self.dummy    = bool((_header >> 59) & 0x1)
+            self.timeout  = bool((_header >> 58) & 0x1)
             _colBitmask   = (_header >>  8) & 0xFFFFFF
             self.trgCnt   = (_header >>  0) & 0xFF
 
@@ -167,7 +171,7 @@ class LaneData(object):
         if _colBitmask == 0:
             self.isEmpty = True
 
-        self.headerErr = self.colErr or self.pauseErr or self.timeout
+        self.headerErr = bool(self.colErr or self.pauseErr or self.timeout)
 
         if (self.headerErr or self._verbose) and not(self.dummy):
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
