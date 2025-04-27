@@ -22,11 +22,11 @@ class SparseDataFormatBase:
 class SparkPixSDataFormat(SparseDataFormatBase):
     def decoder(self, hit0, hit1, hitLen=2, asicData=False, fpgaTbData=False):
         if asicData:
-            _hitData0_dict = {'row':  (hit0 >>  0) & 0x3FF,
-                              'addr': (hit0 >> 10) & 0xFFFFF}
+            _hitData0_dict = {'row'    : (hit0 >>  0) & 0x3FF,
+                              'addr'   : (hit0 >> 10) & 0xFFFFF}
 
-            _hitData1_dict = {'row':  (hit1 >>  0) & 0x3FF,
-                              'addr': (hit1 >> 10) & 0xFFFFF}
+            _hitData1_dict = {'row'    : (hit1 >>  0) & 0x3FF,
+                              'addr'   : (hit1 >> 10) & 0xFFFFF}
         elif fpgaTbData:
             _hitData0_dict = {'hitCnt' : (hit0 >>  0) & 0x3FF,
                               'colId'  : (hit0 >> 10) & 0x3F,
@@ -53,15 +53,15 @@ class SparkPixSDataFormat(SparseDataFormatBase):
 class SparkPixTDataFormat(SparseDataFormatBase):
     def decoder(self, hit0, hit1, hitLen=2, asicData=False, fpgaTbData=False):
         if asicData:
-            _hitData0_dict = {'toaF':  (hit0 >>  0) & 0x7F,
-                              'toaC':  (hit0 >>  8) & 0xFF,
-                              'tot':   (hit0 >> 16) & 0xFF,
-                              'row':   (hit0 >> 24) & 0xFF}
+            _hitData0_dict = {'toaF'   : (hit0 >>  0) & 0x7F,
+                              'toaC'   : (hit0 >>  8) & 0xFF,
+                              'tot'    : (hit0 >> 16) & 0xFF,
+                              'row'    : (hit0 >> 24) & 0xFF}
 
-            _hitData1_dict = {'toaF':  (hit1 >>  0) & 0x7F,
-                              'toaC':  (hit1 >>  8) & 0xFF,
-                              'tot':   (hit1 >> 16) & 0xFF,
-                              'row':   (hit1 >> 24) & 0xFF}
+            _hitData1_dict = {'toaF'   : (hit1 >>  0) & 0x7F,
+                              'toaC'   : (hit1 >>  8) & 0xFF,
+                              'tot'    : (hit1 >> 16) & 0xFF,
+                              'row'    : (hit1 >> 24) & 0xFF}
         elif fpgaTbData:
             _hitData0_dict = {'hitCnt' : (hit0 >>  0) & 0x1FF,
                               'colId'  : (hit0 >> 10) & 0x3F,

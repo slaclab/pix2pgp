@@ -30,11 +30,23 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--dataFormat",
+    action   ="store_true",
+    help     = "Set to true if willing to use the ASIC-related data formatter",
+)
+
+parser.add_argument(
     "--asicType",
     type     = str,
     required = False,
     default  = 'SparkPixS',
     help     = "options: SparkPixS, SparkPixT",
+)
+
+parser.add_argument(
+    "--dataFormat",
+    action   ="store_true",
+    help     = "Set to true if willing to use the ASIC-related data formatter",
 )
 
 parser.add_argument(
@@ -63,9 +75,12 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
+    _dataFormat = args.dataFormat or args.asicData or args.fpgaTbData
+
     asicParser = pix2pgp.AsicData(asicType=args.asicType,
                                   asicData=args.asicData,
                                   fpgaTbData=args.fpgaTbData,
+                                  dataFormat=_dataFormat,
                                   verbose=args.verbose)
 
     asicParser.formatter(data=_dataArray, dataLen=len(_dataArray))

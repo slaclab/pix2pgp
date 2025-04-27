@@ -18,6 +18,7 @@ class LaneData(object):
                  asicType   = "SparkPixS",
                  asicData   = False,
                  fpgaTbData = False,
+                 dataFormat = False,
                  verbose    = 0,
                  laneId     = 0,
                  **kwargs):
@@ -30,6 +31,7 @@ class LaneData(object):
         self._asicTypeSet = asicType
         self._asicData    = asicData
         self._fpgaTbData  = fpgaTbData
+        self._dataFormat  = dataFormat
         self._verbose     = verbose
         self._laneId      = laneId
 
@@ -255,11 +257,17 @@ class LaneData(object):
             hit0 = (_hitData >> 32) & 0xFFFFFFFF
             hit1 = (_hitData >>  0) & 0xFFFFFFFF
 
-        self.laneHits[colBmskId].append(self.dataFormat(hit0=hit0,
-                                                        hit1=hit1,
-                                                        hitLen=hitLen,
-                                                        asicData=self._asicData,
-                                                        fpgaTbData=self._fpgaTbData))
+        if self._dataFormat:
+            self.laneHits[colBmskId].append(self.dataFormat.decoder(hit0=hit0,
+                                                                    hit1=hit1,
+                                                                    hitLen=hitLen,
+                                                                    asicData=self._asicData,
+                                                                    fpgaTbData=self._fpgaTbData))
+        else:
+            self.laneHits[colBmskId].append(hit0)
+
+            if hitLen > 1:
+                self.laneHits[colBmskId].append(hit1)
 
     #################################################################
 
