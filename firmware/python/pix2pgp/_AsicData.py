@@ -17,8 +17,10 @@ import pix2pgp
 
 class AsicData(object):
     def __init__(self,
-                 asicType = "SparkPixS",
-                 verbose  = 0,
+                 asicType   = "SparkPixS",
+                 asicData   = False,
+                 fpgaTbData = False,
+                 verbose    = 0,
                  **kwargs):
         """
         Class for the entire ASIC dataset.
@@ -33,6 +35,8 @@ class AsicData(object):
 
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
+        self._asicData    = asicData
+        self._fpgaTbData  = fpgaTbData
         self._verbose     = verbose
 
         # the real initialization method
@@ -62,7 +66,10 @@ class AsicData(object):
         self.asicParamSet()
 
         # initialize the lane decoding class
-        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet, verbose=self._verbose)
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet,
+                                            asicData=self._asicData,
+                                            fpgaTbData=self._fpgaTbData,
+                                            verbose=self._verbose)
 
         # call after self.asicParamSet
         # fpga header

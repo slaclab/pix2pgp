@@ -13,9 +13,11 @@ import click
 
 class LaneData(object):
     def __init__(self,
-                 asicType = "SparkPixS",
-                 verbose  = 0,
-                 laneId   = 0,
+                 asicType   = "SparkPixS",
+                 asicData   = False,
+                 fpgaTbData = False,
+                 verbose    = 0,
+                 laneId     = 0,
                  **kwargs):
 
         """
@@ -24,6 +26,8 @@ class LaneData(object):
 
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
+        self._asicData    = asicData
+        self._fpgaTbData  = fpgaTbData
         self._verbose     = verbose
         self._laneId      = laneId
 
@@ -40,6 +44,9 @@ class LaneData(object):
         # populated by asicParamSet() (parameters have _ prefix)
         self._numOfCols     = None
         self._dataLen       = None
+
+        # data format
+        self.dataFormat     = None
 
         # initialize the values
         self.asicParamSet()
@@ -126,9 +133,11 @@ class LaneData(object):
         if self._asicTypeSet == 'SparkPixS':
             self._numOfCols = 24
             self._dataLen   = 5
+            self.dataFormat = pix2pgp.SparkPixSDataFormat()
         elif self._asicTypeSet == 'SparkPixT':
             self._numOfCols = 24
             self._dataLen   = 8
+            self.dataFormat = pix2pgp.SparkPixTDataFormat()
         else:
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
@@ -234,21 +243,22 @@ class LaneData(object):
     def hitAlloc(self, colBmskId, hitData, hitLen):
         """
         Populates the associated data type with the hits
-        What happens to those hits and how they are decoded is determined later
         """
         _hitData = int(hitData, 16)
 
         if self._asicTypeSet == 'SparkPixS':
             hit0 = (_hitData >> 20) & 0xFFFFF
-            hit1 = (_hitData >> 0)  & 0xFFFFF
+            hit1 = (_hitData >>  0) & 0xFFFFF
         elif self._asicTypeSet == 'SparkPixT':
             hit0 = (_hitData >> 32) & 0xFFFFFFFF
-            hit1 = (_hitData >> 0)  & 0xFFFFFFFF
+            hit1 = (_hitData >>  0) & 0xFFFFFFFF
 
-        self.laneHits[colBmskId].append(hit0)
+        self.laneHits[colBmskId].append(self.dataFormat(hit0=hit0,
+                                                        hit1=hit1,
+                                                        hitLen=hitLen,
+                                                        asicData=self._asicData,
+                                                        fpgaTbData=self._fpgaTbData))
 
-        if hitLen > 1:
-            self.laneHits[colBmskId].append(hit1)
     #################################################################
 
     #################################################################
