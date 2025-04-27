@@ -346,9 +346,6 @@ class LaneData(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
-            self.done = True
-
-        if self.done:
             self.dataIndexEnd = index
             self.laneDataPrinter()
             self.done = True

@@ -111,6 +111,10 @@ class AsicData(object):
         # trailer
         self.trailerErr  = False
 
+        # data index
+        self.dataIndexStart = 0
+        self.dataIndexEnd   = 0
+
         # flag indicating that we are done processing
         self.done        = False
     #################################################################
@@ -137,6 +141,14 @@ class AsicData(object):
 
         # Parse them in
         self.eventParseFsm(frame=dat, size=dataLen)
+    #################################################################
+
+    #################################################################
+    def dataIndexStartSet(self, dataIndexStart):
+        """
+        Externally set the data index
+        """
+        self.dataIndexStart = dataIndexStart
     #################################################################
 
     #################################################################
@@ -322,7 +334,7 @@ class AsicData(object):
         """
 
         state   = "preamble_s"
-        index   = 0
+        index   = self.dataIndexStart
         laneSel = 0
         pause   = False
 
@@ -399,10 +411,11 @@ class AsicData(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
+            self.dataIndexEnd = index
             for lane in range(self._numOfLanes): self.asicDataPrinter(laneSel=lane)
             self.done = True
 
-    ################################################################
+    #################################################################
 
     #################################################################
     def asicDataPrinter(self, laneSel):

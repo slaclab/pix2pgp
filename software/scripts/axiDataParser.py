@@ -69,12 +69,23 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
+    _eventSize   = len(_dataArray)
+    currentIndex = 0
+
     _dataFormat = args.dataFormat or args.asicData or args.fpgaTbData
 
-    asicParser = pix2pgp.AsicData(asicType=args.asicType,
+    asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
                                   asicData=args.asicData,
                                   fpgaTbData=args.fpgaTbData,
                                   dataFormat=_dataFormat,
                                   verbose=args.verbose)
 
-    asicParser.formatter(data=_dataArray, dataLen=len(_dataArray))
+    while _eventSize > currentIndex:
+        asicDecoder.dataIndexStartSet(dataIndexStart=currentIndex)
+        asicDecoder.formatter(data=_dataArray, dataLen=len(_dataArray))
+
+        while not(asicDecoder.done):
+            time.sleep(0.1) # crude; sleep before checking again
+
+        currentIndex = asicDecoder.dataIndexEnd
+        asicDecoder.reset()
