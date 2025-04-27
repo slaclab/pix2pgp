@@ -244,8 +244,6 @@ class AsicData(object):
             # header data
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # flags are cumulative in case we are in pause
-            self.laneColBitmask[laneSel]     = copy.deepcopy(self.laneDecoder.colBitmask)
-
             self.laneGlblOverOcc[laneSel]    = (self.laneGlblOverOcc[laneSel] or
                                                copy.deepcopy(self.laneDecoder.overOcc))
             self.laneGlblPause[laneSel]      = (self.laneGlblPause[laneSel] or
@@ -259,7 +257,7 @@ class AsicData(object):
             self.laneGlblColTimeout[laneSel] = (self.laneGlblColTimeout[laneSel] or
                                                copy.deepcopy(self.laneDecoder.timeout))
             self.laneColBitmask[laneSel]     = (self.laneColBitmask[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.timeout))
+                                               copy.deepcopy(self.laneDecoder.colBitmask))
 
             # gets the last trgCnt (hopefully does not change within pauses)
             self.laneGlblTrgCnt[laneSel] = copy.deepcopy(self.laneDecoder.trgCnt)
@@ -293,6 +291,98 @@ class AsicData(object):
     #################################################################
 
     #################################################################
+    def eventParseFsm(self, frame, size):
+        """
+        Parsing the data in stages
+        Fist is the preamble
+        Then the FPGA-generated header
+        Then the Lane Contents, where a sub-class is used
+        Then the trailer
+        """
+
+        state   = "preamble_s"
+        index   = 0
+        laneSel = 0
+        pause   = False
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        while index < size:
+            # --------------------------------------------------------------------------------------
+            if state == "preamble_s":
+                laneSel = 0
+
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._preambleLen])
+                self.preambleEval(wordHex)
+
+                index += self._preambleLen
+                state = "header_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "header_s":
+
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._headerLen])
+                self.headerEval(wordHex)
+
+                index += self._headerLen
+
+                if any(self.laneValid):
+                    state = "laneValidCheck_s"
+                else:
+                    state = "trailer_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "laneValidCheck_s":
+
+                if laneSel < self._numOfLanes:
+                    if self.laneValid[laneSel]:
+                        state = "lane_s"
+                    else:
+                        laneSel += 1
+                else:
+                    state = "trailer_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "lane_s":
+
+                self.laneDecoder.dataIndexStartSet(dataIndexStart=index)
+                self.laneDecoder.laneIdSet(laneId=laneSel)
+                self.laneDecoder.formatter(data=frame, dataLen=size)
+
+                while not(self.laneDecoder.done):
+                    time.sleep(0.1) # crude; sleep before checking again
+
+                # get the index and the pause
+                index = self.laneDecoder.dataIndexEnd
+                pause = self.laneDecoder.pause
+
+                self.laneDecoder.reset()
+
+                # check if this was a pause; if not, done with lane
+                if not(pause):
+                    self.asicDataPrinter(laneSel=laneSel)
+                    laneSel += 1
+                    state = "laneValidCheck_s"
+                else:
+                    # in pause, more data for this lane -> re-evaluate
+                    state = "lane_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "trailer_s":
+
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._trailerLen])
+                self.trailerEval(wordHex)
+                index += self._trailerLen
+
+                # will re-evaluate the preamble if there are more data
+                state = "preamble_s"
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if index >= size:
+            self.done = True
+
+    ################################################################
+
+    #################################################################
     def asicDataPrinter(self, laneSel):
         """
         Prints out all the data
@@ -323,95 +413,3 @@ class AsicData(object):
             if not self.laneIsEmpty[laneSel]:
                 print(f"self.asicHits[{laneSel}] = {self.asicHits[laneSel]}")
     #################################################################
-
-    #################################################################
-    def eventParseFsm(self, frame, size):
-        """
-        Parsing the data in stages
-        Fist is the preamble
-        Then the FPGA-generated header
-        Then the Lane Contents, where a sub-class is used
-        Then the trailer
-        """
-
-        state   = "preamble_s"
-        index   = 0
-        laneSel = 0
-
-        while index < size:
-            # --------------------------------------------------------------------------------------
-            if state == "preamble_s":
-                laneSel = 0
-
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._preambleLen])
-                self.preambleEval(wordHex)
-
-                index += self._preambleLen
-                state = "header_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "header_s":
-
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._headerLen])
-                self.headerEval(wordHex)
-
-                index += self._headerLen
-
-                if any(self.laneValid):
-                    state = "bitmaskCheck_s"
-                else:
-                    state = "trailer_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "bitmaskCheck_s":
-
-                if laneSel < self._numOfLanes:
-                    if self.laneValid[laneSel]:
-                        state = "lane_s"
-                    else:
-                        laneSel += 1
-                else:
-                    state = "trailer_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "lane_s":
-
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + 5])
-                print(f"wordHex = {wordHex}")
-
-                self.laneDecoder.dataIndexStartSet(dataIndexStart=index)
-                self.laneDecoder.laneIdSet(laneId=laneSel)
-                self.laneDecoder.formatter(data=frame, dataLen=size)
-
-                while not(self.laneDecoder.done):
-                    time.sleep(0.1) # crude; sleep before checking again
-
-                self.extractLaneData(laneSel=laneSel)
-
-                index = copy.deepcopy(self.laneDecoder.dataIndexEnd)
-
-                self.laneDecoder.reset()
-
-                # check if this was a pause
-                if not(self.laneDecoder.pause):
-                    self.asicDataPrinter(laneSel=laneSel)
-                    laneSel += 1
-                    state = "bitmaskCheck_s"
-                else:
-                    # in pause, more data for this lane -> re-evaluate
-                    state == "lane_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "trailer_s":
-
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._trailerLen])
-                self.trailerEval(wordHex)
-                index += self._trailerLen
-
-                # will re-evaluate the preamble if there are more data
-                state = "preamble_s"
-
-        if index >= size:
-            self.done = True
-
-    ################################################################

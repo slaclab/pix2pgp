@@ -11,7 +11,6 @@
 import numpy as np
 import click
 
-
 class LaneData(object):
     def __init__(self,
                  asicType = "SparkPixS",
@@ -304,6 +303,10 @@ class LaneData(object):
 
                 # check this! there is a chance that after a post-pause-release,
                 # a column does not have more hits and writes dataLen = 0
+
+                # To-Do: Remove Me
+                print(f"[DEBUG]: bitmaskCheck_s: colSel={colSel}, index={index}, subLen={subLen}, colLen={self.colLen}")
+
                 if subLen > 0:
                     state = "parseHits_s"
                 else:
@@ -320,16 +323,58 @@ class LaneData(object):
 
                 subLen -= 2
 
+                # To-Do: Remove Me
+                print(f"[DEBUG]: bitmaskCheck_s: colSel={colSel}, index={index}, subLen={subLen}, colLen={self.colLen}")
+
                 if subLen <= 0:
                     colSel += 1
                     subLen = 0
                     state  = "bitmaskCheck_s"
-            #################################################################
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
             self.done = True
 
         if self.done:
             self.dataIndexEnd = index
+            print(f"[DEBUG]: FSM Completion: start={self.dataIndexStart}, end={self.dataIndexEnd}")
+            self.laneDataPrinter()
+            self.done = True
 
+    #################################################################
+    def laneDataPrinter(self):
+        """
+        Prints out all the data
+        """
+        if self._verbose:
+            print(f"self.laneDecoder.overOcc    = {self.overOcc}")
+            print(f"self.laneDecoder.pause      = {self.pause}")
+            print(f"self.laneDecoder.colErr     = {self.colErr}")
+            print(f"self.laneDecoder.pauseErr   = {self.pauseErr}")
+            print(f"self.laneDecoder.dummy      = {self.dummy}")
+            print(f"self.laneDecoder.timeout    = {self.timeout}")
+            print(f"self.laneDecoder.colBitmask = {self.colBitmask}")
+
+            # column metadata
+            print(f"self.laneDecoder.colOverOcc = {self.colOverOcc}")
+            print(f"self.laneDecoder.colPause   = {self.colPause}")
+            print(f"self.laneDecoder.colId      = {self.colId}")
+            print(f"self.laneDecoder.colTrgCnt  = {self.colTrgCnt}")
+            print(f"self.laneDecoder.colLen     = {self.colLen}")
+
+            # flags
+            print(f"self.laneDecoder.headerErr = {self.headerErr}")
+            print(f"self.laneDecoder.decErr    = {self.decErr}")
+            print(f"self.laneDecoder.isEmpty   = {self.isEmpty}")
+
+            # indices
+            print(f"self.laneDecoder.dataIndexStart = {self.dataIndexStart}")
+            print(f"self.laneDecoder.dataIndexEnd   = {self.dataIndexEnd}")
+
+            # done flag
+            # print(f"self.laneDecoder.done = {self.done}")
+
+            # actual hits
+            if not self.isEmpty:
+                print(f"self.laneDecoder.laneHits = {self.laneHits}")
     #################################################################
