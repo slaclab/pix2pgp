@@ -39,6 +39,7 @@ entity Pix2PgpLaneAdapter is
       frameDataRd    : out sl;
       frameDataDout  : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameDataFull  : in  sl;
+      frameDataValid : in  sl;
       frameMetaRd    : out sl;
       frameMetaDout  : in  slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
       frameMetaValid : in  sl;
@@ -112,7 +113,7 @@ architecture rtl of Pix2PgpLaneAdapter is
 begin
 
    comb : process (r, sysRst, frameDataDout, frameDataFull, laneErrorAck,
-                   frameMetaDout, frameMetaValid, sAxisSlave) is
+                   frameMetaDout, frameMetaValid, frameDataValid, sAxisSlave) is
 
       -- omnipresent
       variable v : RegType;

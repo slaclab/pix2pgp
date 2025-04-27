@@ -56,6 +56,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal frameMetaRd     : sl := '0';
    signal frameMetaDout   : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaValid  : sl := '0';
+   signal frameDataValid  : sl := '0';
    signal reverseTxMaster : AxiStreamMasterType;
    signal reverseTxSlave  : AxiStreamSlaveType;
 
@@ -80,6 +81,7 @@ begin
          frameDataRd    => frameDataRd,
          frameDataDout  => frameDataDout,
          frameDataFull  => frameDataFull,
+         frameDataValid => frameDataValid,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid);
@@ -97,6 +99,7 @@ begin
          frameDataRd    => frameDataRd,
          frameDataDout  => frameDataDout,
          frameDataFull  => frameDataFull,
+         frameDataValid => frameDataValid,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,

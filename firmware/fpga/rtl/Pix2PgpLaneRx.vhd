@@ -44,6 +44,7 @@ entity Pix2PgpLaneRx is
       frameDataRd    : in  sl;
       frameDataDout  : out slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameDataFull  : out sl;
+      frameDataValid : out sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
       frameMetaValid : out sl
@@ -395,7 +396,8 @@ begin
          -- Read Ports
          rd_clk   => sysClk,
          rd_en    => frameDataRd,
-         dout     => frameDataDout);
+         dout     => frameDataDout,
+         valid    => frameDataValid);
 
    U_PipelineDataRst : entity surf.SlvDelay
       generic map (
