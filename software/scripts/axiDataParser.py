@@ -44,12 +44,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--dataFormat",
-    action   ="store_true",
-    help     = "Set to true if willing to use the ASIC-related data formatter",
-)
-
-parser.add_argument(
     "--verbose",
     type     = int,
     required = False,
