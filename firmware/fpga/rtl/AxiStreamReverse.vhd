@@ -143,10 +143,12 @@ begin
          -- Accept the input word
          v.ibTxSlave.tReady := '1';
 
+         v.sAxisMaster.tUser  := ibTxMaster.tUser;
          v.sAxisMaster.tValid := ibTxMaster.tValid;
          v.sAxisMaster.tLast  := ibTxMaster.tLast;
          v.sAxisMaster.tKeep  := ibTxMaster.tKeep;
          v.sAxisMaster.tStrb  := ibTxMaster.tStrb;
+         v.sAxisMaster.tId    := ibTxMaster.tId;
       end if;
 
       -- data assignment (reversing)

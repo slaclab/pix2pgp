@@ -53,7 +53,7 @@ end Pix2PgpLaneAdapter;
 architecture rtl of Pix2PgpLaneAdapter is
 
    -- delay between reading of FIFO and writing into bus
-   constant WRITE_DELAY_C : positive := 1;
+   constant WRITE_DELAY_C : natural := 0;
 
    -- axi-stream gearbox configuration
    constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
@@ -112,8 +112,8 @@ architecture rtl of Pix2PgpLaneAdapter is
 
 begin
 
-   comb : process (r, sysRst, frameDataDout, frameDataFull, laneErrorAck,
-                   frameMetaDout, frameMetaValid, frameDataValid, sAxisSlave) is
+   comb : process (r, sysRst, frameDataFull, laneErrorAck, frameMetaDout,
+                   frameMetaValid, frameDataValid, sAxisSlave) is
 
       -- omnipresent
       variable v : RegType;
@@ -140,6 +140,11 @@ begin
       v.frameMetaRd := '0';
       v.frameDataRd := '0';
 
+      -- data-write counter before flow control check
+      if sAxisMaster.tValid = '1' and sAxisSlave.tReady = '1' then
+         v.dataWrCnt := r.dataWrCnt + 1;
+      end if;
+
       -- flow control check
       if v.sAxisSlave.tReady = '1' then
          v.sAxisMaster.tValid := '0';
@@ -149,8 +154,6 @@ begin
 
       -- default flags
       v.sAxisMaster.tKeep := (others => '1');
-      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := frameDataDout;
-
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
@@ -175,30 +178,31 @@ begin
          -- parse lane data
          when PARSE_FRAME_S =>
             if v.sAxisMaster.tValid = '0' then
+
                v.dataRdCnt   := r.dataRdCnt + 1;
                v.frameDataRd := '1';
+               v.sAxisMaster.tValid := '1';
 
-               -- ground the read if hit the limit
-               if r.dataRdCnt >= r.frameLen then
+               -- FIFO data have all been read
+               if r.dataRdCnt = r.frameLen then
                   v.frameDataRd := '0';
+                  v.dataRdCnt   := r.dataRdCnt;
                end if;
 
-               -- start writing to the axi bus if past the delay
-               if r.dataRdCnt >= WRITE_DELAY_C then
-                  v.dataWrCnt          := r.dataWrCnt + 1;
-                  v.sAxisMaster.tValid := '1';
-
-                  -- issue SoF if first word that is written
-                  if r.dataRdCnt = WRITE_DELAY_C then
-                     v.sAxisMaster.tUser(1) := '1';
-                  end if;
-
-                  -- done reading of lane
-                  if r.dataWrCnt = r.frameLen - 1 then
-                     v.sAxisMaster.tLast := '1';
-                     v.state             := IDLE_S;
-                  end if;
+               -- dataWrCnt incremented by another sub-process
+               -- first frame -> SoF
+               if r.dataWrCnt = 0 then
+                  v.sAxisMaster.tUser(1) := '1';
                end if;
+
+               -- done writing
+               if r.dataWrCnt = r.frameLen-1  and
+                  sAxisSlave.tReady     = '1' then
+                  --
+                  v.sAxisMaster.tLast := '1';
+                  v.state := IDLE_S;
+               end if;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -216,7 +220,15 @@ begin
       frameMetaRd <= r.frameMetaRd;
       frameDataRd <= r.frameDataRd;
       laneError   <= r.laneError;
-      sAxisMaster <= r.sAxisMaster;
+
+      -- All except for the data
+      sAxisMaster.tValid <= r.sAxisMaster.tValid;
+      sAxisMaster.tStrb  <= r.sAxisMaster.tStrb;
+      sAxisMaster.tKeep  <= r.sAxisMaster.tKeep;
+      sAxisMaster.tLast  <= r.sAxisMaster.tLast;
+      sAxisMaster.tDest  <= r.sAxisMaster.tDest;
+      sAxisMaster.tId    <= r.sAxisMaster.tId;
+      sAxisMaster.tUser  <= r.sAxisMaster.tUser;
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
@@ -236,6 +248,17 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   U_PipelineAxiDin : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => ASIC_DATABUS_DWIDTH_C,
+         DELAY_G        => WRITE_DELAY_C)
+      port map (
+         clk  => sysClk,
+         din  => frameDataDout,
+         dout => sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0));
 
    -----------------------------------------
    -- Axi-Stream Gearbox (1-to-8)
