@@ -43,20 +43,20 @@ entity Pix2PgpLaneRxWrapper is
       pgpData      : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       pgpReady     : out sl;
       -- ASIC Rx Interface
+      lastTrgCnt   : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneError    : out sl;
-      laneErrorAck : in  sl;
       laneTxMaster : out AxiStreamMasterType;
       laneTxSlave  : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
 
 architecture rtl of Pix2PgpLaneRxWrapper is
 
-   signal frameMetaRd    : sl := '0';
-   signal frameMetaDout  : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0) := (others => '0');
-   signal frameMetaValid : sl := '0';
-   signal rstDone        : sl := '0';
-   signal mAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal mAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal frameMetaRd      : sl := '0';
+   signal frameMetaDout    : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal frameMetaValid   : sl := '0';
+   signal laneRxRst        : sl := '0';
+   signal adapterAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal adapterAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
 begin
 
@@ -77,13 +77,13 @@ begin
          pgpData        => pgpData,
          pgpReady       => pgpReady,
          -- Adapter Interface
-         rstDone        => rstDone,
+         laneRxRst      => laneRxRst,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
-         -- AXI
-         mAxisMaster    => mAxisMaster,
-         mAxisSlave     => mAxisSlave);
+         -- AXI-Stream to Adapter
+         obAxisMaster   => adapterAxiMaster,
+         obAxisSlave    => adapterAxiSlave);
 
    U_Adapter: entity pix2pgp.Pix2PgpLaneAdapter
       generic map(
@@ -95,16 +95,16 @@ begin
          sysClk         => sysClk,
          sysRst         => sysRst,
          -- Lane Interface
-         rstDone        => rstDone,
+         laneRxRst      => laneRxRst,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
-         -- AXI
-         mAxisMaster    => mAxisMaster,
-         mAxisSlave     => mAxisSlave,
+         -- AXI-Stream from Lane
+         ibAxisMaster   => adapterAxiMaster,
+         ibAxisSlave    => adapterAxiSlave,
          -- ASIC Rx Interface
+         lastTrgCnt     => lastTrgCnt,
          laneError      => laneError,
-         laneErrorAck   => laneErrorAck,
          laneTxMaster   => laneTxMaster,
          laneTxSlave    => laneTxSlave);
 

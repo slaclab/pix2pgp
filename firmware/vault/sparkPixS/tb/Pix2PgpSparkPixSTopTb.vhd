@@ -95,7 +95,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    signal pgpValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal pgpData   : Pix2PgpFpgaRxDataArray := (others => DEFAULT_PIX2PGP_DATABUS_C);
+   signal pgpData   : Pix2PgpFpgaRxDataArray := (others => (others => '0'));
 
    signal laneError      : sl := '0';
    signal laneErrorAck   : sl := '1';
@@ -288,7 +288,7 @@ begin
           pgpDinReady => pgpDataAsicReady(lane),
           -- FPGA RX Interface
           pgpValid    => pgpValid(lane),
-          pgpData     => pgpData(lane).data,
+          pgpData     => pgpData(lane),
           pgpReady    => pgpReady(lane));
 
    end generate GEN_LANE;

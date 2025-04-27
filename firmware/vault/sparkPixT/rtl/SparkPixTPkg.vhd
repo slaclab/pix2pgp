@@ -198,11 +198,11 @@ package Pix2PgpPkg is
    --
 
    -- FPGA-RX related
-   constant LANERX_FIFO_ADDR_WIDTH_C     : integer := 10;
-   constant LANERX_FRAMELEN_WIDTH_C      : integer := TRGCNT_WIDTH_C;
-   constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
-   constant LANERX_FIFO_PIPE_C           : integer := 2;
-   constant AXIS_FIFO_WIDTH_C            : integer := 10;
+   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 10;
+   constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
+   constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
+   constant LANERX_FIFO_PIPE_C       : integer := 2;
+   constant AXIS_FIFO_WIDTH_C        : integer := 10;
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
@@ -221,16 +221,7 @@ package Pix2PgpPkg is
    constant FPGA_HEADER_LEN_C  : natural := 3*NUM_OF_SERIALIZERS_C;
    constant FPGA_TRAILER_LEN_C : natural := 64;
 
-   type Pix2PgpFpgaRxMetaBusType is record
-      -- flags begin
-      metaData : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
-   end record;
-
-   constant DEFAULT_PIX2PGP_FPGARX_METABUS_C : Pix2PgpFpgaRxMetaBusType := (
-      metaData => (others => '0'));
-
-   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpDataBusType;
-   type Pix2PgpFpgaRxMetaArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpFpgaRxMetaBusType;
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
 end Pix2PgpPkg;
 

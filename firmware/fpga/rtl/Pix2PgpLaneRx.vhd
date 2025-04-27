@@ -43,13 +43,13 @@ entity Pix2PgpLaneRx is
       pgpData        : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       pgpReady       : out sl;
       -- Adapter Interface
-      rstDone        : in  sl;
+      laneRxRst      : in  sl;
       frameMetaRd    : in  sl;
-      frameMetaDout  : out slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDout  : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       frameMetaValid : out sl;
-      -- AXI
-      mAxisMaster    : out AxiStreamMasterType;
-      mAxisSlave     : in  AxiStreamSlaveType
+      -- AXI-Stream to Adapter
+      obAxisMaster   : out AxiStreamMasterType;
+      obAxisSlave    : in  AxiStreamSlaveType
    );
 end Pix2PgpLaneRx;
 
@@ -86,7 +86,7 @@ architecture rtl of Pix2PgpLaneRx is
       toHeader      : sl;
       toMeta        : sl;
       toData        : sl;
-      frameMetaDin  : slv(LANERX_FRAMELEN_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       inPause       : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
@@ -128,10 +128,11 @@ architecture rtl of Pix2PgpLaneRx is
    signal protoBufRd    : sl := '0';
    signal protoBufDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
 
-   signal sysFifoRst    : sl := '0';
-   signal pgpFifoRst    : sl := '0';
+   signal sysFifoRst    : sl := not(RST_POLARITY_G);
+   signal pgpFifoRst    : sl := not(RST_POLARITY_G);
 
-   signal rstDoneSync   : sl := '0';
+   signal laneRst       : sl := not(RST_POLARITY_G);
+   signal laneRxRstSync : sl := not(RST_POLARITY_G);
 
    signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -163,18 +164,18 @@ begin
          dout     => protoBufDout,
          valid    => protoBufValid);
 
-   U_SyncRstDone : entity surf.Synchronizer
+   U_SynclaneRxRst : entity surf.Synchronizer
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map (
          clk     => pgpClk,
-         dataIn  => rstDone,
-         dataOut => rstDoneSync);
+         dataIn  => laneRxRst,
+         dataOut => laneRxRstSync);
 
-   comb : process (r, pgpRst, protoBufDout, protoBufValid, pgpError,
-                   protoBufFull, sAxisSlave, rstDoneSync) is
+   comb : process (r, laneRst, protoBufDout, protoBufValid,
+                   pgpError, protoBufFull, sAxisSlave) is
 
       -- omnipresent
       variable v : RegType;
@@ -350,13 +351,6 @@ begin
             v.fifoRst  := RST_POLARITY_G;
             v.decError := '1';
 
-            if rstDoneSync = '1' then
-               v.toHeader := '1';
-               v.toMeta   := '0';
-               v.toData   := '0';
-               v.state    := WAIT_HEADER_S;
-            end if;
-
       end case;
       ---------------------------------------------------------------------------
 
@@ -364,19 +358,17 @@ begin
       v.frameMetaWr := (v.sAxisMaster.tLast and not(r.sAxisMaster.tLast)) or
                        (v.decError          and not(r.decError));
 
-      v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-1)          := v.decError;
-      v.frameMetaDin(LANERX_FRAMELEN_BUFF_WIDTH_C-2 downto 0) := r.trgCntHeader;
+      protoBufRd  <= v.protoBufRd;
+
+      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
+      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := r.trgCntHeader;
 
       sAxisMaster <= r.sAxisMaster;
 
       pgpReady <= not(protoBufFull); -- on pgp domain
 
-      protoBufRd <= v.protoBufRd;
-
-      protoBufRst <= pgpRst or r.fifoRst;
-
       -- Reset
-      if (RST_ASYNC_G = false and pgpRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -385,9 +377,16 @@ begin
 
    end process comb;
 
-   seq : process (pgpClk, pgpRst) is
+   -- internal resets
+   laneRst     <= (pgpRst or laneRxRstSync) when RST_POLARITY_G = '1' else
+                  (pgpRst and not(laneRxRstSync));
+
+   protoBufRst <= (pgpRst or r.fifoRst) when RST_POLARITY_G = '1' else
+                  (pgpRst and not(r.fifoRst));
+
+   seq : process (pgpClk, laneRst) is
    begin
-      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and laneRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpClk) then
          r <= rin after TPD_G;
@@ -417,11 +416,12 @@ begin
          -- Master Port
          mAxisClk    => sysClk,
          mAxisRst    => sysFifoRst,
-         mAxisMaster => mAxisMaster,
-         mAxisSlave  => mAxisSlave);
+         mAxisMaster => obAxisMaster,
+         mAxisSlave  => obAxisSlave);
 
-   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst, not(sysRst));
-   pgpFifoRst <= ite(toBoolean(RST_POLARITY_G), pgpRst, not(pgpRst));
+   -- AXI-Stream FIFO does not have RST_POLARITY_G
+   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
+   pgpFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
    ----------------------------------------
    -- Metadata Buffer
@@ -434,10 +434,10 @@ begin
          MEMORY_TYPE_G   => "block",
          GEN_SYNC_FIFO_G => false, -- false = clock-domain-crossing FIFO
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => LANERX_FRAMELEN_BUFF_WIDTH_C, -- dataLen plus the error flag
+         DATA_WIDTH_G    => LANERX_META_BUFF_WIDTH_C, -- dataLen plus the error flag
          ADDR_WIDTH_G    => 4)
       port map (
-         rst      => sysRst,
+         rst      => pgpFifoRst,
          -- Write Ports
          wr_clk   => pgpClk,
          wr_en    => r.frameMetaWr,
