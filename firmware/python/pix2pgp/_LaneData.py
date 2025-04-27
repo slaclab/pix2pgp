@@ -10,6 +10,7 @@
 
 import numpy as np
 import click
+import json
 
 import pix2pgp
 

@@ -40,9 +40,9 @@ class SparkPixSDataFormat(SparseDataFormatBase):
             _hitData1_dict = {'raw'    : hit1}
 
         if hitLen > 1:
-            return { **_hitData0_dict, **_hitData1_dict }
+            return [_hitData0_dict, _hitData1_dict]
         elif hitLen == 1:
-            return { **_hitData0_dict }
+            return [_hitData0_dict]
         else:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Data Decoding Error!", bg='red', blink=True)
@@ -75,9 +75,9 @@ class SparkPixTDataFormat(SparseDataFormatBase):
             _hitData1_dict = {'raw'    : hit1}
 
         if hitLen > 1:
-            return { **_hitData0_dict, **_hitData1_dict }
+            return [_hitData0_dict, _hitData1_dict]
         elif hitLen == 1:
-            return { **_hitData0_dict }
+            return [_hitData0_dict]
         else:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Data Decoding Error!", bg='red', blink=True)
