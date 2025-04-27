@@ -313,6 +313,7 @@ begin
          asicSro         => sroFinal,
          asicSroEna      => '1',
          -- PGP4Rx Interface
+         pgpError        => (others => '0'),
          pgpValid        => pgpValid,
          pgpData         => pgpData,
          pgpReady        => pgpReady,
@@ -375,7 +376,7 @@ begin
      wait for CLK_PERIOD_SPARSE_C*93;
        for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
           for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-            hitLen(ser)(col) <= toSlv(50, hitLen(ser)(col)'length);
+            hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
           end loop;
        end loop;
          sro  <= '1';

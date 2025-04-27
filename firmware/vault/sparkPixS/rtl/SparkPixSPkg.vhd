@@ -202,7 +202,7 @@ package Pix2PgpPkg is
 
    -- FPGA-RX related
    constant LANERX_FIFO_ADDR_WIDTH_C     : integer := 10;
-   constant LANERX_FRAMELEN_WIDTH_C      : integer := 20;
+   constant LANERX_FRAMELEN_WIDTH_C      : integer := TRGCNT_WIDTH_C;
    constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
    constant LANERX_FIFO_PIPE_C           : integer := 2;
    constant AXIS_FIFO_WIDTH_C            : integer := 10;

@@ -18,7 +18,7 @@ import pix2pgp
 class AsicData(object):
     def __init__(self,
                  asicType = "SparkPixS",
-                 verbose  = False,
+                 verbose  = 0,
                  **kwargs):
         """
         Class for the entire ASIC dataset.
@@ -80,19 +80,18 @@ class AsicData(object):
         self.laneGlblPauseErr   = [False] * self._numOfLanes
         self.laneGlblDummy      = [False] * self._numOfLanes
         self.laneGlblColTimeout = [False] * self._numOfLanes
-        self.laneColBitmask     = [[False] for _ in range(self._numOfLanes)]
+        self.laneColBitmask     = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
         self.laneGlblTrgCnt     = [0]     * self._numOfLanes
 
         # lane column metadata
-        self.laneColOverOcc = [[False] for _ in range(self._numOfLanes)]
-        self.laneColPause   = [[False] for _ in range(self._numOfLanes)]
-        self.laneColId      = [[0]     for _ in range(self._numOfLanes)]
-        self.laneColTrgCnt  = [[0]     for _ in range(self._numOfLanes)]
-        self.laneColLen     = [0       for _ in range(self._numOfLanes)]
+        self.laneColOverOcc = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
+        self.laneColPause   = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
+        self.laneColId      = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
+        self.laneColTrgCnt  = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
+        self.laneColLen     = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
 
-        # lane data
-        #self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
-        self.asicHits = [[] for _ in range(self._numOfLanes)]
+        # data from all lanes
+        self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
 
         # lane-decoder-assigned flags
         self.laneHeaderErr = [False] * self._numOfLanes
@@ -170,17 +169,17 @@ class AsicData(object):
         elif self._asicTypeSet != self.asicTypeDict.get(self.asicType):
             self.preambleErr = True
 
-        if self.preambleErr or self._verbose:
+        if (self.preambleErr and self._verbose > 0) or self._verbose > 1:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
             _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
             print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
             print(f"")
-        if self.preambleErr:
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-            click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+            if self.preambleErr:
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
     #################################################################
 
 
@@ -201,7 +200,7 @@ class AsicData(object):
 
         self.headerErr  = _laneError > 0 or _laneTimeout > 0
 
-        if self.headerErr or self._verbose:
+        if (self.headerErr and self._verbose > 0) or self._verbose > 1:
             _format = 'LaneError={0:08b}           LaneTimeout={1:08b}           LaneValid={2:08b}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(_laneError, _laneTimeout, _laneValid))
@@ -223,7 +222,7 @@ class AsicData(object):
         if pix2pgp.Tools.toAscii(_pix2pgpId) != "pix2pgp":
             self.trailerErr = True
 
-        if self.trailerErr or self._verbose:
+        if (self.trailerErr and self._verbose > 0) or self._verbose > 1:
             print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
@@ -256,8 +255,12 @@ class AsicData(object):
                                                copy.deepcopy(self.laneDecoder.dummy))
             self.laneGlblColTimeout[laneSel] = (self.laneGlblColTimeout[laneSel] or
                                                copy.deepcopy(self.laneDecoder.timeout))
-            self.laneColBitmask[laneSel]     = (self.laneColBitmask[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.colBitmask))
+
+            # column bitmask is cumulative
+            _bmsk = copy.deepcopy(self.laneDecoder.colBitmask)
+            self.laneColBitmask[laneSel] = [
+                value or _bmsk[idx] for idx, value in enumerate(self.laneColBitmask[laneSel])
+            ]
 
             # gets the last trgCnt (hopefully does not change within pauses)
             self.laneGlblTrgCnt[laneSel] = copy.deepcopy(self.laneDecoder.trgCnt)
@@ -265,20 +268,27 @@ class AsicData(object):
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # column metadata
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
-            # flags are cumulative in case we are in pause
-            self.laneColOverOcc[laneSel] =  (self.laneColOverOcc[laneSel] or
-                                            copy.deepcopy(self.laneDecoder.colOverOcc))
-            self.laneColPause[laneSel]   =  (self.laneColPause[laneSel] or
-                                            copy.deepcopy(self.laneDecoder.colPause))
+            # individual column flags are cumulative in case we are in pause
+            _ooc = copy.deepcopy(self.laneDecoder.colOverOcc)
+            self.laneColOverOcc[laneSel] = [
+                value or _ooc[idx] for idx, value in enumerate(self.laneColOverOcc[laneSel])
+            ]
 
+            _pause = copy.deepcopy(self.laneDecoder.colPause)
+            self.laneColPause[laneSel] = [
+                value or _pause[idx] for idx, value in enumerate(self.laneColPause[laneSel])
+            ]
 
             # gets the last colId (hopefully does not change within pauses)
             self.laneColId[laneSel]      = copy.deepcopy(self.laneDecoder.colId)
             # gets the last trgCnt (hopefully does not change within pauses)
             self.laneColTrgCnt[laneSel]  = copy.deepcopy(self.laneDecoder.colTrgCnt)
+
             # increments the column Length
-            for idx in range(len(self.laneColLen)):
-                self.laneColLen[laneSel] += copy.deepcopy(self.laneDecoder.colLen[idx])
+            _len = copy.deepcopy(self.laneDecoder.colLen)
+            self.laneColLen[laneSel] = [
+                value + _len[idx] for idx, value in enumerate(self.laneColLen[laneSel])
+            ]
 
             # gets the last flags
             self.laneHeaderErr[laneSel]  = copy.deepcopy(self.laneDecoder.headerErr)
@@ -287,7 +297,9 @@ class AsicData(object):
 
             # actual hits
             if not self.laneIsEmpty[laneSel]:
-                self.asicHits[laneSel].extend(copy.deepcopy(self.laneDecoder.laneHits))
+                for colIdx in range(self._numOfCols):
+                    self.asicHits[laneSel][colIdx].extend(
+                        copy.deepcopy(self.laneDecoder.laneHits[colIdx]))
     #################################################################
 
     #################################################################
@@ -355,11 +367,11 @@ class AsicData(object):
                 index = self.laneDecoder.dataIndexEnd
                 pause = self.laneDecoder.pause
 
+                self.extractLaneData(laneSel=laneSel)
                 self.laneDecoder.reset()
 
                 # check if this was a pause; if not, done with lane
                 if not(pause):
-                    self.asicDataPrinter(laneSel=laneSel)
                     laneSel += 1
                     state = "laneValidCheck_s"
                 else:
@@ -378,6 +390,7 @@ class AsicData(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
+            for lane in range(self._numOfLanes): self.asicDataPrinter(laneSel=lane)
             self.done = True
 
     ################################################################
@@ -387,7 +400,7 @@ class AsicData(object):
         """
         Prints out all the data
         """
-        if laneSel < self._numOfLanes and self._verbose:
+        if laneSel < self._numOfLanes and self._verbose > 2:
             print(f"self.laneGlblOverOcc[{laneSel}]    = {self.laneGlblOverOcc[laneSel]}")
             print(f"self.laneGlblPause[{laneSel}]      = {self.laneGlblPause[laneSel]}")
             print(f"self.laneGlblColErr[{laneSel}]     = {self.laneGlblColErr[laneSel]}")

@@ -32,6 +32,14 @@ parser.add_argument(
     help     = "options: SparkPixS, SparkPixT",
 )
 
+parser.add_argument(
+    "--verbose",
+    type     = int,
+    required = False,
+    default  = 0,
+    help     = "Verbosity level: 0 = no printing, 1 = errors only, 2, 3, 4 varying levels of info.",
+)
+
 # Get the arguments
 args = parser.parse_args()
 
@@ -53,7 +61,7 @@ if __name__ == "__main__":
     _eventSize   = len(_dataArray)
     currentIndex = 0
 
-    laneDecoder = pix2pgp.LaneData(asicType=args.asicType, verbose=True)
+    laneDecoder = pix2pgp.LaneData(asicType=args.asicType, verbose=args.verbose)
 
     while _eventSize > currentIndex:
         laneDecoder.dataIndexStartSet(dataIndexStart=currentIndex)

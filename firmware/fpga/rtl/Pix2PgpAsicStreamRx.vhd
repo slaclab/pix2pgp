@@ -47,6 +47,7 @@ entity Pix2PgpAsicStreamRx is
       asicSro         : in  sl;
       asicSroEna      : in  sl;
       -- PGP4Rx Interface
+      pgpError        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgpData         : in  Pix2PgpFpgaRxDataArray;
       pgpReady        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -430,9 +431,10 @@ begin
             pgpLaneRst(lane) <= pgpRst and    (laneEnableSync(lane));
          end if;
 
+         laneErrorAck(lane) <= r.laneErrorAck(lane);
+
       end loop;
 
-      laneErrorAck <= r.laneErrorAck;
 
       -- AXI-Stream Outputs
       laneTxSlaves <= v.laneTxSlaves;
@@ -554,6 +556,7 @@ begin
             sysClk         => sysClk,
             sysRst         => sysLaneRst(lane),
             -- RX FIFO Interface
+            pgpError       => pgpError(lane),
             pgpValid       => pgpValid(lane),
             pgpData        => pgpData(lane).data,
             pgpReady       => pgpReady(lane),

@@ -31,6 +31,14 @@ parser.add_argument(
     help     = "options: SparkPixS, SparkPixT",
 )
 
+parser.add_argument(
+    "--verbose",
+    type     = int,
+    required = False,
+    default  = 0,
+    help     = "Verbosity level: 0 = no printing, 1 = errors only, 2, 3, 4 varying levels of info.",
+)
+
 # Get the arguments
 args = parser.parse_args()
 
@@ -49,5 +57,5 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
-    asicParser = pix2pgp.AsicData(asicType=args.asicType, verbose=True)
+    asicParser = pix2pgp.AsicData(asicType=args.asicType, verbose=args.verbose)
     asicParser.formatter(data=_dataArray, dataLen=len(_dataArray))

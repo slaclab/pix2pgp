@@ -14,7 +14,7 @@ import click
 class LaneData(object):
     def __init__(self,
                  asicType = "SparkPixS",
-                 verbose  = False,
+                 verbose  = 0,
                  laneId   = 0,
                  **kwargs):
 
@@ -142,7 +142,6 @@ class LaneData(object):
         """
         _header     = int(header, 16)
         _colBitmask = 0
-        _dummyPrint = "~~~~~~~~~~~~~~~~~~~~~~~~~~~ Dummy Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
         # there's gotta be a better way to code this...
@@ -172,12 +171,12 @@ class LaneData(object):
 
         self.headerErr = bool(self.colErr or self.pauseErr or self.timeout)
 
-        if (self.headerErr or self._verbose) and not(self.dummy):
+        if ((self.headerErr and self._verbose > 0) or self._verbose > 1) and not(self.dummy):
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
             print(_lanePrint)
             print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        if self.headerErr:
+        if self.headerErr and self._verbose > 0:
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
@@ -216,14 +215,14 @@ class LaneData(object):
         self.colTrgCnt[colBmskId]  = _colTrgCnt
         self.colLen[colBmskId]     = _colLen
 
-        if self.decErr:
+        if self.decErr and self._verbose > 0:
             print(f"_colId = {_colId}")
             print(f"colBmskId = {colBmskId}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Column ID Decoding Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
 
-        if _mismatch:
+        if _mismatch and self._verbose > 0:
             print(f"_colTrgCnt = {_colTrgCnt}")
             print(f"self.trgCnt = {self.trgCnt}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
@@ -303,10 +302,6 @@ class LaneData(object):
 
                 # check this! there is a chance that after a post-pause-release,
                 # a column does not have more hits and writes dataLen = 0
-
-                # To-Do: Remove Me
-                print(f"[DEBUG]: bitmaskCheck_s: colSel={colSel}, index={index}, subLen={subLen}, colLen={self.colLen}")
-
                 if subLen > 0:
                     state = "parseHits_s"
                 else:
@@ -323,9 +318,6 @@ class LaneData(object):
 
                 subLen -= 2
 
-                # To-Do: Remove Me
-                print(f"[DEBUG]: bitmaskCheck_s: colSel={colSel}, index={index}, subLen={subLen}, colLen={self.colLen}")
-
                 if subLen <= 0:
                     colSel += 1
                     subLen = 0
@@ -337,7 +329,6 @@ class LaneData(object):
 
         if self.done:
             self.dataIndexEnd = index
-            print(f"[DEBUG]: FSM Completion: start={self.dataIndexStart}, end={self.dataIndexEnd}")
             self.laneDataPrinter()
             self.done = True
 
@@ -346,7 +337,7 @@ class LaneData(object):
         """
         Prints out all the data
         """
-        if self._verbose:
+        if self._verbose > 3:
             print(f"self.laneDecoder.overOcc    = {self.overOcc}")
             print(f"self.laneDecoder.pause      = {self.pause}")
             print(f"self.laneDecoder.colErr     = {self.colErr}")
@@ -370,9 +361,6 @@ class LaneData(object):
             # indices
             print(f"self.laneDecoder.dataIndexStart = {self.dataIndexStart}")
             print(f"self.laneDecoder.dataIndexEnd   = {self.dataIndexEnd}")
-
-            # done flag
-            # print(f"self.laneDecoder.done = {self.done}")
 
             # actual hits
             if not self.isEmpty:
