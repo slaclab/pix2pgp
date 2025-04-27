@@ -11,6 +11,8 @@
 import numpy as np
 import click
 
+import pix2pgp
+
 class LaneData(object):
     def __init__(self,
                  asicType   = "SparkPixS",
