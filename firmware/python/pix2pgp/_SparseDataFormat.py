@@ -9,7 +9,7 @@
 # -------------------------------------------------------------------------------
 
 import click
-import sys.exit
+import sys
 
 class SparseDataFormatBase:
     '''
