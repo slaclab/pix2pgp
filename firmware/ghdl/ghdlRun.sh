@@ -77,8 +77,10 @@ SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 SURF_PKG_DIR=${SURF_DIR}/pkg
 SURF_PKG_ALL=${SURF_PKG_DIR}/*Pkg.vhd
 SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
+          "${SURF_PKG_DIR}/TextUtilPkg.vhd"
           "${SURF_PKG_DIR}/CrcPkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPkg.vhd"
+          "${SURF_PKG_DIR}/AxiLitePkg.vhd"
           "${SURF_PKG_DIR}/SsiPkg.vhd"
           "${SURF_PKG_DIR}/Pgp4Pkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd"
@@ -133,11 +135,13 @@ prepareSurf()
   # add files here accordingly
   # note that I add all the *Pkg.vhd in a separate dir that will be imported *first*;
   # otherwise, this ERROR shows up: `entity "xxx" is obsoleted by package "stdrtlpkg"` (or whatever *pkg)
+  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/TextUtilPkg.vhd                     ${SURF_PKG_DIR}/TextUtilPkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/StdRtlPkg.vhd                       ${SURF_PKG_DIR}/StdRtlPkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd              ${SURF_PKG_DIR}/Pgp4Pkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/CrcPkg.vhd                              ${SURF_PKG_DIR}/CrcPkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/ssi/rtl/SsiPkg.vhd                         ${SURF_PKG_DIR}/SsiPkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPkg.vhd                  ${SURF_PKG_DIR}/AxiStreamPkg.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-lite/rtl/AxiLitePkg.vhd                      ${SURF_PKG_DIR}/AxiLitePkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd ${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd
   ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/ArbiterPkg.vhd                      ${SURF_PKG_DIR}/ArbiterPkg.vhd
 
@@ -174,7 +178,9 @@ prepareSurf()
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd           ${SURF_DIR}/Pgp4TxLite.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd   ${SURF_DIR}/Pgp4TxLiteProtocol.vhd
   ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd    ${SURF_DIR}/Pgp4TxLiteWrapper.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-lite/rtl/AxiLiteAsync.vhd                    ${SURF_DIR}/AxiLiteAsync.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamMux.vhd                  ${SURF_DIR}/AxiStreamMux.vhd
+  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamFifoV2.vhd               ${SURF_DIR}/AxiStreamFifoV2.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamDeMux.vhd                ${SURF_DIR}/AxiStreamDeMux.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamGearbox.vhd              ${SURF_DIR}/AxiStreamGearbox.vhd
   ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamResize.vhd               ${SURF_DIR}/AxiStreamResize.vhd

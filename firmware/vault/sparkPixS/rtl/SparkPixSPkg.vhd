@@ -20,6 +20,7 @@ use ieee.std_logic_arith.all;
 
 library surf;
 use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
 
 package Pix2PgpPkg is
 
@@ -47,12 +48,15 @@ package Pix2PgpPkg is
 
    constant TRGCNT_WIDTH_C  : natural := 6; -- 6-bit counter to double-check alignment
 
+   -- in some ASIC implementations, the trigger counter should not increment upon receiving overOcc
+   constant INCR_TRGCNT_OVEROCC_C : boolean := True;
+
    -- data bus width is twice the pixel data width;
    -- to maximize bandwidth
-   constant DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+   constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
 
-   constant PGP_DWIDTH_C     : natural := 64;
-   constant SER_DWIDTH_C     : natural := 32;
+   constant PGP_DWIDTH_C : natural := 64;
+   constant SER_DWIDTH_C : natural := 32;
 
    -- status FIFO bus
    -- does not have the same width as the whole status bus;
@@ -96,7 +100,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusType is record
       -- flags begin
-      data : slv(DATABUS_DWIDTH_C-1 downto 0);
+      data : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_DATABUS_C : Pix2PgpDataBusType := (
@@ -104,18 +108,19 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpDataBusType;
 
+   constant ENA_PAUSE_TIMEOUT_C : boolean := False;
+
    ----------------------------
    -- Pix2Pgp data frame header
    ----------------------------
 
    -- the Pix2Pgp data frame header *has* to be an interger-multiple of the databus width
-   -- 8+8+24=40 -> DATABUS_DWIDTH_C=2*SPARSE_DWIDTH_C
-   --
+   -- i.e. = 40 for SparkPix-S
    -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
    -- the header has a standard trigger counter width that needs to be larger or equal
    -- to the actual trigger counter coming in from the columns;
    -- (the inbound trigger counter from the columns gets resized to fit)
-   constant HEADER_DWITDH_C       : natural := DATABUS_DWIDTH_C;
+   constant HEADER_DWIDTH_C       : natural := ASIC_DATABUS_DWIDTH_C;
    constant TRGCNT_HEADER_WIDTH_C : natural := 8;                        -- 8
    -- constant FLAGS_WIDTH_C         : natural := 8;                     -- 8  (unused)
    -- constant COL_BITMASK_WIDTH_C   : natural := NUM_OF_COL_MANAGERS_C; -- 24 (unused)
@@ -123,23 +128,23 @@ package Pix2PgpPkg is
    ---------------------------------------------
    -- Pix2Pgp data frame header bitmapping begin
    ---------------------------------------------
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWITDH_C-1;
-   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWITDH_C-2;
-   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWITDH_C-3;
-   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWITDH_C-4;
-   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWITDH_C-5;
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWITDH_C-6;
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 39
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 38
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 37
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 36
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 35
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 34
    ---------------------------------------------------------------------------
    -- reserved bits (only one left)
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWITDH_C-7
-                                              downto HEADER_DWITDH_C-8;
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7 -- [33:32]
+                                              downto HEADER_DWIDTH_C-8;
    ---------------------------------------------------------------------------
    -- col-bitmask
-   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWITDH_C-9
+   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWIDTH_C-9 -- [31:8]
                                               downto TRGCNT_HEADER_WIDTH_C;
    ---------------------------------------------------------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1
+   subtype  TRG_CNT_POS_C          is natural range  TRGCNT_HEADER_WIDTH_C-1 -- [7:0]
                                               downto 0;
    ---------------------------------------------------------------------------
    -------------------------------------------
@@ -150,7 +155,7 @@ package Pix2PgpPkg is
    -- Pix2Pgp column metadata bitmapping begin
    -------------------------------------------
    ---------------------------------------------------------------------------
-   subtype  META_FLAGS_POS_C   is natural range  DATABUS_DWIDTH_C-1 downto 24;
+   subtype  META_FLAGS_POS_C   is natural range  ASIC_DATABUS_DWIDTH_C-1 downto 24;
    ---------------------------------------------------------------------------
    subtype  META_COL_POS_C     is natural range  23 downto 16;
    ---------------------------------------------------------------------------
@@ -163,8 +168,16 @@ package Pix2PgpPkg is
    -----------------------------------------
 
    -- functions
-   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
-   function isDummy (din : slv) return boolean;
+   -- asic
+   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
+                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                          colBitmask: slv; trgCntGlbl: slv) return slv;
+   -- fpga
+   function isDummy        (din : slv) return boolean;
+   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv;
+   function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
+   function tKeepSet       (dataLen : natural) return slv;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- and it can also deduce how many data by reading the dataLen before each seq of hits
@@ -180,25 +193,50 @@ package Pix2PgpPkg is
 
    -- also, if a column yielded odd number of events, the last hit will have an extra 20-bit padding
    -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
-
-   constant GEARBOX_OUTPUT_WIDTH_C : natural := DATABUS_DWIDTH_C*8;
    --
-   -- functions stolen from numeric_std
-   function xsll       (inArg: slv; count: natural) return slv;
+   --
+   function powerOfTwo(N: natural) return slv;
+   -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
-   function leftShift  (inArg: unsigned; count: natural) return unsigned;
-   constant nau: unsigned(1 downto 0) := (others => '0');
    --
 
    -- FPGA-RX related
-   constant LANERX_FIFO_ADDR_WIDTH_C     : integer := 10;
-   constant LANERX_FRAMELEN_WIDTH_C      : integer := 20;
-   constant LANERX_FRAMELEN_BUFF_WIDTH_C : integer := LANERX_FRAMELEN_WIDTH_C+1;
-   constant LANERX_FIFO_PIPE_C           : integer := 2;
+   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 10;
+   constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
+   constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
+   constant LANERX_FIFO_PIPE_C       : integer := 2;
+   constant AXIS_FIFO_WIDTH_C        : integer := 10;
+
+   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
+   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+
+   constant FPGA_PREAMPLE_LEN_C : natural := 160;
+   constant ASIC_TYPE_C         : slv(31 downto  0) := toSlv(0, 32); -- SparPix-S = 0
+   constant FPGA_ID_DEFAULT_C   : slv(31 downto  0) := x"C0CAC01A";
+   constant PIX2PGP_ID_C        : slv(55 downto  0) := x"70"  -- p
+                                                     & x"69"  -- i
+                                                     & x"78"  -- x
+                                                     & x"32"  -- 2
+                                                     & x"70"  -- p
+                                                     & x"67"  -- g
+                                                     & x"70"; -- p
+
+   constant FPGA_HEADER_LEN_C  : natural := 3*NUM_OF_SERIALIZERS_C;
+   constant FPGA_TRAILER_LEN_C : natural := 64;
+
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
+
+   function powerOfTwo(N: natural) return slv is
+      variable result : slv(N downto 0);
+   begin
+      result := (others => '0');
+      result(N) := '1';
+      return result;
+   end function powerOfTwo;
 
    -- stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv is
@@ -215,41 +253,37 @@ package body Pix2PgpPkg is
 
    end rightShift;
 
-   function xsll (inArg: slv; count: natural) return slv is
-      constant argL   : integer := inArg'length-1;
-      alias    xarg   : slv(argL downto 0) is inArg;
-      variable result : slv(argL downto 0) := (others => '0');
-   begin
-
-      if count <= argL then
-         result(argL downto count) := xarg(argL-count downto 0);
-      end if;
-
-      return result;
-
-   end xsll;
-
-   function leftShift (inArg: unsigned; count: natural) return unsigned is
-   begin
-
-      if (inArg'length < 1) then return nau;
-      end if;
-
-      return unsigned(xsll(slv(inArg), count));
-   end leftShift;
-
    -- ASIC-related
-   function colMeta (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
-      variable retHeader: slv(DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
+      variable retMeta: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
-      retHeader(META_FLAGS_POS_C)   := resize(flags,  16);
-      retHeader(META_COL_POS_C)     := resize(col,     8);
-      retHeader(META_TRG_CNT_POS_C) := resize(trgCnt,  8);
-      retHeader(META_DATALEN_POS_C) := resize(dataLen, 8);
+      retMeta(META_FLAGS_POS_C)   := resize(flags,  16);
+      retMeta(META_COL_POS_C)     := resize(col,     8);
+      retMeta(META_TRG_CNT_POS_C) := resize(trgCnt,  8);
+      retMeta(META_DATALEN_POS_C) := resize(dataLen, 8);
+
+      return retMeta;
+   end colMetaMap;
+
+   function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
+                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                           colBitmask: slv; trgCntGlbl: slv) return slv is
+      variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   begin
+
+      retHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(dummyHeader);
+      retHeader(PAUSE_FLAG_POS_C)        := colPause      and not(dummyHeader);
+      retHeader(COLUMN_ERROR_FLAG_POS_C) := colFifoError  and not(dummyHeader);
+      retHeader(PAUSE_ERROR_FLAG_POS_C)  := colPauseError and not(dummyHeader);
+      retHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(dummyHeader);
+      retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
+      retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
+      retHeader(COL_BITMASK_POS_C)       := colBitmask;
+      retHeader(TRG_CNT_POS_C)           := resize(trgCntGlbl, 8);
 
       return retHeader;
-   end colMeta;
+   end asicHeaderMap;
 
    -- FPGA-related
    function isDummy (din: slv) return boolean is
@@ -279,5 +313,46 @@ package body Pix2PgpPkg is
       return retSlv;
 
    end function;
+
+   -- pretty much fixed
+   function fpgaPreambleMap (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
+      variable retPreamble: slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
+   begin
+
+      retPreamble(FPGA_PREAMPLE_LEN_C-1 downto 96) := resize(pix2pgpId, 64);
+      retPreamble(95 downto 64) := resize(asicType, 32);
+      retPreamble(63 downto 32) := resize(asicId,   32);
+      retPreamble(31 downto  0) := resize(fpgaId,   32);
+
+      return retPreamble;
+
+   end fpgaPreambleMap;
+
+   function tKeepSet (dataLen : natural) return slv is
+      variable retTkeep: slv(AXI_STREAM_MAX_TKEEP_WIDTH_C-1 downto 0) := (others => '0');
+      variable preambleBytes : natural := 1;
+   begin
+
+      preambleBytes := dataLen/8;
+
+      for i in 0 to preambleBytes-1 loop
+         retTkeep(i) := '1';
+      end loop;
+
+      return retTkeep;
+
+   end tKeepSet;
+
+   function fpgaHeaderMap (laneError: slv; laneTimeout: slv; laneValid: slv) return slv is
+      variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
+   begin
+
+      retHeader(FPGA_HEADER_LEN_C-1 downto 16) := resize(laneError, 8);
+      retHeader(15 downto  8) := resize(laneTimeout, 8);
+      retHeader(7  downto  0) := resize(laneValid,   8);
+
+      return retHeader;
+
+   end fpgaHeaderMap;
 
 end package body Pix2PgpPkg;

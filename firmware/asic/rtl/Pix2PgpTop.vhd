@@ -45,6 +45,7 @@ entity Pix2PgpTop is
       sparseRst    : in  sl;
       pgpRst       : in  sl;
       timeoutLimit : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      pauseLimit   : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
@@ -137,6 +138,7 @@ begin
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
          timeoutLimit  => timeoutLimit,
+         pauseLimit    => pauseLimit,
          columnEnable  => columnEnable,
          -- Column Manager Interface
          colBusy       => anyColBusy,
