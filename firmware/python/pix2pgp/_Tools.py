@@ -1,0 +1,35 @@
+# -------------------------------------------------------------------------------
+# -- This file is part of 'Pix2Pgp'.
+# -- It is subject to the license terms in the LICENSE.txt file found in the
+# -- top-level directory of this distribution and at:
+# --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# -- No part of 'Pix2Pgp', including this file,
+# -- may be copied, modified, propagated, or distributed except according to
+# -- the terms contained in the LICENSE.txt file.
+# -------------------------------------------------------------------------------
+
+class Tools:
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def toAscii(inputArg):
+
+        asciiChars = []
+
+        # first convert to hex (and remove the "0x" prefix)
+        hexString = hex(inputArg)[2:]
+
+        # ensure the hex string length is even
+        if len(hexString) % 2 != 0:
+            hexString = '0' + hexString
+
+        for i in range(0, len(hexString), 2):
+            _byteHex = hexString[i:i+2]
+            _byteInt = int(_byteHex, 16)
+            _char    = chr(_byteInt)
+            asciiChars.append(_char)
+
+        retString = ''.join(asciiChars)
+
+        return retString
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

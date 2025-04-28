@@ -13,6 +13,7 @@ use surf.AxiStreamPkg.all;
 use surf.SsiPkg.all;
 use surf.Pgp4Pkg.all;
 use surf.AxiStreamPacketizer2Pkg.all;
+use surf.AxiLitePkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -48,34 +49,67 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
+   constant CLK_PERIOD_SYS_C    : time := 6.25   ns;
+   constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
+   signal sysClk    : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
+   signal revRst    : sl := '0';
 
-   signal tokFb     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal sof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal eof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal overOcc   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal busy      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal ackN      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal wrEn      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal pause     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal pauseAck  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal sparseBusy: slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
-   signal din       : Pix2PgpSparseDinArray := (others => (others => '0'));
+   type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+
+   signal tokFb     : asicArray := (others => (others => '1'));
+   signal sof       : asicArray := (others => (others => '1'));
+   signal eof       : asicArray := (others => (others => '0'));
+   signal overOcc   : asicArray := (others => (others => '0'));
+   signal busy      : asicArray := (others => (others => '0'));
+   signal ackN      : asicArray := (others => (others => '1'));
+   signal wrEn      : asicArray := (others => (others => '0'));
+   signal pause     : asicArray := (others => (others => '0'));
+   signal pauseAck  : asicArray := (others => (others => '0'));
+   signal sparseBusy: asicArray := (others => (others => '0'));
+
+   signal allLanesMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal allLanesSlave  : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1)  := (others => AXI_STREAM_SLAVE_INIT_C);
+
+   type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
+   signal din : asicDinArray := (others => (others =>  (others => '0')));
 
    type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
-   signal hitLen  : hitLenArray := (others => (others => '0'));
 
-   signal pgpDataAsic      : slv(31 downto 0) := (others => '0');
-   signal pgpDataAsicValid : sl;
-   signal pgpDataAsicReady : sl;
+   type metaHitLenArray is array (0 to NUM_OF_SERIALIZERS_C-1) of hitLenArray;
 
-   signal pgpValid  : sl := '0';
-   signal pgpData   : slv(39 downto 0) := (others => '0');
+   signal hitLen  : metaHitLenArray := (others => (others => (others => '0')));
+
+   type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(31 downto 0);
+
+   signal pgpDataAsic      : pgpDataAsicType := (others => (others => '0'));
+   signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpDataAsicReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal pgpValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpData   : Pix2PgpFpgaRxDataArray := (others => (others => '0'));
+
+   signal laneError      : sl := '0';
+   signal laneErrorAck   : sl := '1';
+   signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
+
+   file myFile0 : text open write_mode is "pix2pgpLaneDataDump0.dat";
+   file myFile1 : text open write_mode is "pix2pgpLaneDataDump1.dat";
+   file myFile2 : text open write_mode is "pix2pgpLaneDataDump2.dat";
+   file myFile3 : text open write_mode is "pix2pgpLaneDataDump3.dat";
+   file myFile4 : text open write_mode is "pix2pgpLaneDataDump4.dat";
+   file myFile5 : text open write_mode is "pix2pgpLaneDataDump5.dat";
+   file myFile6 : text open write_mode is "pix2pgpLaneDataDump6.dat";
+   file myFile7 : text open write_mode is "pix2pgpLaneDataDump7.dat";
 
 begin
 
@@ -102,24 +136,16 @@ begin
          clkP => sparseClk,
          clkN => open);
 
-    writeDataProcess: process(pgpClk)
-
-    -- variables for file-writing
-    file myFile  : text open write_mode is "pix2pgpRxDataDump.dat";
-    variable row : line;
-
-  begin
-    if (rising_edge(pgpClk)) then
-        -- check if the valid flag is high
-        if pgpValid = '1' then
-          -- syntax: write(row_variable,what_to_write,
-          -- justification(right/left), trailing_whitespaces);
-          -- writeline(file_variable, row_variable);
-          hwrite(row, pgpData, right, 0);
-          writeline(myFile,row);
-        end if;
-      end if;
-  end process;
+   U_ClkRst_sysClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SYS_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sysClk,
+         clkN => open);
 
   issueSroProcess: process(sparseClk)
   begin
@@ -135,125 +161,175 @@ begin
    --------
    -- Pixel
    --------
-   GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-      U_DummyPixel : entity pix2pgp.DummySparkPixSPixel
+   GEN_SERIALIZER: for ser in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+      GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+         U_DummyPixel : entity pix2pgp.DummySparkPixSPixel
+            generic map(
+               TPD_G          => TPD_G,
+               RST_ASYNC_G    => RST_ASYNC_G,
+               RST_POLARITY_G => RST_POLARITY_G,
+               WAIT_FB_G      => 4,
+               WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
+               WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
+               COL_ID_G       => col)
+            port map(
+               clk      => sparseClk,
+               rst      => rst,
+               sro      => sroFinal,
+               pause    => pause(ser)(col),
+               hitLen   => hitLen(ser)(col),
+               pauseAck => pauseAck(ser)(col),
+               tok      => open,
+               tokFb    => tokFb(ser)(col),
+               ackN     => ackN(ser)(col),
+               wrEn     => wrEn(ser)(col),
+               dout     => din(ser)(col));
+
+         U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
+           generic map(
+             RST_POLARITY_G => RST_POLARITY_G,
+             COL_ID_G       => col)
+           port map(
+               clk             => sparseClk,
+               df_reset_n      => rst,
+               sro             => sroFinal,
+               tok_fb          => tokFb(ser)(col),
+               sparse_itf_busy => sparseBusy(ser)(col),
+               pix2pgp_busy    => busy(ser)(col),
+               sof             => sof(ser)(col),
+               eof             => eof(ser)(col),
+               over_occ        => overOcc(ser)(col));
+      end generate GEN_DUMMY_PIXEL;
+
+      ------
+      -- UUT
+      ------
+      U_Uut : entity pix2pgp.Pix2PgpSparkPixSTop
          generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            WAIT_FB_G      => 4,
-            WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
-            WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
-            COL_ID_G       => col)
+            TPD_G                      => TPD_G,
+            RST_ASYNC_G                => RST_ASYNC_G,
+            RST_POLARITY_G             => RST_POLARITY_G,
+            DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+            STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+            TIMEOUT_LIMIT_WIDTH_G      => TIMEOUT_LIMIT_WIDTH_G,
+            PIPELINE_DATA_G            => PIPELINE_DATA_G,
+            PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
+            COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+            COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
          port map(
-            clk      => sparseClk,
-            rst      => rst,
-            sro      => sroFinal,
-            pause    => pause(col),
-            hitLen   => hitLen(col),
-            pauseAck => pauseAck(col),
-            tok      => open,
-            tokFb    => tokFb(col),
-            ackN     => ackN(col),
-            wrEn     => wrEn(col),
-            dout     => din(col));
+            sparseClk    => sparseClk,
+            sparseRst    => rst,
+            pgpClk       => pgpClk,
+            pgpRst       => rst,
+            sel          => '1',
+            timeoutLimit => x"0FF",
+            pauseLimit   => x"00C",
+            columnEnable => x"FFFFFF",
+            pause        => pause(ser),
+            sof          => sof(ser),
+            eof          => eof(ser),
+            busy         => busy(ser),
+            overOcc      => overOcc(ser),
+            pauseAck     => pauseAck(ser),
+            wrEn         => wrEn(ser),
+            din0         => din(ser)(0),
+            din1         => din(ser)(1),
+            din2         => din(ser)(2),
+            din3         => din(ser)(3),
+            din4         => din(ser)(4),
+            din5         => din(ser)(5),
+            din6         => din(ser)(6),
+            din7         => din(ser)(7),
+            din8         => din(ser)(8),
+            din9         => din(ser)(9),
+            din10        => din(ser)(10),
+            din11        => din(ser)(11),
+            din12        => din(ser)(12),
+            din13        => din(ser)(13),
+            din14        => din(ser)(14),
+            din15        => din(ser)(15),
+            din16        => din(ser)(16),
+            din17        => din(ser)(17),
+            din18        => din(ser)(18),
+            din19        => din(ser)(19),
+            din20        => din(ser)(20),
+            din21        => din(ser)(21),
+            din22        => din(ser)(22),
+            din23        => din(ser)(23),
+            pgpDout      => pgpDataAsic(ser),
+            pgpDoutValid => pgpDataAsicValid(ser),
+            pgpDoutReady => pgpDataAsicReady(ser));
 
-      U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
-        generic map(
-          RST_POLARITY_G => RST_POLARITY_G,
-          COL_ID_G       => col)
-        port map(
-            clk             => sparseClk,
-            df_reset_n      => rst,
-            sro             => sroFinal,
-            tok_fb          => tokFb(col),
-            sparse_itf_busy => sparseBusy(col),
-            pix2pgp_busy    => busy(col),
-            sof             => sof(col),
-            eof             => eof(col),
-            over_occ        => overOcc(col));
-   end generate GEN_DUMMY_PIXEL;
-
-   ------
-   -- UUT
-   ------
-   U_Uut : entity pix2pgp.Pix2PgpSparkPixSTop
-      generic map(
-         TPD_G                      => TPD_G,
-         RST_ASYNC_G                => RST_ASYNC_G,
-         RST_POLARITY_G             => RST_POLARITY_G,
-         DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
-         STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-         TIMEOUT_LIMIT_WIDTH_G      => TIMEOUT_LIMIT_WIDTH_G,
-         PIPELINE_DATA_G            => PIPELINE_DATA_G,
-         PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
-         COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
-         COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
-      port map(
-         sparseClk    => sparseClk,
-         sparseRst    => rst,
-         pgpClk       => pgpClk,
-         pgpRst       => rst,
-         sel          => '1',
-         timeoutLimit => x"0FF",
-         pauseLimit   => x"00C",
-         columnEnable => x"FFFFFF",
-         pause        => pause,
-         sof          => sof,
-         eof          => eof,
-         busy         => busy,
-         overOcc      => overOcc,
-         pauseAck     => pauseAck,
-         wrEn         => wrEn,
-         din0         => din(0),
-         din1         => din(1),
-         din2         => din(2),
-         din3         => din(3),
-         din4         => din(4),
-         din5         => din(5),
-         din6         => din(6),
-         din7         => din(7),
-         din8         => din(8),
-         din9         => din(9),
-         din10        => din(10),
-         din11        => din(11),
-         din12        => din(12),
-         din13        => din(13),
-         din14        => din(14),
-         din15        => din(15),
-         din16        => din(16),
-         din17        => din(17),
-         din18        => din(18),
-         din19        => din(19),
-         din20        => din(20),
-         din21        => din(21),
-         din22        => din(22),
-         din23        => din(23),
-         pgpDout      => pgpDataAsic,
-         pgpDoutValid => pgpDataAsicValid,
-         pgpDoutReady => pgpDataAsicReady);
+   end generate GEN_SERIALIZER;
 
    -------
    -- FPGA
    -------
-   U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
-    generic map(
-       TPD_G          => TPD_G,
-       RST_ASYNC_G    => RST_ASYNC_G,
-       RST_POLARITY_G => RST_POLARITY_G,
-       FPGA_SYNTH_G   => FPGA_SYNTH_G,
-       NUM_VC_G       => NUM_VC_G)
-    port map(
-       -- General Interface
-       clk         => pgpClk,
-       rst         => rst,
-       -- Pix2Pgp Interface
-       pgpDin      => pgpDataAsic,
-       pgpDinValid => pgpDataAsicValid, -- has to be connected; otherwise pgp does not align
-       pgpDinReady => pgpDataAsicReady, -- does not have to be connected
-       -- FPGA RX Interface
-       pgpValid    => pgpValid,
-       pgpData     => pgpData);
+
+   -- same stream on all lanes
+   GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+      -- pgp4 wrapper
+      U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
+       generic map(
+          TPD_G          => TPD_G,
+          RST_ASYNC_G    => false,
+          RST_POLARITY_G => REV_RST_POLARITY_C,
+          FPGA_SYNTH_G   => FPGA_SYNTH_G,
+          NUM_VC_G       => NUM_VC_G)
+       port map(
+          -- General Interface
+          clk         => pgpClk,
+          rst         => revRst,
+          -- Pix2Pgp Interface
+          pgpDin      => pgpDataAsic(lane),
+          pgpDinValid => pgpDataAsicValid(lane),
+          pgpDinReady => pgpDataAsicReady(lane),
+          -- FPGA RX Interface
+          pgpValid    => pgpValid(lane),
+          pgpData     => pgpData(lane),
+          pgpReady    => pgpReady(lane));
+
+   end generate GEN_LANE;
+
+   -- asic stream receiver and merger
+   U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
+      generic map(
+         TPD_G                => TPD_G,
+         RST_ASYNC_G          => false,
+         RST_POLARITY_G       => REV_RST_POLARITY_C,
+         ASIC_ID_G            => 0,
+         TIMEOUT_LIMIT_WIDTH_G => 16)
+      port map(
+         -- General Interface
+         pgpClk          => pgpClk,
+         pgpRst          => revRst,
+         sysClk          => sysClk,
+         sysRst          => revRst,
+         -- ASIC Domain Interface
+         asicClk         => sparseClk,
+         asicRst         => rst,
+         asicSro         => sroFinal,
+         asicSroEna      => '1',
+         -- PGP4Rx Interface
+         pgpError        => (others => '0'),
+         pgpValid        => pgpValid,
+         pgpData         => pgpData,
+         pgpReady        => pgpReady,
+         -- Individual Axi Lanes for Debugging
+         allLanesMaster  => allLanesMaster,
+         allLanesSlave   => allLanesSlave,
+         -- AXI-Stream Rx Interface
+         asicTxMaster    => asicTxMaster,
+         asicTxSlave     => asicTxSlave,
+         -- AXI-Lite Interface
+         axilClk         => sysClk,
+         axilRst         => revRst,
+         axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
+         axilReadSlave   => open,
+         axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
+         axilWriteSlave  => open);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -269,8 +345,10 @@ begin
 
     -- Wait for the rst to be released before doing anything else
     wait until (rst = not(RST_POLARITY_G));
-    for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-      hitLen(col) <= toSlv(0, hitLen(col)'length);
+    for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+         hitLen(ser)(col) <= toSlv(0, hitLen(ser)(col)'length);
+       end loop;
     end loop;
 
     wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
@@ -284,3822 +362,233 @@ begin
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*93;
-       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(4, hitLen(col)'length);
-       end loop;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro  <= '0';
 
-     wait for CLK_PERIOD_SPARSE_C*93;
-      hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-      hitLen(1)  <= toSlv(3,  hitLen(5)'length);
-      hitLen(2)  <= toSlv(0,  hitLen(5)'length);
-      hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-      hitLen(4)  <= toSlv(1,  hitLen(5)'length);
-      hitLen(5)  <= toSlv(2,  hitLen(5)'length);
-      hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-      hitLen(7)  <= toSlv(2,  hitLen(7)'length);
-      hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-      hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-      hitLen(10) <= toSlv(4,  hitLen(5)'length);
-      hitLen(11) <= toSlv(3,  hitLen(5)'length);
-      hitLen(12) <= toSlv(0,  hitLen(5)'length);
-      hitLen(13) <= toSlv(3,  hitLen(5)'length);
-      hitLen(14) <= toSlv(0,  hitLen(5)'length);
-      hitLen(15) <= toSlv(2,  hitLen(5)'length);
-      hitLen(16) <= toSlv(0,  hitLen(6)'length);
-      hitLen(17) <= toSlv(1,  hitLen(7)'length);
-      hitLen(18) <= toSlv(1,  hitLen(8)'length);
-      hitLen(19) <= toSlv(0,  hitLen(9)'length);
-      hitLen(20) <= toSlv(3,  hitLen(5)'length);
-      hitLen(21) <= toSlv(0,  hitLen(5)'length);
-      hitLen(22) <= toSlv(4,  hitLen(5)'length);
-      hitLen(23) <= toSlv(0,  hitLen(5)'length);
-      sro  <= '1';
+    wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
       sro  <= '0';
 
-    wait for CLK_PERIOD_SPARSE_C*93;
-      hitLen(0)  <= toSlv(2,  hitLen(5)'length);
-      hitLen(1)  <= toSlv(3,  hitLen(5)'length);
-      hitLen(2)  <= toSlv(1,  hitLen(5)'length);
-      hitLen(3)  <= toSlv(3,  hitLen(5)'length);
-      hitLen(4)  <= toSlv(1,  hitLen(5)'length);
-      hitLen(5)  <= toSlv(2,  hitLen(5)'length);
-      hitLen(6)  <= toSlv(3,  hitLen(6)'length);
-      hitLen(7)  <= toSlv(2,  hitLen(7)'length);
-      hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-      hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-      hitLen(10) <= toSlv(4,  hitLen(5)'length);
-      hitLen(11) <= toSlv(3,  hitLen(5)'length);
-      hitLen(12) <= toSlv(5,  hitLen(5)'length);
-      hitLen(13) <= toSlv(3,  hitLen(5)'length);
-      hitLen(14) <= toSlv(1,  hitLen(5)'length);
-      hitLen(15) <= toSlv(2,  hitLen(5)'length);
-      hitLen(16) <= toSlv(3,  hitLen(6)'length);
-      hitLen(17) <= toSlv(3,  hitLen(7)'length);
-      hitLen(18) <= toSlv(1,  hitLen(8)'length);
-      hitLen(19) <= toSlv(4,  hitLen(9)'length);
-      hitLen(20) <= toSlv(2,  hitLen(5)'length);
-      hitLen(21) <= toSlv(2,  hitLen(5)'length);
-      hitLen(22) <= toSlv(6,  hitLen(5)'length);
-      hitLen(23) <= toSlv(0,  hitLen(5)'length);
-      sro  <= '1';
+   wait for CLK_PERIOD_SPARSE_C*93;
+      sro <= '1';
     wait for CLK_PERIOD_SPARSE_C*2;
       sro  <= '0';
 
-    -----------------------------------------------------------------------------
-    -- reset test begin
-    -----------------------------------------------------------------------------
-    -- wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to make sure data are tx'd
-    --  rst <= RST_POLARITY_G;
-    -- wait for CLK_PERIOD_SPARSE_C*100;
-    --  rst  <= not(RST_POLARITY_G);
-
-    -- wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
-    --  sro <= '1';
-    -- wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro <= '0';
-    -----------------------------------------------------------------------------
-    -- reset test end
-    -----------------------------------------------------------------------------
-
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --    hitLen(col) <= toSlv(3, hitLen(col)'length);
-     --  end loop;
-     --    sro <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --    sro  <= '0';
-
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --    hitLen(col) <= toSlv(1, hitLen(col)'length);
-     --  end loop;
-     --    sro <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --    sro  <= '0';
-
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --  hitLen(col) <= toSlv(2, hitLen(col)'length);
-     --end loop;
-     --  sro <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --  sro  <= '0';
-
-     --wait for CLK_PERIOD_SPARSE_C*93;
-     --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-     --  hitLen(col) <= toSlv(0, hitLen(col)'length);
-     --end loop;
-     --  sro <= '1';
-     --wait for CLK_PERIOD_SPARSE_C*2;
-     --  sro  <= '0';
-    ----------------------------------------------
-    ----------------------------------------------
-    -- regular stimuli end
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 12 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(3, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 14 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-    --  end loop;
-    --    sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --    sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(4, hitLen(col)'length);
-    --  end loop;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(5) <= toSlv(3, hitLen(5)'length);
-    --  hitLen(6) <= toSlv(1, hitLen(6)'length);
-    --  hitLen(7) <= toSlv(2, hitLen(7)'length);
-    --  hitLen(8) <= toSlv(3, hitLen(8)'length);
-    --  hitLen(9) <= toSlv(4, hitLen(9)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    ----  will force pause
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    -- hitLen(5) <= toSlv(13, hitLen(5)'length);
-    -- hitLen(6) <= toSlv(6,  hitLen(6)'length);
-    -- hitLen(7) <= toSlv(3,  hitLen(7)'length);
-    -- hitLen(8) <= toSlv(15, hitLen(8)'length);
-    -- hitLen(9) <= toSlv(1,  hitLen(9)'length);
-    -- sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    -- sro  <= '0';
-
-    -- -- will force pause
-    wait for CLK_PERIOD_SPARSE_C*93;
-     hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(1)  <= toSlv(31,  hitLen(5)'length);
-     hitLen(2)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-     hitLen(4)  <= toSlv(4,  hitLen(5)'length);
-     hitLen(5)  <= toSlv(24,  hitLen(5)'length);
-     hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-     hitLen(7)  <= toSlv(1,  hitLen(7)'length);
-     hitLen(8)  <= toSlv(5,  hitLen(8)'length);
-     hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-     hitLen(10) <= toSlv(4,  hitLen(5)'length);
-     hitLen(11) <= toSlv(20,  hitLen(5)'length);
-     hitLen(12) <= toSlv(0,  hitLen(5)'length);
-     hitLen(13) <= toSlv(3,  hitLen(5)'length);
-     hitLen(14) <= toSlv(4,  hitLen(5)'length);
-     hitLen(15) <= toSlv(2,  hitLen(5)'length);
-     hitLen(16) <= toSlv(0,  hitLen(6)'length);
-     hitLen(17) <= toSlv(2,  hitLen(7)'length);
-     hitLen(18) <= toSlv(18,  hitLen(8)'length);
-     hitLen(19) <= toSlv(0,  hitLen(9)'length);
-     hitLen(20) <= toSlv(3,  hitLen(5)'length);
-     hitLen(21) <= toSlv(0,  hitLen(5)'length);
-     hitLen(22) <= toSlv(4,  hitLen(5)'length);
-     hitLen(23) <= toSlv(0,  hitLen(5)'length);
-     sro  <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-     sro  <= '0';
-
-    wait for CLK_PERIOD_SPARSE_C*1093;
-       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         hitLen(col) <= toSlv(0, hitLen(col)'length);
-       end loop;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro  <= '0';
-
-     -- blast it; use with VCS (ghdl is not fast enough)
-     --for trg in 0 to 1023 loop
-     --  wait for CLK_PERIOD_SPARSE_C*93;
-     -- hitLen(col) <= toSlv(4, hitLen(col)'length);
-     --   sro <= '1';
-     --  wait for CLK_PERIOD_SPARSE_C*2;
-     --   sro <= '0';
-     --end loop;
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(1)  <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(3)  <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(4)  <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(5)  <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(6)  <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(1,  hitLen(7)'length);
-    --  hitLen(8)  <= toSlv(0,  hitLen(8)'length);
-    --  hitLen(9)  <= toSlv(0,  hitLen(9)'length);
-    --  hitLen(10) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(11) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(12) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(13) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(14) <= toSlv(0,  hitLen(5)'length);
-    --  hitLen(15) <= toSlv(3,  hitLen(5)'length);
-    --  hitLen(16) <= toSlv(0,  hitLen(6)'length);
-    --  hitLen(17) <= toSlv(2,  hitLen(7)'length);
-    --  hitLen(18) <= toSlv(1,  hitLen(8)'length);
-    --  hitLen(19) <= toSlv(2,  hitLen(9)'length);
-    --  hitLen(20) <= toSlv(4,  hitLen(5)'length);
-    --  hitLen(21) <= toSlv(2,  hitLen(5)'length);
-    --  hitLen(22) <= toSlv(1,  hitLen(5)'length);
-    --  hitLen(23) <= toSlv(2,  hitLen(5)'length);
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
-    --  hitLen(12) <= toSlv(3, hitLen(8)'length);
-    --  hitLen(20) <= toSlv(4, hitLen(9)'length);
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --    hitLen(col) <= toSlv(0, hitLen(col)'length);
-    --  end loop;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    -- overocc test
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
-    --  hitLen(4)  <= toSlv(2, hitLen(7)'length);
-    --  hitLen(7)  <= toSlv(25, hitLen(8)'length);
-    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(2, hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(4, hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
-    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
-    --  hitLen(20) <= toSlv(3, hitLen(9)'length);
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  hitLen(0)  <= toSlv(3, hitLen(5)'length);
-    --  hitLen(2)  <= toSlv(1, hitLen(6)'length);
-    --  hitLen(7)  <= toSlv(2, hitLen(7)'length);
-    --  hitLen(12) <= toSlv(2, hitLen(8)'length);
-    --  hitLen(20) <= toSlv(4, hitLen(9)'length);
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --     hitLen(col) <= toSlv(0, hitLen(col)'length);
-    --  end loop;
-    --  sro  <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  hitLen(col) <= toSlv(0, hitLen(col)'length);
-    --end loop;
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  hitLen(col) <= toSlv(1, hitLen(col)'length);
-    --end loop;
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-    --wait for CLK_PERIOD_SPARSE_C*93;
-    --  for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-    --  hitLen(col) <= toSlv(1, hitLen(col)'length);
-    --end loop;
-    --  sro <= '1';
-    --wait for CLK_PERIOD_SPARSE_C*2;
-    --  sro  <= '0';
-
-  -- verification-generated
-  ----------------------------------------
-  --------------- hit = 0 ---------------
-  ----------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 1 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 2 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 3 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 4 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 5 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 6 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 7 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 8 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 9 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(7, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 10 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 11 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 12 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 13 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 14 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 15 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 16 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(0, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 17 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 18 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 19 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 20 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 21 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 22 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 23 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(0, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 24 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 25 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 26 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(10, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 27 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 28 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 29 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 30 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 31 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 32 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 33 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 34 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 35 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 36 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 37 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 38 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 39 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(11, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 40 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 41 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 42 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(0, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 43 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 44 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 45 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(8, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 46 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 47 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 48 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 49 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 50 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 51 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(13, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 52 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 53 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 54 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 55 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 56 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 57 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(7, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 58 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 59 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 60 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 61 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 62 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 63 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(0, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 64 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 65 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 66 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 67 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 68 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(10, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 69 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 70 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(0, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 71 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 72 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 73 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 74 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 75 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 76 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 77 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(10, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 78 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 79 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 80 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 81 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 82 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 83 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 84 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(11, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 85 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 86 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(7, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 87 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 88 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(6, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 89 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(10, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 90 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 91 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 92 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(10, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(5, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 93 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 94 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 95 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 96 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(4, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 97 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(7, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(1, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 98 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(9, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(0, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(3, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
-  ------------------------------------------
-  ------------------------------------------
-
-
-  ------------------------------------------
-  ----------------- hit = 99 ---------------
-  ------------------------------------------
-  --wait for CLK_PERIOD_SPARSE_C*93;
-  --  hitLen(0) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(1) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(2) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(3) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(4) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(5) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(6) <= toSlv(6, hitLen(0)'length);
-  --  hitLen(7) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(8) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(9) <= toSlv(8, hitLen(0)'length);
-  --  hitLen(10) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(11) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(12) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(13) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(14) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(15) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(16) <= toSlv(1, hitLen(0)'length);
-  --  hitLen(17) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(18) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(19) <= toSlv(3, hitLen(0)'length);
-  --  hitLen(20) <= toSlv(5, hitLen(0)'length);
-  --  hitLen(21) <= toSlv(2, hitLen(0)'length);
-  --  hitLen(22) <= toSlv(4, hitLen(0)'length);
-  --  hitLen(23) <= toSlv(2, hitLen(0)'length);
-  --  sro <= '1';
-  --wait for CLK_PERIOD_SPARSE_C*2;
-  --  sro <= '0';
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+wait for CLK_PERIOD_SPARSE_C*93;
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
+   hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(0)(4) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(0)(5) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(6) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(8) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(0)(9) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(10) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(0)(11) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(0)(12) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(0)(13) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(0)(14) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(0)(15) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(0)(16) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(0)(17) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(18) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(0)(19) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(0)(20) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(0)(21) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(0)(22) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(0)(23) <= toSlv(1, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(1)(0) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(1) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(2) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(1)(4) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(5) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(6) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(7) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(8) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(9) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(10) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(11) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(12) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(1)(13) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(14) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(15) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(16) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(17) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(1)(18) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(1)(19) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(1)(20) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(1)(21) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(1)(22) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(1)(23) <= toSlv(2, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(2)(0) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(2)(1) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(2) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(2)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(4) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(2)(5) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(2)(6) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(2)(7) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(8) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(9) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(2)(11) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(2)(12) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(2)(13) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(2)(14) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(15) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(2)(16) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(17) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(2)(18) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(19) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(2)(20) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(2)(21) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(2)(22) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(2)(23) <= toSlv(1, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(3)(0) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(1) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(2) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(3)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(3)(4) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(5) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(6) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(7) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(8) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(9) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(3)(10) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(3)(11) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(3)(12) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(13) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(3)(14) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(15) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(16) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(17) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(18) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(3)(19) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(3)(20) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(3)(21) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(3)(22) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(3)(23) <= toSlv(4, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(4)(0) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(1) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(2) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(3) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(4)(4) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(4)(5) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(4)(6) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(4)(8) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(4)(9) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(4)(10) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(4)(11) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(12) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(13) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(4)(14) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(15) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(17) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(18) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(19) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(4)(20) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(21) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(4)(22) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(4)(23) <= toSlv(4, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(5)(0) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(5)(1) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(5)(2) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(5)(4) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(5) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(6) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(5)(7) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(5)(8) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(9) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(10) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(11) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(5)(12) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(5)(13) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(14) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(5)(15) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(16) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(5)(17) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(5)(18) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(19) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(20) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(5)(21) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(5)(22) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(5)(23) <= toSlv(2, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(6)(0) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(1) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(6)(2) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(6)(3) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(4) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(5) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(6) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(7) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(8) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(6)(9) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(6)(10) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(6)(11) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(12) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(13) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(14) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(15) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(16) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(6)(17) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(6)(18) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(6)(19) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(20) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(6)(21) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(6)(22) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(6)(23) <= toSlv(2, hitLen(0)(0)'length);
+---------------------------------------
+---------------------------------------
+   hitLen(7)(0) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(7)(1) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(7)(2) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(3) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(4) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(5) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(6) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(7)(7) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(7)(8) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(7)(9) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(10) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(11) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(7)(12) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(13) <= toSlv(0, hitLen(0)(0)'length);
+   hitLen(7)(14) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(7)(15) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(16) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(17) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(18) <= toSlv(4, hitLen(0)(0)'length);
+   hitLen(7)(19) <= toSlv(1, hitLen(0)(0)'length);
+   hitLen(7)(20) <= toSlv(2, hitLen(0)(0)'length);
+   hitLen(7)(21) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(22) <= toSlv(3, hitLen(0)(0)'length);
+   hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   sro  <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro  <= '0';
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ----------------------------------------
   ----------------------------------------
 
@@ -4108,5 +597,139 @@ begin
     -- do not touch end
 
   end process stimulus;
+
+  revRst <= not(rst);
+
+
+  -- Process to Monitor AXI Stream and Write to File
+  FileWriteProcessAsic : process(sysClk)
+    file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable row : line;
+    variable byte : std_logic_vector(7 downto 0);
+  begin
+    if rising_edge(sysClk) then
+      if asicTxMaster.tValid = '1' then
+        for i in 127 downto 0 loop
+          if asicTxMaster.tKeep(i) = '1' then
+            byte := asicTxMaster.tData((i*8+7) downto (i*8));
+            hwrite(row, byte, LEFT, 0);
+            writeline(myFile, row);
+            row.all := "";
+          end if;
+        end loop;
+      end if;
+    end if;
+  end process;
+
+
+ FileWriteProcessSingle : process(sysClk)
+   variable row : line;
+   variable byte : std_logic_vector(7 downto 0);
+   begin
+        if rising_edge(sysClk) then
+            for laneIndex in 0 to 7 loop
+                case laneIndex is
+                    when 0 =>
+                        if allLanesMaster(0).tValid = '1' and allLanesSlave(0).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(0).tKeep(i) = '1' then
+                                    byte := allLanesMaster(0).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile0, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 1 =>
+                        if allLanesMaster(1).tValid = '1' and allLanesSlave(1).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(1).tKeep(i) = '1' then
+                                    byte := allLanesMaster(1).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile1, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 2 =>
+                        if allLanesMaster(2).tValid = '1' and allLanesSlave(2).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(2).tKeep(i) = '1' then
+                                    byte := allLanesMaster(2).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile2, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 3 =>
+                        if allLanesMaster(3).tValid = '1' and allLanesSlave(3).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(3).tKeep(i) = '1' then
+                                    byte := allLanesMaster(3).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile3, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 4 =>
+                        if allLanesMaster(4).tValid = '1' and allLanesSlave(4).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(4).tKeep(i) = '1' then
+                                    byte := allLanesMaster(4).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile4, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 5 =>
+                        if allLanesMaster(5).tValid = '1' and allLanesSlave(5).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(5).tKeep(i) = '1' then
+                                    byte := allLanesMaster(5).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile5, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 6 =>
+                        if allLanesMaster(6).tValid = '1' and allLanesSlave(6).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(6).tKeep(i) = '1' then
+                                    byte := allLanesMaster(6).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile6, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when 7 =>
+                        if allLanesMaster(7).tValid = '1' and allLanesSlave(7).tReady = '1' then
+                            for i in 127 downto 0 loop
+                                if allLanesMaster(7).tKeep(i) = '1' then
+                                    byte := allLanesMaster(7).tData((i*8+7) downto (i*8));
+                                    hwrite(row, byte, LEFT, 0);
+                                    writeline(myFile7, row);
+                                    row.all := "";
+                                end if;
+                            end loop;
+                        end if;
+
+                    when others =>
+                        -- Handle unexpected index if needed
+                end case;
+            end loop;
+        end if;
+    end process;
 
 end architecture;
