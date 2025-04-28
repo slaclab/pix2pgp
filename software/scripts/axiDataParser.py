@@ -2,6 +2,7 @@ import sys
 import os
 import click
 import argparse
+import time
 
 import setupLibPaths
 import pix2pgp
@@ -75,10 +76,11 @@ if __name__ == "__main__":
     _dataFormat = args.dataFormat or args.asicData or args.fpgaTbData
 
     asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
-                                  asicData=args.asicData,
-                                  fpgaTbData=args.fpgaTbData,
-                                  dataFormat=_dataFormat,
-                                  verbose=args.verbose)
+                                   asicData=args.asicData,
+                                   fpgaTbData=args.fpgaTbData,
+                                   dataFormat=_dataFormat,
+                                   selfRst=True,
+                                   verbose=args.verbose)
 
     while _eventSize > currentIndex:
         asicDecoder.dataIndexStartSet(dataIndexStart=currentIndex)

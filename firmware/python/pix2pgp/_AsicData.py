@@ -20,6 +20,7 @@ class AsicData(object):
                  asicData   = False,
                  fpgaTbData = False,
                  dataFormat = False,
+                 selfRst    = False,
                  verbose    = 0,
                  **kwargs):
         """
@@ -38,6 +39,7 @@ class AsicData(object):
         self._asicData    = asicData
         self._fpgaTbData  = fpgaTbData
         self._dataFormat  = dataFormat
+        self._selfRst     = selfRst
         self._verbose     = verbose
 
         # the real initialization method
@@ -83,14 +85,14 @@ class AsicData(object):
         # data from lane decoder
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # lane header data
-        self.laneGlblOverOcc    = [False] * self._numOfLanes
-        self.laneGlblPause      = [False] * self._numOfLanes
-        self.laneGlblColErr     = [False] * self._numOfLanes
-        self.laneGlblPauseErr   = [False] * self._numOfLanes
-        self.laneGlblDummy      = [False] * self._numOfLanes
-        self.laneGlblColTimeout = [False] * self._numOfLanes
+        self.laneGlblOverOcc    = [False]  * self._numOfLanes
+        self.laneGlblPause      = [False]  * self._numOfLanes
+        self.laneGlblColErr     = [False]  * self._numOfLanes
+        self.laneGlblPauseErr   = [False]  * self._numOfLanes
+        self.laneGlblDummy      = [False]  * self._numOfLanes
+        self.laneGlblColTimeout = [False]  * self._numOfLanes
         self.laneColBitmask     = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
-        self.laneGlblTrgCnt     = [0]     * self._numOfLanes
+        self.laneGlblTrgCnt     = [0]      * self._numOfLanes
 
         # lane column metadata
         self.laneColOverOcc = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
@@ -277,8 +279,9 @@ class AsicData(object):
             self.laneGlblColTimeout[laneSel] = (self.laneGlblColTimeout[laneSel] or
                                                copy.deepcopy(self.laneDecoder.timeout))
 
-            # column bitmask is cumulative
             _bmsk = copy.deepcopy(self.laneDecoder.colBitmask)
+
+            # column bitmask is cumulative
             self.laneColBitmask[laneSel] = [
                 value or _bmsk[idx] for idx, value in enumerate(self.laneColBitmask[laneSel])
             ]
@@ -339,7 +342,7 @@ class AsicData(object):
         pause   = False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        while index < size:
+        while index < size and not(self.done):
             # --------------------------------------------------------------------------------------
             if state == "preamble_s":
                 laneSel = 0
@@ -396,7 +399,7 @@ class AsicData(object):
                     laneSel += 1
                     state = "laneValidCheck_s"
                 else:
-                    # in pause, more data for this lane -> re-evaluate
+                    # in pause; more data for this lane -> re-evaluate
                     state = "lane_s"
 
             # --------------------------------------------------------------------------------------
@@ -406,15 +409,15 @@ class AsicData(object):
                 self.trailerEval(wordHex)
                 index += self._trailerLen
 
-                # will re-evaluate the preamble if there are more data
-                state = "preamble_s"
+                self.done = self._selfRst
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
+            self.done = self._selfRst
+
+        if self.done:
             self.dataIndexEnd = index
             for lane in range(self._numOfLanes): self.asicDataPrinter(laneSel=lane)
-            self.done = True
-
     #################################################################
 
     #################################################################
