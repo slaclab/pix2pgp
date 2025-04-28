@@ -223,12 +223,12 @@ class AsicData(object):
         self.laneTimeout = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
         self.laneValid   = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
 
-        self.headerErr  = _laneError > 0 or _laneTimeout > 0
+        self.headerErr = self.laneError > 0 or self.laneTimeout > 0
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
             _format = 'LaneError={0:08b}           LaneTimeout={1:08b}           LaneValid={2:08b}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(_laneError, _laneTimeout, _laneValid))
+            print(_format.format(self.laneError, self.laneTimeout, self.laneValid))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
