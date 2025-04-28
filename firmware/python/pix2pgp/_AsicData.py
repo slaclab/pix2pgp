@@ -28,11 +28,11 @@ class AsicData(object):
         """
 
         # class parameters (parameters have _ prefix)
-        self._asicTypeSet = asicType
-        self._asicData    = asicData
-        self._fpgaTbData  = fpgaTbData
-        self._selfRst     = selfRst
-        self._verbose     = verbose
+        self._asicType   = asicType
+        self._asicData   = asicData
+        self._fpgaTbData = fpgaTbData
+        self._selfRst    = selfRst
+        self._verbose    = verbose
 
         # the real initialization method
         self.reset()
@@ -66,7 +66,7 @@ class AsicData(object):
         self.fpgaParameterSet()
 
         # initialize the lane decoding class
-        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet,
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
                                             asicData=self._asicData,
                                             fpgaTbData=self._fpgaTbData,
                                             verbose=self._verbose)
@@ -156,10 +156,10 @@ class AsicData(object):
         """
         self.fpgaDataFormat = pix2pgp.FpgaRxDataFormat()
 
-        if self._asicTypeSet == 'SparkPixS':
+        if self._asicType == 'SparkPixS':
             self.asicParams = pix2pgp.SparkPixSParameters()
 
-        elif self._asicTypeSet == 'SparkPixT':
+        elif self._asicType == 'SparkPixT':
             self.asicParams = pix2pgp.SparkPixTParameters()
 
         else:
@@ -188,7 +188,7 @@ class AsicData(object):
         # error-checking
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.preambleErr = True
-        elif self._asicTypeSet != self.asicParams.asicParamExtract()['asicId']:
+        elif self._asicType != self.asicParams.asicParamExtract()['asicId']:
             self.typeMismatchErr = True
 
         if ((self.preambleErr or self.typeMismatchErr) and self._verbose > 0) or self._verbose > 1:
@@ -196,7 +196,7 @@ class AsicData(object):
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
             _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
-            print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
+            print(_format.format(self._asicType, self.asicId, self.fpgaId))
             print(f"")
             if self.preambleErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
