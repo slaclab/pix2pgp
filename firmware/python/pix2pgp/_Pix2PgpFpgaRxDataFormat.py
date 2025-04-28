@@ -68,7 +68,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         FPGA Trailer Decoder
         '''
-        _trailer = int(header, 16)
+        _trailer = int(trailer, 16)
 
         trailer_dict = {'trailer' : (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF}
 
