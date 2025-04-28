@@ -19,7 +19,6 @@ class AsicData(object):
                  asicType   = "SparkPixS",
                  asicData   = False,
                  fpgaTbData = False,
-                 dataFormat = False,
                  selfRst    = False,
                  verbose    = 0,
                  **kwargs):
@@ -38,7 +37,6 @@ class AsicData(object):
         self._asicTypeSet = asicType
         self._asicData    = asicData
         self._fpgaTbData  = fpgaTbData
-        self._dataFormat  = dataFormat
         self._selfRst     = selfRst
         self._verbose     = verbose
 
@@ -72,7 +70,6 @@ class AsicData(object):
         self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet,
                                             asicData=self._asicData,
                                             fpgaTbData=self._fpgaTbData,
-                                            dataFormat=self._dataFormat,
                                             verbose=self._verbose)
 
         # call after self.asicParamSet

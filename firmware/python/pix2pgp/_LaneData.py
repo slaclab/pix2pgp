@@ -19,7 +19,6 @@ class LaneData(object):
                  asicType   = "SparkPixS",
                  asicData   = False,
                  fpgaTbData = False,
-                 dataFormat = False,
                  verbose    = 0,
                  laneId     = 0,
                  **kwargs):
@@ -46,15 +45,18 @@ class LaneData(object):
         Reset Class variables
         """
 
-        # populated by asicParamSet() (parameters have _ prefix)
+        # populated by asicSet() (parameters have _ prefix)
         self._numOfCols     = None
         self._dataLen       = None
 
-        # data format
-        self.dataFormat     = None
+        # asic-specific formats
+        self.asicParams        = None
+        self.headerFormat      = None
+        self.colMetadataFormat = None
+        self.dataFormat        = None
 
         # initialize the values
-        self.asicParamSet()
+        self.asicSet()
 
         # header contents
         self.overOcc        = False
@@ -131,21 +133,28 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def asicParamSet(self):
+    def asicSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type
         """
         if self._asicTypeSet == 'SparkPixS':
-            self._numOfCols = 24
-            self._dataLen   = 5
-            self.dataFormat = pix2pgp.SparkPixSDataFormat()
+            self.asicParams        = pix2pgp.SparkPixSParameters()
+            self.headerFormat      = pix2pgp.SparkPixSHeaderFormat()
+            self.colMetadataFormat = pix2pgp.SparkPixSColMetadataFormat()
+            self.dataFormat        = pix2pgp.SparkPixSDataFormat()
+
         elif self._asicTypeSet == 'SparkPixT':
-            self._numOfCols = 24
-            self._dataLen   = 8
-            self.dataFormat = pix2pgp.SparkPixTDataFormat()
+            self.asicParams        = pix2pgp.SparkPixTParameters()
+            self.headerFormat      = pix2pgp.SparkPixTHeaderFormat()
+            self.colMetadataFormat = pix2pgp.SparkPixTColMetadataFormat()
+            self.dataFormat        = pix2pgp.SparkPixTDataFormat()
+
         else:
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
+
+        self._numOfCols = self.asicParams.paramExtract()['numOfCols']
+        self._dataLen   = self.asicParams.paramExtract()['dataLen']
     #################################################################
 
     #################################################################
@@ -154,29 +163,17 @@ class LaneData(object):
         Parses-in the header and determines if there is an error or not
         Also prints-out the header metadata if needed
         """
-        _header     = int(header, 16)
         _colBitmask = 0
-        _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        _dict = self.headerFormat.headerDecoder(header=header)
 
-        # there's gotta be a better way to code this...
-        if self._asicTypeSet == 'SparkPixS':
-            self.overOcc  = bool((_header >> 39) & 0x1)
-            self.pause    = bool((_header >> 38) & 0x1)
-            self.colErr   = bool((_header >> 37) & 0x1)
-            self.pauseErr = bool((_header >> 36) & 0x1)
-            self.dummy    = bool((_header >> 35) & 0x1)
-            self.timeout  = bool((_header >> 34) & 0x1)
-            _colBitmask   = (_header >>  8) & 0xFFFFFF
-            self.trgCnt   = (_header >>  0) & 0xFF
-        elif self._asicTypeSet == 'SparkPixT':
-            self.overOcc  = bool((_header >> 63) & 0x1)
-            self.pause    = bool((_header >> 62) & 0x1)
-            self.colErr   = bool((_header >> 61) & 0x1)
-            self.pauseErr = bool((_header >> 60) & 0x1)
-            self.dummy    = bool((_header >> 59) & 0x1)
-            self.timeout  = bool((_header >> 58) & 0x1)
-            _colBitmask   = (_header >>  8) & 0xFFFFFF
-            self.trgCnt   = (_header >>  0) & 0xFF
+        self.overOcc  = _dict['overOcc']
+        self.pause    = _dict['pause']
+        self.colErr   = _dict['colErr']
+        self.pauseErr = _dict['pauseErr']
+        self.dummy    = _dict['dummy']
+        self.timeout  = _dict['timeout']
+        _colBitmask   = _dict['colBitmask']
+        self.trgCnt   = _dict['trgCnt']
 
         self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self._numOfCols)]
 
@@ -186,6 +183,7 @@ class LaneData(object):
         self.headerErr = bool(self.colErr or self.pauseErr or self.timeout)
 
         if ((self.headerErr and self._verbose > 0) or self._verbose > 1) and not(self.dummy):
+            _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
             _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
             print(_lanePrint)
             print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
@@ -201,43 +199,32 @@ class LaneData(object):
     def colMetaEval(self, colBmskId, colMeta):
         """
         Parses-in the column metadata
-        To-Do: *not* asic-specific for the time being
         """
-        _colMeta    = int(colMeta, 16)
-        _colOverOcc = 0
-        _colPause   = 0
-        _colId      = 0
-        _colTrgCnt  = 0
-        _colLen     = 0
-        _mismatch   = False
+        _mismatch = False
 
-        _colOverOcc = (_colMeta >> 25) & 0x1
-        _colPause   = (_colMeta >> 24) & 0x1
-        _colId      = (_colMeta >> 16) & 0xFF
-        _colTrgCnt  = (_colMeta >>  8) & 0xFF
-        _colLen     = (_colMeta >>  0) & 0xFF
+        _dict = self.colMetadataFormatFormat.colMetadataDecoder(colMeta=colMeta)
 
-        if _colId != colBmskId:
+        self.colOverOcc[colBmskId] = _dict['colOverOcc']
+        self.colPause[colBmskId]   = _dict['colPause']
+        self.colId[colBmskId]      = _dict['colId']
+        self.colTrgCnt[colBmskId]  = _dict['colTrgCnt']
+        self.colLen[colBmskId]     = _dict['colLen']
+
+        if self.colId[colBmskId] != colBmskId:
             self.decErr = True
 
-        if _colTrgCnt != self.trgCnt:
+        if self.colTrgCnt[colBmskId] != self.trgCnt:
             _mismatch = True
 
-        self.colOverOcc[colBmskId] = bool(_colOverOcc)
-        self.colPause[colBmskId]   = bool(_colPause)
-        self.colId[colBmskId]      = _colId
-        self.colTrgCnt[colBmskId]  = _colTrgCnt
-        self.colLen[colBmskId]     = _colLen
-
         if self.decErr and self._verbose > 0:
-            print(f"_colId = {_colId}")
+            print(f"_colId = {self.colId[colBmskId]}")
             print(f"colBmskId = {colBmskId}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
             click.secho(f"[ERROR]: Column ID Decoding Error!", bg='red', blink=True)
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
 
         if _mismatch and self._verbose > 0:
-            print(f"_colTrgCnt = {_colTrgCnt}")
+            print(f"_colTrgCnt = {self.colTrgCnt[colBmskId]}")
             print(f"self.trgCnt = {self.trgCnt}")
             click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
             click.secho(f"[WARNING]: Column Trigger Counter Mismatch!", bg='yellow')
@@ -249,26 +236,10 @@ class LaneData(object):
         """
         Populates the associated data type with the hits
         """
-        _hitData = int(hitData, 16)
-
-        if self._asicTypeSet == 'SparkPixS':
-            hit0 = (_hitData >> 20) & 0xFFFFF
-            hit1 = (_hitData >>  0) & 0xFFFFF
-        elif self._asicTypeSet == 'SparkPixT':
-            hit0 = (_hitData >> 32) & 0xFFFFFFFF
-            hit1 = (_hitData >>  0) & 0xFFFFFFFF
-
-        if self._dataFormat:
-            self.laneHits[colBmskId].append(self.dataFormat.decoder(hit0=hit0,
-                                                                    hit1=hit1,
+        self.laneHits[colBmskId].append(self.dataFormat.dataDecoder(hitData=hitData,
                                                                     hitLen=hitLen,
                                                                     asicData=self._asicData,
                                                                     fpgaTbData=self._fpgaTbData))
-        else:
-            self.laneHits[colBmskId].append(hit0)
-
-            if hitLen > 1:
-                self.laneHits[colBmskId].append(hit1)
 
     #################################################################
 

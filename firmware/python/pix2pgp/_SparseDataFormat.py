@@ -7,20 +7,29 @@
 # -- may be copied, modified, propagated, or distributed except according to
 # -- the terms contained in the LICENSE.txt file.
 # -------------------------------------------------------------------------------
-
 import click
-import sys
 
 class SparseDataFormatBase:
     '''
-        Base class for sparse data
-        every ASIC class should have a decoder() method, same as this base class
+    Base class for sparse data
+    every ASIC class should have:
+    * a dataDecoder() method, same as this base class
     '''
-    def decoder(self, hit0, hit1, hitLen=2, asicData=False, fpgaTbData=False):
+    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSDataFormat(SparseDataFormatBase):
-    def decoder(self, hit0, hit1, hitLen=2, asicData=False, fpgaTbData=False):
+        '''
+        SparkPix-S Data Format
+        '''
+    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        _hitData = int(hitData, 16)
+        hit0     = (_hitData >> 20) & 0xFFFFF
+        hit1     = (_hitData >>  0) & 0xFFFFF
+
         if asicData:
             _hitData0_dict = {'row'    : (hit0 >>  0) & 0x3FF,
                               'addr'   : (hit0 >> 10) & 0xFFFFF}
@@ -51,7 +60,17 @@ class SparkPixSDataFormat(SparseDataFormatBase):
             return None
 
 class SparkPixTDataFormat(SparseDataFormatBase):
-    def decoder(self, hit0, hit1, hitLen=2, asicData=False, fpgaTbData=False):
+        '''
+        SparkPix-T Data Format
+        '''
+    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        _hitData = int(hitData, 16)
+        hit0 = (_hitData >> 32) & 0xFFFFFFFF
+        hit1 = (_hitData >>  0) & 0xFFFFFFFF
+
         if asicData:
             _hitData0_dict = {'toaF'   : (hit0 >>  0) & 0x7F,
                               'toaC'   : (hit0 >>  8) & 0xFF,
