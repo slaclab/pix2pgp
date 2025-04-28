@@ -134,7 +134,7 @@ class LaneData(object):
     #################################################################
     def asicSet(self):
         """
-        Sets the parameters of the frame length depending on the ASIC type
+        Sets the parameters depending on the ASIC type
         """
         if self._asicTypeSet == 'SparkPixS':
             self.asicParams        = pix2pgp.SparkPixSParameters()
