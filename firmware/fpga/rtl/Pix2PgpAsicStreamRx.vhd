@@ -255,7 +255,7 @@ begin
       variable axilEp : AxiLiteEndpointType;
 
       -- internal variables
-      variable preamble      : slv(FPGA_PREAMPLE_LEN_C-1 downto 0)  := (others => '0');
+      variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)  := (others => '0');
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)    := (others => '0');
       variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -366,10 +366,10 @@ begin
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
             if v.asicTxMaster.tValid = '0' then
-               v.asicTxMaster.tKeep    := tKeepSet(FPGA_PREAMPLE_LEN_C);
+               v.asicTxMaster.tKeep    := tKeepSet(FPGA_PREAMBLE_LEN_C);
                v.asicTxMaster.tUser(1) := '1'; -- SoF
                v.asicTxMaster.tValid   := '1';
-               v.asicTxMaster.tData(FPGA_PREAMPLE_LEN_C-1 downto 0) := preamble;
+               v.asicTxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
                v.state := WAIT_LANES_S;
             end if;
 

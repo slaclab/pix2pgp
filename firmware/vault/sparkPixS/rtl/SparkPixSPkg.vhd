@@ -210,7 +210,7 @@ package Pix2PgpPkg is
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
 
-   constant FPGA_PREAMPLE_LEN_C : natural := 160;
+   constant FPGA_PREAMBLE_LEN_C : natural := 160;
    constant ASIC_TYPE_C         : slv(31 downto  0) := toSlv(0, 32); -- SparPix-S = 0
    constant FPGA_ID_DEFAULT_C   : slv(31 downto  0) := x"C0CAC01A";
    constant PIX2PGP_ID_C        : slv(55 downto  0) := x"70"  -- p
@@ -316,10 +316,10 @@ package body Pix2PgpPkg is
 
    -- pretty much fixed
    function fpgaPreambleMap (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
-      variable retPreamble: slv(FPGA_PREAMPLE_LEN_C-1 downto 0) := (others => '0');
+      variable retPreamble: slv(FPGA_PREAMBLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retPreamble(FPGA_PREAMPLE_LEN_C-1 downto 96) := resize(pix2pgpId, 64);
+      retPreamble(FPGA_PREAMBLE_LEN_C-1 downto 96) := resize(pix2pgpId, 64);
       retPreamble(95 downto 64) := resize(asicType, 32);
       retPreamble(63 downto 32) := resize(asicId,   32);
       retPreamble(31 downto  0) := resize(fpgaId,   32);
