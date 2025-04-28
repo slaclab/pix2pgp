@@ -18,9 +18,9 @@ class SparseColMetadataFormatBase:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSColMetaDataFormat(SparseColMetadataFormatBase):
-        '''
-        SparkPix-S colMetaData Format
-        '''
+    '''
+    SparkPix-S colMetaData Format
+    '''
     def colMetadataDecoder(self, colMeta):
         '''
         Column Metadata mapping and decoding
@@ -36,9 +36,9 @@ class SparkPixSColMetaDataFormat(SparseColMetadataFormatBase):
         return colMeta_dict
 
 class SparkPixTColMetaDataFormat(SparseColMetadataFormatBase):
-        '''
-        SparkPix-T colMetaData Format
-        '''
+    '''
+    SparkPix-T colMetaData Format
+    '''
     def colMetadataDecoder(self, colMeta):
         '''
         Column Metadata mapping and decoding
