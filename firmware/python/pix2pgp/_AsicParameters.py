@@ -13,16 +13,16 @@ class AsicParameterBase:
     '''
     Base class for ASIC Paramters
     every ASIC class should have:
-    * a paramExtract() method, same as this base class
+    * a asicParamExtract() method, same as this base class
     '''
-    def paramExtract(self):
+    def asicParamExtract(self):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSParameters(AsicParameterBase):
     '''
     SparkPix-S Parameters
     '''
-    def paramExtract(self):
+    def asicParamExtract(self):
         '''
         Parameter dictionary
         '''
@@ -38,7 +38,7 @@ class SparkPixTParameters(AsicParameterBase):
     '''
     SparkPix-T Parameters
     '''
-    def paramExtract(self):
+    def asicParamExtract(self):
         '''
         Parameter dictionary
         '''
