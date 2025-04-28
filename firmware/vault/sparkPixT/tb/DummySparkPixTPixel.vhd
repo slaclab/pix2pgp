@@ -22,7 +22,7 @@ entity DummySparkPixTPixel is
         clk        : in  sl;
         df_reset_n : in  sl := not RST_POLARITY_G;
         sro        : in  sl; -- acts as a SOF
-        trigger    : in  sl; -- acts as an EOF
+        ero        : in  sl; -- acts as an EOF
         hitLen     : in  slv(15 downto 0);
         pause      : in  sl;
         pauseAck   : out sl;
@@ -46,7 +46,7 @@ architecture tb of DummySparkPixTPixel is
       sof      : sl;
       eof      : sl;
       sro      : sl;
-      trigger  : sl;
+      ero  : sl;
       hitLen   : slv(15 downto 0);
       wrEn     : sl;
       pause    : sl;
@@ -64,7 +64,7 @@ architecture tb of DummySparkPixTPixel is
       sof      => '0',
       eof      => '0',
       sro      => '0',
-      trigger  => '0',
+      ero  => '0',
       hitLen   => (others => '0'),
       wrEn     => '0',
       pause    => '0',
@@ -74,7 +74,7 @@ architecture tb of DummySparkPixTPixel is
       --
       waitCnt  => 0,
       hitCnt   => toSlv(1, 16),
-      trgCnt   => (others => '1'), -- so that it rolls-over to zero on first trigger
+      trgCnt   => (others => '1'), -- so that it rolls-over to zero on first ero
       state    => IDLE_S
    );
 
@@ -83,7 +83,7 @@ architecture tb of DummySparkPixTPixel is
 
 begin
 
-comb : process (df_reset_n, r, hitLen, trigger, sro, pause) is
+comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
       variable v : RegType;
 
@@ -93,7 +93,7 @@ comb : process (df_reset_n, r, hitLen, trigger, sro, pause) is
 
       -- Get the inputs
       v.sro     := sro;
-      v.trigger := trigger;
+      v.ero := ero;
       v.pause   := pause;
 
       -- defaults
@@ -162,7 +162,7 @@ comb : process (df_reset_n, r, hitLen, trigger, sro, pause) is
          ----------------------------------------------------------------------
          when WAIT_TRG_S =>
             v.pauseAck := r.pause;
-            if (v.trigger = '1' and r.trigger = '0' and v.pause = '0') then
+            if (v.ero = '1' and r.ero = '0' and v.pause = '0') then
                v.eof   := '1';
                v.state := IDLE_S;
             end if;

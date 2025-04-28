@@ -97,8 +97,6 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpData   : Pix2PgpFpgaRxDataArray := (others => (others => '0'));
 
-   signal laneError      : sl := '0';
-   signal laneErrorAck   : sl := '1';
    signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
@@ -267,7 +265,6 @@ begin
    -- FPGA
    -------
 
-   -- same stream on all lanes
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
       -- pgp4 wrapper
@@ -599,7 +596,6 @@ wait for CLK_PERIOD_SPARSE_C*93;
   end process stimulus;
 
   revRst <= not(rst);
-
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcessAsic : process(sysClk)
