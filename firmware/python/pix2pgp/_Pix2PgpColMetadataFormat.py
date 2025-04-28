@@ -8,7 +8,7 @@
 # -- the terms contained in the LICENSE.txt file.
 # -------------------------------------------------------------------------------
 
-class SparseColMetadataFormatBase:
+class Pix2PgpColMetadataFormatBase:
     '''
     Base class for sparse data
     every ASIC class should have:
@@ -17,7 +17,7 @@ class SparseColMetadataFormatBase:
     def colMetadataDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")
 
-class SparkPixSColMetaDataFormat(SparseColMetadataFormatBase):
+class SparkPixSColMetadataFormat(Pix2PgpColMetadataFormatBase):
     '''
     SparkPix-S colMetaData Format
     '''
@@ -35,7 +35,7 @@ class SparkPixSColMetaDataFormat(SparseColMetadataFormatBase):
 
         return colMeta_dict
 
-class SparkPixTColMetaDataFormat(SparseColMetadataFormatBase):
+class SparkPixTColMetadataFormat(Pix2PgpColMetadataFormatBase):
     '''
     SparkPix-T colMetaData Format
     '''

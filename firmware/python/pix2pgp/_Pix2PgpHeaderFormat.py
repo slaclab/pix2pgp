@@ -8,7 +8,7 @@
 # -- the terms contained in the LICENSE.txt file.
 # -------------------------------------------------------------------------------
 
-class SparseHeaderFormatBase:
+class Pix2PgpHeaderFormatBase:
     '''
     Base class for sparse data
     every ASIC class should have:
@@ -17,7 +17,7 @@ class SparseHeaderFormatBase:
     def headerDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")
 
-class SparkPixSHeaderFormat(SparseHeaderFormatBase):
+class SparkPixSHeaderFormat(Pix2PgpHeaderFormatBase):
     '''
     SparkPix-S Header Format
     '''
@@ -38,7 +38,7 @@ class SparkPixSHeaderFormat(SparseHeaderFormatBase):
 
         return header_dict
 
-class SparkPixTHeaderFormat(SparseHeaderFormatBase):
+class SparkPixTHeaderFormat(Pix2PgpHeaderFormatBase):
     '''
     SparkPix-T Header Format
     '''

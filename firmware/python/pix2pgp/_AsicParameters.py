@@ -9,7 +9,7 @@
 # -------------------------------------------------------------------------------
 import click
 
-class AsicParametersBase:
+class AsicParameterBase:
     '''
     Base class for ASIC Paramters
     every ASIC class should have:
@@ -18,7 +18,7 @@ class AsicParametersBase:
     def paramExtract(self):
         raise NotImplementedError("This method should be overridden by subclasses")
 
-class SparkPixSParameters(AsicParametersBase):
+class SparkPixSParameters(AsicParameterBase):
     '''
     SparkPix-S Parameters
     '''
@@ -34,7 +34,7 @@ class SparkPixSParameters(AsicParametersBase):
 
         return param_dict
 
-class SparkPixTParameters(AsicParametersBase):
+class SparkPixTParameters(AsicParameterBase):
     '''
     SparkPix-T Parameters
     '''

@@ -31,7 +31,6 @@ class LaneData(object):
         self._asicTypeSet = asicType
         self._asicData    = asicData
         self._fpgaTbData  = fpgaTbData
-        self._dataFormat  = dataFormat
         self._verbose     = verbose
         self._laneId      = laneId
 
