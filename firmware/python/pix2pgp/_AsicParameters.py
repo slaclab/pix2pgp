@@ -19,9 +19,9 @@ class AsicParametersBase:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSParameters(AsicParametersBase):
-        '''
-        SparkPix-S Parameters
-        '''
+    '''
+    SparkPix-S Parameters
+    '''
     def paramExtract(self):
         '''
         Parameter dictionary
@@ -35,9 +35,9 @@ class SparkPixSParameters(AsicParametersBase):
         return param_dict
 
 class SparkPixTParameters(AsicParametersBase):
-        '''
-        SparkPix-T Parameters
-        '''
+    '''
+    SparkPix-T Parameters
+    '''
     def paramExtract(self):
         '''
         Parameter dictionary

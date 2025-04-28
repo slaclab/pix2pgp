@@ -18,9 +18,9 @@ class SparseHeaderFormatBase:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSHeaderFormat(SparseHeaderFormatBase):
-        '''
-        SparkPix-S Header Format
-        '''
+    '''
+    SparkPix-S Header Format
+    '''
     def headerDecoder(self, header):
         '''
         Header mapping and decoding
@@ -39,9 +39,9 @@ class SparkPixSHeaderFormat(SparseHeaderFormatBase):
         return header_dict
 
 class SparkPixTHeaderFormat(SparseHeaderFormatBase):
-        '''
-        SparkPix-T Header Format
-        '''
+    '''
+    SparkPix-T Header Format
+    '''
     def headerDecoder(self, header):
         '''
         Header mapping and decoding

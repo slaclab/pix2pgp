@@ -19,9 +19,9 @@ class SparseDataFormatBase:
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSDataFormat(SparseDataFormatBase):
-        '''
-        SparkPix-S Data Format
-        '''
+    '''
+    SparkPix-S Data Format
+    '''
     def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
         '''
         Hit data mapping and decoding
@@ -60,9 +60,9 @@ class SparkPixSDataFormat(SparseDataFormatBase):
             return None
 
 class SparkPixTDataFormat(SparseDataFormatBase):
-        '''
-        SparkPix-T Data Format
-        '''
+    '''
+    SparkPix-T Data Format
+    '''
     def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
         '''
         Hit data mapping and decoding
