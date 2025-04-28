@@ -236,7 +236,8 @@ package Pix2PgpPkg is
 
    constant ASIC_ID_LEN_C       : natural := 32;
    constant FPGA_ID_DEFAULT_C   : slv(31 downto  0) := x"C0CAC01A";
-   constant PIX2PGP_ID_C        : slv(55 downto  0) := x"70"  -- p
+   constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
+                                                     & x"70"  -- p
                                                      & x"69"  -- i
                                                      & x"78"  -- x
                                                      & x"32"  -- 2
