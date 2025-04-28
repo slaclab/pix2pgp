@@ -19,7 +19,6 @@ class AsicData(object):
                  asicType   = "SparkPixS",
                  asicData   = False,
                  fpgaTbData = False,
-                 dataFormat = False,
                  selfRst    = False,
                  verbose    = 0,
                  **kwargs):
@@ -28,19 +27,12 @@ class AsicData(object):
         Container for all datapoints associated with the ASIC.
         """
 
-        # expand as necessary; should match the associated value in the VHDL pkg
-        self.asicTypeDict = {
-            0: "SparkPixS",
-            1: "SparkPixT",
-        }
-
         # class parameters (parameters have _ prefix)
-        self._asicTypeSet = asicType
-        self._asicData    = asicData
-        self._fpgaTbData  = fpgaTbData
-        self._dataFormat  = dataFormat
-        self._selfRst     = selfRst
-        self._verbose     = verbose
+        self._asicType   = asicType
+        self._asicData   = asicData
+        self._fpgaTbData = fpgaTbData
+        self._selfRst    = selfRst
+        self._verbose    = verbose
 
         # the real initialization method
         self.reset()
@@ -51,63 +43,67 @@ class AsicData(object):
         Reset Class variables
         """
 
-        # populated by asicParamSet() (parameters have _ prefix)
-        self._numOfLanes  = None
-        self._numOfCols   = None
-        self._preambleLen = None
-        self._headerLen   = None
-        self._trailerLen  = None
+        # populated by fpgaParameterSet() (parameters have _ prefix)
+        self.numOfLanes  = None
+        self.numOfCols   = None
+        self.preambleLen = None
+        self.headerLen   = None
+        self.trailerLen  = None
 
         # populated by the data themselves
         # preamble
-        self.preambleErr  = False
-        self.asicType     = 0
-        self.asicId       = 0
-        self.fpgaId       = 0
+        self.preambleErr     = False
+        self.typeMismatchErr = False
+        self.asicType        = 0
+        self.asicId          = 0
+        self.fpgaId          = 0
+
+        # asic-specific formats
+        self.asicParams     = None
+        self.fpgaDataFormat = None
 
         # initialize the values
-        self.asicParamSet()
+        self.fpgaParameterSet()
 
         # initialize the lane decoding class
-        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicTypeSet,
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
                                             asicData=self._asicData,
                                             fpgaTbData=self._fpgaTbData,
-                                            dataFormat=self._dataFormat,
                                             verbose=self._verbose)
 
-        # call after self.asicParamSet
+        # call after self.fpgaParameterSet
         # fpga header
         self.headerErr   = False
-        self.laneValid   = [None] * self._numOfLanes
-        self.laneTimeout = [None] * self._numOfLanes
-        self.laneError   = [None] * self._numOfLanes
+        self.laneValid   = [None] * self.numOfLanes
+        self.laneTimeout = [None] * self.numOfLanes
+        self.laneError   = [None] * self.numOfLanes
 
         # data from lane decoder
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # lane header data
-        self.laneGlblOverOcc    = [False]  * self._numOfLanes
-        self.laneGlblPause      = [False]  * self._numOfLanes
-        self.laneGlblColErr     = [False]  * self._numOfLanes
-        self.laneGlblPauseErr   = [False]  * self._numOfLanes
-        self.laneGlblDummy      = [False]  * self._numOfLanes
-        self.laneGlblColTimeout = [False]  * self._numOfLanes
-        self.laneColBitmask     = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
-        self.laneGlblTrgCnt     = [0]      * self._numOfLanes
+        self.laneGlblOverOcc    = [False]  * self.numOfLanes
+        self.laneGlblPause      = [False]  * self.numOfLanes
+        self.laneGlblColErr     = [False]  * self.numOfLanes
+        self.laneGlblPauseErr   = [False]  * self.numOfLanes
+        self.laneGlblDummy      = [False]  * self.numOfLanes
+        self.laneGlblColTimeout = [False]  * self.numOfLanes
+        self.laneColBitmask     = [[False] * self.numOfCols for _ in range(self.numOfLanes)]
+        self.laneGlblTrgCnt     = [0]      * self.numOfLanes
 
         # lane column metadata
-        self.laneColOverOcc = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
-        self.laneColPause   = [[False] * self._numOfCols for _ in range(self._numOfLanes)]
-        self.laneColId      = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
-        self.laneColTrgCnt  = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
-        self.laneColLen     = [[0] * self._numOfCols     for _ in range(self._numOfLanes)]
+        self.laneColOverOcc = [[False] * self.numOfCols for _ in range(self.numOfLanes)]
+        self.laneColPause   = [[False] * self.numOfCols for _ in range(self.numOfLanes)]
+        self.laneColId      = [[0] * self.numOfCols     for _ in range(self.numOfLanes)]
+        self.laneColTrgCnt  = [[0] * self.numOfCols     for _ in range(self.numOfLanes)]
+        self.laneColLen     = [[0] * self.numOfCols     for _ in range(self.numOfLanes)]
 
         # data from all lanes
-        self.asicHits = [[[] for _ in range(self._numOfCols)] for _ in range(self._numOfLanes)]
+        self.asicHits = [[[] for _ in range(self.numOfCols)] for _ in range(self.numOfLanes)]
 
         # lane-decoder-assigned flags
-        self.laneHeaderErr = [False] * self._numOfLanes
-        self.laneDecErr    = [False] * self._numOfLanes
-        self.laneIsEmpty   = [False] * self._numOfLanes
+        self.laneHeaderErr = [False] * self.numOfLanes
+        self.laneDecErr    = [False] * self.numOfLanes
+        self.laneIsEmpty   = [False] * self.numOfLanes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # trailer
@@ -154,25 +150,27 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def asicParamSet(self):
+    def fpgaParameterSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type
         """
-        if self._asicTypeSet == 'SparkPixS':
-            self._numOfLanes  = 8
-            self._numOfCols   = 24
-            self._preambleLen = 20
-            self._headerLen   = 3
-            self._trailerLen  = 8
-        elif self._asicTypeSet == 'SparkPixT':
-            self._numOfLanes  = 8
-            self._numOfCols   = 24
-            self._preambleLen = 20
-            self._headerLen   = 3
-            self._trailerLen  = 8
+        self.fpgaDataFormat = pix2pgp.FpgaRxDataFormat()
+
+        if self._asicType == 'SparkPixS':
+            self.asicParams = pix2pgp.SparkPixSParameters()
+
+        elif self._asicType == 'SparkPixT':
+            self.asicParams = pix2pgp.SparkPixTParameters()
+
         else:
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
+
+        self.numOfLanes  = self.asicParams.asicParamExtract()['numOfLanes']
+        self.numOfCols   = self.asicParams.asicParamExtract()['numOfCols']
+        self.preambleLen = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
+        self.headerLen   = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
+        self.trailerLen  = self.fpgaDataFormat.fpgaParamExtract()['trailerLen']
     #################################################################
 
     #################################################################
@@ -180,29 +178,37 @@ class AsicData(object):
         """
         Parses in the preamble and returns
         """
-        _preamble     = int(preamble, 16)
-        _pix2pgpId    = (_preamble >> 96) & 0xFFFFFFFFFFFFFFFF
-        self.asicType = (_preamble >> 64) & 0xFFFFFFFF
-        self.asicId   = (_preamble >> 32) & 0xFFFFFFFF
-        self.fpgaId   = (_preamble >>  0) & 0xFFFFFFFF
+
+        _dict = self.fpgaDataFormat.fpgaPreambleDecoder(preamble=preamble)
+
+        self.asicType = _dict['asicType']
+        self.asicId   = _dict['asicId']
+        self.fpgaId   = _dict['fpgaId']
 
         # error-checking
-        if pix2pgp.Tools.toAscii(_pix2pgpId) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.preambleErr = True
-        elif self._asicTypeSet != self.asicTypeDict.get(self.asicType):
-            self.preambleErr = True
+        elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
+            self.typeMismatchErr = True
 
-        if (self.preambleErr and self._verbose > 0) or self._verbose > 1:
+        if ((self.preambleErr or self.typeMismatchErr) and self._verbose > 0) or self._verbose > 1:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
             _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
-            print(_format.format(self.asicTypeDict.get(self.asicType), self.asicId, self.fpgaId))
+            print(_format.format(self.asicParams.asicParamExtract()['asicType'],
+                  self.asicId,
+                  self.fpgaId))
             print(f"")
             if self.preambleErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
                 click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+
+            if self.typeMismatchErr:
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                click.secho(f"[ERROR]: ASIC Type Mismatch!", bg='red', blink=True)
+                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
     #################################################################
 
 
@@ -211,22 +217,18 @@ class AsicData(object):
         """
         Parses in the FPGA header, and returns the status of the lanes
         """
-        _header = int(header, 16)
+        _dict = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
 
-        _laneError   = (_header >> 16) & 0xFF
-        _laneTimeout = (_header >>  8) & 0xFF
-        _laneValid   = (_header >>  0) & 0xFF
+        self.laneError   = [(_dict['laneError'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
+        self.laneTimeout = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
+        self.laneValid   = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
 
-        self.laneError   = [(_laneError >> i) & 1 == 1 for i in range(self._numOfLanes)]
-        self.laneTimeout = [(_laneTimeout >> i) & 1 == 1 for i in range(self._numOfLanes)]
-        self.laneValid   = [(_laneValid >> i) & 1 == 1 for i in range(self._numOfLanes)]
-
-        self.headerErr  = _laneError > 0 or _laneTimeout > 0
+        self.headerErr = _dict['laneError'] > 0 or _dict['laneTimeout'] > 0
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
             _format = 'LaneError={0:08b}           LaneTimeout={1:08b}           LaneValid={2:08b}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(_laneError, _laneTimeout, _laneValid))
+            print(_format.format(_dict['laneError'], _dict['laneTimeout'], _dict['laneValid']))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
@@ -239,10 +241,9 @@ class AsicData(object):
         """
         Parses in the trailer
         """
-        _trailer   = int(trailer, 16)
-        _pix2pgpId = (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF
+        _dict = self.fpgaDataFormat.fpgaTrailerDecoder(trailer=trailer)
 
-        if pix2pgp.Tools.toAscii(_pix2pgpId) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.trailerErr = True
 
         if (self.trailerErr and self._verbose > 0) or self._verbose > 1:
@@ -260,7 +261,7 @@ class AsicData(object):
         """
         Extracts lane data from the lane decoder into the AsicData class arrays.
         """
-        if laneSel < self._numOfLanes:
+        if laneSel < self.numOfLanes:
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # header data
@@ -321,7 +322,7 @@ class AsicData(object):
 
             # actual hits
             if not self.laneIsEmpty[laneSel]:
-                for colIdx in range(self._numOfCols):
+                for colIdx in range(self.numOfCols):
                     self.asicHits[laneSel][colIdx].extend(
                         copy.deepcopy(self.laneDecoder.laneHits[colIdx]))
     #################################################################
@@ -347,19 +348,19 @@ class AsicData(object):
             if state == "preamble_s":
                 laneSel = 0
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._preambleLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.preambleLen])
                 self.preambleEval(wordHex)
 
-                index += self._preambleLen
+                index += self.preambleLen
                 state = "header_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._headerLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.headerLen])
                 self.headerEval(wordHex)
 
-                index += self._headerLen
+                index += self.headerLen
 
                 if any(self.laneValid):
                     state = "laneValidCheck_s"
@@ -369,7 +370,7 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "laneValidCheck_s":
 
-                if laneSel < self._numOfLanes:
+                if laneSel < self.numOfLanes:
                     if self.laneValid[laneSel]:
                         state = "lane_s"
                     else:
@@ -405,9 +406,9 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._trailerLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.trailerLen])
                 self.trailerEval(wordHex)
-                index += self._trailerLen
+                index += self.trailerLen
 
                 self.done = self._selfRst
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -417,7 +418,7 @@ class AsicData(object):
 
         if self.done:
             self.dataIndexEnd = index
-            for lane in range(self._numOfLanes): self.asicDataPrinter(laneSel=lane)
+            for lane in range(self.numOfLanes): self.asicDataPrinter(laneSel=lane)
     #################################################################
 
     #################################################################
@@ -425,7 +426,7 @@ class AsicData(object):
         """
         Prints out all the data
         """
-        if laneSel < self._numOfLanes and self._verbose > 2:
+        if laneSel < self.numOfLanes and self._verbose > 2:
             print(f"self.laneGlblOverOcc[{laneSel}]    = {self.laneGlblOverOcc[laneSel]}")
             print(f"self.laneGlblPause[{laneSel}]      = {self.laneGlblPause[laneSel]}")
             print(f"self.laneGlblColErr[{laneSel}]     = {self.laneGlblColErr[laneSel]}")

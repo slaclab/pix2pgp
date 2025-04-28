@@ -31,12 +31,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--dataFormat",
-    action   ="store_true",
-    help     = "Set to true if willing to use the ASIC-related data formatter",
-)
-
-parser.add_argument(
     "--asicType",
     type     = str,
     required = False,
@@ -73,12 +67,10 @@ if __name__ == "__main__":
     _eventSize   = len(_dataArray)
     currentIndex = 0
 
-    _dataFormat = args.dataFormat or args.asicData or args.fpgaTbData
 
     asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
                                    asicData=args.asicData,
                                    fpgaTbData=args.fpgaTbData,
-                                   dataFormat=_dataFormat,
                                    selfRst=True,
                                    verbose=args.verbose)
 
