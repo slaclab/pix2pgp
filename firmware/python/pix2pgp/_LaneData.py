@@ -45,8 +45,8 @@ class LaneData(object):
         """
 
         # populated by asicSet() (parameters have _ prefix)
-        self._numOfCols     = None
-        self._dataLen       = None
+        self.numOfCols     = None
+        self.dataLen       = None
 
         # asic-specific formats
         self.asicParams        = None
@@ -64,18 +64,18 @@ class LaneData(object):
         self.pauseErr       = False
         self.dummy          = False
         self.timeout        = False
-        self.colBitmask     = [False] * self._numOfCols
+        self.colBitmask     = [False] * self.numOfCols
         self.trgCnt         = 0
 
         # column metadata
-        self.colOverOcc     = [False] * self._numOfCols
-        self.colPause       = [False] * self._numOfCols
-        self.colId          = [0]     * self._numOfCols
-        self.colTrgCnt      = [0]     * self._numOfCols
-        self.colLen         = [0]     * self._numOfCols
+        self.colOverOcc     = [False] * self.numOfCols
+        self.colPause       = [False] * self.numOfCols
+        self.colId          = [0]     * self.numOfCols
+        self.colTrgCnt      = [0]     * self.numOfCols
+        self.colLen         = [0]     * self.numOfCols
 
         # lane hits
-        self.laneHits       = [[] for _ in range(self._numOfCols)]
+        self.laneHits       = [[] for _ in range(self.numOfCols)]
 
         # evaluated by this class
         self.headerErr      = False
@@ -152,8 +152,8 @@ class LaneData(object):
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
 
-        self._numOfCols = self.asicParams.paramExtract()['numOfCols']
-        self._dataLen   = self.asicParams.paramExtract()['dataLen']
+        self.numOfCols = self.asicParams.asicParamExtract()['numOfCols']
+        self.dataLen   = self.asicParams.asicParamExtract()['dataLen']
     #################################################################
 
     #################################################################
@@ -174,7 +174,7 @@ class LaneData(object):
         _colBitmask   = _dict['colBitmask']
         self.trgCnt   = _dict['trgCnt']
 
-        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self._numOfCols)]
+        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
 
         if _colBitmask == 0:
             self.isEmpty = True
@@ -261,10 +261,10 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             if state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
                 self.headerEval(wordHex)
 
-                index += self._dataLen
+                index += self.dataLen
 
                 if not(self.isEmpty) and self.dummy == False:
                     state = "bitmaskCheck_s"
@@ -273,7 +273,7 @@ class LaneData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
-                if colSel < self._numOfCols:
+                if colSel < self.numOfCols:
                     if self.colBitmask[colSel]:
                         state = "colMetaParse_s"
                     else:
@@ -284,10 +284,10 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
                 self.colMetaEval(colSel, wordHex)
 
-                index += self._dataLen
+                index += self.dataLen
 
                 subLen = self.colLen[colSel]
 
@@ -302,10 +302,10 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self._dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
                 self.hitAlloc(colSel, wordHex, subLen)
 
-                index += self._dataLen
+                index += self.dataLen
 
                 subLen -= 2
 
