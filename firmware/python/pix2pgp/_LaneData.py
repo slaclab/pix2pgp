@@ -201,7 +201,7 @@ class LaneData(object):
         """
         _mismatch = False
 
-        _dict = self.colMetadataFormatFormat.colMetadataDecoder(colMeta=colMeta)
+        _dict = self.colMetadataFormat.colMetadataDecoder(colMeta=colMeta)
 
         self.colOverOcc[colBmskId] = _dict['colOverOcc']
         self.colPause[colBmskId]   = _dict['colPause']
