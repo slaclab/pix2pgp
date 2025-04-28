@@ -70,7 +70,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         _trailer = int(trailer, 16)
 
-        trailer_dict = {'trailer' : (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF}
+        trailer_dict = {'pix2pgpId' : (_trailer >>  0) & 0xFFFFFFFFFFFFFFFF}
 
         return trailer_dict
 
