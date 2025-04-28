@@ -188,7 +188,7 @@ class AsicData(object):
         # error-checking
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.preambleErr = True
-        elif self._asicType != self.asicParams.asicParamExtract()['asicId']:
+        elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
 
         if ((self.preambleErr or self.typeMismatchErr) and self._verbose > 0) or self._verbose > 1:
@@ -196,7 +196,9 @@ class AsicData(object):
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
             _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
-            print(_format.format(self._asicType, self.asicId, self.fpgaId))
+            print(_format.format(self.asicParams.asicParamExtract()['asicType'],
+                  self.asicId,
+                  self.fpgaId))
             print(f"")
             if self.preambleErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
