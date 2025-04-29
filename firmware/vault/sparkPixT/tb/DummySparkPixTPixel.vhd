@@ -46,7 +46,7 @@ architecture tb of DummySparkPixTPixel is
       sof      : sl;
       eof      : sl;
       sro      : sl;
-      ero  : sl;
+      ero      : sl;
       hitLen   : slv(15 downto 0);
       wrEn     : sl;
       pause    : sl;
@@ -64,7 +64,7 @@ architecture tb of DummySparkPixTPixel is
       sof      => '0',
       eof      => '0',
       sro      => '0',
-      ero  => '0',
+      ero      => '0',
       hitLen   => (others => '0'),
       wrEn     => '0',
       pause    => '0',
@@ -93,7 +93,7 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
       -- Get the inputs
       v.sro     := sro;
-      v.ero := ero;
+      v.ero     := ero;
       v.pause   := pause;
 
       -- defaults
@@ -104,6 +104,13 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
       if (v.sro = '1' and r.sro = '0') then -- reset everything
          v.trgCnt := r.trgCnt + 1;
+         v.state  := IDLE_S;
+         if r.state /= IDLE_S or r.pause = '1' then
+            v.overOcc := '1';
+         end if;
+      end if;
+
+      if (v.ero = '1' and r.ero = '0' and r.state /= WAIT_TRG_S) then
          v.state  := IDLE_S;
          if r.state /= IDLE_S or r.pause = '1' then
             v.overOcc := '1';
