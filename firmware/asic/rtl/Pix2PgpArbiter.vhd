@@ -180,11 +180,11 @@ begin
       -- flow control check
       if sAxisSlave.tReady = '1' then
          v.sAxisMaster.tValid := '0';
-         v.sAxisMaster.tLast  := '0';
-         v.sAxisMaster.tUser  := (others => '0');
       end if;
 
       -- default flags
+      v.sAxisMaster.tLast  := '0';
+      v.sAxisMaster.tUser  := (others => '0');
       v.sAxisMaster.tKeep  := (others => '1');
 
       -- status Mux
@@ -317,9 +317,10 @@ begin
                      v.dummyCnt := r.dummyCnt + 1;
                   end if;
 
-                  if r.dummyCnt = toSlv(5, r.dummyCnt'length) then
-                     v.sAxisMaster.tLast := '1';
-                     v.state             := IDLE_S;
+                  if allBits(r.dummyCnt, '1') then
+                     v.sAxisMaster.tValid := '0';
+                     v.sAxisMaster.tLast  := '1';
+                     v.state              := IDLE_S;
                   end if;
                end if;
             end if;
@@ -401,5 +402,4 @@ begin
          mAxisMaster => pgpTxMaster,
          mSideBand   => open,
          mAxisSlave  => pgpTxSlave);
-
 end rtl;
