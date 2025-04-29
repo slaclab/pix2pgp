@@ -179,6 +179,34 @@ package Pix2PgpPkg is
    constant DEFAULT_PIX2PGP_DATABUS_C : Pix2PgpDataBusType := (
       data => (others => '0'));
 
+   -- AXI-Stream configuration
+   constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
+   constant ASIC_TX_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
+   constant FPGA_RX_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => FPGA_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_NORMAL_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
    type Pix2PgpDataBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpDataBusType;
 
 

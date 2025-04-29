@@ -27,16 +27,15 @@ entity Pix2PgpFpgaTb is
    );
    port(
       -- General Interface
-      clk         : in  sl;
-      rst         : in  sl := not RST_POLARITY_G;
+      clk             : in  sl;
+      rst             : in  sl := not RST_POLARITY_G;
       -- Pix2Pgp Interface
-      pgpDin      : in  slv(31 downto 0);
-      pgpDinValid : in  sl;
-      pgpDinReady : out sl;
+      pgpDin          : in  slv(31 downto 0);
+      pgpDinValid     : in  sl;
+      pgpDinReady     : out sl;
       -- FPGA RX Interface
-      pgpReady    : in  sl;
-      pgpValid    : out sl;
-      pgpData     : out slv(ASIC_DATABUS_DWIDTH_C-1 downto 0));
+      pix2pgpTxMaster : out AxiStreamMasterType;
+      pix2pgpTxSlave  : in  AxiStreamSlaveType := AXI_STREAM_SLAVE_INIT_C);
 end entity Pix2PgpFpgaTb;
 
 architecture test of Pix2PgpFpgaTb is
@@ -47,28 +46,6 @@ architecture test of Pix2PgpFpgaTb is
    signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
    signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
-
-   signal pgpTxSlave   : AxiStreamSlaveType;
-   signal pgpTxMaster  : AxiStreamMasterType;
-
-   -- axi-stream gearbox configuration
-   constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
-
-   constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
 
 begin
 
@@ -133,8 +110,8 @@ begin
          RST_POLARITY_G      => RST_POLARITY_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
       port map(
          -- Clock and reset
          axisClk     => clk,
@@ -144,12 +121,8 @@ begin
          sSideBand   => (others => '0'),
          sAxisSlave  => open,
          -- Master Port
-         mAxisMaster => pgpTxMaster,
+         mAxisMaster => pix2pgpTxMaster,
          mSideBand   => open,
-         mAxisSlave  => pgpTxSlave);
-
-   pgpTxSlave.tReady <= pgpReady;
-   pgpValid          <= pgpTxMaster.tValid;
-   pgpData           <= pgpTxMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+         mAxisSlave  => pix2pgpTxSlave);
 
 end architecture;

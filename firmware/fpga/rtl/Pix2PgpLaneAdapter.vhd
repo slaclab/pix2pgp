@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Pix2Pgp Lane Adapter; converts lane data to AXI-Stream
+-- Description: Pix2Pgp Lane Adapter; checks on the trigger number
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -46,34 +46,14 @@ entity Pix2PgpLaneAdapter is
       -- ASIC Rx Interface
       lastTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneError      : out sl;
-      laneTxMaster   : out AxiStreamMasterType;
-      laneTxSlave    : in  AxiStreamSlaveType);
+      laneRxMaster   : out AxiStreamMasterType;
+      laneRxSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneAdapter;
 
 architecture rtl of Pix2PgpLaneAdapter is
 
    -- how much to stretch laneRxRst
    constant LANE_RX_RST_WIDTH_C : natural := 10;
-
-   -- axi-stream gearbox configuration
-   constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
-
-   -- note that the bus becomes wider to have enough bandwidth to read-out all lanes fast enough
-   constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    signal axisFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal axisFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -89,7 +69,7 @@ architecture rtl of Pix2PgpLaneAdapter is
       valid          : sl;
       waitCnt        : slv(1 downto 0);
       lastTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      axisFifoMaster : AxiStreamMasterType;
+      laneRxMaster : AxiStreamMasterType;
       ibAxisSlave    : AxiStreamSlaveType;
    end record RegType;
 
@@ -101,7 +81,7 @@ architecture rtl of Pix2PgpLaneAdapter is
       valid          => '0',
       waitCnt        => (others => '0'),
       lastTrgCnt     => (others => '0'),
-      axisFifoMaster => AXI_STREAM_MASTER_INIT_C,
+      laneRxMaster => AXI_STREAM_MASTER_INIT_C,
       ibAxisSlave    => AXI_STREAM_SLAVE_INIT_C);
 
    signal r   : RegType;
@@ -109,7 +89,7 @@ architecture rtl of Pix2PgpLaneAdapter is
 
 begin
 
-   comb : process (r, frameMetaDout, sysRst, frameMetaValid, ibAxisMaster, axisFifoSlave) is
+   comb : process (r, frameMetaDout, sysRst, frameMetaValid, ibAxisMaster, laneRxSlave) is
       variable v       : RegType;
       variable axisTrg : slv(TRGCNT_WIDTH_C-1 downto 0);
       variable trg     : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -128,12 +108,12 @@ begin
 
       -- refuse to receive the AXI-Stream by default
       v.ibAxisSlave.tReady := '0';
-      v.axisFifoMaster     := AXI_STREAM_MASTER_INIT_C;
+      v.laneRxMaster     := AXI_STREAM_MASTER_INIT_C;
 
       -- ready to accept data
       if r.valid = '1' then
-         v.ibAxisSlave.tReady := axisFifoSlave.tReady;
-         v.axisFifoMaster     := ibAxisMaster;
+         v.ibAxisSlave.tReady := laneRxSlave.tReady;
+         v.laneRxMaster     := ibAxisMaster;
       end if;
 
       -- get the metadata first...
@@ -177,9 +157,9 @@ begin
       end if;
 
       -- Outputs
-      axisFifoMaster <= v.axisFifoMaster;
-      ibAxisSlave    <= v.ibAxisSlave;
-      frameMetaRd    <= r.frameMetaRd;
+      laneRxMaster <= v.laneRxMaster;
+      ibAxisSlave  <= v.ibAxisSlave;
+      frameMetaRd  <= r.frameMetaRd;
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
@@ -219,52 +199,5 @@ begin
          clk     => sysClk,
          dataIn  => sysRst,
          dataOut => laneRxRst);
-
-   -----------------------------------------
-   -- Axi-Stream Gearbox (1-to-8)
-   -----------------------------------------
-   U_Gearbox : entity surf.AxiStreamGearbox
-      generic map(
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_POLARITY_G      => RST_POLARITY_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
-      port map(
-         -- Clock and reset
-         axisClk     => sysClk,
-         axisRst     => sysRst,
-         -- Slave Port
-         sAxisMaster => axisFifoMaster,
-         sSideBand   => (others => '0'),
-         sAxisSlave  => axisFifoSlave,
-         -- Master Port
-         mAxisMaster => reverseTxMaster,
-         mSideBand   => open,
-         mAxisSlave  => reverseTxSlave);
-
-   -----------------------------------------
-   -- Reverses on a per-word basis
-   -----------------------------------------
-   U_Reverse: entity pix2pgp.AxiStreamReverse
-      generic map(
-         TPD_G             => TPD_G,
-         RST_ASYNC_G       => RST_ASYNC_G,
-         RST_POLARITY_G    => RST_POLARITY_G,
-         AXIS_FIFO_WIDTH_G => AXIS_FIFO_WIDTH_C,
-         IB_DWIDTH_G       => ASIC_DATABUS_DWIDTH_C/8,
-         OB_DWIDTH_G       => FPGA_DATABUS_DWIDTH_C/8)
-      port map(
-         -- General Interface
-         sysClk     => sysClk,
-         sysRst     => sysRst,
-         -- Inbound Interface
-         ibTxMaster => reverseTxMaster,
-         ibTxSlave  => reverseTxSlave,
-         -- Outbound Interface
-         obTxMaster => laneTxMaster,
-         obTxSlave  => laneTxSlave);
 
 end rtl;

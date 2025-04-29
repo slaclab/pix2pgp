@@ -33,23 +33,21 @@ entity Pix2PgpLaneRx is
    );
    port(
       -- General Interface
-      pgpClk         : in  sl;
-      pgpRst         : in  sl := not(RST_POLARITY_G);
-      sysClk         : in  sl;
-      sysRst         : in  sl := not(RST_POLARITY_G);
+      pgpClk          : in  sl;
+      pgpRst          : in  sl := not(RST_POLARITY_G);
+      sysClk          : in  sl;
+      sysRst          : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpError       : in  sl;
-      pgpValid       : in  sl;
-      pgpData        : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      pgpReady       : out sl;
+      pix2pgpTxMaster : in  AxiStreamMasterType;
+      pix2pgpTxSlave  : out AxiStreamSlaveType;
       -- Adapter Interface
-      laneRxRst      : in  sl;
-      frameMetaRd    : in  sl;
-      frameMetaDout  : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
-      frameMetaValid : out sl;
+      laneRxRst       : in  sl;
+      frameMetaRd     : in  sl;
+      frameMetaDout   : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaValid  : out sl;
       -- AXI-Stream to Adapter
-      obAxisMaster   : out AxiStreamMasterType;
-      obAxisSlave    : in  AxiStreamSlaveType
+      obAxisMaster    : out AxiStreamMasterType;
+      obAxisSlave     : in  AxiStreamSlaveType
    );
 end Pix2PgpLaneRx;
 
@@ -72,13 +70,6 @@ architecture rtl of Pix2PgpLaneRx is
       ERROR_S);
 
    type RegType is record
-      protoBufDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      protoBufValid : sl;
-      protoBufRd    : sl;
-      protoBufFull  : sl;
-      din           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      preValid      : sl;
-      valid         : sl;
       decError      : sl;
       pgpError      : sl;
       fifoRst       : sl;
@@ -92,17 +83,11 @@ architecture rtl of Pix2PgpLaneRx is
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dataLenCnt    : slv(7 downto 0);
       sAxisMaster   : AxiStreamMasterType;
+      rxFifoSlave   : AxiStreamSlaveType;
       state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      protoBufDout  => (others => '0'),
-      protoBufValid => '0',
-      protoBufRd    => '0',
-      protoBufFull  => '0',
-      din           => (others => '0'),
-      preValid      => '0',
-      valid         => '0',
       decError      => '0',
       pgpError      => '0',
       toHeader      => '1',
@@ -116,17 +101,14 @@ architecture rtl of Pix2PgpLaneRx is
       activeColCnt  => (others => '0'),
       dataLenCnt    => (others => '0'),
       sAxisMaster   => AXI_STREAM_MASTER_INIT_C,
+      rxFifoSlave   => AXI_STREAM_SLAVE_INIT_C,
       state         => WAIT_VALID_S
    );
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
-   signal protoBufFull  : sl := '0';
-   signal protoBufValid : sl := '0';
-   signal protoBufRst   : sl := '0';
-   signal protoBufRd    : sl := '0';
-   signal protoBufDout  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+   signal rxFifoRst     : sl := '0';
 
    signal sysFifoRst    : sl := not(RST_POLARITY_G);
    signal pgpFifoRst    : sl := not(RST_POLARITY_G);
@@ -137,32 +119,36 @@ architecture rtl of Pix2PgpLaneRx is
    signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
+   signal rxFifoMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal rxFifoSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+
+
 begin
 
    -----------------------------
    -- First Buffer Level
    -----------------------------
-   U_protoBuffer : entity surf.Fifo
+   U_LaneRxFifo : entity surf.AxiStreamFifoV2
       generic map (
-         TPD_G           => TPD_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
-         RST_ASYNC_G     => RST_ASYNC_G,
-         MEMORY_TYPE_G   => "block",
-         FWFT_EN_G       => true,
-         DATA_WIDTH_G    => ASIC_DATABUS_DWIDTH_C,
-         ADDR_WIDTH_G    => LANERX_FIFO_ADDR_WIDTH_C)
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         FIFO_ADDR_WIDTH_G   => LANERX_FIFO_ADDR_WIDTH_C,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => AXI_CONFIG_C)
       port map (
-         rst      => protoBufRst,
-         -- Write Ports
-         wr_clk   => pgpClk,
-         wr_en    => pgpValid,
-         din      => pgpData,
-         overflow => protoBufFull,
-         -- Read Ports
-         rd_clk   => pgpClk,
-         rd_en    => protoBufRd,
-         dout     => protoBufDout,
-         valid    => protoBufValid);
+         -- Slave Port
+         sAxisClk    => pgpClk,
+         sAxisRst    => rxFifoRst,
+         sAxisMaster => pix2pgpTxMaster,
+         sAxisSlave  => pix2pgpTxSlave,
+         -- Master Port
+         mAxisClk    => pgpClk,
+         mAxisRst    => rxFifoRst,
+         mAxisMaster => rxFifoMaster,
+         mAxisSlave  => rxFifoSlave);
 
    U_SynclaneRxRst : entity surf.Synchronizer
       generic map (
@@ -174,8 +160,7 @@ begin
          dataIn  => laneRxRst,
          dataOut => laneRxRstSync);
 
-   comb : process (r, laneRst, protoBufDout, protoBufValid,
-                   pgpError, protoBufFull, sAxisSlave) is
+   comb : process (r, laneRst, rxFifoMaster, sAxisSlave) is
 
       -- omnipresent
       variable v : RegType;
@@ -202,19 +187,15 @@ begin
       v := r;
 
       -- Register inputs
-      v.protoBufDout   := protoBufDout;
-      v.protoBufValid  := protoBufValid;
       v.pgpError       := pgpError;
       v.protoBufFull   := protoBufFull;
 
       -- Defaults
-      v.frameMetaWr := '0';
-      v.protoBufRd  := '0';
-      v.fifoRst     := not(RST_POLARITY_G);
+      v.frameMetaWr         := '0';
+      v.rxFifoSlave.tRready := '0';
+      v.fifoRst             := not(RST_POLARITY_G);
 
-      -- read if valid and if axi is ready
-      v.din        := v.protoBufDout;
-      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := r.din;
+      v.sAxisMaster.tData := v.sAxisMaster.rxFifoMaster;
 
       -- header variables
       overOcc     := r.din(OVEROCC_FLAG_POS_C);
@@ -333,9 +314,9 @@ begin
          -- then depending on the register state, it transitions
          -- to the associated state
          when WAIT_VALID_S =>
-            v.protoBufRd := v.protoBufValid;
+            v.rxFifoSlave.tReady := rxFifoMaster.tValid;
 
-            if v.protoBufValid = '1' then
+            if rxFifoMaster.tValid = '1' then
                if r.toHeader = '1' then
                   v.state := WAIT_HEADER_S;
                elsif r.toMeta = '1' then
@@ -358,7 +339,7 @@ begin
       v.frameMetaWr := (v.sAxisMaster.tLast and not(r.sAxisMaster.tLast)) or
                        (v.decError          and not(r.decError));
 
-      protoBufRd  <= v.protoBufRd;
+      rxFifoSlave  <= v.rxFifoSlave;
 
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := r.trgCntHeader;
@@ -378,11 +359,11 @@ begin
    end process comb;
 
    -- internal resets
-   laneRst     <= (pgpRst or laneRxRstSync) when RST_POLARITY_G = '1' else
-                  (pgpRst and not(laneRxRstSync));
+   laneRst  <= (pgpRst or laneRxRstSync) when RST_POLARITY_G = '1' else
+               (pgpRst and not(laneRxRstSync));
 
-   protoBufRst <= (pgpRst or r.fifoRst) when RST_POLARITY_G = '1' else
-                  (pgpRst and not(r.fifoRst));
+   rxFifoRst <= (pgpRst or r.fifoRst) when RST_POLARITY_G = '1' else
+                (pgpRst and not(r.fifoRst));
 
    seq : process (pgpClk, laneRst) is
    begin
@@ -405,8 +386,8 @@ begin
          GEN_SYNC_FIFO_G     => false,
          FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => ASIC_TX_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => pgpClk,

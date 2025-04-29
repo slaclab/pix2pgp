@@ -97,9 +97,8 @@ type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArra
 
    signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal pgpValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal pgpReady  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal pgpData   : Pix2PgpFpgaRxDataArray := (others => (others => '0'));
+   signal pix2pgpTxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal pix2pgpTxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
@@ -279,16 +278,15 @@ begin
           NUM_VC_G       => NUM_VC_G)
        port map(
           -- General Interface
-          clk         => pgpClk,
-          rst         => revRst,
+          clk             => pgpClk,
+          rst             => revRst,
           -- Pix2Pgp Interface
-          pgpDin      => pgpDataAsic(lane),
-          pgpDinValid => pgpDataAsicValid(lane),
-          pgpDinReady => pgpDataAsicReady(lane),
+          pgpDin          => pgpDataAsic(lane),
+          pgpDinValid     => pgpDataAsicValid(lane),
+          pgpDinReady     => pgpDataAsicReady(lane),
           -- FPGA RX Interface
-          pgpValid    => pgpValid(lane),
-          pgpData     => pgpData(lane),
-          pgpReady    => pgpReady(lane));
+          pix2pgpTxMaster => pix2pgpTxMaster,
+          pix2pgpTxSlave  => pix2pgpTxSlave);
 
    end generate GEN_LANE;
 
@@ -312,10 +310,8 @@ begin
             asicSro         => sroFinal,
             asicSroEna      => '1',
             -- PGP4Rx Interface
-            pgpError        => (others => '0'),
-            pgpValid        => pgpValid,
-            pgpData         => pgpData,
-            pgpReady        => pgpReady,
+            pix2pgpTxMaster => pix2pgpTxMaster,
+            pix2pgpTxSlave  => pix2pgpTxSlave);
             -- Individual Axi Lanes for Debugging
             allLanesMaster  => allLanesMaster,
             allLanesSlave   => allLanesSlave,

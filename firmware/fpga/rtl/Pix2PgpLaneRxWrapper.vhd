@@ -33,20 +33,18 @@ entity Pix2PgpLaneRxWrapper is
    );
    port(
       -- General Interface
-      pgpClk       : in  sl;
-      pgpRst       : in  sl := not(RST_POLARITY_G);
-      sysClk       : in  sl;
-      sysRst       : in  sl := not(RST_POLARITY_G);
+      pgpClk          : in  sl;
+      pgpRst          : in  sl := not(RST_POLARITY_G);
+      sysClk          : in  sl;
+      sysRst          : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgpError     : in  sl;
-      pgpValid     : in  sl;
-      pgpData      : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      pgpReady     : out sl;
+      pix2pgpTxMaster : in  AxiStreamMasterType;
+      pix2pgpTxSlave  : out AxiStreamSlaveType;
       -- ASIC Rx Interface
-      lastTrgCnt   : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      laneError    : out sl;
-      laneTxMaster : out AxiStreamMasterType;
-      laneTxSlave  : in  AxiStreamSlaveType);
+      lastTrgCnt      : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneError       : out sl;
+      laneTxMaster    : out AxiStreamMasterType;
+      laneTxSlave     : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
 
 architecture rtl of Pix2PgpLaneRxWrapper is
@@ -67,23 +65,21 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         pgpClk         => pgpClk,
-         pgpRst         => pgpRst,
-         sysClk         => sysClk,
-         sysRst         => sysRst,
+         pgpClk          => pgpClk,
+         pgpRst          => pgpRst,
+         sysClk          => sysClk,
+         sysRst          => sysRst,
          -- RX FIFO Interface
-         pgpError       => pgpError,
-         pgpValid       => pgpValid,
-         pgpData        => pgpData,
-         pgpReady       => pgpReady,
+         pix2pgpTxMaster => pix2pgpTxMaster,
+         pix2pgpTxSlave  => pix2pgpTxSlave,
          -- Adapter Interface
-         laneRxRst      => laneRxRst,
-         frameMetaRd    => frameMetaRd,
-         frameMetaDout  => frameMetaDout,
-         frameMetaValid => frameMetaValid,
+         laneRxRst       => laneRxRst,
+         frameMetaRd     => frameMetaRd,
+         frameMetaDout   => frameMetaDout,
+         frameMetaValid  => frameMetaValid,
          -- AXI-Stream to Adapter
-         obAxisMaster   => adapterAxiMaster,
-         obAxisSlave    => adapterAxiSlave);
+         obAxisMaster    => adapterAxiMaster,
+         obAxisSlave     => adapterAxiSlave);
 
    U_Adapter: entity pix2pgp.Pix2PgpLaneAdapter
       generic map(

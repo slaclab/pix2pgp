@@ -47,10 +47,8 @@ entity Pix2PgpAsicStreamRx is
       asicSro         : in  sl;
       asicSroEna      : in  sl;
       -- PGP4Rx Interface
-      pgpError        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpValid        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpData         : in  Pix2PgpFpgaRxDataArray;
-      pgpReady        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pix2pgpTxMaster : in  AxiStreamMasterType;
+      pix2pgpTxSlave  : out AxiStreamSlaveType;
       -- AXI-Stream Interface
       asicTxMaster    : out AxiStreamMasterType;
       asicTxSlave     : in  AxiStreamSlaveType;
@@ -584,20 +582,18 @@ begin
             RST_POLARITY_G => RST_POLARITY_G)
          port map(
             -- General Interface
-            pgpClk       => pgpClk,
-            pgpRst       => pgpLaneRst(lane),
-            sysClk       => sysClk,
-            sysRst       => sysLaneRst(lane),
+            pgpClk          => pgpClk,
+            pgpRst          => pgpLaneRst(lane),
+            sysClk          => sysClk,
+            sysRst          => sysLaneRst(lane),
             -- RX FIFO Interface
-            pgpError     => pgpError(lane),
-            pgpValid     => pgpValid(lane),
-            pgpData      => pgpData(lane),
-            pgpReady     => pgpReady(lane),
+            pix2pgpTxMaster => pix2pgpTxMaster,
+            pix2pgpTxSlave  => pix2pgpTxSlave);
             -- ASIC Rx Interface
-            laneError    => laneError(lane),
-            lastTrgCnt   => lastTrgCnt(lane),
-            laneTxMaster => laneTxMasters(lane),
-            laneTxSlave  => laneTxSlaves(lane));
+            laneError       => laneError(lane),
+            lastTrgCnt      => lastTrgCnt(lane),
+            laneTxMaster    => laneTxMasters(lane),
+            laneTxSlave     => laneTxSlaves(lane));
 
       -- Watchdog (on a per-lane basis)
       U_Watchdog : entity pix2pgp.Pix2PgpWatchdog

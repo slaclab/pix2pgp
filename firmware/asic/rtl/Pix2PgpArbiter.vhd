@@ -59,25 +59,6 @@ end Pix2PgpArbiter;
 
 architecture rtl of Pix2PgpArbiter is
 
-   -- axi-stream gearbox configuration
-   constant SLAVE_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
-
-   constant MASTER_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
-
    type StateType is (
       IDLE_S,
       PARSE_HEADER_S,
@@ -388,8 +369,8 @@ begin
          RST_POLARITY_G      => RST_POLARITY_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => SLAVE_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => MASTER_AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
       port map(
          -- Clock and reset
          axisClk     => pgpClk,
