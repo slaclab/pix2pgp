@@ -372,7 +372,7 @@ begin
 wait for CLK_PERIOD_SPARSE_C*93;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
---for i in 0 to 10 loop
+for i in 0 to 10 loop
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
    hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
    hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);
@@ -1887,14 +1887,15 @@ wait for CLK_PERIOD_SPARSE_C*93;
    hitLen(7)(21) <= toSlv(4, hitLen(0)(0)'length);
    hitLen(7)(22) <= toSlv(1, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(0, hitLen(0)(0)'length);
----------------------------------------
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-sro  <= '1';
-wait for CLK_PERIOD_SPARSE_C*2;
-sro  <= '0';
---wait for CLK_PERIOD_SPARSE_C*93;
----- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
---end loop;
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   sro  <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro  <= '0';
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*93;
+end loop;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -110,6 +110,17 @@ package Pix2PgpPkg is
    subtype  META_DATALEN_POS_C is natural range   7 downto 0;
    ------------------------------------------------------------------------------
 
+   ------------------------------------------------------------------------------
+   -- FPGA-RX related parameters
+   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 6;
+   constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
+   constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
+   constant LANERX_FIFO_PIPE_C       : integer := 2;
+   constant AXIS_FIFO_WIDTH_C        : integer := 10;
+
+   constant FORWARD_SOF_C            : boolean := False;
+   constant DUMMY_CNT_MAX_C          : natural := 4;
+
    -- ***************************************************************************
    -- ************************ Tunable parameters end ***************************
    -- ***************************************************************************
@@ -215,18 +226,6 @@ package Pix2PgpPkg is
    function rightShift (inSlv: slv; count: natural) return slv;
    --
 
-   -- FPGA-RX related
-   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 6;
-   constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
-   constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
-   constant LANERX_FIFO_PIPE_C       : integer := 2;
-   constant AXIS_FIFO_WIDTH_C        : integer := 10;
-
-   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
-
-   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-
    ------------------------------------------------------------------------------
    -- FPGA Preamble Mapping
    constant FPGA_PREAMBLE_LEN_C : natural := 160;
@@ -258,6 +257,11 @@ package Pix2PgpPkg is
    subtype LANE_TIMEOUT_POS_C is natural range  15 downto 8;
    subtype LANE_VALID_POS_C   is natural range   7 downto 0;
    ------------------------------------------------------------------------------
+
+   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
+   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (

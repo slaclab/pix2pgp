@@ -54,10 +54,10 @@ end Pix2PgpLaneRx;
 architecture rtl of Pix2PgpLaneRx is
 
    type StateType is (
-      WAIT_VALID_S,
       WAIT_HEADER_S,
       PARSE_COL_METADATA_S,
       PARSE_DATA_S,
+      WAIT_DUMMY_S,
       ERROR_S);
 
    type RegType is record
@@ -65,16 +65,14 @@ architecture rtl of Pix2PgpLaneRx is
       pgpError      : sl;
       fifoRst       : sl;
       frameMetaWr   : sl;
-      toHeader      : sl;
-      toMeta        : sl;
-      toData        : sl;
       din           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       inPause       : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
+      dummyCnt      : slv(bitSize(DUMMY_CNT_MAX_C)-1 downto 0);
       dataLenCnt    : slv(7 downto 0);
-      sAxisMaster   : AxiStreamMasterType;
+      axiFifoMaster   : AxiStreamMasterType;
       rxFifoSlave   : AxiStreamSlaveType;
       state         : StateType;
    end record RegType;
@@ -82,9 +80,6 @@ architecture rtl of Pix2PgpLaneRx is
    constant REG_INIT_C : RegType := (
       decError      => '0',
       pgpError      => '0',
-      toHeader      => '1',
-      toMeta        => '0',
-      toData        => '0',
       din           => (others => '0'),
       fifoRst       => not(RST_POLARITY_G),
       frameMetaWr   => '0',
@@ -92,10 +87,11 @@ architecture rtl of Pix2PgpLaneRx is
       inPause       => '0',
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
+      dummyCnt      => (others => '0'),
       dataLenCnt    => (others => '0'),
-      sAxisMaster   => AXI_STREAM_MASTER_INIT_C,
+      axiFifoMaster => AXI_STREAM_MASTER_INIT_C,
       rxFifoSlave   => AXI_STREAM_SLAVE_INIT_C,
-      state         => WAIT_VALID_S
+      state         => WAIT_HEADER_S
    );
 
    signal r   : RegType := REG_INIT_C;
@@ -109,8 +105,8 @@ architecture rtl of Pix2PgpLaneRx is
    signal laneRst       : sl := not(RST_POLARITY_G);
    signal laneRxRstSync : sl := not(RST_POLARITY_G);
 
-   signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal axiFifoMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal axiFifoSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
    signal rxFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal rxFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -153,7 +149,7 @@ begin
          dataIn  => laneRxRst,
          dataOut => laneRxRstSync);
 
-   comb : process (r, laneRst, rxFifoMaster, sAxisSlave, discard) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, discard) is
 
       -- omnipresent
       variable v : RegType;
@@ -188,26 +184,26 @@ begin
       v.fifoRst            := not(RST_POLARITY_G);
 
       v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := r.din;
+      v.axiFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.din;
 
       -- header variables
-      overOcc     := r.din(OVEROCC_FLAG_POS_C);
-      pause       := r.din(PAUSE_FLAG_POS_C);
-      colError    := r.din(COLUMN_ERROR_FLAG_POS_C);
-      pauseError  := r.din(PAUSE_ERROR_FLAG_POS_C);
-      timeout     := r.din(TIMEOUT_FLAG_POS_C);
-      dummy       := toSl(isDummy(r.din));
-      colBitmask  := r.din(COL_BITMASK_POS_C);
-      trgCnt      := resize(r.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
+      overOcc     := v.din(OVEROCC_FLAG_POS_C);
+      pause       := v.din(PAUSE_FLAG_POS_C);
+      colError    := v.din(COLUMN_ERROR_FLAG_POS_C);
+      pauseError  := v.din(PAUSE_ERROR_FLAG_POS_C);
+      timeout     := v.din(TIMEOUT_FLAG_POS_C);
+      dummy       := toSl(isDummy(v.din));
+      colBitmask  := v.din(COL_BITMASK_POS_C);
+      trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
       -- column metadata variables
-      metaTrgCnt  := r.din(META_TRGCNT_POS_C);
-      metaDataLen := r.din(META_DATALEN_POS_C);
+      metaTrgCnt  := v.din(META_TRGCNT_POS_C);
+      metaDataLen := v.din(META_DATALEN_POS_C);
 
       -- flow control check
-      if sAxisSlave.tReady = '1' then
-         v.sAxisMaster.tValid := '0';
-         v.sAxisMaster.tLast  := '0';
-         v.sAxisMaster.tUser  := (others => '0');
+      if axiFifoSlave.tReady = '1' then
+         v.axiFifoMaster.tValid := '0';
+         v.axiFifoMaster.tLast  := '0';
+         v.axiFifoMaster.tUser  := (others => '0');
       end if;
 
       -- PGP error check
@@ -217,25 +213,24 @@ begin
       case r.state is
       ---------------------------------------------------------------------------
          -- stay here until a valid header comes in
+         -- discard dummies
          when WAIT_HEADER_S =>
-            if dummy = '1' then
-               v.state := WAIT_VALID_S;
-            elsif sAxisSlave.tReady = '1' and dummy = '0' then
-               v.sAxisMaster.tValid   := '1';
-               v.sAxisMaster.tUser(1) := '1'; -- SoF
-               v.inPause      := pause;
-               v.trgCntHeader := trgCnt;
+            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+               v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
-               if uOr(colBitmask) = '0' then
-                  v.sAxisMaster.tLast := '1'; -- EoF
-               else
-                  v.toHeader     := '0';
-                  v.toMeta       := '1';
-                  v.activeColCnt := onesCount(colBitmask);
+               if dummy = '0' then
+                  v.axiFifoMaster.tValid   := '1';
+                  v.axiFifoMaster.tUser(1) := '1'; -- SoF
+                  v.inPause                := pause;
+                  v.trgCntHeader           := trgCnt;
+
+                  if uOr(colBitmask) = '0' then
+                     v.axiFifoMaster.tLast := '1'; -- EoF
+                  else
+                     v.activeColCnt := onesCount(colBitmask);
+                     v.state        := PARSE_COL_METADATA_S;
+                  end if;
                end if;
-
-               v.state := WAIT_VALID_S;
-
             end if;
 
             -- error detected!
@@ -246,13 +241,24 @@ begin
          ----------------------------------------------------------------------
          -- parse column metadata
          when PARSE_COL_METADATA_S =>
-            if sAxisSlave.tReady = '1' then
-               v.sAxisMaster.tValid := '1';
-               v.dataLenCnt         := metaDataLen;
+            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
+               v.axiFifoMaster.tValid := '1'; -- write to axiFifo
+               v.dataLenCnt           := metaDataLen;
 
-               v.toMeta  := '0';
-               v.toData  := '1';
-               v.state := WAIT_VALID_S;
+               if metaDataLen > 0 then
+                  v.state := PARSE_DATA_S;
+               else
+                  -- data for this column done; what about more columns though?
+                  if r.activeColCnt > 1 then
+                     v.activeColCnt := r.activeColCnt - 1;
+                     v.state := PARSE_COL_METADATA_S;
+                  else
+                     -- close data frame if not expecting more data
+                     v.axiFifoMaster.tLast := not(r.inPause);
+                     v.state := WAIT_DUMMY_S;
+                  end if;
+               end if;
 
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
@@ -272,28 +278,26 @@ begin
          ----------------------------------------------------------------------
          -- parse column data
          when PARSE_DATA_S =>
-            if sAxisSlave.tReady = '1' then
+            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
+               v.axiFifoMaster.tValid := '1'; -- write to axiFifo
 
-               v.sAxisMaster.tValid := '1';
                -- still more data for this column remaining
                if r.dataLenCnt > 2 then
                   v.dataLenCnt := r.dataLenCnt - 2;
                else
+
                   -- data for this column done; what about more columns though?
                   if r.activeColCnt > 1 then
                      v.activeColCnt := r.activeColCnt - 1;
-                     v.toMeta  := '1';
-                     v.toData  := '0';
+                     v.state := PARSE_COL_METADATA_S;
                   else
                      -- close data frame if not expecting more data
-                     v.sAxisMaster.tLast := not(r.inPause);
-                     v.toHeader := '1';
-                     v.toData   := '0';
+                     v.axiFifoMaster.tLast := not(r.inPause);
+                     v.state := WAIT_DUMMY_S;
                   end if;
+
                end if;
-
-               v.state := WAIT_VALID_S;
-
             end if;
 
             -- error detected!
@@ -302,23 +306,22 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- the 'central' state; waits for valid signal from FIFO to read it
-         -- then depending on the register state, it transitions
-         -- to the associated state
-         when WAIT_VALID_S =>
-            v.rxFifoSlave.tReady := rxFifoMaster.tValid;
+         -- check for dummies; after a configurable amount, go-to header eval
+         -- don't write dummies to axiFifo
+         when WAIT_DUMMY_S =>
+            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+               v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
-            if rxFifoMaster.tValid = '1' then
-               if r.toHeader = '1' then
-                  v.state := WAIT_HEADER_S;
-               elsif r.toMeta = '1' then
-                  v.state := PARSE_COL_METADATA_S;
-               elsif r.toData = '1' then
-                  v.state := PARSE_DATA_S;
+               if dummy = '1' then
+                  v.dummyCnt := r.dummyCnt + 1;
+                  if r.dummyCnt = DUMMY_CNT_MAX_C then
+                     v.dummyCnt := (others => '0');
+                     v.state    := WAIT_HEADER_S;
+                  end if;
                end if;
             end if;
 
-         ----------------------------------------------------------------------
+         ------------------------------------------------------------------------
          -- stay here until reset
          when ERROR_S =>
             v.fifoRst  := RST_POLARITY_G;
@@ -328,14 +331,14 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      v.frameMetaWr := (v.sAxisMaster.tLast and not(r.sAxisMaster.tLast)) or
+      v.frameMetaWr := (v.axiFifoMaster.tLast and not(r.axiFifoMaster.tLast)) or
                        (v.decError          and not(r.decError));
 
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := v.trgCntHeader;
 
-      rxFifoSlave <= r.rxFifoSlave;
-      sAxisMaster <= r.sAxisMaster;
+      rxFifoSlave   <= v.rxFifoSlave;
+      axiFifoMaster <= r.axiFifoMaster;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
@@ -406,8 +409,8 @@ begin
          -- Slave Port
          sAxisClk    => pgpClk,
          sAxisRst    => pgpFifoRst,
-         sAxisMaster => sAxisMaster,
-         sAxisSlave  => sAxisSlave,
+         sAxisMaster => axiFifoMaster,
+         sAxisSlave  => axiFifoSlave,
          -- Master Port
          mAxisClk    => sysClk,
          mAxisRst    => sysFifoRst,
