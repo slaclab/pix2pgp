@@ -29,8 +29,8 @@ entity Pix2PgpLaneFilter is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1'  -- '1' for active high rst, '0' for active low
-   );
+      RST_POLARITY_G : sl      := '1';   -- '1' for active high rst, '0' for active low
+      PIPE_STAGES_G  : natural := 1);
    port(
       -- General Interface
       sysClk         : in  sl;
@@ -56,27 +56,27 @@ architecture rtl of Pix2PgpLaneFilter is
    constant LANE_RX_RST_WIDTH_C : natural := 10;
 
    type RegType is record
-      errorFlag      : sl;
-      laneError      : sl;
-      frameMetaRd    : sl;
-      checking       : sl;
-      valid          : sl;
-      waitCnt        : slv(1 downto 0);
-      lastTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      sAxisMaster : AxiStreamMasterType;
-      ibAxisSlave    : AxiStreamSlaveType;
+      errorFlag    : sl;
+      laneError    : sl;
+      frameMetaRd  : sl;
+      checking     : sl;
+      valid        : sl;
+      waitCnt      : slv(1 downto 0);
+      lastTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
+      sAxisMaster  : AxiStreamMasterType;
+      ibAxisSlave  : AxiStreamSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      errorFlag      => '0',
-      laneError      => '0',
-      frameMetaRd    => '0',
-      checking       => '0',
-      valid          => '0',
-      waitCnt        => (others => '0'),
-      lastTrgCnt     => (others => '0'),
-      sAxisMaster => AXI_STREAM_MASTER_INIT_C,
-      ibAxisSlave    => AXI_STREAM_SLAVE_INIT_C);
+      errorFlag    => '0',
+      laneError    => '0',
+      frameMetaRd  => '0',
+      checking     => '0',
+      valid        => '0',
+      waitCnt      => (others => '0'),
+      lastTrgCnt   => (others => '0'),
+      sAxisMaster  => AXI_STREAM_MASTER_INIT_C,
+      ibAxisSlave  => AXI_STREAM_SLAVE_INIT_C);
 
    signal r   : RegType;
    signal rin : RegType;
@@ -142,7 +142,7 @@ begin
          v.laneError := '1'; -- can only be cleared by an upstream reset
       end if;
 
-      if r.valid = '1' and ibAxisMaster.tLast = '1' and r.laneError = '0' then
+      if r.valid = '1' and ibAxisMaster.tLast = '1' and ibAxisMaster.tValid = '1' then
          v.valid   := '0'; -- last word received; force the slave to non-ready again
          v.waitCnt := r.waitCnt + 1; -- start the wait counter
       end if;
@@ -234,6 +234,7 @@ begin
          RST_ASYNC_G       => RST_ASYNC_G,
          RST_POLARITY_G    => RST_POLARITY_G,
          AXIS_FIFO_WIDTH_G => AXIS_FIFO_WIDTH_C,
+         PIPE_STAGES_G     => PIPE_STAGES_G,
          IB_DWIDTH_G       => ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C,
          OB_DWIDTH_G       => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)
       port map(

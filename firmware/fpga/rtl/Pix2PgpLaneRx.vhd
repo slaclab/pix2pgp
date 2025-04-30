@@ -29,8 +29,7 @@ entity Pix2PgpLaneRx is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1'  -- '1' for active high rst, '0' for active low
-   );
+      RST_POLARITY_G : sl      := '1'); -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
       pgpClk         : in  sl;
@@ -188,9 +187,8 @@ begin
       v.rxFifoSlave.tReady := '0';
       v.fifoRst            := not(RST_POLARITY_G);
 
-      v.din                := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := r.din;
-
 
       -- header variables
       overOcc     := r.din(OVEROCC_FLAG_POS_C);
@@ -225,14 +223,14 @@ begin
             elsif sAxisSlave.tReady = '1' and dummy = '0' then
                v.sAxisMaster.tValid   := '1';
                v.sAxisMaster.tUser(1) := '1'; -- SoF
-               v.inPause := pause;
+               v.inPause      := pause;
+               v.trgCntHeader := trgCnt;
 
                if uOr(colBitmask) = '0' then
                   v.sAxisMaster.tLast := '1'; -- EoF
                else
                   v.toHeader     := '0';
                   v.toMeta       := '1';
-                  v.trgCntHeader := trgCnt;
                   v.activeColCnt := onesCount(colBitmask);
                end if;
 
@@ -334,9 +332,9 @@ begin
                        (v.decError          and not(r.decError));
 
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
-      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := r.trgCntHeader;
+      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := v.trgCntHeader;
 
-      rxFifoSlave <= v.rxFifoSlave;
+      rxFifoSlave <= r.rxFifoSlave;
       sAxisMaster <= r.sAxisMaster;
 
       -- Reset
@@ -365,36 +363,6 @@ begin
       end if;
    end process seq;
 
-   ------------------
-   -- Axi-Stream FIFO
-   ------------------
-   U_Fifo : entity surf.AxiStreamFifoV2
-      generic map (
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- FIFO configurations
-         GEN_SYNC_FIFO_G     => false,
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
-      port map (
-         -- Slave Port
-         sAxisClk    => pgpClk,
-         sAxisRst    => pgpFifoRst,
-         sAxisMaster => sAxisMaster,
-         sAxisSlave  => sAxisSlave,
-         -- Master Port
-         mAxisClk    => sysClk,
-         mAxisRst    => sysFifoRst,
-         mAxisMaster => obAxisMaster,
-         mAxisSlave  => obAxisSlave);
-
-   -- AXI-Stream FIFO does not have RST_POLARITY_G
-   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
-   pgpFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
-
    ----------------------------------------
    -- Metadata Buffer
    ----------------------------------------
@@ -419,5 +387,35 @@ begin
          rd_en    => frameMetaRd,
          dout     => frameMetaDout,
          valid    => frameMetaValid);
+
+   ------------------
+   -- Axi-Stream FIFO
+   ------------------
+   U_Fifo : entity surf.AxiStreamFifoV2
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         GEN_SYNC_FIFO_G     => false,
+         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => pgpClk,
+         sAxisRst    => pgpFifoRst,
+         sAxisMaster => sAxisMaster,
+         sAxisSlave  => sAxisSlave,
+         -- Master Port
+         mAxisClk    => sysClk,
+         mAxisRst    => sysFifoRst,
+         mAxisMaster => obAxisMaster,
+         mAxisSlave  => obAxisSlave);
+
+   -- AXI-Stream FIFO does not have RST_POLARITY_G
+   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
+   pgpFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
 end rtl;

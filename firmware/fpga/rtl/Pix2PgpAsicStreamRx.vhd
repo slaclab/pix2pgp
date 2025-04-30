@@ -35,6 +35,7 @@ entity Pix2PgpAsicStreamRx is
       ASIC_ID_G             : natural  := 0;
       SINGLE_LANE_ID_G      : natural  := 0;
       TIMEOUT_LIMIT_WIDTH_G : positive := 16;
+      LANERX_PIPE_STAGES_G  : natural  := 1;
       DISCARD_BAD_COL_TRG_G : boolean  := true);
    port(
       -- General Interface
@@ -591,9 +592,10 @@ begin
 
       U_Lane: entity pix2pgp.Pix2PgpLaneRxWrapper
          generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G)
+            TPD_G                => TPD_G,
+            RST_ASYNC_G          => RST_ASYNC_G,
+            RST_POLARITY_G       => RST_POLARITY_G,
+            LANERX_PIPE_STAGES_G => LANERX_PIPE_STAGES_G)
          port map(
             -- General Interface
             pgpClk           => pgpClk,

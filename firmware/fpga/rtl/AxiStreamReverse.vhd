@@ -31,9 +31,9 @@ entity AxiStreamReverse is
       RST_ASYNC_G       : boolean := false;
       RST_POLARITY_G    : sl      := '1';  -- '1' for active high rst, '0' for active low
       AXIS_FIFO_WIDTH_G : natural := 4;
-      IB_DWIDTH_G       : natural := 5; -- in bytes
-      OB_DWIDTH_G       : natural := 40 -- in bytes
-   );
+      PIPE_STAGES_G     : natural := 1;
+      IB_DWIDTH_G       : natural := 5;   -- in bytes
+      OB_DWIDTH_G       : natural := 40); -- in bytes
    port(
       -- General Interface
       sysClk     : in  sl;
@@ -127,21 +127,14 @@ begin
 
          v.sAxisMaster.tValid := '0';
          v.sAxisMaster.tLast  := '0';
-
-         -- Check if previous word terminated the frame
-         if (r.sAxisMaster.tLast = '1') then
-            v.sAxisMaster.tStrb := (others => '0');
-            v.sAxisMaster.tKeep := (others => '0');
-         end if;
+         v.sAxisMaster.tUser  := (others => '0');
+         v.sAxisMaster.tKeep  := (others => '1');
 
       end if;
 
-      if ibTxMaster.tValid = '1' and
-         v.sAxisMaster.tValid   = '0' and
-         v.sAxisMaster.tLast    = '0' then
-
+      if v.sAxisMaster.tValid = '0' then
          -- Accept the input word
-         v.ibTxSlave.tReady := '1';
+         v.ibTxSlave.tReady   := sAxisSlave.tReady;
 
          v.sAxisMaster.tUser  := ibTxMaster.tUser;
          v.sAxisMaster.tValid := ibTxMaster.tValid;
@@ -156,7 +149,7 @@ begin
 
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output
-      sAxisMaster <= r.sAxisMaster; -- downstream master input
+      sAxisMaster <= v.sAxisMaster; -- downstream master input
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
@@ -177,31 +170,24 @@ begin
       end if;
    end process seq;
 
-   -----------------------------------------
-   -- Axi-Stream FIFO
-   -----------------------------------------
-   U_Fifo : entity surf.AxiStreamFifoV2
+   -------------------------
+   -- Pipeline Stage
+   -------------------------
+   U_Pipe : entity surf.AxiStreamPipeline
       generic map (
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => FPGA_RX_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         PIPE_STAGES_G  => PIPE_STAGES_G)
       port map (
+         -- Clock and Reset
+         axisClk     => sysClk,
+         axisRst     => sysRst,
          -- Slave Port
-         sAxisClk    => sysClk,
-         sAxisRst    => fifoRst,
          sAxisMaster => sAxisMaster,
          sAxisSlave  => sAxisSlave,
          -- Master Port
-         mAxisClk    => sysClk,
-         mAxisRst    => fifoRst,
          mAxisMaster => obTxMaster,
          mAxisSlave  => obTxSlave);
-
-   fifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst, not(sysRst));
 
 end rtl;
