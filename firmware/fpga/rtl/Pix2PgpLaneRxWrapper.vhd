@@ -83,7 +83,7 @@ begin
          obAxisMaster   => filterAxiMaster,
          obAxisSlave    => filterAxiSlave);
 
-   U_Filter: entity pix2pgp.Pix2PgpLaneFilter
+   U_Filter: entity pix2pgp.Pix2PgpLaneRxFilter
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,

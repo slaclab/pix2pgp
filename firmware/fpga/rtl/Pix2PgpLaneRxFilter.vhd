@@ -25,7 +25,7 @@ use surf.AxiStreamPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpLaneFilter is
+entity Pix2PgpLaneRxFilter is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
@@ -48,9 +48,9 @@ entity Pix2PgpLaneFilter is
       laneError      : out sl;
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
-end Pix2PgpLaneFilter;
+end Pix2PgpLaneRxFilter;
 
-architecture rtl of Pix2PgpLaneFilter is
+architecture rtl of Pix2PgpLaneRxFilter is
 
    -- how much to stretch laneRxRst
    constant LANE_RX_RST_WIDTH_C : natural := 10;
