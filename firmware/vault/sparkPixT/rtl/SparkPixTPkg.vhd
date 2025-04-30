@@ -118,7 +118,7 @@ package Pix2PgpPkg is
    constant LANERX_FIFO_PIPE_C       : integer := 2;
    constant AXIS_FIFO_WIDTH_C        : integer := 10;
 
-   constant FORWARD_SOF_C            : boolean := False;
+   constant FORWARD_SOF_C            : boolean := True;
    constant DUMMY_CNT_MAX_C          : natural := 4;
 
    -- ***************************************************************************

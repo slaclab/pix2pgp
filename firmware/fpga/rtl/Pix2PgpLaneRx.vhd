@@ -62,12 +62,12 @@ architecture rtl of Pix2PgpLaneRx is
 
    type RegType is record
       decError      : sl;
-      pgpError      : sl;
       fifoRst       : sl;
       frameMetaWr   : sl;
       din           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       inPause       : sl;
+      rxError       : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dummyCnt      : slv(bitSize(DUMMY_CNT_MAX_C)-1 downto 0);
@@ -79,12 +79,12 @@ architecture rtl of Pix2PgpLaneRx is
 
    constant REG_INIT_C : RegType := (
       decError      => '0',
-      pgpError      => '0',
       din           => (others => '0'),
       fifoRst       => not(RST_POLARITY_G),
       frameMetaWr   => '0',
       frameMetaDin  => (others => '0'),
       inPause       => '0',
+      rxError       => '0',
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -110,7 +110,6 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal rxFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal rxFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
 
 begin
 
@@ -163,6 +162,8 @@ begin
       variable pauseError : sl := '0';
       variable timeout    : sl := '0';
       variable dummy      : sl := '0';
+      variable sof        : sl := '0';
+      variable eof        : sl := '0';
       variable colBitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
       variable trgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
 
@@ -174,9 +175,6 @@ begin
 
       -- Latch the current value
       v := r;
-
-      -- Register inputs
-      v.pgpError       := '0'; -- To-Do: encode this
 
       -- Defaults
       v.frameMetaWr        := '0';
@@ -199,6 +197,9 @@ begin
       metaTrgCnt  := v.din(META_TRGCNT_POS_C);
       metaDataLen := v.din(META_DATALEN_POS_C);
 
+      -- flow control
+      sof := ite(FORWARD_SOF_C, rxFifoMaster.tUser(1), '1');
+
       -- flow control check
       if axiFifoSlave.tReady = '1' then
          v.axiFifoMaster.tValid := '0';
@@ -207,7 +208,7 @@ begin
       end if;
 
       -- PGP error check
-      v.decError := (v.pgpError and not(r.pgpError));
+      v.decError := (v.rxError and not(r.rxError));
 
       ---------------------------------------------------------------------------
       case r.state is
@@ -220,7 +221,7 @@ begin
 
                if dummy = '0' then
                   v.axiFifoMaster.tValid   := '1';
-                  v.axiFifoMaster.tUser(1) := '1'; -- SoF
+                  v.axiFifoMaster.tUser(1) := sof;
                   v.inPause                := pause;
                   v.trgCntHeader           := trgCnt;
 
