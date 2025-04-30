@@ -365,9 +365,9 @@ begin
       end if;
    end process seq;
 
-   -----------------------------------------
-   -- Axi-Stream FIFO (resize for bwidth)
-   -----------------------------------------
+   ------------------
+   -- Axi-Stream FIFO
+   ------------------
    U_Fifo : entity surf.AxiStreamFifoV2
       generic map (
          -- General Configurations

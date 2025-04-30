@@ -188,8 +188,8 @@ begin
          -- FIFO configurations
          FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => FPGA_RX_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => sysClk,

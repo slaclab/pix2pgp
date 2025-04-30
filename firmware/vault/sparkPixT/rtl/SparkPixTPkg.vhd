@@ -216,7 +216,7 @@ package Pix2PgpPkg is
    --
 
    -- FPGA-RX related
-   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 10;
+   constant LANERX_FIFO_ADDR_WIDTH_C : integer := 6;
    constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
    constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
    constant LANERX_FIFO_PIPE_C       : integer := 2;
@@ -265,7 +265,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TKEEP_MODE_C       => TKEEP_COMP_C,
       TUSER_BITS_C       => 4,
       TUSER_MODE_C       => TUSER_NORMAL_C);
 
@@ -274,7 +274,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C      => PGP_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TKEEP_MODE_C       => TKEEP_COMP_C,
       TUSER_BITS_C       => 4,
       TUSER_MODE_C       => TUSER_NORMAL_C);
 
