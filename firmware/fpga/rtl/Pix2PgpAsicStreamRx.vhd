@@ -23,6 +23,7 @@ library surf;
 use surf.StdRtlPkg.all;
 use surf.AxiLitePkg.all;
 use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -378,9 +379,10 @@ begin
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
             if v.asicRxMaster.tValid = '0' then
-               v.asicRxMaster.tKeep    := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               v.asicRxMaster.tUser(1) := '1'; -- SoF
-               v.asicRxMaster.tValid   := '1';
+               v.asicRxMaster.tValid := '1';
+
+               v.asicRxMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
+               ssiSetUserSof(FPGA_RX_AXI_CONFIG_C, v.asicRxMaster, '1');
                v.asicRxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
                v.state := WAIT_LANES_S;
             end if;
@@ -391,8 +393,9 @@ begin
 
             -- done; either all lanes are valid, or all in timeout/error state
             if allBits(allLanesReady, '1') then
-               v.asicRxMaster.tKeep  := tKeepSet(FPGA_HEADER_LEN_C);
                v.asicRxMaster.tValid := '1';
+
+               v.asicRxMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
                v.asicRxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
                -- reset the troubled lanes

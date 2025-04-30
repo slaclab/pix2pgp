@@ -21,6 +21,7 @@ use ieee.std_logic_arith.all;
 library surf;
 use surf.StdRtlPkg.all;
 use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -198,7 +199,8 @@ begin
       metaDataLen := v.din(META_DATALEN_POS_C);
 
       -- flow control
-      sof := ite(FORWARD_SOF_C, rxFifoMaster.tUser(1), '1');
+      sof       := ite(EVAL_SOF_C,  ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,  rxFifoMaster), '1');
+      v.rxError := ite(EVAL_EOFE_C, ssiGetUserEofe(ASIC_DATA_AXI_CONFIG_C, rxFifoMaster), '0');
 
       -- flow control check
       if axiFifoSlave.tReady = '1' then
@@ -219,9 +221,9 @@ begin
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
-               if dummy = '0' then
+               if dummy = '0' and sof = '1' then
                   v.axiFifoMaster.tValid   := '1';
-                  v.axiFifoMaster.tUser(1) := sof;
+                  ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   v.inPause                := pause;
                   v.trgCntHeader           := trgCnt;
 
