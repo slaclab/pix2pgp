@@ -185,6 +185,7 @@ begin
               RST_ASYNC_G     => RST_ASYNC_G,
               RST_POLARITY_G  => RST_POLARITY_G,
               WAIT_WREN_G     => 3,
+              SER_ID_G        => ser,
               COL_ID_G        => col)
             port map(
               clk        => sparseClk,
@@ -370,7 +371,11 @@ begin
      wait for CLK_PERIOD_SPARSE_C*2;
          ero <= '0';
 
-   wait for CLK_PERIOD_SPARSE_C*7;
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+wait for CLK_PERIOD_SPARSE_C*7;
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
+--for i in 0 to 10 loop
    ---------------------------------------
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
    hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
@@ -1926,6 +1931,11 @@ wait for CLK_PERIOD_SPARSE_C*800;
    ero <= '1';
 wait for CLK_PERIOD_SPARSE_C*2;
    ero <= '0';
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--   wait for CLK_PERIOD_SPARSE_C*93;
+--end loop;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ----------------------------------------------
     ----------------------------------------------
