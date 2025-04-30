@@ -96,7 +96,7 @@ package Pix2PgpPkg is
                                               downto HEADER_DWIDTH_C-56;
    --------------------------
    -- trigger counter
-   subtype  TRG_CNT_POS_C          is natural range  HEADER_DWIDTH_C-57 -- [7:0]
+   subtype  TRGCNT_POS_C           is natural range  HEADER_DWIDTH_C-57 -- [7:0]
                                               downto HEADER_DWIDTH_C-64;
    ------------------------------------------------------------------------------
    -- ~~~~~~~~~~~~~~~
@@ -106,8 +106,8 @@ package Pix2PgpPkg is
    -- two flags: overOcc and Pause; colMeta[25] -> overOcc; colMeta[24] -> overOcc
    subtype  META_FLAGS_POS_C   is natural range  ASIC_DATABUS_DWIDTH_C-1 downto 24;
    subtype  META_COL_POS_C     is natural range  23 downto 16;
-   subtype  META_TRG_CNT_POS_C is natural range  15 downto 8;
-   subtype  META_DATALEN_POS_C is natural range  7 downto 0;
+   subtype  META_TRGCNT_POS_C  is natural range  15 downto 8;
+   subtype  META_DATALEN_POS_C is natural range   7 downto 0;
    ------------------------------------------------------------------------------
 
    -- ***************************************************************************
@@ -188,7 +188,8 @@ package Pix2PgpPkg is
                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                           colBitmask: slv; trgCntGlbl: slv) return slv;
    function isDummy        (din : slv) return boolean;
-   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv;
+   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
+                            asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
    function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
 
@@ -229,13 +230,15 @@ package Pix2PgpPkg is
    ------------------------------------------------------------------------------
    -- FPGA Preamble Mapping
    constant FPGA_PREAMBLE_LEN_C : natural := 160;
-   subtype PIX2PGP_ID_POS_C is natural range  FPGA_PREAMBLE_LEN_C-1 downto 96;
-   subtype ASIC_TYPE_POS_C  is natural range  95 downto 64;
-   subtype ASIC_ID_POS_C    is natural range  63 downto 32;
-   subtype FPGA_ID_POS_C    is natural range  31 downto 0;
+   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 96;
+   subtype ASIC_TYPE_POS_C     is natural range  95 downto 64;
+   subtype ASIC_ID_POS_C       is natural range  63 downto 32;
+   subtype FPGA_ID_POS_C       is natural range  31 downto 16;
+   subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
+   subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
 
    constant ASIC_ID_LEN_C       : natural := 32;
-   constant FPGA_ID_DEFAULT_C   : slv(31 downto  0) := x"C0CAC01A";
+   constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
    constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
                                                      & x"70"  -- p
                                                      & x"69"  -- i
@@ -255,6 +258,34 @@ package Pix2PgpPkg is
    subtype LANE_TIMEOUT_POS_C is natural range  15 downto 8;
    subtype LANE_VALID_POS_C   is natural range   7 downto 0;
    ------------------------------------------------------------------------------
+
+   -- AXI-Stream configuration
+   constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
+   constant ASIC_TX_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
+
+   constant FPGA_RX_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C         => false,
+      TDATA_BYTES_C      => FPGA_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C       => 4,
+      TID_BITS_C         => 0,
+      TKEEP_MODE_C       => TKEEP_NORMAL_C,
+      TUSER_BITS_C       => 4,
+      TUSER_MODE_C       => TUSER_NORMAL_C);
 
 end Pix2PgpPkg;
 
@@ -299,8 +330,8 @@ package body Pix2PgpPkg is
       retMeta(META_COL_POS_C)     := resize(col, rangeToLen(META_COL_POS_C'high,
                                                             META_COL_POS_C'low));
       --
-      retMeta(META_TRG_CNT_POS_C) := resize(trgCnt, rangeToLen(META_TRG_CNT_POS_C'high,
-                                                               META_TRG_CNT_POS_C'low));
+      retMeta(META_TRGCNT_POS_C)  := resize(trgCnt, rangeToLen(META_TRGCNT_POS_C'high,
+                                                               META_TRGCNT_POS_C'low));
       --
       retMeta(META_DATALEN_POS_C) := resize(dataLen, rangeToLen(META_DATALEN_POS_C'high,
                                                                 META_DATALEN_POS_C'low));
@@ -322,7 +353,7 @@ package body Pix2PgpPkg is
       retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       retHeader(COL_BITMASK_POS_C)       := colBitmask;
-      retHeader(TRG_CNT_POS_C)           := resize(trgCntGlbl, 8);
+      retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, 8);
 
       return retHeader;
    end asicHeaderMap;
@@ -357,14 +388,16 @@ package body Pix2PgpPkg is
    end function;
 
    -- pretty much fixed
-   function fpgaPreambleMap (pix2pgpId: slv; asicType: slv; asicId: slv; fpgaId: slv) return slv is
+   function fpgaPreambleMap (pix2pgpId: slv; asicType: slv;
+                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv ) return slv is
       variable retPreamble: slv(FPGA_PREAMBLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retPreamble(PIX2PGP_ID_POS_C) := resize(pix2pgpId, PIX2PGP_ID_C'length);
-      retPreamble(ASIC_TYPE_POS_C)  := resize(asicType, ASIC_TYPE_C'length);
-      retPreamble(ASIC_ID_POS_C)    := resize(asicId, ASIC_ID_LEN_C);
-      retPreamble(FPGA_ID_POS_C)    := resize(fpgaId, FPGA_ID_DEFAULT_C'length);
+      retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, PIX2PGP_ID_C'length);
+      retPreamble(ASIC_TYPE_POS_C)   := resize(asicType, ASIC_TYPE_C'length);
+      retPreamble(ASIC_ID_POS_C)     := resize(asicId, ASIC_ID_LEN_C);
+      retPreamble(FPGA_ID_POS_C)     := resize(fpgaId, FPGA_ID_DEFAULT_C'length);
+      retPreamble(FPGA_TRGCNT_POS_C) := resize(fpgaTrgCnt, TRGCNT_WIDTH_C);
 
       return retPreamble;
 

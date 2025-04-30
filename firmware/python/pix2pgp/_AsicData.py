@@ -57,6 +57,8 @@ class AsicData(object):
         self.asicType        = 0
         self.asicId          = 0
         self.fpgaId          = 0
+        self.fpgaTrgCnt      = 0
+
 
         # asic-specific formats
         self.asicParams     = None
@@ -181,9 +183,10 @@ class AsicData(object):
 
         _dict = self.fpgaDataFormat.fpgaPreambleDecoder(preamble=preamble)
 
-        self.asicType = _dict['asicType']
-        self.asicId   = _dict['asicId']
-        self.fpgaId   = _dict['fpgaId']
+        self.asicType   = _dict['asicType']
+        self.asicId     = _dict['asicId']
+        self.fpgaId     = _dict['fpgaId']
+        self.fpgaTrgCnt = _dict['fpgaTrgCnt']
 
         # error-checking
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
@@ -195,10 +198,11 @@ class AsicData(object):
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
-            _format = 'AsicType={0:<22} AsicId={1:<23} FpgaId={2:<8x}'
+            _format = 'AsicType={0:<8} AsicId={1:<8} FpgaId={2:<4x} FpgaTrgCnt={3:<8}'
             print(_format.format(self.asicParams.asicParamExtract()['asicType'],
                   self.asicId,
-                  self.fpgaId))
+                  self.fpgaId,
+                  self.fpgaTrgCnt))
             print(f"")
             if self.preambleErr:
                 click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)

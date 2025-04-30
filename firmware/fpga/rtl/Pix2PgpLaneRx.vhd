@@ -33,34 +33,26 @@ entity Pix2PgpLaneRx is
    );
    port(
       -- General Interface
-      pgpClk          : in  sl;
-      pgpRst          : in  sl := not(RST_POLARITY_G);
-      sysClk          : in  sl;
-      sysRst          : in  sl := not(RST_POLARITY_G);
+      pgpClk         : in  sl;
+      pgpRst         : in  sl := not(RST_POLARITY_G);
+      sysClk         : in  sl;
+      sysRst         : in  sl := not(RST_POLARITY_G);
+      discard        : in  sl;
       -- RX FIFO Interface
-      pix2pgpTxMaster : in  AxiStreamMasterType;
-      pix2pgpTxSlave  : out AxiStreamSlaveType;
-      -- Adapter Interface
-      laneRxRst       : in  sl;
-      frameMetaRd     : in  sl;
-      frameMetaDout   : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
-      frameMetaValid  : out sl;
-      -- AXI-Stream to Adapter
-      obAxisMaster    : out AxiStreamMasterType;
-      obAxisSlave     : in  AxiStreamSlaveType
+      pgp4RxMaster   : in  AxiStreamMasterType;
+      pgp4RxSlave    : out AxiStreamSlaveType;
+      -- Filter Interface
+      laneRxRst      : in  sl;
+      frameMetaRd    : in  sl;
+      frameMetaDout  : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaValid : out sl;
+      -- AXI-Stream to Filter
+      obAxisMaster   : out AxiStreamMasterType;
+      obAxisSlave    : in  AxiStreamSlaveType
    );
 end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
-
-   constant AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    type StateType is (
       WAIT_VALID_S,
@@ -77,6 +69,7 @@ architecture rtl of Pix2PgpLaneRx is
       toHeader      : sl;
       toMeta        : sl;
       toData        : sl;
+      din           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       inPause       : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -93,6 +86,7 @@ architecture rtl of Pix2PgpLaneRx is
       toHeader      => '1',
       toMeta        => '0',
       toData        => '0',
+      din           => (others => '0'),
       fifoRst       => not(RST_POLARITY_G),
       frameMetaWr   => '0',
       frameMetaDin  => (others => '0'),
@@ -119,8 +113,8 @@ architecture rtl of Pix2PgpLaneRx is
    signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal rxFifoMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal rxFifoSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal rxFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal rxFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
 
 begin
@@ -136,14 +130,14 @@ begin
          -- FIFO configurations
          FIFO_ADDR_WIDTH_G   => LANERX_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => pgpClk,
          sAxisRst    => rxFifoRst,
-         sAxisMaster => pix2pgpTxMaster,
-         sAxisSlave  => pix2pgpTxSlave,
+         sAxisMaster => pgp4RxMaster,
+         sAxisSlave  => pgp4RxSlave,
          -- Master Port
          mAxisClk    => pgpClk,
          mAxisRst    => rxFifoRst,
@@ -160,7 +154,7 @@ begin
          dataIn  => laneRxRst,
          dataOut => laneRxRstSync);
 
-   comb : process (r, laneRst, rxFifoMaster, sAxisSlave) is
+   comb : process (r, laneRst, rxFifoMaster, sAxisSlave, discard) is
 
       -- omnipresent
       variable v : RegType;
@@ -187,15 +181,16 @@ begin
       v := r;
 
       -- Register inputs
-      v.pgpError       := pgpError;
-      v.protoBufFull   := protoBufFull;
+      v.pgpError       := '0'; -- To-Do: encode this
 
       -- Defaults
-      v.frameMetaWr         := '0';
-      v.rxFifoSlave.tRready := '0';
-      v.fifoRst             := not(RST_POLARITY_G);
+      v.frameMetaWr        := '0';
+      v.rxFifoSlave.tReady := '0';
+      v.fifoRst            := not(RST_POLARITY_G);
 
-      v.sAxisMaster.tData := v.sAxisMaster.rxFifoMaster;
+      v.din                := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := r.din;
+
 
       -- header variables
       overOcc     := r.din(OVEROCC_FLAG_POS_C);
@@ -205,9 +200,9 @@ begin
       timeout     := r.din(TIMEOUT_FLAG_POS_C);
       dummy       := toSl(isDummy(r.din));
       colBitmask  := r.din(COL_BITMASK_POS_C);
-      trgCnt      := resize(r.din(TRG_CNT_POS_C), TRGCNT_WIDTH_C);
+      trgCnt      := resize(r.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
       -- column metadata variables
-      metaTrgCnt  := r.din(META_TRG_CNT_POS_C);
+      metaTrgCnt  := r.din(META_TRGCNT_POS_C);
       metaDataLen := r.din(META_DATALEN_POS_C);
 
       -- flow control check
@@ -218,8 +213,7 @@ begin
       end if;
 
       -- PGP error check
-      v.decError := (v.pgpError and not(r.pgpError)) or
-                    (v.protoBufFull and not(r.protoBufFull));
+      v.decError := (v.pgpError and not(r.pgpError));
 
       ---------------------------------------------------------------------------
       case r.state is
@@ -265,8 +259,8 @@ begin
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
                -- 2. check if the data length of this column is within the limits
-               if metaTrgCnt /= r.trgCntHeader or
-                  metaDataLen >= powerOfTwo(DATALEN_WIDTH_C) then
+               if (metaTrgCnt /= r.trgCntHeader and discard = '1') or
+                  (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
                   v.state    := ERROR_S;
                end if;
@@ -339,14 +333,11 @@ begin
       v.frameMetaWr := (v.sAxisMaster.tLast and not(r.sAxisMaster.tLast)) or
                        (v.decError          and not(r.decError));
 
-      rxFifoSlave  <= v.rxFifoSlave;
-
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
       v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := r.trgCntHeader;
 
+      rxFifoSlave <= v.rxFifoSlave;
       sAxisMaster <= r.sAxisMaster;
-
-      pgpReady <= not(protoBufFull); -- on pgp domain
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
@@ -375,7 +366,7 @@ begin
    end process seq;
 
    -----------------------------------------
-   -- Axi-Stream FIFO
+   -- Axi-Stream FIFO (resize for bwidth)
    -----------------------------------------
    U_Fifo : entity surf.AxiStreamFifoV2
       generic map (
@@ -386,7 +377,7 @@ begin
          GEN_SYNC_FIFO_G     => false,
          FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => ASIC_TX_AXI_CONFIG_C,
+         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
       port map (
          -- Slave Port

@@ -34,7 +34,8 @@ entity Pix2PgpAsicStreamRx is
       RST_POLARITY_G        : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G             : natural  := 0;
       SINGLE_LANE_ID_G      : natural  := 0;
-      TIMEOUT_LIMIT_WIDTH_G : positive := 16);
+      TIMEOUT_LIMIT_WIDTH_G : positive := 16;
+      DISCARD_BAD_COL_TRG_G : boolean  := true);
    port(
       -- General Interface
       pgpClk          : in  sl;
@@ -47,11 +48,11 @@ entity Pix2PgpAsicStreamRx is
       asicSro         : in  sl;
       asicSroEna      : in  sl;
       -- PGP4Rx Interface
-      pix2pgpTxMaster : in  AxiStreamMasterType;
-      pix2pgpTxSlave  : out AxiStreamSlaveType;
+      pgp4RxMaster    : in  AxiStreamMasterArray;
+      pgp4RxSlave     : out AxiStreamSlaveArray;
       -- AXI-Stream Interface
-      asicTxMaster    : out AxiStreamMasterType;
-      asicTxSlave     : in  AxiStreamSlaveType;
+      asicRxMaster    : out AxiStreamMasterType;
+      asicRxSlave     : in  AxiStreamSlaveType;
       -- Individual Axi Lanes for Debugging
       allLanesMaster  : out AxiStreamMasterArray;
       allLanesSlave   : out AxiStreamSlaveArray;
@@ -76,9 +77,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal lastTrgCnt      : trgCntArray := (others => (others => '0'));
 
-   signal laneTxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+   signal laneRxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_MASTER_INIT_C);
-   signal laneTxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+   signal laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal laneError       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -111,6 +112,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal pgpLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
    signal sysLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
+   signal discardBadColTrg: slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
@@ -121,52 +124,54 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    type RegType is record
       -- Internal
-      asicSro      : sl;
-      fpgaTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffWr    : sl;
-      trgBuffRd    : sl;
-      trgCntBuff   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffValid : sl;
-      armTimeout   : sl;
-      laneSel      : slv(BITMAX_SERIALIZERS_C downto 0);
-      laneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      waitLaneSel  : sl;
-      state        : StateType;
+      asicSro          : sl;
+      fpgaTrgCnt       : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffWr        : sl;
+      trgBuffRd        : sl;
+      trgCntBuff       : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffValid     : sl;
+      armTimeout       : sl;
+      laneSel          : slv(BITMAX_SERIALIZERS_C downto 0);
+      laneRst          : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      waitLaneSel      : sl;
+      state            : StateType;
       -- Registers
-      fpgaId       : slv(31 downto 0);
-      timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      laneEnable   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      discardBadColTrg : sl;
+      fpgaId           : slv(15 downto 0);
+      timeoutLimit     : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
-      asicTxMaster : AxiStreamMasterType;
-      laneTxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
+      asicRxMaster     : AxiStreamMasterType;
+      laneRxSlaves     : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Lite
-      readSlave    : AxiLiteReadSlaveType;
-      writeSlave   : AxiLiteWriteSlaveType;
+      readSlave        : AxiLiteReadSlaveType;
+      writeSlave       : AxiLiteWriteSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- Internal
-      asicSro      => '0',
-      fpgaTrgCnt   => FPGA_TRGCNT_DEFAULT_C,
-      trgBuffWr    => '0',
-      trgBuffRd    => '0',
-      trgCntBuff   => (others => '0'),
-      trgBuffValid => '0',
-      armTimeout   => '0',
-      laneSel      => (others => '0'),
-      laneRst      => (others => '0'),
-      waitLaneSel  => '0',
-      state        => IDLE_S,
+      asicSro          => '0',
+      fpgaTrgCnt       => FPGA_TRGCNT_DEFAULT_C,
+      trgBuffWr        => '0',
+      trgBuffRd        => '0',
+      trgCntBuff       => (others => '0'),
+      trgBuffValid     => '0',
+      armTimeout       => '0',
+      laneSel          => (others => '0'),
+      laneRst          => (others => '0'),
+      waitLaneSel      => '0',
+      state            => IDLE_S,
       -- Registers
-      fpgaId       => FPGA_ID_DEFAULT_C,
-      timeoutLimit => TIMEOUT_LIMIT_DEFAULT_C,
-      laneEnable   => LANE_ENABLE_DEFAULT_C,
+      discardBadColTrg => toSl(DISCARD_BAD_COL_TRG_G),
+      fpgaId           => FPGA_ID_DEFAULT_C,
+      timeoutLimit     => TIMEOUT_LIMIT_DEFAULT_C,
+      laneEnable       => LANE_ENABLE_DEFAULT_C,
       -- AXI-Stream
-      asicTxMaster => AXI_STREAM_MASTER_INIT_C,
-      laneTxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
+      asicRxMaster     => AXI_STREAM_MASTER_INIT_C,
+      laneRxSlaves     => (others => AXI_STREAM_SLAVE_INIT_C),
       -- AXI-Lite
-      readSlave    => AXI_LITE_READ_SLAVE_INIT_C,
-      writeSlave   => AXI_LITE_WRITE_SLAVE_INIT_C);
+      readSlave        => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave       => AXI_LITE_WRITE_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -246,8 +251,8 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, asicSroEnaSync,
-                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicTxSlave,
-                   laneTimeout, laneError, laneTxMasters, laneEnableSync, lastTrgCnt, r) is
+                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, asicRxSlave,
+                   laneTimeout, laneError, laneRxMasters, laneEnableSync, lastTrgCnt, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -268,18 +273,18 @@ begin
       v.trgBuffRd := '0';
 
       -- flow control check
-      if asicTxSlave.tReady = '1' then
-         v.asicTxMaster.tValid := '0';
+      if asicRxSlave.tReady = '1' then
+         v.asicRxMaster.tValid := '0';
       end if;
 
       -- default flags
-      v.asicTxMaster.tLast := '0';
-      v.asicTxMaster.tUser := (others => '0');
-      v.asicTxMaster.tData := (others => '0');
-      v.asicTxMaster.tKeep := (others => '0');
+      v.asicRxMaster.tLast := '0';
+      v.asicRxMaster.tUser := (others => '0');
+      v.asicRxMaster.tData := (others => '0');
+      v.asicRxMaster.tKeep := (others => '0');
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         v.laneTxSlaves(lane).tReady := '0'; -- disable by default
+         v.laneRxSlaves(lane).tReady := '0'; -- disable by default
       end loop;
 
       ----------------------------------------------------------------------------------------------
@@ -297,6 +302,7 @@ begin
       axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
       axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"408", 0, v.laneEnable);
+      axiSlaveRegister (axilEp, x"408", 0, v.discardBadColTrg);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -322,7 +328,7 @@ begin
 
       -- global lane status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane) := laneTxMasters(lane).tValid;
+         laneValid(lane) := laneRxMasters(lane).tValid;
 
          if r.laneEnable(lane) = '1' then
             allLanesReady(lane) := laneError(lane) or laneTimeout(lane) or laneValid(lane);
@@ -331,8 +337,15 @@ begin
          end if;
       end loop;
 
-      preamble := fpgaPreambleMap(PIX2PGP_ID_C, ASIC_TYPE_C, toSlv(ASIC_ID_G, 32), r.fpgaId);
-      header   := fpgaHeaderMap(laneError, laneTimeout, laneValid);
+      preamble := fpgaPreambleMap(PIX2PGP_ID_C,
+                                  ASIC_TYPE_C,
+                                  toSlv(ASIC_ID_G, 32),
+                                  r.fpgaId,
+                                  r.trgCntBuff);
+
+      header := fpgaHeaderMap(laneError,
+                              laneTimeout,
+                              laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
       -------------------------------------------------------------------------
@@ -363,11 +376,11 @@ begin
          ----------------------------------------------------------------------
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
-            if v.asicTxMaster.tValid = '0' then
-               v.asicTxMaster.tKeep    := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               v.asicTxMaster.tUser(1) := '1'; -- SoF
-               v.asicTxMaster.tValid   := '1';
-               v.asicTxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
+            if v.asicRxMaster.tValid = '0' then
+               v.asicRxMaster.tKeep    := tKeepSet(FPGA_PREAMBLE_LEN_C);
+               v.asicRxMaster.tUser(1) := '1'; -- SoF
+               v.asicRxMaster.tValid   := '1';
+               v.asicRxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
                v.state := WAIT_LANES_S;
             end if;
 
@@ -377,9 +390,9 @@ begin
 
             -- done; either all lanes are valid, or all in timeout/error state
             if allBits(allLanesReady, '1') then
-               v.asicTxMaster.tKeep  := tKeepSet(FPGA_HEADER_LEN_C);
-               v.asicTxMaster.tValid := '1';
-               v.asicTxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.asicRxMaster.tKeep  := tKeepSet(FPGA_HEADER_LEN_C);
+               v.asicRxMaster.tValid := '1';
+               v.asicRxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
                -- reset the troubled lanes
                for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -411,15 +424,15 @@ begin
          ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done
          when WAIT_TLAST_S =>
-            v.asicTxMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
-                  := laneTxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
-            v.asicTxMaster.tKeep           := laneTxMasters(laneIdx).tKeep;
-            v.asicTxMaster.tValid          := laneTxMasters(laneIdx).tValid;
-            v.laneTxSlaves(laneIdx).tReady := asicTxSlave.tReady;
+            v.asicRxMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
+                  := laneRxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
+            v.asicRxMaster.tKeep           := laneRxMasters(laneIdx).tKeep;
+            v.asicRxMaster.tValid          := laneRxMasters(laneIdx).tValid;
+            v.laneRxSlaves(laneIdx).tReady := asicRxSlave.tReady;
 
-            if laneTxMasters(laneIdx).tLast = '1' and
-               v.asicTxMaster.tValid        = '1' and
-               asicTxSlave.tReady           = '1' then
+            if laneRxMasters(laneIdx).tLast = '1' and
+               v.asicRxMaster.tValid        = '1' and
+               asicRxSlave.tReady           = '1' then
 
                v.state := SWITCH_MUX_S;
 
@@ -436,11 +449,11 @@ begin
          -- transmit trailer;
          -- also acknowledge any errors and reset the timeout watchdog
          when TX_TRAILER_S =>
-            if v.asicTxMaster.tValid = '0' then
-               v.asicTxMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
-               v.asicTxMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) := resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-               v.asicTxMaster.tValid := '1';
-               v.asicTxMaster.tLast  := '1';
+            if v.asicRxMaster.tValid = '0' then
+               v.asicRxMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
+               v.asicRxMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) := resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
+               v.asicRxMaster.tValid := '1';
+               v.asicRxMaster.tLast  := '1';
                v.state               := IDLE_S;
             end if;
 
@@ -453,8 +466,9 @@ begin
       ----------------------------------------------------------------------------------------------
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         timeoutLimit(lane) <= r.timeoutLimit;
-         armTimeout(lane)   <= r.armTimeout and not(laneValid(lane));
+         timeoutLimit(lane)     <= r.timeoutLimit;
+         armTimeout(lane)       <= r.armTimeout and not(laneValid(lane));
+         discardBadColTrg(lane) <= r.discardBadColTrg; -- fan-out
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
@@ -468,8 +482,8 @@ begin
       end loop;
 
       -- AXI-Stream Outputs
-      laneTxSlaves <= v.laneTxSlaves;
-      asicTxMaster <= r.asicTxMaster;
+      laneRxSlaves <= v.laneRxSlaves;
+      asicRxMaster <= r.asicRxMaster;
 
       -- AXI-Lite Outputs
       writeSlave <= r.writeSlave;
@@ -582,18 +596,19 @@ begin
             RST_POLARITY_G => RST_POLARITY_G)
          port map(
             -- General Interface
-            pgpClk          => pgpClk,
-            pgpRst          => pgpLaneRst(lane),
-            sysClk          => sysClk,
-            sysRst          => sysLaneRst(lane),
+            pgpClk           => pgpClk,
+            pgpRst           => pgpLaneRst(lane),
+            sysClk           => sysClk,
+            sysRst           => sysLaneRst(lane),
             -- RX FIFO Interface
-            pix2pgpTxMaster => pix2pgpTxMaster,
-            pix2pgpTxSlave  => pix2pgpTxSlave);
+            pgp4RxMaster     => pgp4RxMaster(lane),
+            pgp4RxSlave      => pgp4RxSlave(lane),
             -- ASIC Rx Interface
-            laneError       => laneError(lane),
-            lastTrgCnt      => lastTrgCnt(lane),
-            laneTxMaster    => laneTxMasters(lane),
-            laneTxSlave     => laneTxSlaves(lane));
+            discardBadColTrg => discardBadColTrg(lane),
+            laneError        => laneError(lane),
+            lastTrgCnt       => lastTrgCnt(lane),
+            laneRxMaster     => laneRxMasters(lane),
+            laneRxSlave      => laneRxSlaves(lane));
 
       -- Watchdog (on a per-lane basis)
       U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
@@ -644,8 +659,8 @@ begin
             din  => timeout,
             dout => laneTimeout);
 
-   allLanesMaster(lane) <= laneTxMasters(lane);
-   allLanesSlave(lane)  <= laneTxSlaves(lane);
+      allLanesMaster(lane) <= laneRxMasters(lane);
+      allLanesSlave(lane)  <= laneRxSlaves(lane);
 
    end generate GEN_LANE;
 

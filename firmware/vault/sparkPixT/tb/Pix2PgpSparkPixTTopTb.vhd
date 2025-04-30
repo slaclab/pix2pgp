@@ -97,11 +97,11 @@ type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArra
 
    signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal pix2pgpTxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
-   signal pix2pgpTxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
+   signal pgp4RxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal pgp4RxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal asicTxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal asicTxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
+   signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
    file myFile0 : text open write_mode is "pix2pgpLaneDataDump0.dat";
    file myFile1 : text open write_mode is "pix2pgpLaneDataDump1.dat";
@@ -278,53 +278,53 @@ begin
           NUM_VC_G       => NUM_VC_G)
        port map(
           -- General Interface
-          clk             => pgpClk,
-          rst             => revRst,
+          clk          => pgpClk,
+          rst          => revRst,
           -- Pix2Pgp Interface
-          pgpDin          => pgpDataAsic(lane),
-          pgpDinValid     => pgpDataAsicValid(lane),
-          pgpDinReady     => pgpDataAsicReady(lane),
+          pgpDin       => pgpDataAsic(lane),
+          pgpDinValid  => pgpDataAsicValid(lane),
+          pgpDinReady  => pgpDataAsicReady(lane),
           -- FPGA RX Interface
-          pix2pgpTxMaster => pix2pgpTxMaster,
-          pix2pgpTxSlave  => pix2pgpTxSlave);
+          pgp4RxMaster => pgp4RxMaster(lane),
+          pgp4RxSlave  => pgp4RxSlave(lane));
 
    end generate GEN_LANE;
 
-      -- asic stream receiver and merger
-      U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
-         generic map(
-            TPD_G                => TPD_G,
-            RST_ASYNC_G          => false,
-            RST_POLARITY_G       => REV_RST_POLARITY_C,
-            ASIC_ID_G            => 0,
-            TIMEOUT_LIMIT_WIDTH_G => 16)
-         port map(
-            -- General Interface
-            pgpClk          => pgpClk,
-            pgpRst          => revRst,
-            sysClk          => sysClk,
-            sysRst          => revRst,
-            -- ASIC Domain Interface
-            asicClk         => sparseClk,
-            asicRst         => rst,
-            asicSro         => sroFinal,
-            asicSroEna      => '1',
-            -- PGP4Rx Interface
-            pix2pgpTxMaster => pix2pgpTxMaster,
-            pix2pgpTxSlave  => pix2pgpTxSlave);
-            -- Individual Axi Lanes for Debugging
-            allLanesMaster  => allLanesMaster,
-            allLanesSlave   => allLanesSlave,
-            -- AXI-Stream Rx Interface
-            asicTxMaster    => asicTxMaster,
-            asicTxSlave     => asicTxSlave,
-            -- AXI-Lite Interface
-            axilClk         => sysClk,
-            axilRst         => revRst,
-            axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
-            axilReadSlave   => open,
-            axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
-            axilWriteSlave  => open);
+   -- asic stream receiver and merger
+   U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
+      generic map(
+         TPD_G                 => TPD_G,
+         RST_ASYNC_G           => false,
+         RST_POLARITY_G        => REV_RST_POLARITY_C,
+         ASIC_ID_G             => 0,
+         TIMEOUT_LIMIT_WIDTH_G => 16)
+      port map(
+         -- General Interface
+         pgpClk          => pgpClk,
+         pgpRst          => revRst,
+         sysClk          => sysClk,
+         sysRst          => revRst,
+         -- ASIC Domain Interface
+         asicClk         => sparseClk,
+         asicRst         => rst,
+         asicSro         => sroFinal,
+         asicSroEna      => '1',
+         -- PGP4Rx Interface
+         pgp4RxMaster    => pgp4RxMaster,
+         pgp4RxSlave     => pgp4RxSlave,
+         -- Individual Axi Lanes for Debugging
+         allLanesMaster  => allLanesMaster,
+         allLanesSlave   => allLanesSlave,
+         -- AXI-Stream Rx Interface
+         asicRxMaster    => asicRxMaster,
+         asicRxSlave     => asicRxSlave,
+         -- AXI-Lite Interface
+         axilClk         => sysClk,
+         axilRst         => revRst,
+         axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
+         axilReadSlave   => open,
+         axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
+         axilWriteSlave  => open);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -1946,10 +1946,10 @@ wait for CLK_PERIOD_SPARSE_C*2;
     variable byte : std_logic_vector(7 downto 0);
   begin
     if rising_edge(sysClk) then
-      if asicTxMaster.tValid = '1' then
+      if asicRxMaster.tValid = '1' then
         for i in 127 downto 0 loop
-          if asicTxMaster.tKeep(i) = '1' then
-            byte := asicTxMaster.tData((i*8+7) downto (i*8));
+          if asicRxMaster.tKeep(i) = '1' then
+            byte := asicRxMaster.tData((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);
             writeline(myFile, row);
             row.all := "";

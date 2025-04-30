@@ -27,15 +27,15 @@ entity Pix2PgpFpgaTb is
    );
    port(
       -- General Interface
-      clk             : in  sl;
-      rst             : in  sl := not RST_POLARITY_G;
+      clk          : in  sl;
+      rst          : in  sl := not RST_POLARITY_G;
       -- Pix2Pgp Interface
-      pgpDin          : in  slv(31 downto 0);
-      pgpDinValid     : in  sl;
-      pgpDinReady     : out sl;
+      pgpDin       : in  slv(31 downto 0);
+      pgpDinValid  : in  sl;
+      pgpDinReady  : out sl;
       -- FPGA RX Interface
-      pix2pgpTxMaster : out AxiStreamMasterType;
-      pix2pgpTxSlave  : in  AxiStreamSlaveType := AXI_STREAM_SLAVE_INIT_C);
+      pgp4RxMaster : out AxiStreamMasterType;
+      pgp4RxSlave  : in  AxiStreamSlaveType := AXI_STREAM_SLAVE_INIT_C);
 end entity Pix2PgpFpgaTb;
 
 architecture test of Pix2PgpFpgaTb is
@@ -54,8 +54,8 @@ begin
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         SLAVE_WIDTH_G  => 32,
-         MASTER_WIDTH_G => 66)
+         SLAVE_WIDTH_G  => SER_DWIDTH_C,
+         MASTER_WIDTH_G => PGP_DWIDTH_C+2)
       port map (
          -- Clock and Reset
          clk            => clk,
@@ -110,8 +110,8 @@ begin
          RST_POLARITY_G      => RST_POLARITY_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
+         SLAVE_AXI_CONFIG_G  => ASIC_TX_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
       port map(
          -- Clock and reset
          axisClk     => clk,
@@ -121,8 +121,8 @@ begin
          sSideBand   => (others => '0'),
          sAxisSlave  => open,
          -- Master Port
-         mAxisMaster => pix2pgpTxMaster,
+         mAxisMaster => pgp4RxMaster,
          mSideBand   => open,
-         mAxisSlave  => pix2pgpTxSlave);
+         mAxisSlave  => pgp4RxSlave);
 
 end architecture;

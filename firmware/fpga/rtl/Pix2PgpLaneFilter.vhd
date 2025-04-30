@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Pix2Pgp Lane Adapter; checks on the trigger number
+-- Description: Pix2Pgp Lane Filter; checks on the trigger number
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -25,7 +25,7 @@ use surf.AxiStreamPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpLaneAdapter is
+entity Pix2PgpLaneFilter is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
@@ -48,41 +48,35 @@ entity Pix2PgpLaneAdapter is
       laneError      : out sl;
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
-end Pix2PgpLaneAdapter;
+end Pix2PgpLaneFilter;
 
-architecture rtl of Pix2PgpLaneAdapter is
+architecture rtl of Pix2PgpLaneFilter is
 
    -- how much to stretch laneRxRst
    constant LANE_RX_RST_WIDTH_C : natural := 10;
 
-   signal axisFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal axisFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
-   signal reverseTxMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal reverseTxSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
    type RegType is record
-      errorFlag      : sl;
-      laneError      : sl;
-      frameMetaRd    : sl;
-      checking       : sl;
-      valid          : sl;
-      waitCnt        : slv(1 downto 0);
-      lastTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
+      errorFlag    : sl;
+      laneError    : sl;
+      frameMetaRd  : sl;
+      checking     : sl;
+      valid        : sl;
+      waitCnt      : slv(1 downto 0);
+      lastTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
       laneRxMaster : AxiStreamMasterType;
-      ibAxisSlave    : AxiStreamSlaveType;
+      ibAxisSlave  : AxiStreamSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      errorFlag      => '0',
-      laneError      => '0',
-      frameMetaRd    => '0',
-      checking       => '0',
-      valid          => '0',
-      waitCnt        => (others => '0'),
-      lastTrgCnt     => (others => '0'),
+      errorFlag    => '0',
+      laneError    => '0',
+      frameMetaRd  => '0',
+      checking     => '0',
+      valid        => '0',
+      waitCnt      => (others => '0'),
+      lastTrgCnt   => (others => '0'),
       laneRxMaster => AXI_STREAM_MASTER_INIT_C,
-      ibAxisSlave    => AXI_STREAM_SLAVE_INIT_C);
+      ibAxisSlave  => AXI_STREAM_SLAVE_INIT_C);
 
    signal r   : RegType;
    signal rin : RegType;
@@ -99,7 +93,7 @@ begin
       -- Latch the current value
       v := r;
 
-      axisTrg := resize(ibAxisMaster.tData(TRG_CNT_POS_C), TRGCNT_WIDTH_C);
+      axisTrg := resize(ibAxisMaster.tData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
       flag    := frameMetaDout(LANERX_META_BUFF_WIDTH_C-1);
       trg     := frameMetaDout(LANERX_META_BUFF_WIDTH_C-2 downto 0);
 

@@ -45,10 +45,11 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         _preamble = int(preamble, 16)
 
-        preamble_dict = {'pix2pgpId' : (_preamble >> 96) & 0xFFFFFFFFFFFFFFFF,
-                         'asicType'  : (_preamble >> 64) & 0xFFFFFFFF,
-                         'asicId'    : (_preamble >> 32) & 0xFFFFFFFF,
-                         'fpgaId'    : (_preamble >>  0) & 0xFFFFFFFF}
+        preamble_dict = {'pix2pgpId'  : (_preamble >> 96) & 0xFFFFFFFFFFFFFFFF,
+                         'asicType'   : (_preamble >> 64) & 0xFFFFFFFF,
+                         'asicId'     : (_preamble >> 32) & 0xFFFFFFFF,
+                         'fpgaId'     : (_preamble >> 15) & 0xFFFF,
+                         'fpgaTrgCnt' : (_preamble >>  0) & 0xFFFF}
 
         return preamble_dict
 
