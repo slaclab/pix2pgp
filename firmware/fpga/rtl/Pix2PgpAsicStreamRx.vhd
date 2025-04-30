@@ -276,14 +276,13 @@ begin
       -- flow control check
       if asicRxSlave.tReady = '1' then
          v.asicRxMaster.tValid := '0';
+         v.asicRxMaster.tLast  := '0';
+         v.asicRxMaster.tUser  := (others => '0');
+         v.asicRxMaster.tData  := (others => '0');
+         v.asicRxMaster.tKeep  := (others => '0');
       end if;
 
       -- default flags
-      v.asicRxMaster.tLast := '0';
-      v.asicRxMaster.tUser := (others => '0');
-      v.asicRxMaster.tData := (others => '0');
-      v.asicRxMaster.tKeep := (others => '0');
-
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          v.laneRxSlaves(lane).tReady := '0'; -- disable by default
       end loop;
@@ -303,7 +302,8 @@ begin
       axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
       axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"408", 0, v.laneEnable);
-      axiSlaveRegister (axilEp, x"408", 0, v.discardBadColTrg);
+      axiSlaveRegister (axilEp, x"40C", 0, v.discardBadColTrg);
+      axiSlaveRegisterR(axilEp, x"410", 0, r.fpgaTrgCnt);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
