@@ -34,6 +34,7 @@ entity DummySparkPixSPixel is
       WAIT_FB_G      : natural := 2; -- 2 cycles
       WAIT_ACKN_G    : natural := 2;
       WAIT_WREN_G    : natural := 3;
+      SER_ID_G       : natural := 0;
       COL_ID_G       : natural := 0);
    port (
       clk      : in  sl;
@@ -72,8 +73,8 @@ architecture rtl of DummySparkPixSPixel is
       --
       waitCnt : natural range 0 to 1023;
       ackCnt  : natural range 0 to 1023;
-      hitCnt  : slv(9 downto 0);
-      trgCnt  : slv(3 downto 0);
+      hitCnt  : slv(5 downto 0);
+      trgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0);
       state   : StateType;
    end record RegType;
 
@@ -91,7 +92,7 @@ architecture rtl of DummySparkPixSPixel is
       --
       waitCnt => 0,
       ackCnt  => 0,
-      hitCnt  => toSlv(1, 10),
+      hitCnt  => toSlv(1, 6),
       trgCnt  => (others => '1'), -- so that it rolls-over to zero on first trigger
       state   => IDLE_S
    );
@@ -132,7 +133,7 @@ comb : process (rst, r, hitLen, sro, pause) is
             v.hitLen   := hitLen;
             v.tokFb    := '1';
             v.waitCnt  := 0;
-            v.hitCnt   := toSlv(1, 10);
+            v.hitCnt   := toSlv(1, 6);
             v.ackCnt   := 0;
             v.busy     := '0';
             v.pauseAck := '0';
@@ -140,7 +141,7 @@ comb : process (rst, r, hitLen, sro, pause) is
             if (r.sro = '1') then
                v.tokFb := '0';
                v.busy  := '1';
-               v.dout(19 downto 16) := r.trgCnt;
+               v.dout(19 downto 14) := r.trgCnt;
                if (r.hitLen > 0) then
                   v.state := ISSUE_ACKN_S;
                else
@@ -168,9 +169,10 @@ comb : process (rst, r, hitLen, sro, pause) is
                   v.waitCnt := r.waitCnt + 1;
                   if (v.waitCnt = WAIT_WREN_G) then
                      v.wrEn               := '1';
-                     v.dout(9 downto 0)   := r.hitCnt;
-                     v.dout(15 downto 10)  := toSlv(COL_ID_G, v.dout(15 downto 10)'length);
-                     --v.dout(19 downto 16) := r.trgCnt;
+                     --v.dout(19 downto 14) := r.trgCnt;
+                     v.dout(13 downto 8) := r.hitCnt;
+                     v.dout(7 downto  5) := toSlv(SER_ID_G, v.dout(7 downto 5)'length);
+                     v.dout(4 downto  0) := toSlv(COL_ID_G, v.dout(4 downto 0)'length);
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
                         v.state := WAIT_ISSUE_FB_S;

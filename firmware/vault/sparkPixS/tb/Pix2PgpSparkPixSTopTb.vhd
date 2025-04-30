@@ -169,6 +169,7 @@ begin
                WAIT_FB_G      => 4,
                WAIT_ACKN_G    => 3, -- 14 as per Hyunjoon (so 7+7=14)
                WAIT_WREN_G    => 3, -- 14 as per Hyunjoon
+               SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
                clk      => sparseClk,
