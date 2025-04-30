@@ -36,16 +36,17 @@ class SparkPixSDataFormat(SparseDataFormatBase):
 
             _hitData1_dict = {'row'    : (hit1 >>  0) & 0x3FF,
                               'addr'   : (hit1 >> 10) & 0xFFFFF}
-        elif fpgaTbData:
-            _hitData0_dict = {'hitTrg' : (hit0 >> 14) & 0x3F,
-                              'hitCnt' : (hit0 >>  8) & 0x3F,
-                              'serId'  : (hit0 >>  5) & 0x07,
-                              'colId'  : (hit0 >>  0) & 0x1F}
 
-            _hitData1_dict = {'hitTrg' : (hit1 >> 14) & 0x3F,
+        elif fpgaTbData:
+            _hitData0_dict = {'serId'  : (hit0 >>  0) & 0x07,
+                              'colId'  : (hit0 >>  3) & 0x1F,
+                              'hitCnt' : (hit0 >>  8) & 0x3F,
+                              'hitTrg' : (hit0 >> 14) & 0x3F}
+
+            _hitData1_dict = {'serId'  : (hit1 >>  0) & 0x07,
+                              'colId'  : (hit1 >>  3) & 0x1F,
                               'hitCnt' : (hit1 >>  8) & 0x3F,
-                              'serId'  : (hit1 >>  5) & 0x07,
-                              'colId'  : (hit1 >>  0) & 0x1F}
+                              'hitTrg' : (hit1 >> 14) & 0x3F}
 
         else:
             _hitData0_dict = {'raw'    : hit0}
@@ -76,13 +77,15 @@ class SparkPixTDataFormat(SparseDataFormatBase):
                               'tot'    : (hit1 >> 16) & 0xFF,
                               'row'    : (hit1 >> 24) & 0xFF}
         elif fpgaTbData:
-            _hitData0_dict = {'hitCnt' : (hit0 >>  0) & 0x1FF,
-                              'colId'  : (hit0 >> 10) & 0x3F,
-                              'hitTrg' : (hit0 >> 16) & 0x3FF}
+            _hitData0_dict = {'serId'  : (hit0 >>  0) & 0x07,
+                              'colId'  : (hit0 >>  3) & 0x1F,
+                              'hitCnt' : (hit0 >>  8) & 0x3F,
+                              'hitTrg' : (hit0 >> 14) & 0x3F}
 
-            _hitData1_dict = {'hitCnt' : (hit1 >>  0) & 0x1FF,
-                              'colId'  : (hit1 >> 10) & 0x3F,
-                              'hitTrg' : (hit1 >> 16) & 0x3FF}
+            _hitData1_dict = {'serId'  : (hit1 >>  0) & 0x07,
+                              'colId'  : (hit1 >>  3) & 0x1F,
+                              'hitCnt' : (hit1 >>  8) & 0x3F,
+                              'hitTrg' : (hit1 >> 14) & 0x3F}
         else:
             _hitData0_dict = {'raw'    : hit0}
             _hitData1_dict = {'raw'    : hit1}

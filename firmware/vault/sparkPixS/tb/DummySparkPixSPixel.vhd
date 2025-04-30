@@ -170,9 +170,9 @@ comb : process (rst, r, hitLen, sro, pause) is
                   if (v.waitCnt = WAIT_WREN_G) then
                      v.wrEn               := '1';
                      --v.dout(19 downto 14) := r.trgCnt;
-                     v.dout(13 downto 8) := r.hitCnt;
-                     v.dout(7 downto  5) := toSlv(SER_ID_G, v.dout(7 downto 5)'length);
-                     v.dout(4 downto  0) := toSlv(COL_ID_G, v.dout(4 downto 0)'length);
+                     v.dout(13 downto  8) := r.hitCnt;
+                     v.dout(7  downto  3) := toSlv(COL_ID_G, v.dout(7 downto 3)'length);
+                     v.dout(2  downto  0) := toSlv(SER_ID_G, v.dout(2 downto 0)'length);
                      v.waitCnt := 0;
                      if (r.ackCnt = unsigned(r.hitLen)) then
                         v.state := WAIT_ISSUE_FB_S;

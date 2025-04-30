@@ -17,6 +17,7 @@ entity DummySparkPixTPixel is
         RST_ASYNC_G     : boolean  := true;
         RST_POLARITY_G  : sl       := '1';
         WAIT_WREN_G     : positive := 4;
+        SER_ID_G        : natural  := 0;
         COL_ID_G        : natural  := 0);
     port (
         clk        : in  sl;
@@ -55,8 +56,9 @@ architecture tb of DummySparkPixTPixel is
       dout     : slv(31 downto 0);
       --
       waitCnt  : natural range 0 to 1023;
-      hitCnt   : slv(15 downto 0);
-      trgCnt   : slv(5 downto 0);
+      hitCnt   : slv(5 downto 0);
+      hitLenCnt: slv(15 downto 0);
+      trgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
       state    : StateType;
    end record RegType;
 
@@ -73,7 +75,8 @@ architecture tb of DummySparkPixTPixel is
       dout     => (others => '0'),
       --
       waitCnt  => 0,
-      hitCnt   => toSlv(1, 16),
+      hitCnt   => toSlv(1, 6),
+      hitLenCnt=> toSlv(1, 16),
       trgCnt   => (others => '1'), -- so that it rolls-over to zero on first ero
       state    => IDLE_S
    );
@@ -124,12 +127,14 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
          -- only register the hitLen if idle
          v.hitLen   := hitLen;
          v.waitCnt  := 0;
-         v.hitCnt   := toSlv(1, 16);
+         v.hitCnt   := toSlv(1, 6);
          v.pauseAck := r.pause;
+         v.hitLenCnt := toSlv(1, 16);
 
          if (r.sro = '1' and v.pause = '0') then
             v.sof                := '1';
-            v.dout(31 downto 26) := r.trgCnt;
+            v.dout(31 downto 20) := (others => '0');
+            v.dout(19 downto 14) := r.trgCnt;
             if (r.hitLen > 0) then
                v.state := WAIT_WREN_S;
             else
@@ -152,17 +157,19 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
          ----------------------------------------------------------------------
          when ISSUE_WREN_S =>
             v.waitCnt := r.waitCnt + 1;
-            if (v.waitCnt = WAIT_WREN_G) then
-               --v.dout(31 downto 28) := r.trgCnt; -- issued on IDLE_S
-               v.dout(25 downto 16) := toSlv(COL_ID_G, v.dout(25 downto 16)'length);
-               v.dout(15 downto 0)  := r.hitCnt;
-               v.waitCnt            := 0;
-               v.wrEn               := '1';
-               if (r.hitCnt = r.hitLen) then
+         if (v.waitCnt = WAIT_WREN_G) then
+               --v.dout(19 downto 14) := r.trgCnt;
+               v.dout(13 downto  8) := r.hitCnt;
+               v.dout(7  downto  3) := toSlv(COL_ID_G, v.dout(7 downto 3)'length);
+               v.dout(2  downto  0) := toSlv(SER_ID_G, v.dout(2 downto 0)'length);
+               v.waitCnt := 0;
+               v.wrEn := '1';
+               if (r.hitLenCnt = r.hitLen) then
                   v.state := WAIT_TRG_S;
                else
-                  v.hitCnt := r.hitCnt + 1;
-                  v.state  := WAIT_WREN_S;
+                  v.hitCnt    := r.hitCnt + 1;
+                  v.hitLenCnt := r.hitLenCnt + 1;
+                  v.state     := WAIT_WREN_S;
                end if;
             end if;
 
