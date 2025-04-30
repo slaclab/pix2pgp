@@ -183,7 +183,7 @@ class LaneData(object):
 
         if ((self.headerErr and self._verbose > 0) or self._verbose > 1) and not(self.dummy):
             _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-            _format = 'OverOcc={0:<%d} Pause={1:<%d} ColError={2:<%d} PauseError={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 1, 8, 8)
+            _format = 'OverOcc={0:<%d} Pause={1:<%d} ColErr={2:<%d} PauseErr={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 4, 8, 8)
             print(_lanePrint)
             print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -235,10 +235,16 @@ class LaneData(object):
         """
         Populates the associated data type with the hits
         """
-        self.laneHits[colBmskId].append(self.dataFormat.dataDecoder(hitData=hitData,
-                                                                    hitLen=hitLen,
-                                                                    asicData=self._asicData,
-                                                                    fpgaTbData=self._fpgaTbData))
+        _hit0, _hit1 = self.dataFormat.dataDecoder(hitData=hitData,
+                                                   hitLen=hitLen,
+                                                   asicData=self._asicData,
+                                                   fpgaTbData=self._fpgaTbData)
+
+        if hitLen > 1:
+            self.laneHits[colBmskId].append(_hit0)
+            self.laneHits[colBmskId].append(_hit1)
+        else:
+            self.laneHits[colBmskId].append(_hit0)
 
     #################################################################
 

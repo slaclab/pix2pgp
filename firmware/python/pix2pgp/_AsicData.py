@@ -198,7 +198,7 @@ class AsicData(object):
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
-            _format = 'AsicType={0:<8} AsicId={1:<8} FpgaId={2:<4x} FpgaTrgCnt={3:<8}'
+            _format = 'AsicType={0:<20} AsicId={1:<8} FpgaId={2:<11x} FpgaTrgCnt={3:<8}'
             print(_format.format(self.asicParams.asicParamExtract()['asicType'],
                   self.asicId,
                   self.fpgaId,
