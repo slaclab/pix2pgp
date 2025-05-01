@@ -7,6 +7,8 @@
 # -- may be copied, modified, propagated, or distributed except according to
 # -- the terms contained in the LICENSE.txt file.
 # -------------------------------------------------------------------------------
+import click
+import inspect
 
 class Tools:
 
@@ -32,4 +34,30 @@ class Tools:
         retString = ''.join(asciiChars)
 
         return retString
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def printError(inputArg):
+
+        errorString = f"[ERROR]: {inputArg} Error!"
+        _     = "~"
+        delim = "~" * (len(errorString)-1) + _
+
+        click.secho(delim,       bg='red', blink=True)
+        click.secho(errorString, bg='red', blink=True)
+        click.secho(delim,       bg='red', blink=True)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def printWarning(inputArg):
+
+        warningString = f"[WARNING]: {inputArg}!"
+        _     = "~"
+        delim = "~" * (len(warningString)-1) + _
+
+        click.secho(delim,         bg='yellow')
+        click.secho(warningString, bg='yellow')
+        click.secho(delim,         bg='yellow')
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

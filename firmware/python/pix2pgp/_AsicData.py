@@ -200,14 +200,10 @@ class AsicData(object):
                   self.fpgaTrgCnt))
             print(f"")
             if self.preambleErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: Preamble Error!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                pix2pgp.Tools.printError('Preamble')
 
             if self.typeMismatchErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: ASIC Type Mismatch!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                pix2pgp.Tools.printError('ASIC Type Mismatch')
     #################################################################
 
     #################################################################
@@ -229,9 +225,7 @@ class AsicData(object):
             print(_format.format(_dict['laneError'], _dict['laneTimeout'], _dict['laneValid']))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                pix2pgp.Tools.printError('Header')
     #################################################################
 
     #################################################################
@@ -249,9 +243,26 @@ class AsicData(object):
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
             if self.trailerErr:
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-                click.secho(f"[ERROR]: Trailer Error!", bg='red', blink=True)
-                click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+                pix2pgp.Tools.printError('Trailer')
+    #################################################################
+
+    #################################################################
+    def orAlloc(self, oldVar, newVar):
+        oldVar = oldVar or newVar
+    #################################################################
+
+    #################################################################
+    def orAllocWide(self, oldVar, newVar, offset):
+            oldVar[offset:offset + self.numOfCols] = [
+                oldVar[i + offset] or newVar[idx] for idx, i in enumerate(range(self.numOfCols))
+            ]
+    #################################################################
+
+    #################################################################
+    def accumAllocWide(self, oldVar, newVar, offset):
+            oldVar[offset:offset + self.numOfCols] = [
+                oldVar[i + offset] or newVar[idx] for idx, i in enumerate(range(self.numOfCols))
+            ]
     #################################################################
 
     #################################################################
@@ -264,58 +275,39 @@ class AsicData(object):
             # header data
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # flags are cumulative in case we are in pause
-            self.asicGlblOverOcc[laneSel]    = (self.asicGlblOverOcc[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.overOcc))
-            self.asicGlblPause[laneSel]      = (self.asicGlblPause[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.pause))
-            self.asicGlblColErr[laneSel]     = (self.asicGlblColErr[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.colErr))
-            self.asicGlblPauseErr[laneSel]   = (self.asicGlblPauseErr[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.pauseErr))
-            self.asicGlblDummy[laneSel]      = (self.asicGlblDummy[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.dummy))
-            self.asicGlblColTimeout[laneSel] = (self.asicGlblColTimeout[laneSel] or
-                                               copy.deepcopy(self.laneDecoder.timeout))
+
+            self.orAlloc(self.asicGlblOverOcc[laneSel], self.laneDecoder.overOcc)
+            self.orAlloc(self.asicGlblPause[laneSel], self.laneDecoder.pause)
+            self.orAlloc(self.asicGlblColErr[laneSel], self.laneDecoder.colErr)
+            self.orAlloc(self.asicGlblPauseErr[laneSel], self.laneDecoder.pauseErr)
+            self.orAlloc(self.asicGlblDummy[laneSel], self.laneDecoder.dummy)
+            self.orAlloc(self.asicGlblColTimeout[laneSel], self.laneDecoder.timeout)
 
             # gets the last trgCnt (hopefully does not change between pauses)
-            self.asicGlblTrgCnt[laneSel] = copy.deepcopy(self.laneDecoder.trgCnt)
+            self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
 
             offset = laneSel * self.numOfCols
 
-            _bmsk = copy.deepcopy(self.laneDecoder.colBitmask)
-            self.colBitmask[offset:offset + self.numOfCols] = [
-                self.colBitmask[i + offset] or _bmsk[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
-
-            _ooc = copy.deepcopy(self.laneDecoder.colOverOcc)
-            self.colOverOcc[offset:offset + self.numOfCols] = [
-                self.colOverOcc[i + offset] or _ooc[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
-
-            _pause = copy.deepcopy(self.laneDecoder.colPause)
-            self.colPause[offset:offset + self.numOfCols] = [
-                self.colPause[i + offset] or _pause[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
+            self.orAllocWide(self.colBitmask, self.laneDecoder.colBitmask, offset)
+            self.orAllocWide(self.colOverOcc, self.laneDecoder.colOverOcc, offset)
+            self.orAllocWide(self.colPause, self.laneDecoder.colPause, offset)
 
             # Column states
-            self.colDecColId[offset:offset + self.numOfCols] = copy.deepcopy(self.laneDecoder.colId)
-            self.colTrgCnt[offset:offset + self.numOfCols] = copy.deepcopy(self.laneDecoder.colTrgCnt)
+            self.colDecColId[offset:offset + self.numOfCols] = (self.laneDecoder.colId)
+            self.colTrgCnt[offset:offset + self.numOfCols] = (self.laneDecoder.colTrgCnt)
 
             # Length per column
-            _len = copy.deepcopy(self.laneDecoder.colLen)
-            self.colLen[offset:offset + self.numOfCols] = [
-                self.colLen[i + offset] + _len[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
+            self.accumAllocWide(self.colLen, self.laneDecoder.colLen, offset)
 
             # Errors and state flags
-            self.laneHeaderErr[laneSel]  = copy.deepcopy(self.laneDecoder.headerErr)
-            self.laneDecErr[laneSel]     = copy.deepcopy(self.laneDecoder.decErr)
-            self.laneIsEmpty[laneSel]    = copy.deepcopy(self.laneDecoder.isEmpty)
+            self.laneHeaderErr[laneSel] = self.laneDecoder.headerErr
+            self.laneDecErr[laneSel]    = self.laneDecoder.decErr
+            self.laneIsEmpty[laneSel]   = self.laneDecoder.isEmpty
 
             # Actual hits
             if not self.laneIsEmpty[laneSel]:
                 for colIdx in range(self.numOfCols):
-                    self.asicHits[offset + colIdx].extend(copy.deepcopy(self.laneDecoder.laneHits[colIdx]))
+                    self.asicHits[offset + colIdx].extend((self.laneDecoder.laneHits[colIdx]))
     #################################################################
 
     #################################################################
@@ -418,22 +410,5 @@ class AsicData(object):
         Prints out all the data
         """
         if self._verbose > 2:
-            print(f"self.asicGlblOverOcc = {self.asicGlblOverOcc}")
-            print(f"self.asicGlblPause = {self.asicGlblPause}")
-            print(f"self.asicGlblColErr = {self.asicGlblColErr}")
-            print(f"self.asicGlblPauseErr = {self.asicGlblPauseErr}")
-            print(f"self.asicGlblDummy = {self.asicGlblDummy}")
-            print(f"self.asicGlblColTimeout = {self.asicGlblColTimeout}")
-            print(f"self.asicGlblTrgCnt = {self.asicGlblTrgCnt}")
-
-            print(f"self.colBitmask = {self.colBitmask}")
-            print(f"self.colOverOcc = {self.colOverOcc}")
-            print(f"self.colPause = {self.colPause}")
-            print(f"self.colDecColId = {self.colDecColId}")
-            print(f"self.colTrgCnt = {self.colTrgCnt}")
-            print(f"self.colLen = {self.colLen}")
-
-            print(f"self.asicHits = {self.asicHits}")
-
-            print(f"self.dataIndexStart = {self.dataIndexStart}")
-            print(f"self.dataIndexEnd = {self.dataIndexEnd}")
+            for name, value in self.__dict__.items():
+                print(f"self.asicData.{name} = {value}")

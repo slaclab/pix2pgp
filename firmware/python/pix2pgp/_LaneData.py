@@ -11,7 +11,6 @@
 import numpy as np
 import click
 import json
-
 import pix2pgp
 
 class LaneData(object):
@@ -188,9 +187,7 @@ class LaneData(object):
             print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
             print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         if self.headerErr and self._verbose > 0:
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-            click.secho(f"[ERROR]: Header Error!", bg='red', blink=True)
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
+            pix2pgp.Tools.printError('Header')
 
     #################################################################
 
@@ -199,8 +196,6 @@ class LaneData(object):
         """
         Parses-in the column metadata
         """
-        _mismatch = False
-
         _dict = self.colMetadataFormat.colMetadataDecoder(colMeta=colMeta)
 
         self.colOverOcc[colBmskId] = _dict['colOverOcc']
@@ -211,23 +206,15 @@ class LaneData(object):
 
         if self.colId[colBmskId] != colBmskId:
             self.decErr = True
+            if self._verbose > 0:
+                print(f"self.colId[colBmskId] = {self.colId[colBmskId]}")
+                print(f"colBmskId = {colBmskId}")
+                pix2pgp.Tools.printError('Column ID Decoding')
 
-        if self.colTrgCnt[colBmskId] != self.trgCnt:
-            _mismatch = True
-
-        if self.decErr and self._verbose > 0:
-            print(f"_colId = {self.colId[colBmskId]}")
-            print(f"colBmskId = {colBmskId}")
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-            click.secho(f"[ERROR]: Column ID Decoding Error!", bg='red', blink=True)
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='red', blink=True)
-
-        if _mismatch and self._verbose > 0:
-            print(f"_colTrgCnt = {self.colTrgCnt[colBmskId]}")
+        if self.colTrgCnt[colBmskId] != self.trgCnt and self._verbose > 0:
+            print(f"self.colTrgCnt[colBmskId] = {self.colTrgCnt[colBmskId]}")
             print(f"self.trgCnt = {self.trgCnt}")
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
-            click.secho(f"[WARNING]: Column Trigger Counter Mismatch!", bg='yellow')
-            click.secho(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", bg='yellow')
+            pix2pgp.Tools.printWarning('Trigger Counter Mismatch')
     #################################################################
 
     #################################################################
@@ -335,31 +322,6 @@ class LaneData(object):
         Prints out all the data
         """
         if self._verbose > 3:
-            print(f"self.laneDecoder.overOcc    = {self.overOcc}")
-            print(f"self.laneDecoder.pause      = {self.pause}")
-            print(f"self.laneDecoder.colErr     = {self.colErr}")
-            print(f"self.laneDecoder.pauseErr   = {self.pauseErr}")
-            print(f"self.laneDecoder.dummy      = {self.dummy}")
-            print(f"self.laneDecoder.timeout    = {self.timeout}")
-            print(f"self.laneDecoder.colBitmask = {self.colBitmask}")
-
-            # column metadata
-            print(f"self.laneDecoder.colOverOcc = {self.colOverOcc}")
-            print(f"self.laneDecoder.colPause   = {self.colPause}")
-            print(f"self.laneDecoder.colId      = {self.colId}")
-            print(f"self.laneDecoder.colTrgCnt  = {self.colTrgCnt}")
-            print(f"self.laneDecoder.colLen     = {self.colLen}")
-
-            # flags
-            print(f"self.laneDecoder.headerErr = {self.headerErr}")
-            print(f"self.laneDecoder.decErr    = {self.decErr}")
-            print(f"self.laneDecoder.isEmpty   = {self.isEmpty}")
-
-            # indices
-            print(f"self.laneDecoder.dataIndexStart = {self.dataIndexStart}")
-            print(f"self.laneDecoder.dataIndexEnd   = {self.dataIndexEnd}")
-
-            # actual hits
-            if not self.isEmpty:
-                print(f"self.laneDecoder.laneHits = {self.laneHits}")
+            for name, value in self.__dict__.items():
+                print(f"self.laneDecoder.{name} = {value}")
     #################################################################
