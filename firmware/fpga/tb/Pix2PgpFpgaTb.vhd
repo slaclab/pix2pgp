@@ -29,6 +29,7 @@ entity Pix2PgpFpgaTb is
       -- General Interface
       clk          : in  sl;
       rst          : in  sl := not RST_POLARITY_G;
+      linkReady    : out sl;
       -- Pix2Pgp Interface
       pgpDin       : in  slv(31 downto 0);
       pgpDinValid  : in  sl;
@@ -46,6 +47,9 @@ architecture test of Pix2PgpFpgaTb is
    signal pgpRxCtrl   : AxiStreamCtrlArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_CTRL_INIT_C);
    signal pgpRxOut     : Pgp4RxOutType := PGP4_RX_OUT_INIT_C;
    signal pgpRxMasters : AxiStreamMasterArray(NUM_VC_G-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
+
+   signal remRxLinkReady : sl := '0';
+   signal locRxLinkReady : sl := '0';
 
 begin
 
@@ -89,8 +93,8 @@ begin
 
         -- Status of local receive fifos
         remRxFifoCtrl  => open,
-        remRxLinkReady => open,
-        locRxLinkReady => open,
+        remRxLinkReady => remRxLinkReady,
+        locRxLinkReady => locRxLinkReady,
 
         -- PHY interface
         phyRxClk      => clk,
@@ -124,5 +128,7 @@ begin
          mAxisMaster => pgp4RxMaster,
          mSideBand   => open,
          mAxisSlave  => pgp4RxSlave);
+
+   linkReady <= remRxLinkReady and locRxLinkReady;
 
 end architecture;

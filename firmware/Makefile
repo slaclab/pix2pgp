@@ -116,27 +116,6 @@ prepareSurf:
 	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd)               $(SURF_DIR)/AxiStreamResize.vhd
 	@echo "[INFO]: surf preparation complete."
 
-# prepare: clean prepareSurf
-# 	@if [ "$(ASIC)" = "SparkPixS" ]; then \
-# 		echo "[INFO]: Preparing SparkPix-S Specific Files..." ;\
-# 		ln -sf $(shell readlink -f $(SPARKPIX_S_PKG)) $(PIX2PGP_PKG) ;\
-# 		ln -sf $(shell readlink -f $(SPARKPIX_S_TOP)) $(PIX2PGP_ASIC_TOP_DIR)/ ;\
-#         for file in $(SPARKPIX_S_TB_FILES); do \
-#             $(MAKE) create-link FILE=$$file DIR=$(ASIC_TB_DIR); \
-#         done; \
-# 		echo "[INFO]: Successfully linked SparkPix-S files!" ;\
-# 	elif [ "$(ASIC)" = "SparkPixT" ]; then \
-# 		echo "[INFO]: Preparing SparkPix-T Specific Files..." ;\
-# 		ln -sf $(shell readlink -f $(SPARKPIX_T_PKG)) $(PIX2PGP_PKG) ;\
-# 		ln -sf $(shell readlink -f $(SPARKPIX_T_TOP)) $(PIX2PGP_ASIC_TOP_DIR)/ ;\
-#         for file in $(SPARKPIX_T_TB_FILES); do \
-#             $(MAKE) create-link FILE=$$file DIR=$(ASIC_TB_DIR); \
-#         done; \
-# 		echo "[INFO]: Successfully linked SparkPix-T files!" ;\
-# 	else \
-# 		echo "[ERROR]: The 'ASIC' variable was not set properly! Please check; Currently: ASIC = $(ASIC)" ;\
-# 	fi
-
 prepare: clean prepareSurf
 	@if [ "$(ASIC_SOURCED)" = 1 ]; then \
 		echo "[INFO]: Preparing $(ASIC) Specific Files..." ;\
