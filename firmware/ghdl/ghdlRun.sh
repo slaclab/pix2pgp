@@ -114,78 +114,6 @@ DEFAULT_STOP_TIME_US="10"
 
 ##########################################################################
 
-prepareSurf()
-{
-  checkFileExists ${SURF}
-  surf_exists=$?
-
-  if [[ $surf_exists -eq 1 ]]; then
-    echo "[INFO]: Surf libraries found in ${SURF}. Cleaning up..."
-    rm ${SURF}
-  fi
-
-  checkFileExists ${SURF_PKG_ALL}
-  surfPkg_exists=$?
-
-  if [[ $surfPkg_exists -eq 1 ]]; then
-    echo "[INFO]: Surf packages found in ${SURF_PKG_ALL}. Cleaning up..."
-    rm ${SURF_PKG_ALL}
-  fi
-
-  # add files here accordingly
-  # note that I add all the *Pkg.vhd in a separate dir that will be imported *first*;
-  # otherwise, this ERROR shows up: `entity "xxx" is obsoleted by package "stdrtlpkg"` (or whatever *pkg)
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/TextUtilPkg.vhd                     ${SURF_PKG_DIR}/TextUtilPkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/StdRtlPkg.vhd                       ${SURF_PKG_DIR}/StdRtlPkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd              ${SURF_PKG_DIR}/Pgp4Pkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/CrcPkg.vhd                              ${SURF_PKG_DIR}/CrcPkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/ssi/rtl/SsiPkg.vhd                         ${SURF_PKG_DIR}/SsiPkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPkg.vhd                  ${SURF_PKG_DIR}/AxiStreamPkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-lite/rtl/AxiLitePkg.vhd                      ${SURF_PKG_DIR}/AxiLitePkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd ${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/ArbiterPkg.vhd                      ${SURF_PKG_DIR}/ArbiterPkg.vhd
-
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/tb/ClkRst.vhd                           ${SURF_DIR}/ClkRst.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/delay/rtl/SlvDelay.vhd                          ${SURF_DIR}/SlvDelay.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/RstSync.vhd                            ${SURF_DIR}/RstSync.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/Synchronizer.vhd                       ${SURF_DIR}/Synchronizer.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerOneShot.vhd                ${SURF_DIR}/SynchronizerOneShot.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerEdge.vhd                   ${SURF_DIR}/SynchronizerEdge.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerVector.vhd                 ${SURF_DIR}/SynchronizerVector.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/SimpleDualPortRam.vhd              ${SURF_DIR}/SimpleDualPortRam.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/Fifo.vhd                               ${SURF_DIR}/Fifo.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/FifoOutputPipeline.vhd                 ${SURF_DIR}/FifoOutputPipeline.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoWrFsm.vhd                 ${SURF_DIR}/FifoWrFsm.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoRdFsm.vhd                 ${SURF_DIR}/FifoRdFsm.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoSync.vhd                  ${SURF_DIR}/FifoSync.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/fifo/rtl/inferred/FifoAsync.vhd                 ${SURF_DIR}/FifoAsync.vhd
-
-  # PGP4-related
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamPipeline.vhd             ${SURF_DIR}/AxiStreamPipeline.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/Crc32Parallel.vhd                       ${SURF_DIR}/Crc32Parallel.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/crc/rtl/Crc32.vhd                               ${SURF_DIR}/Crc32.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Gearbox.vhd                         ${SURF_DIR}/Gearbox.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/general/rtl/Scrambler.vhd                       ${SURF_DIR}/Scrambler.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd  ${SURF_DIR}/AxiStreamDepacketizer2.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/DualPortRam.vhd                    ${SURF_DIR}/DualPortRam.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/LutRam.vhd                         ${SURF_DIR}/LutRam.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/ram/inferred/TrueDualPortRam.vhd                ${SURF_DIR}/TrueDualPortRam.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/base/sync/rtl/SynchronizerFifo.vhd                   ${SURF_DIR}/SynchronizerFifo.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd ${SURF_DIR}/Pgp3RxGearboxAligner.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd             ${SURF_DIR}/Pgp4RxEb.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd       ${SURF_DIR}/Pgp4RxProtocol.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd               ${SURF_DIR}/Pgp4Rx.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd           ${SURF_DIR}/Pgp4TxLite.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd   ${SURF_DIR}/Pgp4TxLiteProtocol.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd    ${SURF_DIR}/Pgp4TxLiteWrapper.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-lite/rtl/AxiLiteAsync.vhd                    ${SURF_DIR}/AxiLiteAsync.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamMux.vhd                  ${SURF_DIR}/AxiStreamMux.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamFifoV2.vhd               ${SURF_DIR}/AxiStreamFifoV2.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamDeMux.vhd                ${SURF_DIR}/AxiStreamDeMux.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamGearbox.vhd              ${SURF_DIR}/AxiStreamGearbox.vhd
-  ln -s ${SURF_SUBMODULE_DIR}/axi/axi-stream/rtl/AxiStreamResize.vhd               ${SURF_DIR}/AxiStreamResize.vhd
- }
-
 checkFileExists()
 {
   retVal=0
@@ -195,190 +123,9 @@ checkFileExists()
   return $retVal
 }
 
-cleanFiles()
-{
-  checkFileExists $1
-  exists=$?
-  if [[ exists -eq 1 ]]; then
-    rm $1
-  fi
-}
-
 ##########################################################################
-
-ghdlPrepare()
-{
-
-  echo "[INFO]: Cleaning up GHDL directory..."
-
-  # the command below deletes the .cf file(s), which is like a compiled library. Acts as a cleanup
-  cleanFiles "$CF"
-
-  # the command below deletes the .vcd file(s). Acts as a cleanup
-  cleanFiles "$VCD"
-
-  # the command below deletes the .ghw file(s). Acts as a cleanup
-  cleanFiles "$GHW"
-
-  # the command below deletes the .fst file(s). Acts as a cleanup
-  cleanFiles "$FST"
-
-  # the command below deletes the ghdl output file(s). Acts as a cleanup
-  cleanFiles "$OUT"
-
-  # the command below deletes the tb linked files
-  cleanFiles "$TB"
-
-  # add the vhd surf packages files into a new .cf file library named surf
-  echo "[INFO]: Preparing surf directory..."
-  prepareSurf
-  echo ${SURF_DIR}
-  echo ${SURF}
-  checkFileExists ${SURF}
-  surf_exists=$?
-
-  # surf import
-  if [[ $surf_exists -eq 1 ]]; then
-    echo "[INFO]: Surf libraries found in ${SURF}. Importing..."
-    for package in "${SURF_PKG[@]}"
-    do
-      ${GHDL_IMPORT_SURF} $package
-    done
-    ${GHDL_IMPORT_SURF} ${SURF}
-  else
-    echo "[ERROR]: No surf files found..."
-    exit 1
-  fi
-
-  ghdlLink $1
-
-}
-
-linkManyFiles()
-{
-  # Ensure both directories exist
-  if [ ! -d "${1}" ]; then
-    echo "Error: ${1} does not exist."
-    exit 1
-  fi
-
-  if [ ! -d "${2}" ]; then
-    echo "Error: ${2} does not exist."
-    exit 1
-  fi
-
-  # If the destination directory is empty, print a message
-  if [ -z "$(ls -A "${2}")" ]; then
-    echo "The destination directory (${2}) is empty."
-  else
-    echo "The destination directory (${2}) contains files."
-  fi
-
-  # Loop through all .vhd files in the source dir
-  for sharedFile in "${1}"/*.vhd; do
-    # Ensure the file exists
-    if [ -e "$sharedFile" ]; then
-      # Get the filename from the full path
-      filename=$(basename "$sharedFile")
-      destination="${2}/$filename"
-
-      # Check if the file or symlink already exists in the destination directory
-      if [ -e "$destination" ]; then
-        echo "File or symlink already exists: $destination"
-        # Optionally, remove the existing file/symlink before creating a new one
-        # rm "$destination"
-      else
-        ln -s "$sharedFile" "$destination"
-        echo "Created symlink: $destination -> $sharedFile"
-      fi
-    else
-      echo "No .vhd files found in ${1}"
-    fi
-  done
-}
-
-##########################################################################
-# links the corresponding ASIC files from the asicVault/ dir
-ghdlLink()
-{
-  checkFileExists ${ASIC_RTL}
-  rtl_exists=$?
-
-  checkFileExists ${PIX2PGP_PKG}
-  pkg_exists=$?
-
-  checkFileExists ${PIX2PGP_ASIC_TOP}
-  top_exists=$?
-
-  checkFileExists ${ASIC_TB}
-  tb_exists=$?
-
-  if [[ $1 == *"SparkPixS"* ]]; then
-    echo "[INFO]: Preparing for SparkPix-S!"
-
-    if [[ $pkg_exists -eq 1 ]]; then
-      echo "[INFO]: Pkg exists! Removing file..."
-      rm ${PIX2PGP_PKG}
-    fi
-
-    if [[ $top_exists -eq 1 ]]; then
-      echo "[INFO]: Top-Level exists! Removing file..."
-      rm ${PIX2PGP_ASIC_TOP}
-    fi
-
-    if [[ $tb_exists -eq 1 ]]; then
-      echo "[INFO]: Tb-Stuff exist! Removing files..."
-      rm ${ASIC_TB}
-    fi
-
-    echo "[INFO]: linking SparkPixSPkg.vhd"
-    ln -s ${SPARKPIX_S_PKG} ${PIX2PGP_PKG}
-    echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
-    ln -s ${SPARKPIX_S_TOP} ${PIX2PGP_ASIC_TOP_DIR}
-    echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${SPARKPIX_S_TB_DIR} ${ASIC_TB_DIR}
-
-
-  elif [[ $1 == *"SparkPixT"* ]]; then
-    echo "[INFO]: Preparing for SparkPix-T!"
-
-    if [[ $pkg_exists -eq 1 ]]; then
-      echo "[INFO]: Pkg exists! Removing file..."
-      rm ${PIX2PGP_PKG}
-    fi
-
-    if [[ $top_exists -eq 1 ]]; then
-      echo "[INFO]: Top-Level exists! Removing file..."
-      rm ${PIX2PGP_ASIC_TOP}
-    fi
-
-    if [[ $tb_exists -eq 1 ]]; then
-      echo "[INFO]: Tb-Stuff exist! Removing files..."
-      rm ${ASIC_TB}
-    fi
-
-    echo "[INFO]: linking SparkPixSPkg.vhd"
-    ln -s ${SPARKPIX_T_PKG} ${PIX2PGP_PKG}
-    echo "[INFO]: linking Pix2PgpSparkPixSTop.vhd"
-    ln -s ${SPARKPIX_T_TOP} ${PIX2PGP_ASIC_TOP_DIR}
-    echo "[INFO]: linking Testbench stuff..."
-    linkManyFiles ${SPARKPIX_T_TB_DIR} ${ASIC_TB_DIR}
-
-  else
-    echo "[ERROR]: Not sourcing any ASIC-specific tesbench!"
-    echo "[ERROR]: Please give a valid first argument that contains a valid option of an ASIC name!"
-    exit 1
-  fi
-}
-
-
-##########################################################################
-
-
 ghdlAnalyze()
 {
-
-##########################################################################
   # analyze the files to make sure their syntax is correct
   echo "List of Files:"
   echo "$(ls ${ASIC_RTL})"
@@ -390,6 +137,24 @@ ghdlAnalyze()
   echo "$(ls ${FPGA_RTL})"
   echo "$(ls ${FPGA_TB})"
   echo "$(ls ${GHDL_FIFO})"
+
+  echo "List of SURF stuff..."
+  checkFileExists ${SURF}
+  surf_exists=$?
+
+  # surf import
+  if [[ $surf_exists -eq 1 ]]; then
+    echo "[INFO]: Surf libraries found in ${SURF}. Importing following files..."
+    echo "${SURF}"
+    for package in "${SURF_PKG[@]}"
+    do
+      ${GHDL_IMPORT_SURF} $package
+    done
+    ${GHDL_IMPORT_SURF} ${SURF}
+  else
+    echo "[ERROR]: No surf files found..."
+    exit 1
+  fi
 
   echo "[INFO]: Importing RTL Files..."
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
@@ -412,7 +177,9 @@ ghdlAnalyze()
   ${GHDL_ANALYZE} ${GHDL_FIFO}
   echo "[INFO]: Success!"
 }
+##########################################################################
 
+##########################################################################
 ghdlTestbench()
 {
   tbFilePath="${ASIC_TB_DIR}/${1}.vhd"
@@ -456,6 +223,7 @@ ghdlTestbench()
   fi
 
 }
+##########################################################################
 
 ##########################################################################
 
@@ -478,7 +246,7 @@ main()
     exit 1
   fi
 
-  ghdlPrepare $1
+  # ghdlPrepare $1
   ghdlAnalyze
 
   if [[ $# -ge 2 ]]; then
