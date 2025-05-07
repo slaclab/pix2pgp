@@ -441,7 +441,7 @@ package body Pix2PgpPkg is
    -- Essentially reverses the endianness on a word level
    -- bus size and word size are in bytes. tKeep and tData are the AXI-Stream signals
    function revEndian(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
-      variable retWord    : slv((busSize * 8) - 1 downto 0);
+      variable retWord    : slv((busSize * 8) - 1 downto 0) := (others => '0');
       variable tKeepBytes : integer := 0;
       variable tKeepWords : integer := 0;
    begin
@@ -451,23 +451,6 @@ package body Pix2PgpPkg is
 
       -- Calculate the number of bytes to reverse based on tKeep
       tKeepBytes := conv_integer(unsigned(onesCount(tKeep)));
-
-   -- Special case for wordSize = 1 (i.e. reverse byte-by-byte)
-   if wordSize = 1 then
-
-         for i in 0 to busSize - 1 loop
-            if i < tKeepBytes then
-               retWord(((tKeepBytes - 1 - i) * 8 + 7) downto ((tKeepBytes - 1 - i) * 8)) :=
-                  tData(i * 8 + 7 downto i * 8);
-            else
-               retWord((i * 8 + 7) downto (i * 8)) := (others => '0');
-            end if;
-         end loop;
-
-   -- Reverse word-by-word
-   else
-
-
       tKeepWords := tKeepBytes / wordSize;
 
       -- Reverse the words based on the word size
@@ -486,8 +469,6 @@ package body Pix2PgpPkg is
 
          end if;
       end loop;
-
-   end if;
 
       return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
