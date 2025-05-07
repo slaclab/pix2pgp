@@ -452,6 +452,22 @@ package body Pix2PgpPkg is
       -- Calculate the number of bytes to reverse based on tKeep
       tKeepBytes := conv_integer(unsigned(onesCount(tKeep)));
 
+   -- Special case for wordSize = 1 (i.e. reverse byte-by-byte)
+   if wordSize = 1 then
+
+         for i in 0 to busSize - 1 loop
+            if i < tKeepBytes then
+               retWord(((tKeepBytes - 1 - i) * 8 + 7) downto ((tKeepBytes - 1 - i) * 8)) :=
+                  tData(i * 8 + 7 downto i * 8);
+            else
+               retWord((i * 8 + 7) downto (i * 8)) := (others => '0');
+            end if;
+         end loop;
+
+   -- Reverse word-by-word
+   else
+
+
       tKeepWords := tKeepBytes / wordSize;
 
       -- Reverse the words based on the word size
@@ -469,7 +485,9 @@ package body Pix2PgpPkg is
                     (i*8*wordSize)) := (others => '0');
 
          end if;
-     end loop;
+      end loop;
+
+   end if;
 
       return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
