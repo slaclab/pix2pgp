@@ -233,7 +233,6 @@ begin
          TPD_G             => TPD_G,
          RST_ASYNC_G       => RST_ASYNC_G,
          RST_POLARITY_G    => RST_POLARITY_G,
-         AXIS_FIFO_WIDTH_G => AXIS_FIFO_WIDTH_C,
          PIPE_STAGES_G     => PIPE_STAGES_G,
          IB_DWIDTH_G       => ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C,
          OB_DWIDTH_G       => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)

@@ -30,8 +30,6 @@ entity AxiStreamReverse is
       TPD_G             : time    := 1 ns;
       RST_ASYNC_G       : boolean := false;
       RST_POLARITY_G    : sl      := '1';  -- '1' for active high rst, '0' for active low
-      COMB_G            : boolean := true;
-      AXIS_FIFO_WIDTH_G : natural := 4;
       PIPE_STAGES_G     : natural := 1;
       IB_DWIDTH_G       : natural := 5;   -- in bytes
       OB_DWIDTH_G       : natural := 40); -- in bytes
@@ -61,13 +59,11 @@ architecture rtl of AxiStreamReverse is
    type RegType is record
       sAxisMaster : AxiStreamMasterType;
       ibTxSlave   : AxiStreamSlaveType;
-      sAxisSlave  : AxiStreamSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       sAxisMaster => AXI_STREAM_MASTER_INIT_C,
-      ibTxSlave   => AXI_STREAM_SLAVE_INIT_C,
-      sAxisSlave  => AXI_STREAM_SLAVE_INIT_C);
+      ibTxSlave   => AXI_STREAM_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -117,13 +113,7 @@ begin
    comb : process (r, sysRst, sAxisSlave, ibTxMaster) is
 
       -- omnipresent
-      variable v        : RegType;
-
-      -- to choose between combinatorial or sequential
-      variable tReady  : sl;
-      variable txSlave  : AxiStreamSlaveType;
-      variable txMaster : AxiStreamMasterType;
-
+      variable v : RegType;
    begin
 
       -- Latch the current value
@@ -132,9 +122,7 @@ begin
       -- Flow Control
       v.ibTxSlave.tReady := '0';
 
-      tReady := ite(COMB_G, v.sAxisSlave.tReady, r.sAxisSlave.tReady);
-
-      if tReady = '1' then
+      if sAxisSlave.tReady = '1' then
 
          v.sAxisMaster.tValid := '0';
          v.sAxisMaster.tLast  := '0';
@@ -158,12 +146,9 @@ begin
       -- data assignment (reversing)
       v.sAxisMaster.tData := reverse(ibTxMaster.tData, ibTxMaster.tKeep, IB_DWIDTH_G);
 
-      txSlave  := ite(COMB_G, v.ibTxSlave,         r.ibTxSlave);
-      txMaster := ite(COMB_G, v.sAxisMaster,       r.sAxisMaster);
-
       -- Outputs
-      ibTxSlave   <= txSlave;   -- upstream slave output
-      sAxisMaster <= txMaster; -- downstream master input
+      ibTxSlave   <= v.ibTxSlave;   -- upstream slave output
+      sAxisMaster <= v.sAxisMaster; -- downstream master input
 
       -- Reset
       if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
