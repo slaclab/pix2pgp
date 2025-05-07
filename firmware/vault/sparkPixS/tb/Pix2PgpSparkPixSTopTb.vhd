@@ -1955,7 +1955,7 @@ end loop;
   begin
     if rising_edge(sysClk) then
       if m_axis_tvalid = '1' then
-        for i in FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0 loop
+        for i in 0 to FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C - 1 loop
           if m_axis_tkeep(i) = '1' then
             byte := m_axis_tdata((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);
