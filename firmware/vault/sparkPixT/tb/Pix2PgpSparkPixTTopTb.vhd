@@ -112,6 +112,15 @@ type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArra
    file myFile6 : text open write_mode is "pix2pgpLaneDataDump6.dat";
    file myFile7 : text open write_mode is "pix2pgpLaneDataDump7.dat";
 
+   signal m_axis_tvalid  : sl := '0';
+   signal m_axis_tdata   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tlast   : sl := '0';
+   signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
+   signal m_axis_tid     : slv(7 downto 0) := (others => '0');
+   signal m_axis_tuser   : slv(7 downto 0) := (others => '0');
+
 begin
 
    -- clocks
@@ -326,6 +335,33 @@ begin
          axilReadSlave   => open,
          axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
          axilWriteSlave  => open);
+
+   -- Map PgpRxMasters to AXI
+   axiMaster : entity surf.MasterAxiStreamIpIntegrator
+      generic map (
+         INTERFACENAME   => "M_AXIS",
+         TUSER_WIDTH     => 8,
+         TID_WIDTH       => 8,
+         TDEST_WIDTH     => 8,
+         TDATA_NUM_BYTES => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)
+      port map (
+         -- IP Integrator AXI Stream Interface
+         M_AXIS_ACLK    => sysClk,
+         M_AXIS_ARESETN => '1',
+         M_AXIS_TVALID  => m_axis_tvalid,
+         M_AXIS_TDATA   => m_axis_tdata,
+         M_AXIS_TSTRB   => m_axis_tstrb,
+         M_AXIS_TKEEP   => m_axis_tkeep,
+         M_AXIS_TLAST   => m_axis_tlast,
+         M_AXIS_TDEST   => m_axis_tdest,
+         M_AXIS_TID     => m_axis_tid,
+         M_AXIS_TUSER   => m_axis_tuser,
+         M_AXIS_TREADY  => '1',
+         -- SURF AXI Stream Interface
+         axisClk        => open,
+         axisRst        => open,
+         axisMaster     => asicRxMaster,
+         axisSlave      => asicRxSlave);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -1956,10 +1992,10 @@ wait for CLK_PERIOD_SPARSE_C*2;
     variable byte : std_logic_vector(7 downto 0);
   begin
     if rising_edge(sysClk) then
-      if asicRxMaster.tValid = '1' then
-        for i in 127 downto 0 loop
-          if asicRxMaster.tKeep(i) = '1' then
-            byte := asicRxMaster.tData((i*8+7) downto (i*8));
+      if m_axis_tvalid = '1' then
+        for i in FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0 loop
+          if m_axis_tkeep(i) = '1' then
+            byte := m_axis_tdata((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);
             writeline(myFile, row);
             row.all := "";
