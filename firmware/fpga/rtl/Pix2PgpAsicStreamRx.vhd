@@ -672,7 +672,26 @@ begin
          din  => timeout,
          dout => laneTimeout);
 
-      asicRxMaster <= obAxisMaster;
-      obAxisSlave  <= asicRxSlave;
+   -----------------------------------------
+   -- Reverses on a per-byte basis
+   -----------------------------------------
+   U_Reverse: entity pix2pgp.AxiStreamReverse
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         PIPE_STAGES_G  => 1,
+         BUS_SIZE_G     => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
+         WORD_SIZE_G    => 1)
+      port map(
+         -- General Interface
+         sysClk     => sysClk,
+         sysRst     => sysRst,
+         -- Inbound Interface
+         ibTxMaster => obAxisMaster,
+         ibTxSlave  => obAxisSlave,
+         -- Outbound Interface
+         obTxMaster => asicRxMaster,
+         obTxSlave  => asicRxSlave);
 
 end rtl;
