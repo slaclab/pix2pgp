@@ -443,27 +443,26 @@ package body Pix2PgpPkg is
    function revEndian(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
       variable retWord    : slv((busSize * 8) - 1 downto 0);
       variable tKeepBytes : integer := 0;
+      variable tKeepWords : integer := 0;
    begin
 
       assert (busSize mod wordSize = 0)
       report "[ERROR]: Pix2PgpPkg.vhd; The Bus Byte Width (busSize) is *NOT* a multiple of the Word Byte Width (wordSize)! Please check the values of the generics." severity failure ;
 
       -- Calculate the number of bytes to reverse based on tKeep
-      for i in (busSize-1) downto 0 loop
-         if tKeep(i) = '1' then
-            tKeepBytes := tKeepBytes + 1;
-         end if;
-      end loop;
+      tKeepBytes := conv_integer(unsigned(onesCount(tKeep)));
+
+      tKeepWords := tKeepBytes / wordSize;
 
       -- Reverse the words based on the word size
-      for i in 0 to (tKeepBytes/wordSize)-1 loop
-         retWord (((tKeepBytes/wordSize)-1-i)*8*wordSize + 8*wordSize-1
-          downto ((tKeepBytes/wordSize)- 1-i)*8*wordSize)
+      for i in 0 to (tKeepWords)-1 loop
+         retWord (((tKeepWords)-1-i)*8*wordSize + 8*wordSize-1
+          downto ((tKeepWords)- 1-i)*8*wordSize)
             := tData(i*8*wordSize + 8*wordSize-1 downto i*8*wordSize);
       end loop;
 
       -- Fill the unused bits with zeros
-      for i in ((tKeepBytes/wordSize) * 8 * wordSize) to ((busSize * 8) - 1) loop
+      for i in ((tKeepWords) * 8 * wordSize) to ((busSize * 8) - 1) loop
          retWord(i) := '0';
       end loop;
 
