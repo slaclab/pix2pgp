@@ -27,12 +27,12 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity AxiStreamReverse is
    generic(
-      TPD_G             : time    := 1 ns;
-      RST_ASYNC_G       : boolean := false;
-      RST_POLARITY_G    : sl      := '1';  -- '1' for active high rst, '0' for active low
-      PIPE_STAGES_G     : natural := 1;
-      IB_DWIDTH_G       : natural := 5;   -- in bytes
-      OB_DWIDTH_G       : natural := 40); -- in bytes
+      TPD_G          : time    := 1 ns;
+      RST_ASYNC_G    : boolean := false;
+      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
+      PIPE_STAGES_G  : natural := 1;
+      BUS_SIZE_G     : natural := 40; -- in bytes
+      WORD_SIZE_G    : natural := 5); -- in bytes
    port(
       -- General Interface
       sysClk     : in  sl;
@@ -62,39 +62,6 @@ architecture rtl of AxiStreamReverse is
    -- reset via the variables
    signal sAxisMaster : AxiStreamMasterType;
    signal sAxisSlave  : AxiStreamSlaveType;
-
-   signal fifoRst     : sl := '0';
-
-   function reverse(din : slv; tKeep : slv; dataBusWidth : natural) return slv is
-      variable dout          : slv(AXI_STREAM_MAX_TDATA_WIDTH_C-1 downto 0) := (others => '0');
-      variable tKeepBytesCnt : integer := 0;
-      variable validWordsCnt : integer := 0;
-      variable wordIndex     : integer := 0;
-      variable dataBusBits   : integer := dataBusWidth * 8; -- Calculate bits from bytes
-   begin
-
-      tKeepBytesCnt := conv_integer(unsigned(onesCount(tKeep)));
-
-      -- always check if the tKeep has a valid value for this conversion
-
-      if tKeepBytesCnt mod dataBusWidth = 0 then
-         -- Calculate the number of valid words
-         validWordsCnt := tKeepBytesCnt / dataBusWidth;
-
-         -- Reverse the input order
-         for i in 0 to validWordsCnt - 1 loop
-            wordIndex := validWordsCnt - 1 - i;
-            dout((i*dataBusBits) + dataBusBits - 1 downto (i*dataBusBits))
-               := din((wordIndex*dataBusBits) + dataBusBits - 1 downto (wordIndex*dataBusBits));
-         end loop;
-
-      else
-         dout := resize(din, din'length);
-      end if;
-
-      return dout;
-
-   end function reverse;
 
 begin
 
@@ -132,7 +99,7 @@ begin
       end if;
 
       -- data assignment (reversing)
-      v.sAxisMaster.tData := revEndian(ibTxMaster.tData, ibTxMaster.tKeep, OB_DWIDTH_G, IB_DWIDTH_G);
+      v.sAxisMaster.tData := revEndian(ibTxMaster.tData, ibTxMaster.tKeep, BUS_SIZE_G, WORD_SIZE_G);
 
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output
@@ -161,6 +128,7 @@ begin
    -- Pipeline Stage (or not)
    --------------------------
    GEN_PIPE: if PIPE_STAGES_G > 0 generate
+
       U_Pipe : entity surf.AxiStreamPipeline
          generic map (
             TPD_G          => TPD_G,
@@ -177,11 +145,14 @@ begin
             -- Master Port
             mAxisMaster => obTxMaster,
             mAxisSlave  => obTxSlave);
+
    end generate GEN_PIPE;
 
    GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
+
       sAxisSlave <= obTxSlave;
       obTxMaster <= sAxisMaster;
+
    end generate GEN_NO_PIPE;
 
 end rtl;
