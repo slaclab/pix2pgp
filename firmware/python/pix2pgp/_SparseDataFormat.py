@@ -49,8 +49,8 @@ class SparkPixSDataFormat(SparseDataFormatBase):
                               'hitTrg' : (hit1 >> 14) & 0x3F}
 
         else:
-            _hitData0_dict = {'raw'    : hit0}
-            _hitData1_dict = {'raw'    : hit1}
+            _hitData0_dict = {'raw': hex(hit0).upper().replace('0X', '0x')}
+            _hitData1_dict = {'raw': hex(hit1).upper().replace('0X', '0x')}
 
         return _hitData0_dict, _hitData1_dict
 
@@ -87,7 +87,7 @@ class SparkPixTDataFormat(SparseDataFormatBase):
                               'hitCnt' : (hit1 >>  8) & 0x3F,
                               'hitTrg' : (hit1 >> 14) & 0x3F}
         else:
-            _hitData0_dict = {'raw'    : hit0}
-            _hitData1_dict = {'raw'    : hit1}
+            _hitData0_dict = {'raw': hex(hit0).upper().replace('0X', '0x')}
+            _hitData1_dict = {'raw': hex(hit1).upper().replace('0X', '0x')}
 
         return _hitData0_dict, _hitData1_dict
