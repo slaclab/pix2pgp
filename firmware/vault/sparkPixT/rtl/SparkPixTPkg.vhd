@@ -455,16 +455,21 @@ package body Pix2PgpPkg is
       tKeepWords := tKeepBytes / wordSize;
 
       -- Reverse the words based on the word size
-      for i in 0 to (tKeepWords)-1 loop
-         retWord (((tKeepWords)-1-i)*8*wordSize + 8*wordSize-1
-          downto ((tKeepWords)- 1-i)*8*wordSize)
-            := tData(i*8*wordSize + 8*wordSize-1 downto i*8*wordSize);
-      end loop;
+      for i in 0 to busSize / wordSize - 1 loop
+         if i < tKeepWords then
 
-      -- Fill the unused bits with zeros
-      for i in ((tKeepWords) * 8 * wordSize) to ((busSize * 8) - 1) loop
-         retWord(i) := '0';
-      end loop;
+            retWord(((tKeepWords-1-i)*8*wordSize + 8*wordSize-1) downto
+                    ((tKeepWords-1-i)*8*wordSize)) :=
+
+               tData(i*8*wordSize +   8*wordSize-1 downto
+                     i*8*wordSize);
+         else
+
+            retWord((i*8*wordSize + 8*wordSize-1) downto
+                    (i*8*wordSize)) := (others => '0');
+
+         end if;
+     end loop;
 
       return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
