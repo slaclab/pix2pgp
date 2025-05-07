@@ -204,6 +204,7 @@ package Pix2PgpPkg is
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
    function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
+   function revBytes       (tData : slv; tKeep : slv; nBytes : integer) return slv;
 
    function rangeToLen (high : integer; low : integer) return integer;
 
@@ -434,5 +435,33 @@ package body Pix2PgpPkg is
       return retHeader;
 
    end fpgaHeaderMap;
+
+   -- Function to reverse the bytes in tData based on tKeep
+   -- essentially reverses the endianness on a byte level
+   function revBytes(tData : slv; tKeep : slv; nBytes : integer) return slv is
+      variable retByte    : slv((nBytes * 8) - 1 downto 0);
+      variable tKeepBytes : integer := 0;
+   begin
+
+      -- Calculate the number of bytes to reverse based on tKeep
+      for i in (nBytes-1) downto 0 loop
+         if tKeep(i) = '1' then
+            tKeepBytes := tKeepBytes + 1;
+         end if;
+      end loop;
+
+      -- Reverse the bytes
+      for i in 0 to tKeepBytes-1 loop
+         retByte((tKeepBytes-1-i)*8 + 7 downto (tKeepBytes-1-i)*8) := tData(i*8 + 7 downto i*8);
+      end loop;
+
+      -- Fill the unused bits with zeros
+      for i in (tKeepBytes * 8) to ((nBytes * 8) - 1) loop
+         retByte(i) := '0';
+      end loop;
+
+      return retByte;
+
+   end function;
 
 end package body Pix2PgpPkg;

@@ -642,33 +642,31 @@ begin
             din  => timeoutLimit(lane),
             dout => timeoutLimitDly(lane));
 
-      U_PipelineArmTimeout : entity surf.SlvDelay
-         generic map (
-            TPD_G          => TPD_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            WIDTH_G        => NUM_OF_SERIALIZERS_C,
-            DELAY_G        => 2)
-         port map (
-            clk  => sysClk,
-            din  => armTimeout,
-            dout => armTimeoutDly);
-
-      U_PipelineTimeout : entity surf.SlvDelay
-         generic map (
-            TPD_G          => TPD_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            WIDTH_G        => NUM_OF_SERIALIZERS_C,
-            DELAY_G        => 2)
-         port map (
-            clk  => sysClk,
-            din  => timeout,
-            dout => laneTimeout);
-
       allLanesMaster(lane) <= laneRxMasters(lane);
       allLanesSlave(lane)  <= laneRxSlaves(lane);
 
    end generate GEN_LANE;
 
+   U_PipelineArmTimeout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => NUM_OF_SERIALIZERS_C,
+         DELAY_G        => 2)
+      port map (
+         clk  => sysClk,
+         din  => armTimeout,
+         dout => armTimeoutDly);
 
+   U_PipelineTimeout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => NUM_OF_SERIALIZERS_C,
+         DELAY_G        => 2)
+      port map (
+         clk  => sysClk,
+         din  => timeout,
+         dout => laneTimeout);
 
 end rtl;
