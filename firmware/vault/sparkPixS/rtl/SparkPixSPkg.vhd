@@ -441,9 +441,17 @@ package body Pix2PgpPkg is
    -- Essentially reverses the endianness on a word level
    -- bus size and word size are in bytes. tKeep and tData are the AXI-Stream signals
    function revEndian(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
-      variable retWord    : slv((busSize * 8) - 1 downto 0) := (others => '0');
-      variable tKeepBytes : integer := 0;
-      variable tKeepWords : integer := 0;
+      variable retWord     : slv((busSize * 8) - 1 downto 0) := (others => '0');
+      variable tKeepBytes  : integer := 0;
+      variable tKeepWords  : integer := 0;
+      variable sourceStart : integer := 0;
+      variable sourceEnd   : integer := 0;
+      variable destStart   : integer := 0;
+      variable destEnd     : integer := 0;
+      variable wordStart   : integer := 0;
+      variable wordEnd     : integer := 0;
+      variable byteIndex   : integer := 0; --index for byte access when wordsize = 1
+
    begin
 
       assert (busSize mod wordSize = 0)
@@ -454,24 +462,41 @@ package body Pix2PgpPkg is
       tKeepWords := tKeepBytes / wordSize;
 
       -- Reverse the words based on the word size
-      for i in 0 to busSize / wordSize - 1 loop
-         if i < tKeepWords then
+      if wordSize = 1 then
+         -- Handle wordSize = 1 (byte-level reversal)
+         for i in 0 to busSize - 1 loop -- Iterate byte by byte
+            if i < tKeepBytes then
+               byteIndex := tKeepBytes - 1 - i;
+               retWord(i*8 + 7 downto i*8) := tData(byteIndex*8 + 7 downto byteIndex*8);
+            else
+               retWord(i*8 + 7 downto i*8) := (others => '0');
+            end if;
+         end loop;
+      else
+         -- General word-level reversal
+         for i in 0 to busSize / wordSize - 1 loop
+            if i < tKeepWords then
+               -- Calculate the source word start and end bits
+               sourceStart := i * 8 * wordSize;
+               sourceEnd   := (i + 1) * 8 * wordSize - 1;
 
-            retWord(((tKeepWords-1-i)*8*wordSize + 8*wordSize-1) downto
-                    ((tKeepWords-1-i)*8*wordSize)) :=
+               -- Calculate the destination word start and end bits
+               destStart   := ((tKeepWords - 1 - i) * 8 * wordSize);
+               destEnd     := ((tKeepWords - 1 - i) * 8 * wordSize) + 8 * wordSize - 1;
 
-               tData(i*8*wordSize +   8*wordSize-1 downto
-                     i*8*wordSize);
-         else
+               retWord(destEnd downto destStart) := tData(sourceEnd downto sourceStart);
 
-            retWord((i*8*wordSize + 8*wordSize-1) downto
-                    (i*8*wordSize)) := (others => '0');
-
-         end if;
-      end loop;
+            else
+               -- Zero out the non-valid words
+               wordStart := i * 8 * wordSize;
+               wordEnd   := (i + 1) * 8 * wordSize - 1;
+               retWord(wordEnd downto wordStart) := (others => '0');
+            end if;
+         end loop;
+      end if;
 
       return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
-   end function;
+   end revEndian;
 
 end package body Pix2PgpPkg;
