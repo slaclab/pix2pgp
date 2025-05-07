@@ -27,10 +27,10 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpLaneRxWrapper is
    generic(
-      TPD_G                : time    := 1 ns;
-      RST_ASYNC_G          : boolean := false;
-      RST_POLARITY_G       : sl      := '1';  -- '1' for active high rst, '0' for active low
-      LANERX_PIPE_STAGES_G : natural := 1);
+      TPD_G          : time    := 1 ns;
+      RST_ASYNC_G    : boolean := false;
+      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
+      PIPE_STAGES_G  : natural := 1);
    port(
       -- General Interface
       pgpClk        : in  sl;
@@ -87,7 +87,7 @@ begin
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         PIPE_STAGES_G  => LANERX_PIPE_STAGES_G,
+         PIPE_STAGES_G  => PIPE_STAGES_G,
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface

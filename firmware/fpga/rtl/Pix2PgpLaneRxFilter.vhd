@@ -84,8 +84,8 @@ architecture rtl of Pix2PgpLaneRxFilter is
    signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal revAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal revAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal obAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal obAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
 begin
 
@@ -221,30 +221,39 @@ begin
          sSideBand   => (others => '0'),
          sAxisSlave  => sAxisSlave,
          -- Master Port
-         mAxisMaster => revAxisMaster,
+         mAxisMaster => obAxisMaster,
          mSideBand   => open,
-         mAxisSlave  => revAxisSlave);
+         mAxisSlave  => obAxisSlave);
 
    -----------------------------------------
    -- Reverses on a per-word basis
    -----------------------------------------
-   U_Reverse: entity pix2pgp.AxiStreamReverse
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         PIPE_STAGES_G  => PIPE_STAGES_G,
-         BUS_SIZE_G     => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
-         WORD_SIZE_G    => ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C)
-      port map(
-         -- General Interface
-         sysClk     => sysClk,
-         sysRst     => sysRst,
-         -- Inbound Interface
-         ibTxMaster => revAxisMaster,
-         ibTxSlave  => revAxisSlave,
-         -- Outbound Interface
-         obTxMaster => laneRxMaster,
-         obTxSlave  => laneRxSlave);
+   GEN_PIPE: if PIPE_STAGES_G > 0 generate
+
+      U_Pipe : entity surf.AxiStreamPipeline
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            PIPE_STAGES_G  => PIPE_STAGES_G)
+         port map (
+            -- Clock and Reset
+            axisClk     => sysClk,
+            axisRst     => sysRst,
+            -- Slave Port
+            sAxisMaster => obAxisMaster,
+            sAxisSlave  => obAxisSlave,
+            -- Master Port
+            mAxisMaster => laneRxMaster,
+            mAxisSlave  => laneRxSlave);
+
+   end generate GEN_PIPE;
+
+   GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
+
+      obAxisSlave  <= laneRxSlave;
+      laneRxMaster <= obAxisMaster;
+
+   end generate GEN_NO_PIPE;
 
 end rtl;

@@ -99,7 +99,10 @@ begin
       end if;
 
       -- data assignment (reversing)
-      v.sAxisMaster.tData := revEndian(ibTxMaster.tData, ibTxMaster.tKeep, BUS_SIZE_G, WORD_SIZE_G);
+      v.sAxisMaster.tData := revEndian(ibTxMaster.tData(BUS_SIZE_G*8-1 downto 0),
+                                       ibTxMaster.tKeep(BUS_SIZE_G-1 downto 0),
+                                       BUS_SIZE_G,
+                                       WORD_SIZE_G);
 
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output

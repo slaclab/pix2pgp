@@ -36,7 +36,8 @@ entity Pix2PgpAsicStreamRx is
       ASIC_ID_G             : natural  := 0;
       SINGLE_LANE_ID_G      : natural  := 0;
       TIMEOUT_LIMIT_WIDTH_G : positive := 16;
-      LANERX_PIPE_STAGES_G  : natural  := 1;
+      LANE_PIPE_STAGES_G    : natural  := 1;
+      STREAM_PIPE_STAGES_G  : natural  := 1;
       DISCARD_BAD_COL_TRG_G : boolean  := true);
    port(
       -- General Interface
@@ -55,9 +56,6 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Interface
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
-      -- Individual Axi Lanes for Debugging
-      allLanesMaster  : out AxiStreamMasterArray;
-      allLanesSlave   : out AxiStreamSlaveArray;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -263,10 +261,11 @@ begin
       variable axilEp : AxiLiteEndpointType;
 
       -- internal variables
-      variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)  := (others => '0');
-      variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)    := (others => '0');
-      variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-      variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)   := (others => '0');
+      variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
+      variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable asicData      : slv(AXI_STREAM_MAX_TDATA_WIDTH_C-1 downto 0) := (others => '0');
       variable laneIdx       : natural := 0;
 
    begin
@@ -430,10 +429,18 @@ begin
 
          ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done
+         -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
-            v.obAxisMaster.tData(FPGA_DATABUS_DWIDTH_C-1 downto 0)
-                  := laneRxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0);
-            v.obAxisMaster.tKeep           := laneRxMasters(laneIdx).tKeep;
+            v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
+
+            asicData := revEndian(
+                           laneRxMasters(laneIdx).tData(FPGA_DATABUS_DWIDTH_C-1 downto 0),
+                           laneRxMasters(laneIdx).tKeep((FPGA_DATABUS_DWIDTH_C/8)-1 downto 0),
+                           FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
+                           ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
+
+            v.obAxisMaster.tData := asicData;
+
             v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
             v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;
 
@@ -596,12 +603,12 @@ begin
    -----------------
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
-      U_Lane: entity pix2pgp.Pix2PgpLaneRxWrapper
+      U_LaneWrapper: entity pix2pgp.Pix2PgpLaneRxWrapper
          generic map(
-            TPD_G                => TPD_G,
-            RST_ASYNC_G          => RST_ASYNC_G,
-            RST_POLARITY_G       => RST_POLARITY_G,
-            LANERX_PIPE_STAGES_G => LANERX_PIPE_STAGES_G)
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            PIPE_STAGES_G  => LANE_PIPE_STAGES_G)
          port map(
             -- General Interface
             pgpClk        => pgpClk,
@@ -645,9 +652,6 @@ begin
             din  => timeoutLimit(lane),
             dout => timeoutLimitDly(lane));
 
-      allLanesMaster(lane) <= laneRxMasters(lane);
-      allLanesSlave(lane)  <= laneRxSlaves(lane);
-
    end generate GEN_LANE;
 
    U_PipelineArmTimeout : entity surf.SlvDelay
@@ -680,7 +684,7 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         PIPE_STAGES_G  => 1,
+         PIPE_STAGES_G  => STREAM_PIPE_STAGES_G,
          BUS_SIZE_G     => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
          WORD_SIZE_G    => 1)
       port map(

@@ -73,9 +73,6 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pauseAck  : asicArray := (others => (others => '0'));
    signal sparseBusy: asicArray := (others => (others => '0'));
 
-   signal allLanesMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
-   signal allLanesSlave  : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1)  := (others => AXI_STREAM_SLAVE_INIT_C);
-
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
 
@@ -98,15 +95,6 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
-
-   file myFile0 : text open write_mode is "pix2pgpLaneDataDump0.dat";
-   file myFile1 : text open write_mode is "pix2pgpLaneDataDump1.dat";
-   file myFile2 : text open write_mode is "pix2pgpLaneDataDump2.dat";
-   file myFile3 : text open write_mode is "pix2pgpLaneDataDump3.dat";
-   file myFile4 : text open write_mode is "pix2pgpLaneDataDump4.dat";
-   file myFile5 : text open write_mode is "pix2pgpLaneDataDump5.dat";
-   file myFile6 : text open write_mode is "pix2pgpLaneDataDump6.dat";
-   file myFile7 : text open write_mode is "pix2pgpLaneDataDump7.dat";
 
    signal m_axis_tvalid  : sl := '0';
    signal m_axis_tdata   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
@@ -320,9 +308,6 @@ begin
          -- PGP4Rx Interface
          pgp4RxMaster    => pgp4RxMaster,
          pgp4RxSlave     => pgp4RxSlave,
-         -- Individual Axi Lanes for Debugging
-         allLanesMaster  => allLanesMaster,
-         allLanesSlave   => allLanesSlave,
          -- AXI-Stream Rx Interface
          asicRxMaster    => asicRxMaster,
          asicRxSlave     => asicRxSlave,
@@ -1966,116 +1951,5 @@ end loop;
       end if;
     end if;
   end process;
-
-
- FileWriteProcessSingle : process(sysClk)
-   variable row : line;
-   variable byte : std_logic_vector(7 downto 0);
-   begin
-        if rising_edge(sysClk) then
-            for laneIndex in 0 to 7 loop
-                case laneIndex is
-                    when 0 =>
-                        if allLanesMaster(0).tValid = '1' and allLanesSlave(0).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(0).tKeep(i) = '1' then
-                                    byte := allLanesMaster(0).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile0, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 1 =>
-                        if allLanesMaster(1).tValid = '1' and allLanesSlave(1).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(1).tKeep(i) = '1' then
-                                    byte := allLanesMaster(1).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile1, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 2 =>
-                        if allLanesMaster(2).tValid = '1' and allLanesSlave(2).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(2).tKeep(i) = '1' then
-                                    byte := allLanesMaster(2).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile2, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 3 =>
-                        if allLanesMaster(3).tValid = '1' and allLanesSlave(3).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(3).tKeep(i) = '1' then
-                                    byte := allLanesMaster(3).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile3, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 4 =>
-                        if allLanesMaster(4).tValid = '1' and allLanesSlave(4).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(4).tKeep(i) = '1' then
-                                    byte := allLanesMaster(4).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile4, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 5 =>
-                        if allLanesMaster(5).tValid = '1' and allLanesSlave(5).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(5).tKeep(i) = '1' then
-                                    byte := allLanesMaster(5).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile5, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 6 =>
-                        if allLanesMaster(6).tValid = '1' and allLanesSlave(6).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(6).tKeep(i) = '1' then
-                                    byte := allLanesMaster(6).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile6, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when 7 =>
-                        if allLanesMaster(7).tValid = '1' and allLanesSlave(7).tReady = '1' then
-                            for i in 127 downto 0 loop
-                                if allLanesMaster(7).tKeep(i) = '1' then
-                                    byte := allLanesMaster(7).tData((i*8+7) downto (i*8));
-                                    hwrite(row, byte, LEFT, 0);
-                                    writeline(myFile7, row);
-                                    row.all := "";
-                                end if;
-                            end loop;
-                        end if;
-
-                    when others =>
-                        -- Handle unexpected index if needed
-                end case;
-            end loop;
-        end if;
-    end process;
 
 end architecture;
