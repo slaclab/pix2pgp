@@ -47,15 +47,6 @@ end AxiStreamReverse;
 
 architecture rtl of AxiStreamReverse is
 
-   constant AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => OB_DWIDTH_G,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
-
    type RegType is record
       sAxisMaster : AxiStreamMasterType;
       ibTxSlave   : AxiStreamSlaveType;
@@ -107,9 +98,6 @@ architecture rtl of AxiStreamReverse is
 
 begin
 
-   assert (OB_DWIDTH_G mod IB_DWIDTH_G = 0)
-      report "[ERROR]: AxiStreamReverse.vhd; The Output Data Width (OB_DWIDTH_G) is *NOT* a multiple of the Input Data Width (IB_DWIDTH_G)! Please check the values of the generics." severity failure;
-
    comb : process (r, sysRst, sAxisSlave, ibTxMaster) is
 
       -- omnipresent
@@ -144,7 +132,7 @@ begin
       end if;
 
       -- data assignment (reversing)
-      v.sAxisMaster.tData := reverse(ibTxMaster.tData, ibTxMaster.tKeep, IB_DWIDTH_G);
+      v.sAxisMaster.tData := revEndian(ibTxMaster.tData, ibTxMaster.tKeep, OB_DWIDTH_G, IB_DWIDTH_G);
 
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output

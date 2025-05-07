@@ -204,7 +204,8 @@ package Pix2PgpPkg is
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
    function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
-   function revBytes       (tData : slv; tKeep : slv; nBytes : integer) return slv;
+   function revEndian      (tData : slv; tKeep : slv;
+                            busSize : integer; wordSize : integer) return slv;
 
    function rangeToLen (high : integer; low : integer) return integer;
 
@@ -436,31 +437,37 @@ package body Pix2PgpPkg is
 
    end fpgaHeaderMap;
 
-   -- Function to reverse the bytes in tData based on tKeep
-   -- essentially reverses the endianness on a byte level
-   function revBytes(tData : slv; tKeep : slv; nBytes : integer) return slv is
-      variable retByte    : slv((nBytes * 8) - 1 downto 0);
+   -- Function to reverse the words in tData based on tKeep
+   -- Essentially reverses the endianness on a word level
+   -- bus size and word size are in bytes. tKeep and tData are the AXI-Stream signals
+   function revEndian(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
+      variable retWord    : slv((busSize * 8) - 1 downto 0);
       variable tKeepBytes : integer := 0;
    begin
 
+      assert (busSize mod wordSize = 0)
+      report "[ERROR]: Pix2PgpPkg.vhd; The Bus Byte Width (busSize) is *NOT* a multiple of the Word Byte Width (wordSize)! Please check the values of the generics." severity failure ;
+
       -- Calculate the number of bytes to reverse based on tKeep
-      for i in (nBytes-1) downto 0 loop
+      for i in (busSize-1) downto 0 loop
          if tKeep(i) = '1' then
             tKeepBytes := tKeepBytes + 1;
          end if;
       end loop;
 
-      -- Reverse the bytes
-      for i in 0 to tKeepBytes-1 loop
-         retByte((tKeepBytes-1-i)*8 + 7 downto (tKeepBytes-1-i)*8) := tData(i*8 + 7 downto i*8);
+      -- Reverse the words based on the word size
+      for i in 0 to (tKeepBytes/wordSize)-1 loop
+         retWord (((tKeepBytes/wordSize)-1-i)*8*wordSize + 8*wordSize-1
+          downto ((tKeepBytes/wordSize)- 1-i)*8*wordSize)
+            := tData(i*8*wordSize + 8*wordSize-1 downto i*8*wordSize);
       end loop;
 
       -- Fill the unused bits with zeros
-      for i in (tKeepBytes * 8) to ((nBytes * 8) - 1) loop
-         retByte(i) := '0';
+      for i in ((tKeepBytes/wordSize) * 8 * wordSize) to ((busSize * 8) - 1) loop
+         retWord(i) := '0';
       end loop;
 
-      return retByte;
+      return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
    end function;
 
