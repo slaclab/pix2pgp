@@ -265,7 +265,7 @@ begin
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
       variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable asicData      : slv(AXI_STREAM_MAX_TDATA_WIDTH_C-1 downto 0) := (others => '0');
+      variable asicAxiStream      : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       variable laneIdx       : natural := 0;
 
    begin
@@ -352,6 +352,8 @@ begin
                               laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
+
+      asicAxiStream := laneRxMasters(laneIdx);
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -433,14 +435,11 @@ begin
          when WAIT_TLAST_S =>
             v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
 
-            asicData := revEndian(laneRxMasters(laneIdx).tData,
-                                  laneRxMasters(laneIdx).tKeep(
-                                    FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0),
-                                    FPGA_RX_AXI_CONFIG_C,
-                                    ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
+            axiStreamEndianSwap(asicAxiStream,
+                                FPGA_RX_AXI_CONFIG_C,
+                                ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
-
-            v.obAxisMaster.tData := asicData;
+            v.obAxisMaster.tData := asicAxiStream.tData;
 
             v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
             v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;
@@ -495,6 +494,9 @@ begin
          end if;
 
       end loop;
+
+      -- endianness swapm (per-byte)
+      axiStreamEndianSwap(v.obAxisMaster, FPGA_RX_AXI_CONFIG_C, 1);
 
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
@@ -677,26 +679,36 @@ begin
          din  => timeout,
          dout => laneTimeout);
 
-   -----------------------------------------
-   -- Reverses on a per-byte basis
-   -----------------------------------------
-   U_Reverse: entity pix2pgp.AxiStreamReverse
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         PIPE_STAGES_G  => STREAM_PIPE_STAGES_G,
-         AXIS_CONFIG_G  => FPGA_RX_AXI_CONFIG_C,
-         WORD_SIZE_G    => 1)
-      port map(
-         -- General Interface
-         sysClk     => sysClk,
-         sysRst     => sysRst,
-         -- Inbound Interface
-         ibTxMaster => obAxisMaster,
-         ibTxSlave  => obAxisSlave,
-         -- Outbound Interface
-         obTxMaster => asicRxMaster,
-         obTxSlave  => asicRxSlave);
+   --------------------------
+   -- Pipeline Stage (or not)
+   --------------------------
+   GEN_PIPE: if STREAM_PIPE_STAGES_G > 0 generate
+
+      U_Pipe : entity surf.AxiStreamPipeline
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            PIPE_STAGES_G  => STREAM_PIPE_STAGES_G)
+         port map (
+            -- Clock and Reset
+            axisClk     => sysClk,
+            axisRst     => sysRst,
+            -- Slave Port
+            sAxisMaster => obAxisMaster,
+            sAxisSlave  => obAxisSlave,
+            -- Master Port
+            mAxisMaster => asicRxMaster,
+            mAxisSlave  => asicRxSlave);
+
+   end generate GEN_PIPE;
+
+   GEN_NO_PIPE: if STREAM_PIPE_STAGES_G <= 0 generate
+
+      asicRxMaster <= obAxisMaster;
+      obAxisSlave  <= asicRxSlave;
+
+   end generate GEN_NO_PIPE;
+
 
 end rtl;

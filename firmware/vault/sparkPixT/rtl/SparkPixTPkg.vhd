@@ -204,11 +204,7 @@ package Pix2PgpPkg is
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
    function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
-
-   function revEndian      (tData : slv; tKeep : slv; busAxisConfig : AxiStreamConfigType;
-                            wordSize : integer) return slv;
-
-   function rangeToLen (high : integer; low : integer) return integer;
+   function rangeToLen     (high : integer; low : integer) return integer;
 
    -- the receiver can deduce which columns have data from the bitmask
    -- it can also deduce how many data each columns has; how?
@@ -437,47 +433,5 @@ package body Pix2PgpPkg is
       return retHeader;
 
    end fpgaHeaderMap;
-
-   -- Function to reverse the words in tData based on tKeep;
-   -- Essentially reverses the endianness on a word level;
-   -- bus size and word size are in bytes;
-   -- tKeep and tData are the regular AXI-Stream signals
-   function revEndian(tData : slv; tKeep : slv; busAxisConfig : AxiStreamConfigType;
-                        wordSize : integer) return slv is
-      constant busSize    : integer := busAxisConfig.TDATA_BYTES_C;
-      variable retWord    : slv(AXI_STREAM_MAX_TDATA_WIDTH_C-1 downto 0) := (others => '0');
-      variable tKeepBytes : integer := 0;
-      variable wordIdx    : integer := 0;
-      variable wordCnt    : integer := 0;
-   begin
-
-      assert (busSize mod wordSize = 0)
-         report "[ERROR]: Pix2PgpPkg.vhd; The Bus Byte Width (busSize) is *NOT* a multiple of the Word Byte Width (wordSize)! Please check the values of the generics." severity failure;
-
-      -- Override if no byte/word is valid
-      if uOr(tKeep) = '0' then
-         return retWord;
-      end if;
-
-      -- Calculate the number of bytes to reverse based on tKeep
-      tKeepBytes := getTkeep(tKeep, busAxisConfig);
-
-      -- Convert to Word Count
-      wordCnt := wordCount(tKeepBytes, wordSize);
-
-      for i in 0 to AXI_STREAM_MAX_TDATA_WIDTH_C / wordSize - 1 loop
-         if wordCnt > 0 then
-            retWord( (wordIdx*wordSize*8)  + ((wordSize*8)-1) downto (wordIdx*wordSize*8) ) :=
-            tData(  ((wordCnt-1)*wordSize*8) + ((wordSize*8)-1) downto ((wordCnt-1)*wordSize*8) );
-
-            wordIdx := wordIdx + 1;
-            wordCnt := wordCnt - 1;
-         else
-            exit;
-         end if;
-      end loop;
-
-      return retWord;
-   end revEndian;
 
 end package body Pix2PgpPkg;
