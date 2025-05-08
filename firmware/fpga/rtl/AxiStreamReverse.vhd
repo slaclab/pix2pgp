@@ -27,12 +27,12 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity AxiStreamReverse is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      PIPE_STAGES_G  : natural := 1;
-      BUS_SIZE_G     : natural := 40; -- in bytes
-      WORD_SIZE_G    : natural := 5); -- in bytes
+      TPD_G              : time    := 1 ns;
+      RST_ASYNC_G        : boolean := false;
+      RST_POLARITY_G     : sl      := '1';  -- '1' for active high rst, '0' for active low
+      PIPE_STAGES_G      : natural := 1;
+      BUS_AXIS_CONFIG_G  : AxiStreamConfigType := AXI_STREAM_CONFIG_INIT_C;
+      WORD_AXIS_CONFIG_G : AxiStreamConfigType := AXI_STREAM_CONFIG_INIT_C);
    port(
       -- General Interface
       sysClk     : in  sl;
@@ -99,16 +99,16 @@ begin
       end if;
 
       -- data assignment (reversing)
-      v.sAxisMaster.tData := revEndian(ibTxMaster.tData(BUS_SIZE_G*8-1 downto 0),
-                                       ibTxMaster.tKeep(BUS_SIZE_G-1 downto 0),
-                                       BUS_SIZE_G,
-                                       WORD_SIZE_G);
+      v.sAxisMaster.tData := revEndian(
+                              ibTxMaster.tData(BUS_AXIS_CONFIG_G.TDATA_BYTES_C*8-1 downto 0),
+                              ibTxMaster.tKeep(BUS_AXIS_CONFIG_G.TDATA_BYTES_C-1 downto 0),
+                              BUS_AXIS_CONFIG_G.TDATA_BYTES_C,
+                              WORD_AXIS_CONFIG_G.TDATA_BYTES_C);
 
       --v.sAxisMaster.tData := revEndianV2(ibTxMaster.tData,
       --                                   ibTxMaster.tKeep,
-      --                                   BUS_SIZE_G,
-      --                                   WORD_SIZE_G);
-
+      --                                   BUS_AXIS_CONFIG_G,
+      --                                   WORD_AXIS_CONFIG_G);
 
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output

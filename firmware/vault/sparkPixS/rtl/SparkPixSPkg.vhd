@@ -207,8 +207,8 @@ package Pix2PgpPkg is
    function revEndian      (tData : slv; tKeep : slv;
                             busSize : integer; wordSize : integer) return slv;
 
-   function revEndianV2    (tData : slv; tKeep : slv;
-                            busSize : integer; wordSize : integer) return slv;
+   function revEndianV2    (tData : slv; tKeep : slv; busAxisConfig : AxiStreamConfigType;
+                            wordAxisConfig : AxiStreamConfigType) return slv;
 
    function rangeToLen (high : integer; low : integer) return integer;
 
@@ -271,31 +271,40 @@ package Pix2PgpPkg is
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_FIXED_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_FIXED_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    constant ASIC_TX_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => PGP_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_FIXED_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => PGP_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_FIXED_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    constant FPGA_RX_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C         => false,
-      TDATA_BYTES_C      => FPGA_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C       => 4,
-      TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_NORMAL_C,
-      TUSER_BITS_C       => 4,
-      TUSER_MODE_C       => TUSER_NORMAL_C);
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
+
+   constant FPGA_BYTE_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => 1,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
 end Pix2PgpPkg;
 
@@ -506,7 +515,10 @@ package body Pix2PgpPkg is
    -- Essentially reverses the endianness on a word level;
    -- bus size and word size are in bytes;
    -- tKeep and tData are the regular AXI-Stream signals
-   function revEndianV2(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
+   function revEndianV2(tData : slv; tKeep : slv; busAxisConfig : AxiStreamConfigType;
+                        wordAxisConfig : AxiStreamConfigType) return slv is
+      constant busSize     : integer := busAxisConfig.TDATA_BYTES_C;
+      constant wordSize    : integer := wordAxisConfig.TDATA_BYTES_C;
       variable retWord     : slv((busSize*8)-1 downto 0) := (others => '0');
       variable tKeepBytes  : integer := 0;
       variable tKeepWords  : integer := 0;
@@ -524,6 +536,7 @@ package body Pix2PgpPkg is
       end if;
 
       -- Calculate the number of bytes to reverse based on tKeep
+      tKeepBytes := getTKeep(tKeep, wordAxisConfig);
 
       report "[DEBUG]: Calculated tKeepBytes = " & integer'image(tKeepBytes);
 
