@@ -433,16 +433,11 @@ begin
          when WAIT_TLAST_S =>
             v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
 
-            asicData := revEndian(
-                  laneRxMasters(laneIdx).tData((FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)*8-1 downto 0),
-                  laneRxMasters(laneIdx).tKeep(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0),
-                  FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
-                  ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
-
-            --asicData := revEndianV2(laneRxMasters(laneIdx).tData,
-            --                        laneRxMasters(laneIdx).tKeep,
-            --                        FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C
-            --                        ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
+            asicData := revEndian(laneRxMasters(laneIdx).tData,
+                                  laneRxMasters(laneIdx).tKeep(
+                                    FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0),
+                                    FPGA_RX_AXI_CONFIG_C,
+                                    ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
 
             v.obAxisMaster.tData := asicData;
@@ -687,12 +682,12 @@ begin
    -----------------------------------------
    U_Reverse: entity pix2pgp.AxiStreamReverse
       generic map(
-         TPD_G              => TPD_G,
-         RST_ASYNC_G        => RST_ASYNC_G,
-         RST_POLARITY_G     => RST_POLARITY_G,
-         PIPE_STAGES_G      => STREAM_PIPE_STAGES_G,
-         BUS_AXIS_CONFIG_G  => FPGA_RX_AXI_CONFIG_C,
-         WORD_AXIS_CONFIG_G => FPGA_BYTE_AXI_CONFIG_C)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         PIPE_STAGES_G  => STREAM_PIPE_STAGES_G,
+         AXIS_CONFIG_G  => FPGA_RX_AXI_CONFIG_C,
+         WORD_SIZE_G    => 1)
       port map(
          -- General Interface
          sysClk     => sysClk,
