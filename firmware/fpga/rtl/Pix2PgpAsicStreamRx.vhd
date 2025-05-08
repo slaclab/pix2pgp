@@ -254,7 +254,7 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, asicSroEnaSync,
-                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, obAxisSlave,
+                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, obAxisSlave, laneRstSync,
                    laneTimeout, laneError, laneRxMasters, laneEnableSync, lastTrgCnt, r) is
 
       variable v      : RegType;
