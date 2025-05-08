@@ -104,6 +104,12 @@ begin
                                        BUS_SIZE_G,
                                        WORD_SIZE_G);
 
+      --v.sAxisMaster.tData := revEndianV2(ibTxMaster.tData,
+      --                                   ibTxMaster.tKeep,
+      --                                   BUS_SIZE_G,
+      --                                   WORD_SIZE_G);
+
+
       -- Outputs
       ibTxSlave   <= v.ibTxSlave;   -- upstream slave output
       sAxisMaster <= v.sAxisMaster; -- downstream master input

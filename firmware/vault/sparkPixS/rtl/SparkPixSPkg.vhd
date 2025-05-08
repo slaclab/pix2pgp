@@ -207,6 +207,9 @@ package Pix2PgpPkg is
    function revEndian      (tData : slv; tKeep : slv;
                             busSize : integer; wordSize : integer) return slv;
 
+   function revEndianV2    (tData : slv; tKeep : slv;
+                            busSize : integer; wordSize : integer) return slv;
+
    function rangeToLen (high : integer; low : integer) return integer;
 
    -- the receiver can deduce which columns have data from the bitmask
@@ -272,7 +275,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C      => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_COMP_C,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
       TUSER_BITS_C       => 4,
       TUSER_MODE_C       => TUSER_NORMAL_C);
 
@@ -281,7 +284,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C      => PGP_DWIDTH_C/8,
       TDEST_BITS_C       => 4,
       TID_BITS_C         => 0,
-      TKEEP_MODE_C       => TKEEP_COMP_C,
+      TKEEP_MODE_C       => TKEEP_FIXED_C,
       TUSER_BITS_C       => 4,
       TUSER_MODE_C       => TUSER_NORMAL_C);
 
@@ -498,5 +501,41 @@ package body Pix2PgpPkg is
       return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
 
    end revEndian;
+
+   -- Function to reverse the words in tData based on tKeep;
+   -- Essentially reverses the endianness on a word level;
+   -- bus size and word size are in bytes;
+   -- tKeep and tData are the regular AXI-Stream signals
+   function revEndianV2(tData : slv; tKeep : slv; busSize : integer; wordSize : integer) return slv is
+      variable retWord     : slv((busSize*8)-1 downto 0) := (others => '0');
+      variable tKeepBytes  : integer := 0;
+      variable tKeepWords  : integer := 0;
+   begin
+
+      assert (busSize mod wordSize = 0)
+         report "[ERROR]: Pix2PgpPkg.vhd; The Bus Byte Width (busSize) is *NOT* a multiple of the Word Byte Width (wordSize)! Please check the values of the generics." severity failure;
+
+      report "[DEBUG]: Starting function revEndianV2 with busSize = " & integer'image(busSize) & ", wordSize = " & integer'image(wordSize);
+
+      -- Override if no byte/word is valid
+      if uOr(tKeep) = '0' then
+         report "[DEBUG]: tKeep is zero; returning default retWord.";
+         return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
+      end if;
+
+      -- Calculate the number of bytes to reverse based on tKeep
+
+      report "[DEBUG]: Calculated tKeepBytes = " & integer'image(tKeepBytes);
+
+      -- Convert to Words
+      tKeepWords := tKeepBytes / wordSize;
+      report "[DEBUG]: Calculated tKeepWords = " & integer'image(tKeepWords);
+
+      -- Swap
+      retWord := endianSwap(tData((busSize*8)-1 downto 0), tKeepWords*8);
+      report "[DEBUG]: Completed endianSwap. Returning retWord.";
+
+      return resize(retWord, AXI_STREAM_MAX_TDATA_WIDTH_C);
+   end revEndianV2;
 
 end package body Pix2PgpPkg;

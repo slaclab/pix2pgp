@@ -439,6 +439,12 @@ begin
                            FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
                            ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
+            --asicData := revEndianV2(laneRxMasters(laneIdx).tData,
+            --                        laneRxMasters(laneIdx).tKeep,
+            --                        FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C,
+            --                        ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
+
+
             v.obAxisMaster.tData := asicData;
 
             v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
