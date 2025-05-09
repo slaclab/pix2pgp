@@ -395,21 +395,23 @@ begin
          -- wait for lanes to present data
          when WAIT_LANES_S =>
 
-            -- done; either all lanes are valid, or all in timeout/error state
-            if allBits(allLanesReady, '1') then
-               v.obAxisMaster.tValid := '1';
+            if v.obAxisMaster.tValid = '0' then
+               -- done; either all lanes are valid, or all in timeout/error state
+               if allBits(allLanesReady, '1') then
+                  v.obAxisMaster.tValid := '1';
 
-               v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
-               v.obAxisMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+                  v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
+                  v.obAxisMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
-               -- reset the troubled lanes
-               for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                  v.laneRst(lane) := laneError(lane) or laneTimeout(lane);
-               end loop;
+                  -- reset the troubled lanes
+                  for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+                     v.laneRst(lane) := laneError(lane) or laneTimeout(lane);
+                  end loop;
 
-               v.armTimeout := '0'; -- release timeout
+                  v.armTimeout := '0'; -- release timeout
 
-               v.state := SWITCH_MUX_S;
+                  v.state := SWITCH_MUX_S;
+               end if;
             end if;
 
          ----------------------------------------------------------------------
@@ -433,30 +435,31 @@ begin
          -- switch mux to the lane with the valid data until done
          -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
-            v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
+            if v.obAxisMaster.tValid = '0' then
+               v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
 
-            axiStreamEndianSwap(asicAxiStream,
-                                FPGA_RX_AXI_CONFIG_C,
-                                ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
+               axiStreamEndianSwap(asicAxiStream,
+                                   FPGA_RX_AXI_CONFIG_C,
+                                   ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
-            v.obAxisMaster.tData := asicAxiStream.tData;
+               v.obAxisMaster.tData := asicAxiStream.tData;
 
-            v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
-            v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;
+               v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
+               v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;
 
-            if laneRxMasters(laneIdx).tLast = '1' and
-               v.obAxisMaster.tValid        = '1' and
-               obAxisSlave.tReady           = '1' then
+               if laneRxMasters(laneIdx).tLast = '1' and
+                  obAxisSlave.tReady           = '1' then
 
-               v.state := SWITCH_MUX_S;
+                  v.state := SWITCH_MUX_S;
 
-               -- that was it; transmit trailer
-               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
-                  v.state := TX_TRAILER_S;
-               else
-                  v.laneSel := r.laneSel + 1;
+                  -- that was it; transmit trailer
+                  if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                     v.state := TX_TRAILER_S;
+                  else
+                     v.laneSel := r.laneSel + 1;
+                  end if;
+
                end if;
-
             end if;
 
          ----------------------------------------------------------------------
