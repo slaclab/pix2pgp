@@ -117,6 +117,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
+   signal laneFrameLen    : Pix2PgpLaneFrameLenArray := (others => (others => '0'));
+
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
@@ -253,9 +255,10 @@ begin
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, asicSroEnaSync,
-                   asicRstSync, trgBuffDoutDly, trgBuffValidDly, obAxisSlave, laneRstSync,
-                   laneTimeout, laneError, laneRxMasters, laneEnableSync, lastTrgCnt, r) is
+   comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, obAxisSlave,
+                   asicSroEnaSync, laneFrameLen, laneRstSync, trgBuffValidDly,
+                   asicRstSync, trgBuffDoutDly, laneTimeout, laneError,
+                   laneRxMasters, laneEnableSync, lastTrgCnt, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -265,8 +268,9 @@ begin
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
       variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable asicAxiStream      : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      variable laneAxiStream : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       variable laneIdx       : natural := 0;
+      variable laneLen       : slv(LANERX_FRAME_LEN_WIDTH_C-1 downto 0) := (others => '0');
 
    begin
       -- Latch the current value
@@ -353,7 +357,11 @@ begin
 
       laneIdx := conv_integer(unsigned(r.laneSel));
 
-      asicAxiStream := laneRxMasters(laneIdx);
+      laneAxiStream := laneRxMasters(laneIdx);
+
+      -- To-Do: connect me with laneRx
+      laneLen := resize(r.laneSel, laneLen'length);
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -432,17 +440,24 @@ begin
             end if;
 
          ----------------------------------------------------------------------
+         ---- send the frame length of the current lane
+         --when TX_LANE_LEN_S =>
+         --   if v.obAxisMaster.tValid = '0' then
+
+         --   end if;
+
+         ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done
          -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
             if v.obAxisMaster.tValid = '0' then
                v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
 
-               axiStreamEndianSwap(asicAxiStream,
+               axiStreamEndianSwap(laneAxiStream,
                                    FPGA_RX_AXI_CONFIG_C,
                                    ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
-               v.obAxisMaster.tData := asicAxiStream.tData;
+               v.obAxisMaster.tData := laneAxiStream.tData;
 
                v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
                v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;

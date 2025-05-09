@@ -100,8 +100,8 @@ begin
       v := r;
 
       axisTrg := resize(ibAxisMaster.tData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-      flag    := frameMetaDout(LANERX_META_BUFF_WIDTH_C-1);
-      trg     := frameMetaDout(LANERX_META_BUFF_WIDTH_C-2 downto 0);
+      flag    := frameMetaDout(LANE_DEC_ERROR_POS_C);
+      trg     := frameMetaDout(LANE_TRGCNT_POS_C);
 
       -- defaults
       v.frameMetaRd := '0';

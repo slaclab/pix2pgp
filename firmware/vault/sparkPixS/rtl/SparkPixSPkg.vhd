@@ -64,6 +64,10 @@ package Pix2PgpPkg is
    -- data bus width is twice the pixel data width to maximize bandwidth
    constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
    --
+   constant EVAL_SOF_C      : boolean := False;
+   constant EVAL_EOFE_C     : boolean := False;
+   constant DUMMY_CNT_MAX_C : natural := 4;
+   --
    -- **************************************************************************
 
    ------------------------------------------------------------------------------
@@ -113,14 +117,18 @@ package Pix2PgpPkg is
    ------------------------------------------------------------------------------
    -- FPGA-RX related parameters
    constant LANERX_FIFO_ADDR_WIDTH_C : integer := 6;
-   constant LANERX_META_DWIDTH_C     : integer := TRGCNT_WIDTH_C;
-   constant LANERX_META_BUFF_WIDTH_C : integer := LANERX_META_DWIDTH_C+1;
+   constant LANERX_FRAME_LEN_WIDTH_C : integer := 16;
+   constant LANERX_META_BUFF_WIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_LEN_WIDTH_C+1;
    constant LANERX_FIFO_PIPE_C       : integer := 2;
    constant AXIS_FIFO_WIDTH_C        : integer := 10;
 
-   constant EVAL_SOF_C               : boolean := False;
-   constant EVAL_EOFE_C              : boolean := False;
-   constant DUMMY_CNT_MAX_C          : natural := 4;
+   -- ~~~~~~~~~~~~~~~~~~
+   -- FPGA Lane Metadata
+   -- ~~~~~~~~~~~~~~~~~~
+   constant LANE_DEC_ERROR_POS_C      : natural      := LANERX_META_BUFF_WIDTH_C-1;
+   subtype  LANE_LEN_POS_C           is natural range   LANERX_META_BUFF_WIDTH_C-2 downto
+                                                        TRGCNT_WIDTH_C;
+   subtype  LANE_TRGCNT_POS_C        is natural range   TRGCNT_WIDTH_C-1 downto 0;
 
    -- ***************************************************************************
    -- ************************ Tunable parameters end ***************************
@@ -248,20 +256,25 @@ package Pix2PgpPkg is
                                                      & x"70"; -- p
 
    -- 3 fields; laneError, laneTimeout, and laneValid
-   constant FPGA_HEADER_LEN_C  : natural := 3*NUM_OF_SERIALIZERS_C;
-   constant FPGA_TRAILER_LEN_C : natural := 64;
+   constant FPGA_HEADER_LEN_C      : natural := 3*NUM_OF_SERIALIZERS_C;
+   constant FPGA_TRAILER_LEN_C     : natural := 64;
 
+   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-2*NUM_OF_SERIALIZERS_C;
    ------------------------------------------------------------------------------
    -- FPGA Preamble Mapping
-   subtype LANE_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto 16;
-   subtype LANE_TIMEOUT_POS_C is natural range  15 downto 8;
-   subtype LANE_VALID_POS_C   is natural range   7 downto 0;
+   subtype LANE_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
+                                                FPGA_HEADER_LEN_C-FPGA_HEADER_STRADDLE_C;
+   subtype LANE_TIMEOUT_POS_C is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
+                                                FPGA_HEADER_STRADDLE_C;
+   subtype LANE_VALID_POS_C   is natural range  FPGA_HEADER_STRADDLE_C-1 downto 0;
    ------------------------------------------------------------------------------
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
 
    type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+
+   type Pix2PgpLaneFrameLenArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_LEN_WIDTH_C-1 downto 0);
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (

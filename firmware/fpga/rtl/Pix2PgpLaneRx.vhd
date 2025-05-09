@@ -337,8 +337,9 @@ begin
       v.frameMetaWr := (v.axiFifoMaster.tLast and not(r.axiFifoMaster.tLast)) or
                        (v.decError          and not(r.decError));
 
-      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-1)          := v.decError;
-      v.frameMetaDin(LANERX_META_BUFF_WIDTH_C-2 downto 0) := v.trgCntHeader;
+      v.frameMetaDin(LANE_DEC_ERROR_POS_C) := v.decError;
+      --v.frameMetaDin(LANE_LEN_POS_C)       := v.eventLen;
+      v.frameMetaDin(LANE_TRGCNT_POS_C)    := v.trgCntHeader;
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
