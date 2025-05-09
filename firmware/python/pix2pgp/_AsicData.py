@@ -367,7 +367,9 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "frameSize_s":
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.frameSizeLen])
-                self.frameSize[laneSel] = int(wordHex)
+                self.frameSize[laneSel] = int(wordHex, 16)
+
+                print(f"self.frameSize[laneSel] = {self.frameSize[laneSel]}")
 
                 index += self.frameSizeLen
 

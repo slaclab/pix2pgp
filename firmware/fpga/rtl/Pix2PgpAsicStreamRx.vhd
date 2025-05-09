@@ -75,7 +75,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    type trgCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TRGCNT_WIDTH_C-1 downto 0);
 
-   signal lastTrgCnt      : trgCntArray := (others => (others => '0'));
+   signal laneTrgCnt      : trgCntArray := (others => (others => '0'));
 
    signal laneRxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_MASTER_INIT_C);
@@ -90,13 +90,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRstSync     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneEnableSync  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '1');
 
-   signal trgBuffWr       : sl := '0';
-   signal trgBuffDin      : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
-   signal trgBuffRd       : sl := '0';
    signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
-   signal trgBuffDoutDly  : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffValid    : sl := '0';
-   signal trgBuffValidDly : sl := '0';
    signal timeoutLimit    : timeoutArray := (others => (others => '1'));
    signal timeoutLimitDly : timeoutArray := (others => (others => '1'));
    signal armTimeout      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -117,7 +112,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal laneFrameSize    : Pix2PgpLaneFrameSizeArray := (others => (others => '0'));
+   signal laneFrameSize   : Pix2PgpLaneFrameSizeArray := (others => (others => '0'));
+
+   signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,
@@ -126,7 +124,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
       TX_FRAME_SIZE_S,
       SWITCH_MUX_S,
       WAIT_TLAST_S,
-      TX_TRAILER_S);
+      TX_TRAILER_S,
+      DONE_S);
 
    type RegType is record
       -- Internal
@@ -135,11 +134,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffWr     : sl;
       trgBuffRd     : sl;
       trgCntBuff    : slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffValid  : sl;
       armTimeout    : sl;
       laneSel       : slv(BITMAX_SERIALIZERS_C downto 0);
       laneRst       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       waitLaneSel   : sl;
+      laneMetaRd    : sl;
+      waitCnt       : slv(1 downto 0);
       state         : StateType;
       -- Registers
       discBadColTrg : sl;
@@ -161,11 +161,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffWr     => '0',
       trgBuffRd     => '0',
       trgCntBuff    => (others => '0'),
-      trgBuffValid  => '0',
       armTimeout    => '0',
       laneSel       => (others => '0'),
       laneRst       => (others => '0'),
       waitLaneSel   => '0',
+      laneMetaRd    => '0',
+      waitCnt       => (others => '0'),
       state         => IDLE_S,
       -- Registers
       discBadColTrg => toSl(DISCARD_BAD_COL_TRG_G),
@@ -257,9 +258,9 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, laneFrameSize, laneRstSync, trgBuffValidDly,
-                   asicRstSync, trgBuffDoutDly, laneTimeout, laneError,
-                   laneRxMasters, laneEnableSync, lastTrgCnt, r) is
+                   asicSroEnaSync, laneFrameSize, laneRstSync, trgBuffValid,
+                   asicRstSync, trgBuffDout, laneTimeout, laneError,
+                   laneRxMasters, laneEnableSync, laneTrgCnt, laneMetaValid, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -273,13 +274,16 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
+      variable laneErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0'); 
+
    begin
       -- Latch the current value
       v := r;
 
       -- Defaults
-      v.trgBuffWr := '0';
-      v.trgBuffRd := '0';
+      v.trgBuffWr  := '0';
+      v.trgBuffRd  := '0';
+      v.laneMetaRd := '0';
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -304,7 +308,7 @@ begin
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- StartAddr=0x300, Sride=4Byte
-         axiSlaveRegisterR(axilEp, toSlv(768+4*i, 12), 0, lastTrgCnt(i));
+         axiSlaveRegisterR(axilEp, toSlv(768+4*i, 12), 0, laneTrgCnt(i));
       end loop;
 
       axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
@@ -337,10 +341,13 @@ begin
 
       -- global lane status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane) := laneRxMasters(lane).tValid;
+         laneValid(lane)     := laneRxMasters(lane).tValid;
+         laneErrorMask(lane) := laneError(lane) and laneMetaValid(lane);
 
          if r.laneEnable(lane) = '1' then
-            allLanesReady(lane) := laneError(lane) or laneTimeout(lane) or laneValid(lane);
+            allLanesReady(lane) := (laneError(lane) and laneMetaValid(lane)) or
+                                   (laneValid(lane) and laneMetaValid(lane)) or
+                                   laneTimeout(lane);
          else
             allLanesReady(lane) := '1';
          end if;
@@ -352,7 +359,7 @@ begin
                                   r.fpgaId,
                                   r.trgCntBuff);
 
-      header := fpgaHeaderMap(laneError,
+      header := fpgaHeaderMap(laneErrorMask,
                               laneTimeout,
                               laneValid);
 
@@ -360,8 +367,7 @@ begin
 
       laneAxiStream := laneRxMasters(laneIdx);
 
-      -- To-Do: connect me with laneRx
-      frameSize := resize(r.laneSel, frameSize'length);
+      frameSize := laneFrameSize(laneIdx);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -373,15 +379,14 @@ begin
             v.laneSel    := (others => '0');
 
             -- new trigger in queue; register and pop the value
-            if trgBuffValidDly = '1' and toBoolean(uOr(r.laneEnable)) then
-               v.trgCntBuff := trgBuffDoutDly;
-               v.trgBuffRd  := '1';
+            if trgBuffValid = '1' and toBoolean(uOr(r.laneEnable)) then
+               v.trgCntBuff := trgBuffDout;
                v.armTimeout := '1';
                v.state      := TX_PREAMBLE_S;
             end if;
 
             -- error detected...timeout time
-            if toBoolean(uOr(laneError)) and not(toBoolean(uAnd(r.laneRst))) then
+            if toBoolean(uOr(laneErrorMask)) and not(toBoolean(uAnd(r.laneRst))) then
                for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
                   v.armTimeout := '1';
                   v.state      := TX_PREAMBLE_S;
@@ -414,7 +419,7 @@ begin
 
                   -- reset the troubled lanes
                   for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                     v.laneRst(lane) := laneError(lane) or laneTimeout(lane);
+                     v.laneRst(lane) := laneErrorMask(lane) or laneTimeout(lane);
                   end loop;
 
                   v.armTimeout := '0'; -- release timeout
@@ -490,7 +495,19 @@ begin
                v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) := resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
                v.obAxisMaster.tValid := '1';
                v.obAxisMaster.tLast  := '1';
-               v.state               := IDLE_S;
+               v.laneMetaRd          := '1';
+               v.trgBuffRd           := '1';
+               v.state               := DONE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- wait before re-evaluating FIFO valid signals
+         when DONE_S =>
+            v.waitCnt := r.waitCnt + 1;
+
+            if allBits(r.waitCnt, '1') then
+               v.waitCnt := (others => '0');
+               v.state   := IDLE_S;
             end if;
 
       end case;
@@ -505,6 +522,7 @@ begin
          timeoutLimit(lane)  <= r.timeoutLimit;
          armTimeout(lane)    <= r.armTimeout and not(laneValid(lane));
          discBadColTrg(lane) <= r.discBadColTrg; -- fan-out
+         laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
@@ -563,65 +581,13 @@ begin
          rst      => sysRst,
          -- Write Ports
          wr_clk   => sysClk,
-         wr_en    => trgBuffWr,
-         din      => trgBuffDin,
+         wr_en    => r.trgBuffWr,
+         din      => r.fpgaTrgCnt,
          -- Read Ports
          rd_clk   => sysClk,
-         rd_en    => trgBuffRd,
+         rd_en    => r.trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
-
-   U_PipelineTriggerBufferWr : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 2)
-      port map (
-         clk     => sysClk,
-         din(0)  => r.trgBuffWr,
-         dout(0) => trgBuffWr);
-
-   U_PipelineTriggerBufferDin : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => TRGCNT_WIDTH_C,
-         DELAY_G        => 2)
-      port map (
-         clk  => sysClk,
-         din  => r.fpgaTrgCnt,
-         dout => trgBuffDin);
-
-   U_PipelineTriggerBufferRd : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 2)
-      port map (
-         clk     => sysClk,
-         din(0)  => r.trgBuffRd,
-         dout(0) => trgBuffRd);
-
-   U_PipelineTriggerBufferDout : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => TRGCNT_WIDTH_C,
-         DELAY_G        => 2)
-      port map (
-         clk  => sysClk,
-         din  => trgBuffDout,
-         dout => trgBuffDoutDly);
-
-   U_PipelineTriggerBufferValid : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 2)
-      port map (
-         clk     => sysClk,
-         din(0)  => trgBuffValid,
-         dout(0) => trgBuffValidDly);
 
    -----------------
    -- Lane Receivers
@@ -645,8 +611,11 @@ begin
             pgp4RxSlave   => pgp4RxSlave(lane),
             -- ASIC Rx Interface
             discBadColTrg => discBadColTrg(lane),
+            laneTrgCnt    => laneTrgCnt(lane),
+            laneFrameSize => laneFrameSize(lane),
             laneError     => laneError(lane),
-            lastTrgCnt    => lastTrgCnt(lane),
+            laneMetaValid => laneMetaValid(lane),
+            laneMetaRd    => laneMetaRd(lane),
             laneRxMaster  => laneRxMasters(lane),
             laneRxSlave   => laneRxSlaves(lane));
 

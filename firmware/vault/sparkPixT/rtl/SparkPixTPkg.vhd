@@ -126,7 +126,7 @@ package Pix2PgpPkg is
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
    constant LANE_DEC_ERROR_POS_C      : natural      := LANERX_META_BUFF_WIDTH_C-1;
-   subtype  LANE_LEN_POS_C           is natural range   LANERX_META_BUFF_WIDTH_C-2 downto
+   subtype  LANE_SIZE_POS_C          is natural range   LANERX_META_BUFF_WIDTH_C-2 downto
                                                         TRGCNT_WIDTH_C;
    subtype  LANE_TRGCNT_POS_C        is natural range   TRGCNT_WIDTH_C-1 downto 0;
 
@@ -274,7 +274,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
-   type Pix2PgpLaneFrameLenArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+   type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (

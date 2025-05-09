@@ -72,8 +72,9 @@ architecture rtl of Pix2PgpLaneRx is
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dummyCnt      : slv(bitSize(DUMMY_CNT_MAX_C)-1 downto 0);
+      frameSizeCnt  : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       dataLenCnt    : slv(7 downto 0);
-      axiFifoMaster   : AxiStreamMasterType;
+      axiFifoMaster : AxiStreamMasterType;
       rxFifoSlave   : AxiStreamSlaveType;
       state         : StateType;
    end record RegType;
@@ -89,6 +90,7 @@ architecture rtl of Pix2PgpLaneRx is
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
       dummyCnt      => (others => '0'),
+      frameSizeCnt  => (others => '0'),
       dataLenCnt    => (others => '0'),
       axiFifoMaster => AXI_STREAM_MASTER_INIT_C,
       rxFifoSlave   => AXI_STREAM_SLAVE_INIT_C,
@@ -212,6 +214,11 @@ begin
       -- PGP error check
       v.decError := (v.rxError and not(r.rxError));
 
+      -- Reset counter
+      if r.frameMetaWr = '1' then
+         v.frameSizeCnt := (others => '0');
+      end if;
+
       ---------------------------------------------------------------------------
       case r.state is
       ---------------------------------------------------------------------------
@@ -222,10 +229,11 @@ begin
                v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
                if dummy = '0' and sof = '1' then
-                  v.axiFifoMaster.tValid   := '1';
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
-                  v.inPause                := pause;
-                  v.trgCntHeader           := trgCnt;
+                  v.axiFifoMaster.tValid := '1'; -- write to axiFifo
+                  v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
+                  v.inPause              := pause;
+                  v.trgCntHeader         := trgCnt;
 
                   if uOr(colBitmask) = '0' then
                      v.axiFifoMaster.tLast := '1'; -- EoF
@@ -245,8 +253,9 @@ begin
          -- parse column metadata
          when PARSE_COL_METADATA_S =>
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
-               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
                v.axiFifoMaster.tValid := '1'; -- write to axiFifo
+               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
+               v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
                v.dataLenCnt           := metaDataLen;
 
                if metaDataLen > 0 then
@@ -282,8 +291,9 @@ begin
          -- parse column data
          when PARSE_DATA_S =>
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
-               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
                v.axiFifoMaster.tValid := '1'; -- write to axiFifo
+               v.rxFifoSlave.tReady   := '1'; -- read rxFifo
+               v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
 
                -- still more data for this column remaining
                if r.dataLenCnt > 2 then
@@ -334,12 +344,12 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      v.frameMetaWr := (v.axiFifoMaster.tLast and not(r.axiFifoMaster.tLast)) or
-                       (v.decError          and not(r.decError));
+      v.frameMetaWr := (r.axiFifoMaster.tLast and axiFifoSlave.tReady) or
+                       (v.decError and not(r.decError));
 
       v.frameMetaDin(LANE_DEC_ERROR_POS_C) := v.decError;
-      --v.frameMetaDin(LANE_LEN_POS_C)       := v.eventLen;
-      v.frameMetaDin(LANE_TRGCNT_POS_C)    := v.trgCntHeader;
+      v.frameMetaDin(LANE_SIZE_POS_C)      := r.frameSizeCnt;
+      v.frameMetaDin(LANE_TRGCNT_POS_C)    := r.trgCntHeader;
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;

@@ -42,8 +42,11 @@ entity Pix2PgpLaneRxWrapper is
       pgp4RxSlave   : out AxiStreamSlaveType;
       -- ASIC Rx Interface
       discBadColTrg : in  sl;
-      lastTrgCnt    : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneTrgCnt    : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneFrameSize : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       laneError     : out sl;
+      laneMetaValid : out sl;
+      laneMetaRd    : in  sl;
       laneRxMaster  : out AxiStreamMasterType;
       laneRxSlave   : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
@@ -102,8 +105,11 @@ begin
          ibAxisMaster   => filterAxiMaster,
          ibAxisSlave    => filterAxiSlave,
          -- ASIC Rx Interface
-         lastTrgCnt     => lastTrgCnt,
+         laneTrgCnt     => laneTrgCnt,
+         laneFrameSize  => laneFrameSize,
          laneError      => laneError,
+         laneMetaValid  => laneMetaValid,
+         laneMetaRd     => laneMetaRd,
          laneRxMaster   => laneRxMaster,
          laneRxSlave    => laneRxSlave);
 

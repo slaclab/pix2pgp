@@ -44,8 +44,11 @@ entity Pix2PgpLaneRxFilter is
       ibAxisMaster   : in  AxiStreamMasterType;
       ibAxisSlave    : out AxiStreamSlaveType;
       -- ASIC Rx Interface
-      lastTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       laneError      : out sl;
+      laneMetaValid  : out sl;
+      laneMetaRd     : in  sl;
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxFilter;
@@ -57,35 +60,45 @@ architecture rtl of Pix2PgpLaneRxFilter is
 
    type RegType is record
       errorFlag    : sl;
-      laneError    : sl;
+      inError      : sl;
       frameMetaRd  : sl;
       checking     : sl;
       valid        : sl;
+      frameMetaWr  : sl;
+      frameMetaDin : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       waitCnt      : slv(1 downto 0);
-      lastTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
       sAxisMaster  : AxiStreamMasterType;
       ibAxisSlave  : AxiStreamSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       errorFlag    => '0',
-      laneError    => '0',
+      inError      => '0',
       frameMetaRd  => '0',
       checking     => '0',
       valid        => '0',
+      frameMetaWr  => '0',
+      frameMetaDin => (others => '0'),
       waitCnt      => (others => '0'),
-      lastTrgCnt   => (others => '0'),
       sAxisMaster  => AXI_STREAM_MASTER_INIT_C,
       ibAxisSlave  => AXI_STREAM_SLAVE_INIT_C);
 
    signal r   : RegType;
    signal rin : RegType;
 
-   signal sAxisMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal sAxisSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal sAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal sAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal obAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal obAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal obAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+
+   signal metaDout  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal metaFull  : sl := '0';
+   signal metaRdEn  : sl := '0';
+   signal metaValid : sl := '0';
+
+   signal laneErrorDly : sl := '0';
+   signal metaFullDly  : sl := '0';
 
 begin
 
@@ -93,18 +106,21 @@ begin
       variable v       : RegType;
       variable axisTrg : slv(TRGCNT_WIDTH_C-1 downto 0);
       variable trg     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      variable flag    : sl;
+      variable size    : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+      variable decErr  : sl;
    begin
 
       -- Latch the current value
       v := r;
 
       axisTrg := resize(ibAxisMaster.tData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-      flag    := frameMetaDout(LANE_DEC_ERROR_POS_C);
+      decErr  := frameMetaDout(LANE_DEC_ERROR_POS_C);
       trg     := frameMetaDout(LANE_TRGCNT_POS_C);
+      size    := frameMetaDout(LANE_SIZE_POS_C);
 
       -- defaults
       v.frameMetaRd := '0';
+      v.frameMetaWr := '0';
 
       -- refuse to receive the AXI-Stream by default
       v.ibAxisSlave.tReady := '0';
@@ -117,29 +133,25 @@ begin
       end if;
 
       -- get the metadata first...
-      if frameMetaValid = '1' and v.valid = '0' and r.checking = '0' and r.laneError = '0' then
-         v.errorFlag  := flag;
-         v.lastTrgCnt := trg;
-         v.checking   := '1';
+      if frameMetaValid = '1' and v.valid = '0' and r.checking = '0' and r.inError = '0' then
+         v.errorFlag := decErr;
+         v.checking  := '1';
       end if;
 
       -- checking trigger counter against inbound AXI stream valid and checking errorFlag
-      if r.errorFlag = '0' and r.checking = '1' and r.laneError = '0' then
+      if r.errorFlag = '0' and r.checking = '1' and r.inError = '0' then
          v.frameMetaRd := '1'; -- pop the metadata word
          v.checking    := '0'; -- drop the flag
+         v.valid       := '1'; -- safe to pipe in the data
 
-         -- disable for now
-         --if axisTrg /= r.lastTrgCnt then
-         --   v.valid     := '0'; -- do not send data downstream
-         --   v.laneError := '1'; -- can only be cleared by an upstream reset
-         --else
-         --   v.valid     := '1'; -- safe to pipe in the data
-         --end if;
+         -- write the metadata to the next buffer
+         v.frameMetaDin(LANE_DEC_ERROR_POS_C) := decErr;
+         v.frameMetaDin(LANE_SIZE_POS_C)      := size;
+         v.frameMetaDin(LANE_TRGCNT_POS_C)    := trg;
+         v.frameMetaWr := '1';
 
-         v.valid := '1';  -- safe to pipe in the data
-
-      elsif r.errorFlag = '1' and r.checking = '1' and r.laneError = '0' then
-         v.laneError := '1'; -- can only be cleared by an upstream reset
+      elsif r.errorFlag = '1' and r.checking = '1' and r.inError = '0' then
+         v.inError := '1'; -- can only be cleared by an upstream reset
       end if;
 
       if r.valid = '1' and ibAxisMaster.tLast = '1' and ibAxisMaster.tValid = '1' then
@@ -180,16 +192,6 @@ begin
       end if;
    end process seq;
 
-   U_PipelineError : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 2)
-      port map (
-         clk     => sysClk,
-         din(0)  => r.laneError,
-         dout(0) => laneError);
-
    U_StretchRst : entity surf.SynchronizerOneShot
       generic map (
          TPD_G          => TPD_G,
@@ -224,6 +226,95 @@ begin
          mAxisMaster => obAxisMaster,
          mSideBand   => open,
          mAxisSlave  => obAxisSlave);
+
+   ----------------------------------------
+   -- Metadata Buffer
+   ----------------------------------------
+   U_laneMetaBuffer : entity surf.Fifo
+      generic map (
+         TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         MEMORY_TYPE_G   => "block",
+         FWFT_EN_G       => true,
+         DATA_WIDTH_G    => LANERX_META_BUFF_WIDTH_C, -- dataLen plus the error flag
+         ADDR_WIDTH_G    => 4)
+      port map (
+         rst      => sysRst,
+         -- Write Ports
+         wr_clk   => sysClk,
+         wr_en    => r.frameMetaWr,
+         din      => r.frameMetaDin,
+         -- Read Ports
+         rd_clk   => sysClk,
+         rd_en    => metaRdEn,
+         dout     => metaDout,
+         valid    => metaValid,
+         full     => metaFull);
+
+   U_PipelineRd : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => laneMetaRd,
+         dout(0) => metaRdEn);
+
+   U_PipelineValid : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => metaValid,
+         dout(0) => laneMetaValid);
+
+   U_PipelineError : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => metaDout(LANE_DEC_ERROR_POS_C),
+         dout(0) => laneErrorDly);
+
+   U_PipelineFull : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => metaFull,
+         dout(0) => metaFullDly);
+
+   U_PipelineSize : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => LANERX_FRAME_SIZE_WIDTH_C,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk  => sysClk,
+         din  => metaDout(LANE_SIZE_POS_C),
+         dout => laneFrameSize);
+
+   U_PipelineTrgCnt : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => TRGCNT_WIDTH_C,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk  => sysClk,
+         din  => metaDout(LANE_TRGCNT_POS_C),
+         dout => laneTrgCnt);
+
+   laneError <= laneErrorDly or metaFullDly;
 
    -----------------------------------------
    -- Reverses on a per-word basis
