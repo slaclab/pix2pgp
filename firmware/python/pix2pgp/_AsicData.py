@@ -81,7 +81,7 @@ class AsicData(object):
         self.laneValid    = [None] * self.numOfLanes
         self.laneTimeout  = [None] * self.numOfLanes
         self.laneError    = [None] * self.numOfLanes
-        self.frameSize = [0]    * self.numOfLanes
+        self.frameSize    = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
