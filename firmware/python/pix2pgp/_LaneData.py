@@ -344,8 +344,8 @@ class LaneData(object):
             self.done = True
 
         if self.done:
-            self.dataIndexEnd = index
             self.laneDataPrinter()
+            self.dataIndexEnd = index
     #################################################################
 
     #################################################################

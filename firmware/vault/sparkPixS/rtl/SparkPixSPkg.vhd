@@ -107,7 +107,7 @@ package Pix2PgpPkg is
    -- Column Metadata
    -- ~~~~~~~~~~~~~~~
    -- Pix2Pgp column metadata *have* to be an equal to the databus width
-   -- two flags: overOcc and Pause; colMeta[25] -> overOcc; colMeta[24] -> overOcc
+   -- two flags: overOcc and Pause; colMeta[25] -> overOcc; colMeta[24] -> pause
    subtype  META_FLAGS_POS_C   is natural range  ASIC_DATABUS_DWIDTH_C-1 downto 24;
    subtype  META_COL_POS_C     is natural range  23 downto 16;
    subtype  META_TRGCNT_POS_C  is natural range  15 downto 8;

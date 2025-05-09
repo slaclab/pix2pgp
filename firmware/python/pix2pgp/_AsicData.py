@@ -253,22 +253,10 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def orAlloc(self, oldVar, newVar):
-        oldVar = oldVar or newVar
-    #################################################################
-
-    #################################################################
-    def orAllocWide(self, oldVar, newVar, offset):
-            oldVar[offset:offset + self.numOfCols] = [
-                oldVar[i + offset] or newVar[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
-    #################################################################
-
-    #################################################################
-    def accumAllocWide(self, oldVar, newVar, offset):
-            oldVar[offset:offset + self.numOfCols] = [
-                oldVar[i + offset] or newVar[idx] for idx, i in enumerate(range(self.numOfCols))
-            ]
+    def allocWide(self, oldVar, newVar, offset):
+        oldVar[offset:offset + self.numOfCols] = [
+            newVar[idx] for idx in range(self.numOfCols)
+        ]
     #################################################################
 
     #################################################################
@@ -280,35 +268,28 @@ class AsicData(object):
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
             # header data
             # ~~~~~~~~~~~~~~~~~~~~~~~~~
-            # flags are cumulative in case we are in pause
 
-            self.orAlloc(self.asicGlblOverOcc[laneSel], self.laneDecoder.overOcc)
-            self.orAlloc(self.asicGlblPause[laneSel], self.laneDecoder.pause)
-            self.orAlloc(self.asicGlblColErr[laneSel], self.laneDecoder.colErr)
-            self.orAlloc(self.asicGlblPauseErr[laneSel], self.laneDecoder.pauseErr)
-            self.orAlloc(self.asicGlblDummy[laneSel], self.laneDecoder.dummy)
-            self.orAlloc(self.asicGlblColTimeout[laneSel], self.laneDecoder.timeout)
+            self.asicGlblOverOcc[laneSel]    = self.laneDecoder.overOcc
+            self.asicGlblPause[laneSel]      = self.laneDecoder.pause
+            self.asicGlblColErr[laneSel]     = self.laneDecoder.colErr
+            self.asicGlblPauseErr[laneSel]   = self.laneDecoder.pauseErr
+            self.asicGlblDummy[laneSel]      = self.laneDecoder.dummy
+            self.asicGlblColTimeout[laneSel] = self.laneDecoder.timeout
+            self.asicGlblTrgCnt[laneSel]     = self.laneDecoder.trgCnt
 
-            # gets the last trgCnt (hopefully does not change between pauses)
-            self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
+            # Errors and status flags
+            self.laneHeaderErr[laneSel]      = self.laneDecoder.headerErr
+            self.laneDecErr[laneSel]         = self.laneDecoder.decErr
+            self.laneIsEmpty[laneSel]        = self.laneDecoder.isEmpty
 
             offset = laneSel * self.numOfCols
 
-            self.orAllocWide(self.colBitmask, self.laneDecoder.colBitmask, offset)
-            self.orAllocWide(self.colOverOcc, self.laneDecoder.colOverOcc, offset)
-            self.orAllocWide(self.colPause, self.laneDecoder.colPause, offset)
-
-            # Column states
-            self.colDecColId[offset:offset + self.numOfCols] = (self.laneDecoder.colId)
-            self.colTrgCnt[offset:offset + self.numOfCols] = (self.laneDecoder.colTrgCnt)
-
-            # Length per column
-            self.accumAllocWide(self.colLen, self.laneDecoder.colLen, offset)
-
-            # Errors and state flags
-            self.laneHeaderErr[laneSel] = self.laneDecoder.headerErr
-            self.laneDecErr[laneSel]    = self.laneDecoder.decErr
-            self.laneIsEmpty[laneSel]   = self.laneDecoder.isEmpty
+            self.colBitmask[offset:offset  + self.numOfCols] = self.laneDecoder.colBitmask
+            self.colOverOcc[offset:offset  + self.numOfCols] = self.laneDecoder.colOverOcc
+            self.colPause[offset:offset    + self.numOfCols] = self.laneDecoder.colPause
+            self.colLen[offset:offset      + self.numOfCols] = self.laneDecoder.colLen
+            self.colDecColId[offset:offset + self.numOfCols] = self.laneDecoder.colId
+            self.colTrgCnt[offset:offset   + self.numOfCols] = self.laneDecoder.colTrgCnt
 
             # Actual hits
             if not self.laneIsEmpty[laneSel]:
@@ -373,8 +354,6 @@ class AsicData(object):
             elif state == "frameSize_s":
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.frameSizeLen])
                 self.frameSize[laneSel] = int(wordHex, 16)
-
-                print(f"self.frameSize[{laneSel}] = {self.frameSize[laneSel]}")
 
                 index += self.frameSizeLen
 
