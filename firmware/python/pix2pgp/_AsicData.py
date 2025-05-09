@@ -10,6 +10,7 @@
 import sys
 import numpy as np
 import click
+import time
 
 import copy
 import pix2pgp
@@ -46,6 +47,7 @@ class AsicData(object):
         # populated by fpgaParameterSet() (parameters have _ prefix)
         self.numOfLanes   = None
         self.numOfCols    = None
+        self.wordLen      = None
         self.preambleLen  = None
         self.headerLen    = None
         self.trailerLen   = None
@@ -167,6 +169,7 @@ class AsicData(object):
 
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
         self.numOfCols    = self.asicParams.asicParamExtract()['numOfCols']
+        self.wordLen      = self.asicParams.asicParamExtract()['wordLen']
         self.preambleLen  = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
         self.headerLen    = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
         self.frameSizeLen = self.fpgaDataFormat.fpgaParamExtract()['frameSizeLen']
@@ -330,6 +333,8 @@ class AsicData(object):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not(self.done):
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
             # --------------------------------------------------------------------------------------
             if state == "preamble_s":
                 laneSel = 0
@@ -369,7 +374,7 @@ class AsicData(object):
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.frameSizeLen])
                 self.frameSize[laneSel] = int(wordHex, 16)
 
-                print(f"self.frameSize[laneSel] = {self.frameSize[laneSel]}")
+                print(f"self.frameSize[{laneSel}] = {self.frameSize[laneSel]}")
 
                 index += self.frameSizeLen
 
@@ -378,27 +383,42 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
 
-                self.laneDecoder.dataIndexStartSet(dataIndexStart=index)
+                _frameSlice = frame[index:index + self.frameSize[laneSel] * self.wordLen]
+                _frameSliceSwap = []
+
+                # _wordList = [_frameSlice[i * self.wordLen : (i + 1) * self.wordLen]
+                #              for i in range(self.frameSize[laneSel])]
+
+                # swapEndian = []
+                # for i in range(0, len(_wordList), self.numOfLanes):
+                #     group = _wordList[i:i + self.numOfLanes]
+                #     if len(group) == self.numOfLanes:
+                #         # Swap elements within the group (reverse)
+                #         swapped_group = group[::-1]
+                #         swapEndian.extend(swapped_group)
+                #     else:
+                #         # Reverse the remaining elements
+                #         swapEndian.extend(group[::-1])
+
+                # flatSwap = [item for sublist in swapEndian for item in sublist]
+                # print(f"flatSwap = {flatSwap}")
+
+                _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen, self.numOfLanes)
+
                 self.laneDecoder.laneIdSet(laneId=laneSel)
-                self.laneDecoder.formatter(data=frame, dataLen=size)
+                self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSliceSwap))
 
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
 
-                # get the index and the pause
-                index = self.laneDecoder.dataIndexEnd
-                pause = self.laneDecoder.pause
+                # update the index
+                index += self.laneDecoder.dataIndexEnd
 
                 self.extractLaneData(laneSel=laneSel)
                 self.laneDecoder.reset()
 
-                # check if this was a pause; if not, done with lane
-                if not(pause):
-                    laneSel += 1
-                    state = "laneValidCheck_s"
-                else:
-                    # in pause; more data for this lane -> re-evaluate
-                    state = "lane_s"
+                laneSel += 1
+                state = "laneValidCheck_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
@@ -408,6 +428,7 @@ class AsicData(object):
                 index += self.trailerLen
 
                 self.done = self._selfRst
+
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:

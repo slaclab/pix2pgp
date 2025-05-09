@@ -61,3 +61,28 @@ class Tools:
         click.secho(warningString, bg='yellow')
         click.secho(delim,         bg='yellow')
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def wordSwap(inByteArray, wordLen, groupSize):
+
+        _wordList = [inByteArray[i * wordLen : (i + 1) * wordLen]
+                     for i in range(len(inByteArray))]
+
+        _swapEndian     = []
+        _flatSwapEndian = []
+
+        for i in range(0, len(_wordList), groupSize):
+            group = _wordList[i:i + groupSize]
+            if len(group) == groupSize:
+                # Swap elements within the group (reverse)
+                _swappedGroup = group[::-1]
+                _swapEndian.extend(_swappedGroup)
+            else:
+                # Reverse the remaining elements
+                _swapEndian.extend(group[::-1])
+
+        _flatSwapEndian = [item for sublist in _swapEndian for item in sublist]
+
+        return _flatSwapEndian
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

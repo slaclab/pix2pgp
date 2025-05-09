@@ -394,7 +394,7 @@ begin
 wait for CLK_PERIOD_SPARSE_C*93;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
-for i in 0 to 10 loop
+for i in 0 to 12 loop
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
    hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
    hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);

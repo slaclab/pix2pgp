@@ -41,7 +41,7 @@ class SparkPixSParameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
-                      'dataLen'    : 5}
+                      'wordLen'    : 5}
 
         return param_dict
 
@@ -66,6 +66,6 @@ class SparkPixTParameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
-                      'dataLen'    : 8}
+                      'wordLen'    : 8}
 
         return param_dict

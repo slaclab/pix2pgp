@@ -11,6 +11,7 @@
 import numpy as np
 import click
 import json
+import sys
 import pix2pgp
 
 class LaneData(object):
@@ -45,7 +46,7 @@ class LaneData(object):
 
         # populated by asicSet() (parameters have _ prefix)
         self.numOfCols     = None
-        self.dataLen       = None
+        self.wordLen       = None
 
         # asic-specific formats
         self.asicParams        = None
@@ -72,6 +73,7 @@ class LaneData(object):
         self.colId          = [0]     * self.numOfCols
         self.colTrgCnt      = [0]     * self.numOfCols
         self.colLen         = [0]     * self.numOfCols
+        self.currColLen     = [0]     * self.numOfCols
 
         # lane hits
         self.laneHits       = [[] for _ in range(self.numOfCols)]
@@ -86,6 +88,9 @@ class LaneData(object):
 
         # empty event
         self.isEmpty        = False
+
+        # current sub-frame is pause
+        self.currPause      = False
 
         # flag indicating that we are done processing
         self.done           = False
@@ -152,7 +157,7 @@ class LaneData(object):
             sys.exit()
 
         self.numOfCols = self.asicParams.asicParamExtract()['numOfCols']
-        self.dataLen   = self.asicParams.asicParamExtract()['dataLen']
+        self.wordLen   = self.asicParams.asicParamExtract()['wordLen']
     #################################################################
 
     #################################################################
@@ -164,28 +169,26 @@ class LaneData(object):
         _colBitmask = 0
         _dict = self.headerFormat.headerDecoder(header=header)
 
-        self.overOcc  = _dict['overOcc']
-        self.pause    = _dict['pause']
-        self.colErr   = _dict['colErr']
-        self.pauseErr = _dict['pauseErr']
-        self.dummy    = _dict['dummy']
-        self.timeout  = _dict['timeout']
-        _colBitmask   = _dict['colBitmask']
-        self.trgCnt   = _dict['trgCnt']
+        self.overOcc   = _dict['overOcc'] or self.overOcc
+        self.currPause = _dict['pause']
+        self.colErr    = _dict['colErr'] or self.colErr
+        self.pauseErr  = _dict['pauseErr'] or self.pauseErr
+        self.dummy     = _dict['dummy'] or self.dummy
+        self.timeout   = _dict['timeout'] or self.timeout
+        _colBitmask    = _dict['colBitmask']
+        self.trgCnt    = _dict['trgCnt']
 
-        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
+        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)] or self.colBitmask
+
+        self.pause = self.currPause or self.pause
 
         if _colBitmask == 0:
             self.isEmpty = True
 
         self.headerErr = bool(self.colErr or self.pauseErr or self.timeout)
 
-        if ((self.headerErr and self._verbose > 0) or self._verbose > 1) and not(self.dummy):
-            _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-            _format = 'OverOcc={0:<%d} Pause={1:<%d} ColErr={2:<%d} PauseErr={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 4, 8, 8)
-            print(_lanePrint)
-            print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
-            print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if self.headerErr and self._verbose > 0 and not(self.dummy):
+            self.headerPrinter()
         if self.headerErr and self._verbose > 0:
             pix2pgp.Tools.printError('Header')
 
@@ -198,11 +201,13 @@ class LaneData(object):
         """
         _dict = self.colMetadataFormat.colMetadataDecoder(colMeta=colMeta)
 
-        self.colOverOcc[colBmskId] = _dict['colOverOcc']
-        self.colPause[colBmskId]   = _dict['colPause']
+        self.colOverOcc[colBmskId] = _dict['colOverOcc'] or self.colOverOcc[colBmskId]
+        self.colPause[colBmskId]   = _dict['colPause'] or self.colPause[colBmskId]
         self.colId[colBmskId]      = _dict['colId']
         self.colTrgCnt[colBmskId]  = _dict['colTrgCnt']
-        self.colLen[colBmskId]     = _dict['colLen']
+
+        self.currColLen[colBmskId] = _dict['colLen']
+        self.colLen[colBmskId]     = self.currColLen[colBmskId] + self.colLen[colBmskId]
 
         if self.colId[colBmskId] != colBmskId:
             self.decErr = True
@@ -236,6 +241,17 @@ class LaneData(object):
     #################################################################
 
     #################################################################
+    def headerPrinter(self):
+        _colBitmask = sum((1 << i) for i, bit in enumerate(self.colBitmask) if bit)
+        _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+        _format = 'OverOcc={0:<%d} Pause={1:<%d} ColErr={2:<%d} PauseErr={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 4, 8, 8)
+        print(_lanePrint)
+        print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
+        print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    #################################################################
+
+    #################################################################
     def eventParseFsm(self, frame, size):
         """
         Parsing the data in stages
@@ -250,19 +266,22 @@ class LaneData(object):
         colSel = 0
         subLen = 0
 
-        while index < size and not(self.done):
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        while not(self.done):
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
             # --------------------------------------------------------------------------------------
             if state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
                 self.headerEval(wordHex)
 
-                index += self.dataLen
+                index += self.wordLen
 
                 if not(self.isEmpty) and self.dummy == False:
                     state = "bitmaskCheck_s"
                 else:
-                    self.done = True
+                    state = "checkPause_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
@@ -272,17 +291,17 @@ class LaneData(object):
                     else:
                         colSel += 1
                 else:
-                    self.done = True
+                    state = "checkPause_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
                 self.colMetaEval(colSel, wordHex)
 
-                index += self.dataLen
+                index += self.wordLen
 
-                subLen = self.colLen[colSel]
+                subLen = self.currColLen[colSel]
 
                 # check this! there is a chance that after a post-pause-release,
                 # a column does not have more hits and writes dataLen = 0
@@ -295,10 +314,10 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.dataLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
                 self.hitAlloc(colSel, wordHex, subLen)
 
-                index += self.dataLen
+                index += self.wordLen
 
                 subLen -= 2
 
@@ -306,6 +325,16 @@ class LaneData(object):
                     colSel += 1
                     subLen = 0
                     state  = "bitmaskCheck_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "checkPause_s":
+                colSel = 0
+                if self.currPause:
+                    # more data
+                    state = "header_s"
+                else:
+                    self.done = True
+
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
@@ -321,6 +350,9 @@ class LaneData(object):
         """
         Prints out all the data
         """
+        if self._verbose > 1:
+            self.headerPrinter()
+
         if self._verbose > 3:
             for name, value in self.__dict__.items():
                 print(f"self.laneDecoder.{name} = {value}")
