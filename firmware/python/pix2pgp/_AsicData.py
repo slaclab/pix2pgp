@@ -385,24 +385,6 @@ class AsicData(object):
 
                 _frameSlice = frame[index:index + self.frameSize[laneSel] * self.wordLen]
                 _frameSliceSwap = []
-
-                # _wordList = [_frameSlice[i * self.wordLen : (i + 1) * self.wordLen]
-                #              for i in range(self.frameSize[laneSel])]
-
-                # swapEndian = []
-                # for i in range(0, len(_wordList), self.numOfLanes):
-                #     group = _wordList[i:i + self.numOfLanes]
-                #     if len(group) == self.numOfLanes:
-                #         # Swap elements within the group (reverse)
-                #         swapped_group = group[::-1]
-                #         swapEndian.extend(swapped_group)
-                #     else:
-                #         # Reverse the remaining elements
-                #         swapEndian.extend(group[::-1])
-
-                # flatSwap = [item for sublist in swapEndian for item in sublist]
-                # print(f"flatSwap = {flatSwap}")
-
                 _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen, self.numOfLanes)
 
                 self.laneDecoder.laneIdSet(laneId=laneSel)

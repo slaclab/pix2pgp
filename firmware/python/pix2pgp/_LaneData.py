@@ -89,8 +89,9 @@ class LaneData(object):
         # empty event
         self.isEmpty        = False
 
-        # current sub-frame is pause
+        # current sub-frame is in pause or pause-error
         self.currPause      = False
+        self.currPauseErr   = False
 
         # flag indicating that we are done processing
         self.done           = False
@@ -169,18 +170,20 @@ class LaneData(object):
         _colBitmask = 0
         _dict = self.headerFormat.headerDecoder(header=header)
 
-        self.overOcc   = _dict['overOcc'] or self.overOcc
-        self.currPause = _dict['pause']
-        self.colErr    = _dict['colErr'] or self.colErr
-        self.pauseErr  = _dict['pauseErr'] or self.pauseErr
-        self.dummy     = _dict['dummy'] or self.dummy
-        self.timeout   = _dict['timeout'] or self.timeout
-        _colBitmask    = _dict['colBitmask']
-        self.trgCnt    = _dict['trgCnt']
+        self.currPause    = _dict['pause']
+        self.currPauseErr = _dict['pauseErr']
+
+        self.overOcc = _dict['overOcc'] or self.overOcc
+        self.colErr  = _dict['colErr'] or self.colErr
+        self.dummy   = _dict['dummy'] or self.dummy
+        self.timeout = _dict['timeout'] or self.timeout
+        _colBitmask  = _dict['colBitmask']
+        self.trgCnt  = _dict['trgCnt']
 
         self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)] or self.colBitmask
 
-        self.pause = self.currPause or self.pause
+        self.pause    = self.currPause or self.pause
+        self.pauseErr = self.currPauseErr or self.pauseErr
 
         if _colBitmask == 0:
             self.isEmpty = True
@@ -329,7 +332,7 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "checkPause_s":
                 colSel = 0
-                if self.currPause:
+                if self.currPause or self.currPauseErr:
                     # more data
                     state = "header_s"
                 else:
