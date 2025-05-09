@@ -117,12 +117,13 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal laneFrameLen    : Pix2PgpLaneFrameLenArray := (others => (others => '0'));
+   signal laneFrameSize    : Pix2PgpLaneFrameSizeArray := (others => (others => '0'));
 
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
       WAIT_LANES_S,
+      TX_FRAME_SIZE_S,
       SWITCH_MUX_S,
       WAIT_TLAST_S,
       TX_TRAILER_S);
@@ -256,7 +257,7 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, laneFrameLen, laneRstSync, trgBuffValidDly,
+                   asicSroEnaSync, laneFrameSize, laneRstSync, trgBuffValidDly,
                    asicRstSync, trgBuffDoutDly, laneTimeout, laneError,
                    laneRxMasters, laneEnableSync, lastTrgCnt, r) is
 
@@ -270,7 +271,7 @@ begin
       variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneAxiStream : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       variable laneIdx       : natural := 0;
-      variable laneLen       : slv(LANERX_FRAME_LEN_WIDTH_C-1 downto 0) := (others => '0');
+      variable frameSize     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
    begin
       -- Latch the current value
@@ -360,7 +361,7 @@ begin
       laneAxiStream := laneRxMasters(laneIdx);
 
       -- To-Do: connect me with laneRx
-      laneLen := resize(r.laneSel, laneLen'length);
+      frameSize := resize(r.laneSel, frameSize'length);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -435,16 +436,19 @@ begin
 
             else
 
-               v.state := WAIT_TLAST_S;
+               v.state := TX_FRAME_SIZE_S;
 
             end if;
 
          ----------------------------------------------------------------------
-         ---- send the frame length of the current lane
-         --when TX_LANE_LEN_S =>
-         --   if v.obAxisMaster.tValid = '0' then
-
-         --   end if;
+         -- send the frame length of the current lane
+         when TX_FRAME_SIZE_S =>
+            if v.obAxisMaster.tValid = '0' then
+               v.obAxisMaster.tValid := '1';
+               v.obAxisMaster.tKeep  := tKeepSet(LANERX_FRAME_SIZE_WIDTH_C);
+               v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
+               v.state := WAIT_TLAST_S;
+            end if;
 
          ----------------------------------------------------------------------
          -- switch mux to the lane with the valid data until done

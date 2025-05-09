@@ -44,11 +44,12 @@ class AsicData(object):
         """
 
         # populated by fpgaParameterSet() (parameters have _ prefix)
-        self.numOfLanes  = None
-        self.numOfCols   = None
-        self.preambleLen = None
-        self.headerLen   = None
-        self.trailerLen  = None
+        self.numOfLanes   = None
+        self.numOfCols    = None
+        self.preambleLen  = None
+        self.headerLen    = None
+        self.trailerLen   = None
+        self.frameSizeLen = None
 
         # populated by the data themselves
         # preamble
@@ -74,10 +75,11 @@ class AsicData(object):
 
         # call after self.fpgaParameterSet
         # fpga header
-        self.headerErr   = False
-        self.laneValid   = [None] * self.numOfLanes
-        self.laneTimeout = [None] * self.numOfLanes
-        self.laneError   = [None] * self.numOfLanes
+        self.headerErr    = False
+        self.laneValid    = [None] * self.numOfLanes
+        self.laneTimeout  = [None] * self.numOfLanes
+        self.laneError    = [None] * self.numOfLanes
+        self.frameSize = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -163,11 +165,12 @@ class AsicData(object):
             click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
             sys.exit()
 
-        self.numOfLanes  = self.asicParams.asicParamExtract()['numOfLanes']
-        self.numOfCols   = self.asicParams.asicParamExtract()['numOfCols']
-        self.preambleLen = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
-        self.headerLen   = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
-        self.trailerLen  = self.fpgaDataFormat.fpgaParamExtract()['trailerLen']
+        self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
+        self.numOfCols    = self.asicParams.asicParamExtract()['numOfCols']
+        self.preambleLen  = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
+        self.headerLen    = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
+        self.frameSizeLen = self.fpgaDataFormat.fpgaParamExtract()['frameSizeLen']
+        self.trailerLen   = self.fpgaDataFormat.fpgaParamExtract()['trailerLen']
     #################################################################
 
     #################################################################
@@ -355,11 +358,20 @@ class AsicData(object):
 
                 if laneSel < self.numOfLanes:
                     if self.laneValid[laneSel]:
-                        state = "lane_s"
+                        state = "frameSize_s"
                     else:
                         laneSel += 1
                 else:
                     state = "trailer_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "frameSize_s":
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.frameSizeLen])
+                self.frameSize[laneSel] = int(wordHex)
+
+                index += self.frameSizeLen
+
+                state = "lane_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
