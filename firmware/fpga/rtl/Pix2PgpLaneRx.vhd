@@ -69,6 +69,7 @@ architecture rtl of Pix2PgpLaneRx is
       frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
       inPause       : sl;
       rxError       : sl;
+      pauseError    : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dummyCnt      : slv(bitSize(DUMMY_CNT_MAX_C)-1 downto 0);
@@ -87,6 +88,7 @@ architecture rtl of Pix2PgpLaneRx is
       frameMetaDin  => (others => '0'),
       inPause       => '0',
       rxError       => '0',
+      pauseError    => '0',
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -232,7 +234,8 @@ begin
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   v.axiFifoMaster.tValid := '1'; -- write to axiFifo
                   v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
-                  v.inPause              := pause;
+                  v.inPause              := pause or pauseError;
+                  v.pauseError           := pauseError;
                   v.trgCntHeader         := trgCnt;
 
                   if uOr(colBitmask) = '0' then
@@ -347,9 +350,10 @@ begin
       v.frameMetaWr := (r.axiFifoMaster.tLast and axiFifoSlave.tReady) or
                        (v.decError and not(r.decError));
 
-      v.frameMetaDin(LANE_DEC_ERROR_POS_C) := v.decError;
-      v.frameMetaDin(LANE_SIZE_POS_C)      := r.frameSizeCnt;
-      v.frameMetaDin(LANE_TRGCNT_POS_C)    := r.trgCntHeader;
+      v.frameMetaDin(LANE_DEC_ERROR_POS_C)   := v.decError;
+      v.frameMetaDin(LANE_PAUSE_ERROR_POS_C) := r.pauseError;
+      v.frameMetaDin(LANE_SIZE_POS_C)        := r.frameSizeCnt;
+      v.frameMetaDin(LANE_TRGCNT_POS_C)      := r.trgCntHeader;
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;

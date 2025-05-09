@@ -33,22 +33,23 @@ entity Pix2PgpLaneRxWrapper is
       PIPE_STAGES_G  : natural := 1);
    port(
       -- General Interface
-      pgpClk        : in  sl;
-      pgpRst        : in  sl := not(RST_POLARITY_G);
-      sysClk        : in  sl;
-      sysRst        : in  sl := not(RST_POLARITY_G);
+      pgpClk         : in  sl;
+      pgpRst         : in  sl := not(RST_POLARITY_G);
+      sysClk         : in  sl;
+      sysRst         : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
-      pgp4RxMaster  : in  AxiStreamMasterType;
-      pgp4RxSlave   : out AxiStreamSlaveType;
+      pgp4RxMaster   : in  AxiStreamMasterType;
+      pgp4RxSlave    : out AxiStreamSlaveType;
       -- ASIC Rx Interface
-      discBadColTrg : in  sl;
-      laneTrgCnt    : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      laneFrameSize : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      laneError     : out sl;
-      laneMetaValid : out sl;
-      laneMetaRd    : in  sl;
-      laneRxMaster  : out AxiStreamMasterType;
-      laneRxSlave   : in  AxiStreamSlaveType);
+      discBadColTrg  : in  sl;
+      laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+      laneError      : out sl;
+      lanePauseError : out sl;
+      laneMetaValid  : out sl;
+      laneMetaRd     : in  sl;
+      laneRxMaster   : out AxiStreamMasterType;
+      laneRxSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
 
 architecture rtl of Pix2PgpLaneRxWrapper is
@@ -108,6 +109,7 @@ begin
          laneTrgCnt     => laneTrgCnt,
          laneFrameSize  => laneFrameSize,
          laneError      => laneError,
+         lanePauseError => lanePauseError,
          laneMetaValid  => laneMetaValid,
          laneMetaRd     => laneMetaRd,
          laneRxMaster   => laneRxMaster,

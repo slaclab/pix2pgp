@@ -47,6 +47,7 @@ entity Pix2PgpLaneRxFilter is
       laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       laneError      : out sl;
+      lanePauseError : out sl;
       laneMetaValid  : out sl;
       laneMetaRd     : in  sl;
       laneRxMaster   : out AxiStreamMasterType;
@@ -105,20 +106,22 @@ architecture rtl of Pix2PgpLaneRxFilter is
 begin
 
    comb : process (r, frameMetaDout, sysRst, frameMetaValid, ibAxisMaster, sAxisSlave) is
-      variable v       : RegType;
-      variable axisTrg : slv(TRGCNT_WIDTH_C-1 downto 0);
-      variable trg     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      variable size    : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      variable decErr  : sl;
+      variable v        : RegType;
+      variable axisTrg  : slv(TRGCNT_WIDTH_C-1 downto 0);
+      variable trg      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      variable size     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+      variable decErr   : sl;
+      variable pauseErr : sl;
    begin
 
       -- Latch the current value
       v := r;
 
-      axisTrg := resize(ibAxisMaster.tData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-      decErr  := frameMetaDout(LANE_DEC_ERROR_POS_C);
-      trg     := frameMetaDout(LANE_TRGCNT_POS_C);
-      size    := frameMetaDout(LANE_SIZE_POS_C);
+      axisTrg  := resize(ibAxisMaster.tData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
+      decErr   := frameMetaDout(LANE_DEC_ERROR_POS_C);
+      pauseErr := frameMetaDout(LANE_PAUSE_ERROR_POS_C);
+      trg      := frameMetaDout(LANE_TRGCNT_POS_C);
+      size     := frameMetaDout(LANE_SIZE_POS_C);
 
       -- defaults
       v.frameMetaRd := '0';
@@ -147,9 +150,10 @@ begin
          v.valid       := '1'; -- safe to pipe in the data
 
          -- write the metadata to the next buffer
-         v.frameMetaDin(LANE_DEC_ERROR_POS_C) := decErr;
-         v.frameMetaDin(LANE_SIZE_POS_C)      := size;
-         v.frameMetaDin(LANE_TRGCNT_POS_C)    := trg;
+         v.frameMetaDin(LANE_DEC_ERROR_POS_C)   := decErr;
+         v.frameMetaDin(LANE_PAUSE_ERROR_POS_C) := pauseErr;
+         v.frameMetaDin(LANE_SIZE_POS_C)        := size;
+         v.frameMetaDin(LANE_TRGCNT_POS_C)      := trg;
          v.frameMetaWr := '1';
 
       elsif r.errorFlag = '1' and r.checking = '1' and r.inError = '0' then
@@ -285,6 +289,17 @@ begin
          clk     => sysClk,
          din(0)  => metaDout(LANE_DEC_ERROR_POS_C),
          dout(0) => laneErrorDly);
+
+
+   U_PipelinePauseError : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => metaDout(LANE_PAUSE_ERROR_POS_C),
+         dout(0) => lanePauseError);
 
    U_PipelineFull : entity surf.SlvDelay
       generic map (

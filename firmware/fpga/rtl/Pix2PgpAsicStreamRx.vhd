@@ -83,6 +83,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal laneError       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal asicSroSync     : sl := '0';
    signal asicSroEnaSync  : sl := '0';
@@ -259,7 +260,7 @@ begin
 
    comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnaSync, laneFrameSize, laneRstSync, trgBuffValid,
-                   asicRstSync, trgBuffDout, laneTimeout, laneError,
+                   asicRstSync, trgBuffDout, laneTimeout, laneError, lanePauseError,
                    laneRxMasters, laneEnableSync, laneTrgCnt, laneMetaValid, r) is
 
       variable v      : RegType;
@@ -602,22 +603,23 @@ begin
             PIPE_STAGES_G  => LANE_PIPE_STAGES_G)
          port map(
             -- General Interface
-            pgpClk        => pgpClk,
-            pgpRst        => pgpLaneRst(lane),
-            sysClk        => sysClk,
-            sysRst        => sysLaneRst(lane),
+            pgpClk         => pgpClk,
+            pgpRst         => pgpLaneRst(lane),
+            sysClk         => sysClk,
+            sysRst         => sysLaneRst(lane),
             -- RX FIFO Interface
-            pgp4RxMaster  => pgp4RxMaster(lane),
-            pgp4RxSlave   => pgp4RxSlave(lane),
+            pgp4RxMaster   => pgp4RxMaster(lane),
+            pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
-            discBadColTrg => discBadColTrg(lane),
-            laneTrgCnt    => laneTrgCnt(lane),
-            laneFrameSize => laneFrameSize(lane),
-            laneError     => laneError(lane),
-            laneMetaValid => laneMetaValid(lane),
-            laneMetaRd    => laneMetaRd(lane),
-            laneRxMaster  => laneRxMasters(lane),
-            laneRxSlave   => laneRxSlaves(lane));
+            discBadColTrg  => discBadColTrg(lane),
+            laneTrgCnt     => laneTrgCnt(lane),
+            laneFrameSize  => laneFrameSize(lane),
+            laneError      => laneError(lane),
+            lanePauseError => lanePauseError(lane),
+            laneMetaValid  => laneMetaValid(lane),
+            laneMetaRd     => laneMetaRd(lane),
+            laneRxMaster   => laneRxMasters(lane),
+            laneRxSlave    => laneRxSlaves(lane));
 
       -- Watchdog (on a per-lane basis)
       U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
