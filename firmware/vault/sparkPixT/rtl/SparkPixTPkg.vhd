@@ -282,7 +282,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C  => 4,
       TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_FIXED_C,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_NORMAL_C);
 
@@ -291,7 +291,7 @@ package Pix2PgpPkg is
       TDATA_BYTES_C => PGP_DWIDTH_C/8,
       TDEST_BITS_C  => 4,
       TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_FIXED_C,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_NORMAL_C);
 

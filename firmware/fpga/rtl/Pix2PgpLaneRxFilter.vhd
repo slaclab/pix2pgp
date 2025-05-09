@@ -100,6 +100,8 @@ architecture rtl of Pix2PgpLaneRxFilter is
    signal laneErrorDly : sl := '0';
    signal metaFullDly  : sl := '0';
 
+   signal sysFifoRst : sl := '0';
+
 begin
 
    comb : process (r, frameMetaDout, sysRst, frameMetaValid, ibAxisMaster, sAxisSlave) is
@@ -202,30 +204,32 @@ begin
          dataIn  => sysRst,
          dataOut => laneRxRst);
 
-   -----------------------------------------
-   -- Axi-Stream Gearbox (1-to-8)
-   -----------------------------------------
-   U_Gearbox : entity surf.AxiStreamGearbox
-      generic map(
+   ------------------
+   -- Axi-Stream FIFO
+   ------------------
+   U_Fifo : entity surf.AxiStreamFifoV2
+      generic map (
          -- General Configurations
          TPD_G               => TPD_G,
-         RST_POLARITY_G      => RST_POLARITY_G,
          RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
-      port map(
-         -- Clock and reset
-         axisClk     => sysClk,
-         axisRst     => sysRst,
+      port map (
          -- Slave Port
+         sAxisClk    => sysClk,
+         sAxisRst    => sysFifoRst,
          sAxisMaster => sAxisMaster,
-         sSideBand   => (others => '0'),
          sAxisSlave  => sAxisSlave,
          -- Master Port
+         mAxisClk    => sysClk,
+         mAxisRst    => sysFifoRst,
          mAxisMaster => obAxisMaster,
-         mSideBand   => open,
          mAxisSlave  => obAxisSlave);
+
+   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
 
    ----------------------------------------
    -- Metadata Buffer
