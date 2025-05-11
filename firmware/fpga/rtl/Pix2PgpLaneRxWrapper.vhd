@@ -55,9 +55,10 @@ end Pix2PgpLaneRxWrapper;
 architecture rtl of Pix2PgpLaneRxWrapper is
 
    signal frameMetaRd     : sl := '0';
-   signal frameMetaDout   : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal frameMetaDout   : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaValid  : sl := '0';
    signal laneRxRst       : sl := '0';
+   signal laneFull        : sl := '0';
    signal filterAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal filterAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
@@ -83,6 +84,7 @@ begin
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
+         laneFull       => laneFull,
          -- AXI-Stream to Filter
          obAxisMaster   => filterAxiMaster,
          obAxisSlave    => filterAxiSlave);
@@ -102,6 +104,7 @@ begin
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
+         laneFull       => laneFull,
          -- AXI-Stream from Lane
          ibAxisMaster   => filterAxiMaster,
          ibAxisSlave    => filterAxiSlave,

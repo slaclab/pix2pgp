@@ -77,11 +77,11 @@ class AsicData(object):
 
         # call after self.fpgaParameterSet
         # fpga header
-        self.headerErr    = False
-        self.laneValid    = [None] * self.numOfLanes
-        self.laneTimeout  = [None] * self.numOfLanes
-        self.laneError    = [None] * self.numOfLanes
-        self.frameSize    = [0]    * self.numOfLanes
+        self.headerErr   = False
+        self.laneValid   = [None] * self.numOfLanes
+        self.laneTimeout = [None] * self.numOfLanes
+        self.laneError   = [None] * self.numOfLanes
+        self.frameSize   = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -116,7 +116,7 @@ class AsicData(object):
         self.dataIndexEnd   = 0
 
         # flag indicating that we are done processing
-        self.done        = False
+        self.done = False
     #################################################################
 
     #################################################################
@@ -363,11 +363,9 @@ class AsicData(object):
             elif state == "lane_s":
 
                 _frameSlice = frame[index:index + self.frameSize[laneSel] * self.wordLen]
-                _frameSliceSwap = []
-                _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen, self.numOfLanes)
 
                 self.laneDecoder.laneIdSet(laneId=laneSel)
-                self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSliceSwap))
+                self.laneDecoder.formatter(data=_frameSlice, dataLen=len(_frameSlice))
 
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again

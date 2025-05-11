@@ -45,8 +45,8 @@ class LaneData(object):
         """
 
         # populated by asicSet() (parameters have _ prefix)
-        self.numOfCols     = None
-        self.wordLen       = None
+        self.numOfCols = None
+        self.wordLen   = None
 
         # asic-specific formats
         self.asicParams        = None
@@ -58,43 +58,43 @@ class LaneData(object):
         self.asicSet()
 
         # header contents
-        self.overOcc        = False
-        self.pause          = False
-        self.colErr         = False
-        self.pauseErr       = False
-        self.dummy          = False
-        self.timeout        = False
-        self.colBitmask     = [False] * self.numOfCols
-        self.trgCnt         = 0
+        self.overOcc    = False
+        self.pause      = False
+        self.colErr     = False
+        self.pauseErr   = False
+        self.dummy      = False
+        self.timeout    = False
+        self.colBitmask = [False] * self.numOfCols
+        self.trgCnt     = 0
 
         # column metadata
-        self.colOverOcc     = [False] * self.numOfCols
-        self.colPause       = [False] * self.numOfCols
-        self.colId          = [0]     * self.numOfCols
-        self.colTrgCnt      = [0]     * self.numOfCols
-        self.colLen         = [0]     * self.numOfCols
-        self.currColLen     = [0]     * self.numOfCols
+        self.colOverOcc = [False] * self.numOfCols
+        self.colPause   = [False] * self.numOfCols
+        self.colId      = [0]     * self.numOfCols
+        self.colTrgCnt  = [0]     * self.numOfCols
+        self.colLen     = [0]     * self.numOfCols
+        self.currColLen = [0]     * self.numOfCols
 
         # lane hits
-        self.laneHits       = [[] for _ in range(self.numOfCols)]
+        self.laneHits = [[] for _ in range(self.numOfCols)]
 
         # evaluated by this class
-        self.headerErr      = False
-        self.decErr         = False
+        self.headerErr = False
+        self.decErr    = False
 
         # data index
         self.dataIndexStart = 0
         self.dataIndexEnd   = 0
 
         # empty event
-        self.isEmpty        = False
+        self.isEmpty = False
 
         # current sub-frame is in pause or pause-error
-        self.currPause      = False
-        self.currPauseErr   = False
+        self.currPause    = False
+        self.currPauseErr = False
 
         # flag indicating that we are done processing
-        self.done           = False
+        self.done = False
     #################################################################
 
     #################################################################

@@ -461,12 +461,11 @@ begin
          -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
             if v.obAxisMaster.tValid = '0' then
-               v.obAxisMaster.tKeep := laneRxMasters(laneIdx).tKeep;
+               axiStreamEndianSwap(laneAxiStream,
+                                   FPGA_RX_AXI_CONFIG_C,
+                                   ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
 
-               --axiStreamEndianSwap(laneAxiStream,
-               --                    FPGA_RX_AXI_CONFIG_C,
-               --                    ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
-
+               v.obAxisMaster.tKeep := laneAxiStream.tKeep;
                v.obAxisMaster.tData := laneAxiStream.tData;
 
                v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;

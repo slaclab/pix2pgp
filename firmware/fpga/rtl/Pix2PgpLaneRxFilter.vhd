@@ -38,8 +38,9 @@ entity Pix2PgpLaneRxFilter is
       -- Lane Interface
       laneRxRst      : out sl;
       frameMetaRd    : out sl;
-      frameMetaDout  : in  slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDout  : in  slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : in  sl;
+      laneFull       : in  sl;
       -- AXI-Stream from Lane
       ibAxisMaster   : in  AxiStreamMasterType;
       ibAxisSlave    : out AxiStreamSlaveType;
@@ -66,7 +67,7 @@ architecture rtl of Pix2PgpLaneRxFilter is
       checking     : sl;
       valid        : sl;
       frameMetaWr  : sl;
-      frameMetaDin : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDin : slv(LANERX_META_DWIDTH_C-1 downto 0);
       waitCnt      : slv(1 downto 0);
       sAxisMaster  : AxiStreamMasterType;
       ibAxisSlave  : AxiStreamSlaveType;
@@ -93,15 +94,20 @@ architecture rtl of Pix2PgpLaneRxFilter is
    signal obAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal metaDout  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0) := (others => '0');
-   signal metaFull  : sl := '0';
-   signal metaRdEn  : sl := '0';
-   signal metaValid : sl := '0';
+   signal metaDout     : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
+   signal metaFull     : sl := '0';
+   signal metaRdEn     : sl := '0';
+   signal metaValid    : sl := '0';
 
    signal laneErrorDly : sl := '0';
    signal metaFullDly  : sl := '0';
 
-   signal sysFifoRst : sl := '0';
+   signal sysFifoRst   : sl := '0';
+
+   signal axiFull      : sl := '0';
+   signal axiFullDly   : sl := '0';
+
+   signal laneFullDly  : sl := '0';
 
 begin
 
@@ -217,7 +223,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
+         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
@@ -227,6 +233,8 @@ begin
          sAxisRst    => sysFifoRst,
          sAxisMaster => sAxisMaster,
          sAxisSlave  => sAxisSlave,
+         -- Status Port
+         fifoFull    => axiFull,
          -- Master Port
          mAxisClk    => sysClk,
          mAxisRst    => sysFifoRst,
@@ -234,6 +242,16 @@ begin
          mAxisSlave  => obAxisSlave);
 
    sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
+
+   U_PipelineAxiFull : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => axiFull,
+         dout(0) => axiFullDly);
 
    ----------------------------------------
    -- Metadata Buffer
@@ -245,20 +263,20 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => LANERX_META_BUFF_WIDTH_C, -- dataLen plus the error flag
-         ADDR_WIDTH_G    => 4)
+         DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
+         ADDR_WIDTH_G    => LANERX_META_ADDR_WIDTH_C)
       port map (
          rst      => sysRst,
          -- Write Ports
          wr_clk   => sysClk,
          wr_en    => r.frameMetaWr,
          din      => r.frameMetaDin,
+         full     => metaFull,
          -- Read Ports
          rd_clk   => sysClk,
          rd_en    => metaRdEn,
          dout     => metaDout,
-         valid    => metaValid,
-         full     => metaFull);
+         valid    => metaValid);
 
    U_PipelineRd : entity surf.SlvDelay
       generic map (
@@ -301,7 +319,7 @@ begin
          din(0)  => metaDout(LANE_PAUSE_ERROR_POS_C),
          dout(0) => lanePauseError);
 
-   U_PipelineFull : entity surf.SlvDelay
+   U_PipelineMetaFull : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
@@ -333,7 +351,17 @@ begin
          din  => metaDout(LANE_TRGCNT_POS_C),
          dout => laneTrgCnt);
 
-   laneError <= laneErrorDly or metaFullDly;
+   U_PipelineLaneFull : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => sysClk,
+         din(0)  => laneFull,
+         dout(0) => laneFullDly);
+
+   laneError <= laneErrorDly or metaFullDly or axiFullDly or laneFullDly;
 
    -----------------------------------------
    -- Reverses on a per-word basis

@@ -44,8 +44,9 @@ entity Pix2PgpLaneRx is
       -- Filter Interface
       laneRxRst      : in  sl;
       frameMetaRd    : in  sl;
-      frameMetaDout  : out slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
+      laneFull       : out sl;
       -- AXI-Stream to Filter
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -66,7 +67,7 @@ architecture rtl of Pix2PgpLaneRx is
       fifoRst       : sl;
       frameMetaWr   : sl;
       din           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      frameMetaDin  : slv(LANERX_META_BUFF_WIDTH_C-1 downto 0);
+      frameMetaDin  : slv(LANERX_META_DWIDTH_C-1 downto 0);
       inPause       : sl;
       rxError       : sl;
       pauseError    : sl;
@@ -116,6 +117,15 @@ architecture rtl of Pix2PgpLaneRx is
    signal rxFifoMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal rxFifoSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
+   signal laneFifoFull      : sl := '0';
+   signal laneFifoFullSync  : sl := '0';
+
+   signal frameMetaFull     : sl := '0';
+   signal frameMetaFullSync : sl := '0';
+
+   signal axiFifoFull       : sl := '0';
+   signal axiFifoFullSync   : sl := '0';
+
 begin
 
    -----------------------------
@@ -137,13 +147,15 @@ begin
          sAxisRst    => rxFifoRst,
          sAxisMaster => pgp4RxMaster,
          sAxisSlave  => pgp4RxSlave,
+         -- Status Port
+         fifoFull    => laneFifoFull,
          -- Master Port
          mAxisClk    => pgpClk,
          mAxisRst    => rxFifoRst,
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   U_SynclaneRxRst : entity surf.Synchronizer
+   U_SyncLaneRxRst : entity surf.Synchronizer
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
@@ -152,6 +164,16 @@ begin
          clk     => pgpClk,
          dataIn  => laneRxRst,
          dataOut => laneRxRstSync);
+
+   U_SyncLaneFull : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => laneFifoFull,
+         dataOut => laneFifoFullSync);
 
    comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, discard) is
 
@@ -395,19 +417,30 @@ begin
          MEMORY_TYPE_G   => "block",
          GEN_SYNC_FIFO_G => false, -- false = clock-domain-crossing FIFO
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => LANERX_META_BUFF_WIDTH_C, -- dataLen plus the error flag
-         ADDR_WIDTH_G    => 4)
+         DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
+         ADDR_WIDTH_G    => LANERX_META_ADDR_WIDTH_C)
       port map (
          rst      => pgpFifoRst,
          -- Write Ports
          wr_clk   => pgpClk,
          wr_en    => r.frameMetaWr,
          din      => r.frameMetaDin,
+         full     => frameMetaFull,
          -- Read Ports
          rd_clk   => sysClk,
          rd_en    => frameMetaRd,
          dout     => frameMetaDout,
          valid    => frameMetaValid);
+
+   U_SyncMetaFull : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => frameMetaFull,
+         dataOut => frameMetaFullSync);
 
    ------------------
    -- Axi-Stream FIFO
@@ -419,7 +452,7 @@ begin
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
          GEN_SYNC_FIFO_G     => false,
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_WIDTH_C,
+         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
@@ -429,14 +462,29 @@ begin
          sAxisRst    => pgpFifoRst,
          sAxisMaster => axiFifoMaster,
          sAxisSlave  => axiFifoSlave,
+         -- Status Port
+         fifoFull    => axiFifoFull,
          -- Master Port
          mAxisClk    => sysClk,
          mAxisRst    => sysFifoRst,
          mAxisMaster => obAxisMaster,
          mAxisSlave  => obAxisSlave);
 
+   U_SyncAxiFull : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sysClk,
+         dataIn  => axiFifoFull,
+         dataOut => axiFifoFullSync);
+
    -- AXI-Stream FIFO does not have RST_POLARITY_G
    sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
    pgpFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
+
+   -- all full signals
+   laneFull <= axiFifoFullSync or frameMetaFullSync or laneFifoFullSync;
 
 end rtl;
