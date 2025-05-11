@@ -275,7 +275,8 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0'); 
+      variable laneErrorMask      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable lanePauseErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
    begin
       -- Latch the current value
@@ -342,8 +343,9 @@ begin
 
       -- global lane status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane)     := laneRxMasters(lane).tValid;
-         laneErrorMask(lane) := laneError(lane) and laneMetaValid(lane);
+         laneValid(lane)          := laneRxMasters(lane).tValid;
+         laneErrorMask(lane)      := laneError(lane) and laneMetaValid(lane);
+         lanePauseErrorMask(lane) := lanePauseError(lane) and laneMetaValid(lane);
 
          if r.laneEnable(lane) = '1' then
             allLanesReady(lane) := (laneError(lane) and laneMetaValid(lane)) or
@@ -361,6 +363,7 @@ begin
                                   r.trgCntBuff);
 
       header := fpgaHeaderMap(laneErrorMask,
+                              lanePauseErrorMask,
                               laneTimeout,
                               laneValid);
 
@@ -425,9 +428,33 @@ begin
 
                   v.armTimeout := '0'; -- release timeout
 
-                  v.state := SWITCH_MUX_S;
+                  v.state := TX_FRAME_SIZE_S;
                end if;
             end if;
+
+         ----------------------------------------------------------------------
+         -- transmit all (valid) lane frame size data
+         when TX_FRAME_SIZE_S =>
+            if v.obAxisMaster.tValid = '0' then
+
+               v.obAxisMaster.tValid := '1';
+               v.obAxisMaster.tKeep  := tKeepSet(LANERX_FRAME_SIZE_WIDTH_C);
+
+               if laneValid(laneIdx) = '0' or r.laneRst(laneIdx) = '1' then
+                  v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
+               else
+                  v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
+               end if;
+
+               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                  v.laneSel := (others => '0');
+                  v.state := SWITCH_MUX_S;
+               else
+                  v.laneSel := r.laneSel + 1;
+               end if;
+
+            end if;
+
 
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
@@ -442,18 +469,8 @@ begin
 
             else
 
-               v.state := TX_FRAME_SIZE_S;
-
-            end if;
-
-         ----------------------------------------------------------------------
-         -- send the frame length of the current lane
-         when TX_FRAME_SIZE_S =>
-            if v.obAxisMaster.tValid = '0' then
-               v.obAxisMaster.tValid := '1';
-               v.obAxisMaster.tKeep  := tKeepSet(LANERX_FRAME_SIZE_WIDTH_C);
-               v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
                v.state := WAIT_TLAST_S;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -492,7 +509,8 @@ begin
          when TX_TRAILER_S =>
             if v.obAxisMaster.tValid = '0' then
                v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
-               v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) := resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
+               v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
+                  resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
                v.obAxisMaster.tValid := '1';
                v.obAxisMaster.tLast  := '1';
                v.laneMetaRd          := '1';
@@ -535,7 +553,7 @@ begin
 
       end loop;
 
-      -- endianness swapm (per-byte)
+      -- endianness swap (per-byte)
       axiStreamEndianSwap(v.obAxisMaster, FPGA_RX_AXI_CONFIG_C, 1);
 
       -- AXI-Stream Outputs

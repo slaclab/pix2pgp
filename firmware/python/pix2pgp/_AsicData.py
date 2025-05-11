@@ -77,11 +77,12 @@ class AsicData(object):
 
         # call after self.fpgaParameterSet
         # fpga header
-        self.headerErr   = False
-        self.laneValid   = [None] * self.numOfLanes
-        self.laneTimeout = [None] * self.numOfLanes
-        self.laneError   = [None] * self.numOfLanes
-        self.frameSize   = [0]    * self.numOfLanes
+        self.headerErr      = False
+        self.laneValid      = [None] * self.numOfLanes
+        self.laneTimeout    = [None] * self.numOfLanes
+        self.laneError      = [None] * self.numOfLanes
+        self.lanePauseError = [None] * self.numOfLanes
+        self.frameSize      = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -219,16 +220,24 @@ class AsicData(object):
         """
         _dict = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
 
-        self.laneError   = [(_dict['laneError'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
-        self.laneTimeout = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
-        self.laneValid   = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(self.numOfLanes)]
+        self.laneError      = [(_dict['laneError'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.laneTimeout    = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.laneValid      = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
 
         self.headerErr = _dict['laneError'] > 0 or _dict['laneTimeout'] > 0
 
+        _padding = (" " * 4)
+
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'LaneError={0:08b}           LaneTimeout={1:08b}           LaneValid={2:08b}'
+            _format = 'LaneError=0x{0:<02X} {1} LanePauseError=0x{2:<02X} {3} LaneTimeout=0x{4:<02X}   LaneValid=0x{5:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(_dict['laneError'], _dict['laneTimeout'], _dict['laneValid']))
+            print(_format.format(_dict['laneError'], _padding, _dict['lanePauseError'], _padding,
+                                 _dict['laneTimeout'], _dict['laneValid']))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 pix2pgp.Tools.printError('Header')
@@ -335,29 +344,37 @@ class AsicData(object):
                 index += self.headerLen
 
                 if any(self.laneValid):
-                    state = "laneValidCheck_s"
+                    state = "frameSize_s"
                 else:
                     state = "trailer_s"
+
+            # --------------------------------------------------------------------------------------
+            elif state == "frameSize_s":
+                if laneSel < self.numOfLanes:
+
+                    wordHex = ''.join(format(x, '02x') for x in frame[
+                        index:index + self.frameSizeLen])
+
+                    self.frameSize[laneSel] = int(wordHex, 16)
+
+                    index += self.frameSizeLen
+                    laneSel += 1
+
+                else:
+
+                    laneSel = 0
+                    state = "laneValidCheck_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "laneValidCheck_s":
 
                 if laneSel < self.numOfLanes:
                     if self.laneValid[laneSel]:
-                        state = "frameSize_s"
+                        state = "lane_s"
                     else:
                         laneSel += 1
                 else:
                     state = "trailer_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "frameSize_s":
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.frameSizeLen])
-                self.frameSize[laneSel] = int(wordHex, 16)
-
-                index += self.frameSizeLen
-
-                state = "lane_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
@@ -386,12 +403,13 @@ class AsicData(object):
                 self.trailerEval(wordHex)
                 index += self.trailerLen
 
+                laneSel = 0
                 self.done = self._selfRst
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if index >= size:
-            self.done = self._selfRst
+            self.done = True
 
         if self.done:
             self.dataIndexEnd = index

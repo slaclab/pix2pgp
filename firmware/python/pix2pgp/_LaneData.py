@@ -245,12 +245,29 @@ class LaneData(object):
 
     #################################################################
     def headerPrinter(self):
-        _colBitmask = sum((1 << i) for i, bit in enumerate(self.colBitmask) if bit)
+        _colBitmask = sum((1 << i) for i, bit in enumerate(self.colBitmask) if bool(bit))
         _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-        _format = 'OverOcc={0:<%d} Pause={1:<%d} ColErr={2:<%d} PauseErr={3:<%d} Timeout={4:<%d} Bitmask={5:<%02x} Trigger={6:<%d}' % (1, 1, 1, 1, 4, 8, 8)
+        _formatFlags = ""
+        if self.overOcc:
+            _formatFlags += "    Over-Occupancy"
+        if self.pause:
+            _formatFlags += "    Pause"
+        if self.colErr:
+            _formatFlags += "    Column-Error"
+        if self.pauseErr:
+            _formatFlags += "    Pause-Error"
+        if self.timeout:
+            _formatFlags += "    Timeout"
+
+        _bitmaskPadding = int(self.numOfCols/4)
+        _printPadding = (" " * abs(36-_bitmaskPadding))
+
+        _format = f'ColumnBitmask = 0x{{0:0{_bitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
         print(_lanePrint)
-        print(_format.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout, hex(_colBitmask).lower(), self.trgCnt))
+        print(_format.format(_colBitmask, _printPadding, self.trgCnt))
+        if len(_formatFlags) > 1:
+            print(_formatFlags)
         print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #################################################################
 

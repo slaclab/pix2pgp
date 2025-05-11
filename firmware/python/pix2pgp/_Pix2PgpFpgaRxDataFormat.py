@@ -34,7 +34,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         Parameter dictionary
         '''
         param_dict = {'preambleLen'  : 20,
-                      'headerLen'    : 3,
+                      'headerLen'    : 4,
                       'frameSizeLen' : 2,
                       'trailerLen'   : 8}
 
@@ -60,9 +60,10 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         _header = int(header, 16)
 
-        header_dict = {'laneError'   : (_header >> 16) & 0xFF,
-                       'laneTimeout' : (_header >>  8) & 0xFF,
-                       'laneValid'   : (_header >>  0) & 0xFF}
+        header_dict = {'laneError'      : (_header >> 24) & 0xFF,
+                       'lanePauseError' : (_header >> 16) & 0xFF,
+                       'laneTimeout'    : (_header >>  8) & 0xFF,
+                       'laneValid'      : (_header >>  0) & 0xFF}
 
         return header_dict
 

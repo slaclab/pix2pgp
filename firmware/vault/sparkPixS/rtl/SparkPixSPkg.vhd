@@ -213,7 +213,8 @@ package Pix2PgpPkg is
    function isDummy        (din : slv) return boolean;
    function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
-   function fpgaHeaderMap  (laneError: slv; laneTimeout: slv; laneValid: slv) return slv;
+   function fpgaHeaderMap  (laneError: slv; lanePauseError: slv;
+                            laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
 
@@ -258,18 +259,31 @@ package Pix2PgpPkg is
                                                      & x"67"  -- g
                                                      & x"70"; -- p
 
-   -- 3 fields; laneError, laneTimeout, and laneValid
-   constant FPGA_HEADER_LEN_C      : natural := 3*NUM_OF_SERIALIZERS_C;
-   constant FPGA_TRAILER_LEN_C     : natural := 64;
-
-   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-2*NUM_OF_SERIALIZERS_C;
+   -- FPGA Header Mapping
    ------------------------------------------------------------------------------
-   -- FPGA Preamble Mapping
-   subtype LANE_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
-                                                FPGA_HEADER_LEN_C-FPGA_HEADER_STRADDLE_C;
-   subtype LANE_TIMEOUT_POS_C is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
-                                                FPGA_HEADER_STRADDLE_C;
-   subtype LANE_VALID_POS_C   is natural range  FPGA_HEADER_STRADDLE_C-1 downto 0;
+   -- 4 fields; laneError, lanePauseError, laneTimeout, and laneValid
+   ------------------------------------------------------------------------------
+   constant FPGA_HEADER_FIELDS_C   : natural := 4;
+   constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
+   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
+                                                                   NUM_OF_SERIALIZERS_C);
+   ------------------------------------------------------------------------------
+   subtype FPGA_LANERX_ERROR_POS_C       is natural range  FPGA_HEADER_LEN_C-1 downto
+                                             FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
+
+   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
+                                             FPGA_HEADER_STRADDLE_C*2;
+
+   subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
+                                             FPGA_HEADER_STRADDLE_C;
+
+   subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*1-1 downto 0;
+   ------------------------------------------------------------------------------
+
+
+   -- trailer is fixed; contains the pix2pgp identifier string
+   ------------------------------------------------------------------------------
+   constant FPGA_TRAILER_LEN_C : natural := 64;
    ------------------------------------------------------------------------------
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
@@ -438,13 +452,15 @@ package body Pix2PgpPkg is
 
    end tKeepSet;
 
-   function fpgaHeaderMap (laneError: slv; laneTimeout: slv; laneValid: slv) return slv is
+   function fpgaHeaderMap (laneError: slv; lanePauseError: slv;
+                           laneTimeout: slv; laneValid: slv) return slv is
       variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retHeader(LANE_ERROR_POS_C)   := resize(laneError, NUM_OF_SERIALIZERS_C);
-      retHeader(LANE_TIMEOUT_POS_C) := resize(laneTimeout, NUM_OF_SERIALIZERS_C);
-      retHeader(LANE_VALID_POS_C)   := resize(laneValid, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_ERROR_POS_C)       := resize(laneError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_PAUSE_ERROR_POS_C) := resize(lanePauseError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_TIMEOUT_POS_C)     := resize(laneTimeout, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_VALID_POS_C)       := resize(laneValid, NUM_OF_SERIALIZERS_C);
 
       return retHeader;
 
