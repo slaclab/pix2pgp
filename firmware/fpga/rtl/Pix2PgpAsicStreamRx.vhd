@@ -357,7 +357,7 @@ begin
       end loop;
 
       preamble := fpgaPreambleMap(PIX2PGP_ID_C,
-                                  ASIC_TYPE_C,
+                                  toSlv(ASIC_TYPE_C, 32),
                                   toSlv(ASIC_ID_G, 32),
                                   r.fpgaId,
                                   r.trgCntBuff);

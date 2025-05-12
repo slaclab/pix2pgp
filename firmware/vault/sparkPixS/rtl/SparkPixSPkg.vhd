@@ -25,7 +25,7 @@ use surf.AxiStreamPkg.all;
 package Pix2PgpPkg is
 
    -----------------------------------------------------------------------------
-   ----------------------------- SparkPix - S ----------------------------------
+   ------------------------------ SparkPix-S -----------------------------------
    -----------------------------------------------------------------------------
    -- ASIC-specific parameters
    -- Most of these constants and data-fields should match the decoder
@@ -41,7 +41,7 @@ package Pix2PgpPkg is
    constant SPARSE_DWIDTH_C       : natural := 20; -- data width
 
    -- every ASIC implementation has a specific decimal identifier
-   constant ASIC_TYPE_C : slv(31 downto  0) := toSlv(0, 32); -- SparPix-T = 0
+   constant ASIC_TYPE_C : natural := 0; -- SparPix-S = 0
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment
@@ -64,9 +64,11 @@ package Pix2PgpPkg is
    -- data bus width is twice the pixel data width to maximize bandwidth
    constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
    --
-   constant EVAL_SOF_C      : boolean := False;
-   constant EVAL_EOFE_C     : boolean := False;
-   constant DUMMY_CNT_MAX_C : natural := 4;
+   constant EVAL_SOF_C  : boolean := False;
+   constant EVAL_EOFE_C : boolean := False;
+
+   constant TX_DUMMY_MAX_C   : natural := 7;
+   constant EVAL_DUMMY_MAX_C : natural := 4;
    --
    -- **************************************************************************
 
@@ -76,13 +78,7 @@ package Pix2PgpPkg is
    -- Header
    -- ~~~~~~
    -- Pix2Pgp data frame header *has* to be an equal to the databus width
-   constant HEADER_DWIDTH_C         : natural := ASIC_DATABUS_DWIDTH_C;
-
-   -- note that TRGCNT_HEADER_WIDTH_C > TRGCNT_WIDTH_C;
-   -- the header has a standard trigger counter width that needs to be larger or equal
-   -- to the actual trigger counter coming in from the columns;
-   -- (the inbound trigger counter from the columns gets resized to fit)
-   constant TRGCNT_HEADER_WIDTH_C   : natural := 8;
+   constant HEADER_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C;
 
    -- bitfields
    constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 39
@@ -358,14 +354,14 @@ package body Pix2PgpPkg is
       variable retMeta: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
-      retMeta(META_FLAGS_POS_C)   := resize(flags, rangeToLen(META_FLAGS_POS_C'high,
-                                                              META_FLAGS_POS_C'low));
+      retMeta(META_FLAGS_POS_C) := resize(flags, rangeToLen(META_FLAGS_POS_C'high,
+                                                            META_FLAGS_POS_C'low));
       --
-      retMeta(META_COL_POS_C)     := resize(col, rangeToLen(META_COL_POS_C'high,
-                                                            META_COL_POS_C'low));
+      retMeta(META_COL_POS_C) := resize(col, rangeToLen(META_COL_POS_C'high,
+                                                        META_COL_POS_C'low));
       --
-      retMeta(META_TRGCNT_POS_C)  := resize(trgCnt, rangeToLen(META_TRGCNT_POS_C'high,
-                                                               META_TRGCNT_POS_C'low));
+      retMeta(META_TRGCNT_POS_C) := resize(trgCnt, rangeToLen(META_TRGCNT_POS_C'high,
+                                                              META_TRGCNT_POS_C'low));
       --
       retMeta(META_DATALEN_POS_C) := resize(dataLen, rangeToLen(META_DATALEN_POS_C'high,
                                                                 META_DATALEN_POS_C'low));
@@ -427,11 +423,20 @@ package body Pix2PgpPkg is
       variable retPreamble: slv(FPGA_PREAMBLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, PIX2PGP_ID_C'length);
-      retPreamble(ASIC_TYPE_POS_C)   := resize(asicType, ASIC_TYPE_C'length);
-      retPreamble(ASIC_ID_POS_C)     := resize(asicId, ASIC_ID_LEN_C);
-      retPreamble(FPGA_ID_POS_C)     := resize(fpgaId, FPGA_ID_DEFAULT_C'length);
-      retPreamble(FPGA_TRGCNT_POS_C) := resize(fpgaTrgCnt, TRGCNT_WIDTH_C);
+      retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, rangeToLen(PIX2PGP_ID_POS_C'high,
+                                                                     PIX2PGP_ID_POS_C'low));
+
+      retPreamble(ASIC_TYPE_POS_C) := resize(asicType, rangeToLen(ASIC_TYPE_POS_C'high,
+                                                                  ASIC_TYPE_POS_C'low));
+
+      retPreamble(ASIC_ID_POS_C) := resize(asicId, rangeToLen(ASIC_ID_POS_C'high,
+                                                              ASIC_ID_POS_C'low));
+
+      retPreamble(FPGA_ID_POS_C) := resize(fpgaId, rangeToLen(FPGA_ID_POS_C'high,
+                                                              FPGA_ID_POS_C'low));
+
+      retPreamble(FPGA_TRGCNT_POS_C) := resize(fpgaTrgCnt, rangeToLen(FPGA_TRGCNT_POS_C'high,
+                                                                      FPGA_TRGCNT_POS_C'low));
 
       return retPreamble;
 

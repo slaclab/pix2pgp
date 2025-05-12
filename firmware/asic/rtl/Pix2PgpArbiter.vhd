@@ -23,6 +23,7 @@ use ieee.std_logic_arith.all;
 library surf;
 use surf.StdRtlPkg.all;
 use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
@@ -160,12 +161,26 @@ begin
 
       -- flow control check
       if sAxisSlave.tReady = '1' then
+
+         -- SparkPix-S -> ASIC_TYPE_C=0; emulate AXI behavior of SparkPix-S
+         if ASIC_TYPE_C > 0 then
+            v.sAxisMaster.tUser := (others => '0');
+            v.sAxisMaster.tLast := '0';
+         end if;
+
+         -- always present
          v.sAxisMaster.tValid := '0';
+
       end if;
 
       -- default flags
-      v.sAxisMaster.tLast  := '0';
-      v.sAxisMaster.tUser  := (others => '0');
+      if ASIC_TYPE_C = 0 then
+         -- SparkPix-S -> ASIC_TYPE_C=0; emulate AXI behavior of SparkPix-S
+         v.sAxisMaster.tUser := (others => '0');
+         v.sAxisMaster.tLast := '0';
+      end if;
+
+      -- always present
       v.sAxisMaster.tKeep  := (others => '1');
 
       -- status Mux
@@ -208,7 +223,7 @@ begin
          -- determine what to do next
          when PARSE_HEADER_S =>
             if v.sAxisMaster.tValid = '0' then
-               v.sAxisMaster.tUser(1) := '1'; -- SoF
+               ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.sAxisMaster, '1');
                v.sAxisMaster.tValid   := '1';
                v.txData               := v.dataHeader;
 
@@ -298,8 +313,8 @@ begin
                      v.dummyCnt := r.dummyCnt + 1;
                   end if;
 
-                  if allBits(r.dummyCnt, '1') then
-                     v.sAxisMaster.tValid := '0';
+                  if r.dummyCnt = toSlv(TX_DUMMY_MAX_C, r.dummyCnt'length) then
+                     v.sAxisMaster.tValid := uOr(toSlv(ASIC_TYPE_C, 32));
                      v.sAxisMaster.tLast  := '1';
                      v.state              := IDLE_S;
                   end if;

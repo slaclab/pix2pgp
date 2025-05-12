@@ -73,7 +73,7 @@ architecture rtl of Pix2PgpLaneRx is
       pauseError    : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
-      dummyCnt      : slv(bitSize(DUMMY_CNT_MAX_C)-1 downto 0);
+      dummyCnt      : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
       frameSizeCnt  : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       dataLenCnt    : slv(7 downto 0);
       axiFifoMaster : AxiStreamMasterType;
@@ -352,7 +352,7 @@ begin
 
                if dummy = '1' then
                   v.dummyCnt := r.dummyCnt + 1;
-                  if r.dummyCnt = DUMMY_CNT_MAX_C then
+                  if r.dummyCnt = EVAL_DUMMY_MAX_C then
                      v.dummyCnt := (others => '0');
                      v.state    := WAIT_HEADER_S;
                   end if;
