@@ -33,10 +33,8 @@ entity Pix2PgpLaneRxWrapper is
       PIPE_STAGES_G  : natural := 1);
    port(
       -- General Interface
-      pgpClk         : in  sl;
-      pgpRst         : in  sl := not(RST_POLARITY_G);
-      sysClk         : in  sl;
-      sysRst         : in  sl := not(RST_POLARITY_G);
+      laneClk        : in  sl;
+      laneRst        : in  sl := not(RST_POLARITY_G);
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
@@ -57,7 +55,6 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal frameMetaRd     : sl := '0';
    signal frameMetaDout   : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaValid  : sl := '0';
-   signal laneRxRst       : sl := '0';
    signal laneFull        : sl := '0';
    signal filterAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal filterAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -71,16 +68,13 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         pgpClk         => pgpClk,
-         pgpRst         => pgpRst,
-         sysClk         => sysClk,
-         sysRst         => sysRst,
+         laneClk        => laneClk,
+         laneRst        => laneRst,
          discard        => discBadColTrg,
          -- RX FIFO Interface
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
          -- Filter Interface
-         laneRxRst      => laneRxRst,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
@@ -97,10 +91,9 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         sysClk         => sysClk,
-         sysRst         => sysRst,
+         laneClk        => laneClk,
+         laneRst        => laneRst,
          -- Lane Interface
-         laneRxRst      => laneRxRst,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,

@@ -27,7 +27,8 @@ entity Pix2PgpFpgaTb is
    );
    port(
       -- General Interface
-      clk          : in  sl;
+      pgpRxClk     : in  sl;
+      phyRxClk     : in  sl;
       rst          : in  sl := not RST_POLARITY_G;
       linkReady    : out sl;
       -- Pix2Pgp Interface
@@ -62,7 +63,7 @@ begin
          MASTER_WIDTH_G => PGP_DWIDTH_C+2)
       port map (
          -- Clock and Reset
-         clk            => clk,
+         clk            => phyRxClk,
          rst            => rst,
          -- Slave Interface
          slaveValid     => pgpDinValid,
@@ -81,11 +82,10 @@ begin
         RST_POLARITY_G => RST_POLARITY_G,
         RST_ASYNC_G    => RST_ASYNC_G,
         NUM_VC_G       => NUM_VC_G,
-        SKIP_EN_G      => false,
         LITE_EN_G      => true)
      port map(
         -- User Transmit interface
-        pgpRxClk     => clk,
+        pgpRxClk     => pgpRxClk,
         pgpRxRst     => rst,
         pgpRxOut     => pgpRxOut,
         pgpRxMasters => pgpRxMasters,
@@ -97,7 +97,7 @@ begin
         locRxLinkReady => locRxLinkReady,
 
         -- PHY interface
-        phyRxClk      => clk,
+        phyRxClk      => phyRxClk,
         phyRxRst      => rst,
         phyRxInit     => open,
         phyRxActive   => '1',
@@ -118,7 +118,7 @@ begin
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
       port map(
          -- Clock and reset
-         axisClk     => clk,
+         axisClk     => pgpRxClk,
          axisRst     => rst,
          -- Slave Port
          sAxisMaster => pgpRxMasters(0),

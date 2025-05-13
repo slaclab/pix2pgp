@@ -47,14 +47,14 @@ end entity Pix2PgpSparkPixSTopTb;
 
 architecture test of Pix2PgpSparkPixSTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns;
-   constant CLK_PERIOD_PGP_C    : time := 5.3846 ns;
-   constant CLK_PERIOD_SYS_C    : time := 6.25   ns;
+   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matric clock sent to ASIC
+   constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
+   constant CLK_PERIOD_PGP_RX_C : time := 4.5    ns; -- internal-to-FPGA
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
-   signal sysClk    : sl := '0';
+   signal pgpRxClk  : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
@@ -130,15 +130,15 @@ begin
          clkP => sparseClk,
          clkN => open);
 
-   U_ClkRst_sysClk : entity surf.ClkRst
+   U_ClkRst_pgpRxClk : entity surf.ClkRst
       generic map (
-         CLK_PERIOD_G      => CLK_PERIOD_SYS_C,
+         CLK_PERIOD_G      => CLK_PERIOD_PGP_RX_C,
          CLK_DELAY_G       => 1 ns,
          RST_START_DELAY_G => 0 ns,
          RST_HOLD_TIME_G   => 5 us,
          SYNC_RESET_G      => true)
       port map (
-         clkP => sysClk,
+         clkP => pgpRxClk,
          clkN => open);
 
   issueSroProcess: process(sparseClk)
@@ -274,7 +274,8 @@ begin
           NUM_VC_G       => NUM_VC_G)
        port map(
           -- General Interface
-          clk          => pgpClk,
+          pgpRxClk     => pgpRxClk,
+          phyRxClk     => pgpClk,
           rst          => revRst,
           -- Pix2Pgp Interface
           pgpDin       => pgpDataAsic(lane),
@@ -296,23 +297,21 @@ begin
          TIMEOUT_LIMIT_WIDTH_G => 16)
       port map(
          -- General Interface
-         pgpClk          => pgpClk,
-         pgpRst          => revRst,
-         sysClk          => sysClk,
-         sysRst          => revRst,
+         pgpRxClk        => pgpRxClk,
+         pgpRxRst        => revRst,
          -- ASIC Domain Interface
          asicClk         => sparseClk,
          asicRst         => rst,
          asicSro         => sroFinal,
          asicSroEna      => '1',
-         -- PGP4Rx Interface
+         -- PGP4Rx Interface (on pgpRxClk domain)
          pgp4RxMaster    => pgp4RxMaster,
          pgp4RxSlave     => pgp4RxSlave,
-         -- AXI-Stream Rx Interface
+         -- AXI-Stream Rx Interface (on pgpRxClk domain)
          asicRxMaster    => asicRxMaster,
          asicRxSlave     => asicRxSlave,
          -- AXI-Lite Interface
-         axilClk         => sysClk,
+         axilClk         => pgpRxClk,
          axilRst         => revRst,
          axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
          axilReadSlave   => open,
@@ -329,7 +328,7 @@ begin
          TDATA_NUM_BYTES => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)
       port map (
          -- IP Integrator AXI Stream Interface
-         M_AXIS_ACLK    => sysClk,
+         M_AXIS_ACLK    => pgpRxClk,
          M_AXIS_ARESETN => '1',
          M_AXIS_TVALID  => m_axis_tvalid,
          M_AXIS_TDATA   => m_axis_tdata,
@@ -1933,12 +1932,12 @@ end loop;
   revRst <= not(rst);
 
   -- Process to Monitor AXI Stream and Write to File
-  FileWriteProcessAsic : process(sysClk)
+  FileWriteProcessAsic : process(pgpRxClk)
     file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
     variable row : line;
     variable byte : std_logic_vector(7 downto 0);
   begin
-    if rising_edge(sysClk) then
+    if rising_edge(pgpRxClk) then
       if m_axis_tvalid = '1' then
         for i in 0 to FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C - 1 loop
           if m_axis_tkeep(i) = '1' then
