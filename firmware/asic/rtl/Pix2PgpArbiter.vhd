@@ -377,25 +377,37 @@ begin
    -----------------------------------------
    -- Axi-Stream Gearbox (if needed)
    -----------------------------------------
-   U_Gearbox : entity surf.AxiStreamGearbox
-      generic map(
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_POLARITY_G      => RST_POLARITY_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
-      port map(
-         -- Clock and reset
-         axisClk     => pgpClk,
-         axisRst     => pgpRst,
-         -- Slave Port
-         sAxisMaster => sAxisMaster,
-         sSideBand   => (others => '0'),
-         sAxisSlave  => sAxisSlave,
-         -- Master Port
-         mAxisMaster => pgpTxMaster,
-         mSideBand   => open,
-         mAxisSlave  => pgpTxSlave);
+   GEN_GBOX: if ASIC_DATABUS_DWIDTH_C /= PGP_DWIDTH_C generate
+
+      U_Gearbox : entity surf.AxiStreamGearbox
+         generic map(
+            -- General Configurations
+            TPD_G               => TPD_G,
+            RST_POLARITY_G      => RST_POLARITY_G,
+            RST_ASYNC_G         => RST_ASYNC_G,
+            -- AXI Stream Port Configurations
+            SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
+            MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
+         port map(
+            -- Clock and reset
+            axisClk     => pgpClk,
+            axisRst     => pgpRst,
+            -- Slave Port
+            sAxisMaster => sAxisMaster,
+            sSideBand   => (others => '0'),
+            sAxisSlave  => sAxisSlave,
+            -- Master Port
+            mAxisMaster => pgpTxMaster,
+            mSideBand   => open,
+            mAxisSlave  => pgpTxSlave);
+
+   end generate GEN_GBOX;
+
+   GEN_NO_GBOX: if ASIC_DATABUS_DWIDTH_C = PGP_DWIDTH_C generate
+
+      pgpTxMaster <= sAxisMaster;
+      sAxisSlave  <= pgpTxSlave;
+
+   end generate GEN_NO_GBOX;
+
 end rtl;
