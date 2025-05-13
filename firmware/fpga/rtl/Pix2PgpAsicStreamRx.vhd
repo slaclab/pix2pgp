@@ -41,19 +41,17 @@ entity Pix2PgpAsicStreamRx is
       DISCARD_BAD_COL_TRG_G : boolean  := true);
    port(
       -- General Interface
-      pgpClk          : in  sl;
-      pgpRst          : in  sl := not(RST_POLARITY_G);
-      sysClk          : in  sl;
-      sysRst          : in  sl := not(RST_POLARITY_G);
+      pgpRxClk        : in  sl;
+      pgpRxRst        : in  sl := not(RST_POLARITY_G);
       -- ASIC Domain Interface
       asicClk         : in  sl;
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
       asicSroEna      : in  sl;
-      -- PGP4Rx Interface
+      -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
-      -- AXI-Stream Interface
+      -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
       -- AXI-Lite Interface
@@ -88,8 +86,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal asicSroSync     : sl := '0';
    signal asicSroEnaSync  : sl := '0';
    signal asicRstSync     : sl := '0';
-   signal laneRstSync     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneEnableSync  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '1');
 
    signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffValid    : sl := '0';
@@ -105,8 +101,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal writeMaster     : AxiLiteWriteMasterType;
    signal writeSlave      : AxiLiteWriteSlaveType;
 
-   signal pgpLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
-   signal sysLaneRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
+   signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
    signal discBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -192,7 +187,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map (
-         clk     => sysClk,
+         clk     => pgpRxClk,
          dataIn  => asicSro,
          dataOut => asicSroSync);
 
@@ -202,7 +197,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map (
-         clk     => sysClk,
+         clk     => pgpRxClk,
          dataIn  => asicSroEna,
          dataOut => asicSroEnaSync);
 
@@ -212,31 +207,9 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map (
-         clk     => sysClk,
+         clk     => pgpRxClk,
          dataIn  => asicRst,
          dataOut => asicRstSync);
-
-   U_SyncLaneEnable : entity surf.SynchronizerVector
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         WIDTH_G        => NUM_OF_SERIALIZERS_C)
-      port map (
-         clk     => pgpClk,
-         dataIn  => r.laneEnable,
-         dataOut => laneEnableSync);
-
-   U_SyncLaneRst : entity surf.SynchronizerVector
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         WIDTH_G        => NUM_OF_SERIALIZERS_C)
-      port map (
-         clk     => pgpClk,
-         dataIn  => r.laneRst,
-         dataOut => laneRstSync);
 
    U_AxiLiteAsync : entity surf.AxiLiteAsync
       generic map (
@@ -251,17 +224,17 @@ begin
          sAxiWriteMaster => axilWriteMaster,
          sAxiWriteSlave  => axilWriteSlave,
          -- Master Interface
-         mAxiClk         => sysClk,
-         mAxiClkRst      => sysRst,
+         mAxiClk         => pgpRxClk,
+         mAxiClkRst      => pgpRxRst,
          mAxiReadMaster  => readMaster,
          mAxiReadSlave   => readSlave,
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, sysRst, pgpRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, laneFrameSize, laneRstSync, trgBuffValid,
+   comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
+                   asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid,
                    asicRstSync, trgBuffDout, laneTimeout, laneError, lanePauseError,
-                   laneRxMasters, laneEnableSync, laneTrgCnt, laneMetaValid, r) is
+                   laneRxMasters, laneTrgCnt, laneMetaValid, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -544,11 +517,9 @@ begin
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
-            sysLaneRst(lane) <= sysRst or r.laneRst(lane)   or not(r.laneEnable(lane));
-            pgpLaneRst(lane) <= pgpRst or laneRstSync(lane) or not(laneEnableSync(lane));
+            laneRst(lane) <= pgpRxRst or r.laneRst(lane) or not(r.laneEnable(lane));
          else
-            sysLaneRst(lane) <= sysRst and not(r.laneRst(lane))   and(r.laneEnable(lane));
-            pgpLaneRst(lane) <= pgpRst and not(laneRstSync(lane)) and(laneEnableSync(lane));
+            laneRst(lane) <= pgpRxRst and not(r.laneRst(lane)) and(r.laneEnable(lane));
          end if;
 
       end loop;
@@ -565,7 +536,7 @@ begin
       readSlave  <= r.readSlave;
 
       -- Reset
-      if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -574,11 +545,11 @@ begin
 
    end process comb;
 
-   seq : process (sysClk, sysRst) is
+   seq : process (pgpRxClk, pgpRxRst) is
    begin
-      if (RST_ASYNC_G and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(sysClk) then
+      elsif rising_edge(pgpRxClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
@@ -596,13 +567,13 @@ begin
          DATA_WIDTH_G    => TRGCNT_WIDTH_C,
          ADDR_WIDTH_G    => 6)
       port map (
-         rst      => sysRst,
+         rst      => pgpRxRst,
          -- Write Ports
-         wr_clk   => sysClk,
+         wr_clk   => pgpRxClk,
          wr_en    => r.trgBuffWr,
          din      => r.fpgaTrgCnt,
          -- Read Ports
-         rd_clk   => sysClk,
+         rd_clk   => pgpRxClk,
          rd_en    => r.trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
@@ -620,10 +591,8 @@ begin
             PIPE_STAGES_G  => LANE_PIPE_STAGES_G)
          port map(
             -- General Interface
-            pgpClk         => pgpClk,
-            pgpRst         => pgpLaneRst(lane),
-            sysClk         => sysClk,
-            sysRst         => sysLaneRst(lane),
+            laneClk        => pgpRxClk,
+            laneRst        => laneRst(lane),
             -- RX FIFO Interface
             pgp4RxMaster   => pgp4RxMaster(lane),
             pgp4RxSlave    => pgp4RxSlave(lane),
@@ -647,8 +616,8 @@ begin
             CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
          port map(
             -- General Interface
-            clk     => sysClk,
-            rst     => sysRst,
+            clk     => pgpRxClk,
+            rst     => pgpRxRst,
             limit   => timeoutLimitDly(lane),
             -- Control Interface
             set     => armTimeoutDly(lane),
@@ -661,7 +630,7 @@ begin
             WIDTH_G        => TIMEOUT_LIMIT_WIDTH_G,
             DELAY_G        => 2)
          port map (
-            clk  => sysClk,
+            clk  => pgpRxClk,
             din  => timeoutLimit(lane),
             dout => timeoutLimitDly(lane));
 
@@ -674,7 +643,7 @@ begin
          WIDTH_G        => NUM_OF_SERIALIZERS_C,
          DELAY_G        => 2)
       port map (
-         clk  => sysClk,
+         clk  => pgpRxClk,
          din  => armTimeout,
          dout => armTimeoutDly);
 
@@ -685,7 +654,7 @@ begin
          WIDTH_G        => NUM_OF_SERIALIZERS_C,
          DELAY_G        => 2)
       port map (
-         clk  => sysClk,
+         clk  => pgpRxClk,
          din  => timeout,
          dout => laneTimeout);
 
@@ -702,8 +671,8 @@ begin
             PIPE_STAGES_G  => STREAM_PIPE_STAGES_G)
          port map (
             -- Clock and Reset
-            axisClk     => sysClk,
-            axisRst     => sysRst,
+            axisClk     => pgpRxClk,
+            axisRst     => pgpRxRst,
             -- Slave Port
             sAxisMaster => obAxisMaster,
             sAxisSlave  => obAxisSlave,

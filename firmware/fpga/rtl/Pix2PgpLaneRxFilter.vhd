@@ -33,10 +33,9 @@ entity Pix2PgpLaneRxFilter is
       PIPE_STAGES_G  : natural := 1);
    port(
       -- General Interface
-      sysClk         : in  sl;
-      sysRst         : in  sl := not(RST_POLARITY_G);
+      laneClk         : in  sl;
+      laneRst         : in  sl := not(RST_POLARITY_G);
       -- Lane Interface
-      laneRxRst      : out sl;
       frameMetaRd    : out sl;
       frameMetaDout  : in  slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : in  sl;
@@ -56,9 +55,6 @@ entity Pix2PgpLaneRxFilter is
 end Pix2PgpLaneRxFilter;
 
 architecture rtl of Pix2PgpLaneRxFilter is
-
-   -- how much to stretch laneRxRst
-   constant LANE_RX_RST_WIDTH_C : natural := 10;
 
    type RegType is record
       errorFlag    : sl;
@@ -102,7 +98,7 @@ architecture rtl of Pix2PgpLaneRxFilter is
    signal laneErrorDly : sl := '0';
    signal metaFullDly  : sl := '0';
 
-   signal sysFifoRst   : sl := '0';
+   signal axiFifoRst   : sl := '0';
 
    signal axiFull      : sl := '0';
    signal axiFullDly   : sl := '0';
@@ -111,7 +107,7 @@ architecture rtl of Pix2PgpLaneRxFilter is
 
 begin
 
-   comb : process (r, frameMetaDout, sysRst, frameMetaValid, ibAxisMaster, sAxisSlave) is
+   comb : process (r, frameMetaDout, laneRst, frameMetaValid, ibAxisMaster, sAxisSlave) is
       variable v        : RegType;
       variable axisTrg  : slv(TRGCNT_WIDTH_C-1 downto 0);
       variable trg      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -186,7 +182,7 @@ begin
       frameMetaRd <= r.frameMetaRd;
 
       -- Reset
-      if (RST_ASYNC_G = false and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -195,24 +191,14 @@ begin
 
    end process comb;
 
-   seq : process (sysClk, sysRst) is
+   seq : process (laneClk, laneRst) is
    begin
-      if (RST_ASYNC_G and sysRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and laneRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(sysClk) then
+      elsif rising_edge(laneClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
-
-   U_StretchRst : entity surf.SynchronizerOneShot
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         PULSE_WIDTH_G  => LANE_RX_RST_WIDTH_C)
-      port map (
-         clk     => sysClk,
-         dataIn  => sysRst,
-         dataOut => laneRxRst);
 
    ------------------
    -- Axi-Stream FIFO
@@ -229,19 +215,19 @@ begin
          MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
       port map (
          -- Slave Port
-         sAxisClk    => sysClk,
-         sAxisRst    => sysFifoRst,
+         sAxisClk    => laneClk,
+         sAxisRst    => axiFifoRst,
          sAxisMaster => sAxisMaster,
          sAxisSlave  => sAxisSlave,
          -- Status Port
          fifoFull    => axiFull,
          -- Master Port
-         mAxisClk    => sysClk,
-         mAxisRst    => sysFifoRst,
+         mAxisClk    => laneClk,
+         mAxisRst    => axiFifoRst,
          mAxisMaster => obAxisMaster,
          mAxisSlave  => obAxisSlave);
 
-   sysFifoRst <= ite(toBoolean(RST_POLARITY_G), sysRst,  not(sysRst));
+   axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst,  not(laneRst));
 
    U_PipelineAxiFull : entity surf.SlvDelay
       generic map (
@@ -249,7 +235,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => axiFull,
          dout(0) => axiFullDly);
 
@@ -266,14 +252,14 @@ begin
          DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
          ADDR_WIDTH_G    => LANERX_META_ADDR_WIDTH_C)
       port map (
-         rst      => sysRst,
+         rst      => laneRst,
          -- Write Ports
-         wr_clk   => sysClk,
+         wr_clk   => laneClk,
          wr_en    => r.frameMetaWr,
          din      => r.frameMetaDin,
          full     => metaFull,
          -- Read Ports
-         rd_clk   => sysClk,
+         rd_clk   => laneClk,
          rd_en    => metaRdEn,
          dout     => metaDout,
          valid    => metaValid);
@@ -284,7 +270,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => laneMetaRd,
          dout(0) => metaRdEn);
 
@@ -294,7 +280,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => metaValid,
          dout(0) => laneMetaValid);
 
@@ -304,7 +290,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => metaDout(LANE_DEC_ERROR_POS_C),
          dout(0) => laneErrorDly);
 
@@ -315,7 +301,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => metaDout(LANE_PAUSE_ERROR_POS_C),
          dout(0) => lanePauseError);
 
@@ -325,7 +311,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => metaFull,
          dout(0) => metaFullDly);
 
@@ -336,7 +322,7 @@ begin
          WIDTH_G        => LANERX_FRAME_SIZE_WIDTH_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => sysClk,
+         clk  => laneClk,
          din  => metaDout(LANE_SIZE_POS_C),
          dout => laneFrameSize);
 
@@ -347,7 +333,7 @@ begin
          WIDTH_G        => TRGCNT_WIDTH_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => sysClk,
+         clk  => laneClk,
          din  => metaDout(LANE_TRGCNT_POS_C),
          dout => laneTrgCnt);
 
@@ -357,7 +343,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => sysClk,
+         clk     => laneClk,
          din(0)  => laneFull,
          dout(0) => laneFullDly);
 
@@ -376,8 +362,8 @@ begin
             PIPE_STAGES_G  => PIPE_STAGES_G)
          port map (
             -- Clock and Reset
-            axisClk     => sysClk,
-            axisRst     => sysRst,
+            axisClk     => laneClk,
+            axisRst     => laneRst,
             -- Slave Port
             sAxisMaster => obAxisMaster,
             sAxisSlave  => obAxisSlave,
