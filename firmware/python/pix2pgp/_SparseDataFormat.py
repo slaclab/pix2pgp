@@ -67,12 +67,12 @@ class SparkPixTDataFormat(SparseDataFormatBase):
         hit1 = (_hitData >>  0) & 0xFFFFFFFF
 
         if asicData:
-            _hitData0_dict = {'toaF'   : (hit0 >>  0) & 0x7F,
+            _hitData0_dict = {'toaF'   : (hit0 >>  0) & 0xFF,
                               'toaC'   : (hit0 >>  8) & 0xFF,
                               'tot'    : (hit0 >> 16) & 0xFF,
                               'row'    : (hit0 >> 24) & 0xFF}
 
-            _hitData1_dict = {'toaF'   : (hit1 >>  0) & 0x7F,
+            _hitData1_dict = {'toaF'   : (hit1 >>  0) & 0xFF,
                               'toaC'   : (hit1 >>  8) & 0xFF,
                               'tot'    : (hit1 >> 16) & 0xFF,
                               'row'    : (hit1 >> 24) & 0xFF}
