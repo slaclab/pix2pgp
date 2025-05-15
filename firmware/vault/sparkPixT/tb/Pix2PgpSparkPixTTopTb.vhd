@@ -292,16 +292,15 @@ begin
    -- asic stream receiver and merger
    U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
       generic map(
-         TPD_G                       => TPD_G,
-         RST_ASYNC_G                 => false,
-         RST_POLARITY_G              => REV_RST_POLARITY_C,
-         ASIC_ID_G                   => 0,
-         TIMEOUT_LIMIT_WIDTH_G       => 12,
-         LANE_PIPE_STAGES_G          => 1,
-         STREAM_PIPE_STAGES_G        => 1,
-         META_FIFO_ADDR_WIDTH_G      => 4,
-         LANE_AXIS_FIFO_ADDR_WIDTH_G => 8,
-         FILT_AXIS_FIFO_ADDR_WIDTH_G => 10)
+         TPD_G                  => TPD_G,
+         RST_ASYNC_G            => false,
+         RST_POLARITY_G         => REV_RST_POLARITY_C,
+         ASIC_ID_G              => 0,
+         TIMEOUT_LIMIT_WIDTH_G  => 12,
+         LANE_PIPE_STAGES_G     => 1,
+         STREAM_PIPE_STAGES_G   => 1,
+         META_FIFO_ADDR_WIDTH_G => 4,
+         AXIS_FIFO_ADDR_WIDTH_G => 10)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,

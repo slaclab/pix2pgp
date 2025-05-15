@@ -30,18 +30,17 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpAsicStreamRx is
    generic(
-      TPD_G                       : time     := 1 ns;
-      RST_ASYNC_G                 : boolean  := false;
-      RST_POLARITY_G              : sl       := '1';  -- '1' for active high rst, '0' for active low
-      ASIC_ID_G                   : natural  := 0;
-      SINGLE_LANE_ID_G            : natural  := 0;
-      TIMEOUT_LIMIT_WIDTH_G       : positive := 12;
-      LANE_PIPE_STAGES_G          : natural  := 1;
-      STREAM_PIPE_STAGES_G        : natural  := 1;
-      META_FIFO_ADDR_WIDTH_G      : positive := 4;
-      LANE_AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
-      FILT_AXIS_FIFO_ADDR_WIDTH_G : positive := 10;
-      DISCARD_BAD_COL_TRG_G       : boolean  := true);
+      TPD_G                  : time     := 1 ns;
+      RST_ASYNC_G            : boolean  := false;
+      RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
+      ASIC_ID_G              : natural  := 0;
+      SINGLE_LANE_ID_G       : natural  := 0;
+      TIMEOUT_LIMIT_WIDTH_G  : positive := 12;
+      LANE_PIPE_STAGES_G     : natural  := 1;
+      STREAM_PIPE_STAGES_G   : natural  := 1;
+      META_FIFO_ADDR_WIDTH_G : positive := 4;
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 10;
+      DISCARD_BAD_COL_TRG_G  : boolean  := true);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -109,6 +108,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
    signal discBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -136,6 +136,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffRd       : sl;
       trgCntBuff      : slv(TRGCNT_WIDTH_C-1 downto 0);
       armTimeout      : sl;
+      lanePostError   : sl;
       laneSel         : slv(BITMAX_SERIALIZERS_C downto 0);
       laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       waitLaneSel     : sl;
@@ -169,6 +170,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffWr       => '0',
       trgBuffRd       => '0',
       trgCntBuff      => (others => '0'),
+      lanePostError   => '0',
       armTimeout      => '0',
       laneSel         => (others => '0'),
       laneRst         => (others => '0'),
@@ -346,8 +348,8 @@ begin
 
          laneDecErrorMask(lane) := laneDecError(lane) and laneMetaValid(lane);
 
-         laneValid(lane)     := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
-                                    not(laneTimeout(lane)) and not(laneFull(lane));
+         laneValid(lane)        := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
+                               not(laneTimeout(lane))         and not(laneFull(lane));
 
          if r.laneEnable(lane) = '1' then
             laneReady(lane) := (laneValid(lane) and laneMetaValid(lane)) or
@@ -573,6 +575,7 @@ begin
          timeoutLimit(lane)  <= r.timeoutLimit;
          armTimeout(lane)    <= r.armTimeout and not(laneValid(lane));
          discBadColTrg(lane) <= r.discBadColTrg; -- fan-out
+         lanePostError(lane) <= r.lanePostError; -- fan-out
          laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
 
          -- enable mapping
@@ -625,7 +628,7 @@ begin
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => TRGCNT_WIDTH_C,
-         ADDR_WIDTH_G    => 6)
+         ADDR_WIDTH_G    => META_FIFO_ADDR_WIDTH_G)
       port map (
          rst      => pgpRxRst,
          -- Write Ports
@@ -645,13 +648,12 @@ begin
 
       U_LaneWrapper: entity pix2pgp.Pix2PgpLaneRxWrapper
          generic map(
-            TPD_G                       => TPD_G,
-            RST_ASYNC_G                 => RST_ASYNC_G,
-            RST_POLARITY_G              => RST_POLARITY_G,
-            PIPE_STAGES_G               => LANE_PIPE_STAGES_G,
-            META_FIFO_ADDR_WIDTH_G      => META_FIFO_ADDR_WIDTH_G,
-            LANE_AXIS_FIFO_ADDR_WIDTH_G => LANE_AXIS_FIFO_ADDR_WIDTH_G,
-            FILT_AXIS_FIFO_ADDR_WIDTH_G => FILT_AXIS_FIFO_ADDR_WIDTH_G)
+            TPD_G                  => TPD_G,
+            RST_ASYNC_G            => RST_ASYNC_G,
+            RST_POLARITY_G         => RST_POLARITY_G,
+            PIPE_STAGES_G          => LANE_PIPE_STAGES_G,
+            META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
+            AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G)
          port map(
             -- General Interface
             laneClk        => pgpRxClk,
@@ -661,6 +663,7 @@ begin
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
             discBadColTrg  => discBadColTrg(lane),
+            lanePostError  => lanePostError(lane),
             laneTrgCnt     => laneTrgCnt(lane),
             laneFrameSize  => laneFrameSize(lane),
             laneDecError   => laneDecError(lane),

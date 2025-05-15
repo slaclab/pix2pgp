@@ -37,17 +37,19 @@ entity Pix2PgpLaneRx is
       -- General Interface
       laneClk        : in  sl;
       laneRst        : in  sl;
-      discard        : in  sl;
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
-      -- Filter Interface
+      -- StreamRx Interface
+      postError      : in  sl;
+      discard        : in  sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
       laneRxFull     : out sl;
+      laneRxReady    : out sl;
       pauseError     : out sl;
-      -- AXI-Stream to Filter
+      -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
    );
@@ -73,6 +75,7 @@ architecture rtl of Pix2PgpLaneRx is
       inPause       : sl;
       rxError       : sl;
       pauseError    : sl;
+      laneRxReady   : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dummyCnt      : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
@@ -92,6 +95,7 @@ architecture rtl of Pix2PgpLaneRx is
       inPause       => '0',
       rxError       => '0',
       pauseError    => '0',
+      laneRxReady   => '0',
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -151,7 +155,7 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, discard) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, discard, postError) is
 
       -- omnipresent
       variable v : RegType;
@@ -182,6 +186,7 @@ begin
       -- Defaults
       v.frameMetaWr        := '0';
       v.rxFifoSlave.tReady := '0';
+      v.laneRxReady        := '1';
 
       v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       v.axiFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.din;
@@ -224,7 +229,17 @@ begin
          -- stay here until a valid header comes in
          -- discard dummies
          when WAIT_HEADER_S =>
-            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+
+            -- post-error state takes precedence; look for dummy headers
+            if postError = '1' then
+               v.state := WAIT_DUMMY_S;
+
+            -- decoding error detected
+            elsif v.decError = '1' then
+               v.state := ERROR_S;
+
+            -- nominal
+            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
                if dummy = '0' and sof = '1' then
@@ -242,12 +257,9 @@ begin
                      v.state        := PARSE_COL_METADATA_S;
                   end if;
                end if;
+
             end if;
 
-            -- error detected!
-            if v.decError = '1' then
-               v.state := ERROR_S;
-            end if;
 
          ----------------------------------------------------------------------
          -- parse column metadata
@@ -322,6 +334,8 @@ begin
          -- check for dummies; after a configurable amount, go-to header eval
          -- don't write dummies to axiFifo
          when WAIT_DUMMY_S =>
+            v.laneRxReady := '0';
+
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                v.rxFifoSlave.tReady := '1';  -- read rxFifo
 
@@ -331,13 +345,16 @@ begin
                      v.dummyCnt := (others => '0');
                      v.state    := WAIT_HEADER_S;
                   end if;
+               else
+                  v.dummyCnt := (others => '0');
                end if;
             end if;
 
          ------------------------------------------------------------------------
          -- stay here until reset
          when ERROR_S =>
-            v.decError := '1';
+            v.laneRxReady := '0';
+            v.decError    := '1';
 
       end case;
       ---------------------------------------------------------------------------
@@ -353,6 +370,7 @@ begin
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
       pauseError    <= r.pauseError;
+      laneRxReady   <= r.laneRxReady;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
@@ -411,7 +429,7 @@ begin
          FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
+         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => laneClk,
