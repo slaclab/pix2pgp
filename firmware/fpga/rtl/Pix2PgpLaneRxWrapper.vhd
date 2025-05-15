@@ -27,10 +27,13 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpLaneRxWrapper is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      PIPE_STAGES_G  : natural := 1);
+      TPD_G                       : time     := 1 ns;
+      RST_ASYNC_G                 : boolean  := false;
+      RST_POLARITY_G              : sl       := '1';  -- '1' for active high rst, '0' for active low
+      PIPE_STAGES_G               : natural  := 1;
+      META_FIFO_ADDR_WIDTH_G      : positive := 4;
+      LANE_AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      FILT_AXIS_FIFO_ADDR_WIDTH_G : positive := 10);
    port(
       -- General Interface
       laneClk        : in  sl;
@@ -65,9 +68,11 @@ begin
 
    U_Lane: entity pix2pgp.Pix2PgpLaneRx
       generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G)
+         TPD_G                  => TPD_G,
+         RST_ASYNC_G            => RST_ASYNC_G,
+         RST_POLARITY_G         => RST_POLARITY_G,
+         META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
+         AXIS_FIFO_ADDR_WIDTH_G => LANE_AXIS_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
          laneClk        => laneClk,
@@ -88,10 +93,12 @@ begin
 
    U_Filter: entity pix2pgp.Pix2PgpLaneRxFilter
       generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         PIPE_STAGES_G  => PIPE_STAGES_G,
-         RST_POLARITY_G => RST_POLARITY_G)
+         TPD_G                  => TPD_G,
+         RST_ASYNC_G            => RST_ASYNC_G,
+         RST_POLARITY_G         => RST_POLARITY_G,
+         PIPE_STAGES_G          => PIPE_STAGES_G,
+         META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
+         AXIS_FIFO_ADDR_WIDTH_G => FILT_AXIS_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
          laneClk        => laneClk,

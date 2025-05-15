@@ -28,9 +28,11 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpLaneRx is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1'); -- '1' for active high rst, '0' for active low
+      TPD_G                  : time     := 1 ns;
+      RST_ASYNC_G            : boolean  := false;
+      RST_POLARITY_G         : sl       := '1'; -- '1' for active high rst, '0' for active low
+      META_FIFO_ADDR_WIDTH_G : positive := 4;
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 10);
    port(
       -- General Interface
       laneClk        : in  sl;
@@ -52,6 +54,8 @@ entity Pix2PgpLaneRx is
 end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
+
+   constant LANERX_FIFO_ADDR_WIDTH_C : positive := 5;
 
    type StateType is (
       WAIT_HEADER_S,
@@ -381,7 +385,7 @@ begin
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
-         ADDR_WIDTH_G    => LANERX_META_ADDR_WIDTH_C)
+         ADDR_WIDTH_G    => META_FIFO_ADDR_WIDTH_G)
       port map (
          rst      => laneRst,
          -- Write Ports
@@ -404,7 +408,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_C,
+         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)

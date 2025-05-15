@@ -30,15 +30,18 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpAsicStreamRx is
    generic(
-      TPD_G                 : time     := 1 ns;
-      RST_ASYNC_G           : boolean  := false;
-      RST_POLARITY_G        : sl       := '1';  -- '1' for active high rst, '0' for active low
-      ASIC_ID_G             : natural  := 0;
-      SINGLE_LANE_ID_G      : natural  := 0;
-      TIMEOUT_LIMIT_WIDTH_G : positive := 16;
-      LANE_PIPE_STAGES_G    : natural  := 1;
-      STREAM_PIPE_STAGES_G  : natural  := 1;
-      DISCARD_BAD_COL_TRG_G : boolean  := true);
+      TPD_G                       : time     := 1 ns;
+      RST_ASYNC_G                 : boolean  := false;
+      RST_POLARITY_G              : sl       := '1';  -- '1' for active high rst, '0' for active low
+      ASIC_ID_G                   : natural  := 0;
+      SINGLE_LANE_ID_G            : natural  := 0;
+      TIMEOUT_LIMIT_WIDTH_G       : positive := 12;
+      LANE_PIPE_STAGES_G          : natural  := 1;
+      STREAM_PIPE_STAGES_G        : natural  := 1;
+      META_FIFO_ADDR_WIDTH_G      : positive := 4;
+      LANE_AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      FILT_AXIS_FIFO_ADDR_WIDTH_G : positive := 10;
+      DISCARD_BAD_COL_TRG_G       : boolean  := true);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -642,10 +645,13 @@ begin
 
       U_LaneWrapper: entity pix2pgp.Pix2PgpLaneRxWrapper
          generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            PIPE_STAGES_G  => LANE_PIPE_STAGES_G)
+            TPD_G                       => TPD_G,
+            RST_ASYNC_G                 => RST_ASYNC_G,
+            RST_POLARITY_G              => RST_POLARITY_G,
+            PIPE_STAGES_G               => LANE_PIPE_STAGES_G,
+            META_FIFO_ADDR_WIDTH_G      => META_FIFO_ADDR_WIDTH_G,
+            LANE_AXIS_FIFO_ADDR_WIDTH_G => LANE_AXIS_FIFO_ADDR_WIDTH_G,
+            FILT_AXIS_FIFO_ADDR_WIDTH_G => FILT_AXIS_FIFO_ADDR_WIDTH_G)
          port map(
             -- General Interface
             laneClk        => pgpRxClk,

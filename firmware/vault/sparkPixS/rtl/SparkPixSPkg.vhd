@@ -112,13 +112,9 @@ package Pix2PgpPkg is
 
    ------------------------------------------------------------------------------
    -- FPGA-RX related parameters
-   constant LANERX_FIFO_ADDR_WIDTH_C  : integer := 6;
-   constant LANERX_FRAME_SIZE_WIDTH_C : integer := 16;
-   constant LANERX_META_ADDR_WIDTH_C  : integer := 4;
+   constant LANERX_FRAME_SIZE_WIDTH_C : integer := 12;
    -- trigger counter, plus frame size, plus decError
    constant LANERX_META_DWIDTH_C      : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+1;
-
-   constant AXIS_FIFO_ADDR_WIDTH_C    : integer := 8;
 
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
