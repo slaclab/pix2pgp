@@ -207,7 +207,7 @@ package Pix2PgpPkg is
    function isDummy        (din : slv) return boolean;
    function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
-   function fpgaHeaderMap  (laneError: slv; lanePauseError: slv;
+   function fpgaHeaderMap  (laneDecError: slv; lanePauseError: slv; laneFull: slv;
                             laneTimeout: slv; laneValid: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
@@ -255,17 +255,20 @@ package Pix2PgpPkg is
 
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
-   -- 4 fields; laneError, lanePauseError, laneTimeout, and laneValid
+   -- 5 fields; laneDecError, lanePauseError, laneFull, laneTimeout, and laneValid
    ------------------------------------------------------------------------------
-   constant FPGA_HEADER_FIELDS_C   : natural := 4;
+   constant FPGA_HEADER_FIELDS_C   : natural := 5;
    constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
    constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
                                                                    NUM_OF_SERIALIZERS_C);
    ------------------------------------------------------------------------------
-   subtype FPGA_LANERX_ERROR_POS_C       is natural range  FPGA_HEADER_LEN_C-1 downto
+   subtype FPGA_LANERX_DEC_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
                                              FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
 
-   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
+   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
+                                             FPGA_HEADER_STRADDLE_C*3;
+
+   subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
                                              FPGA_HEADER_STRADDLE_C*2;
 
    subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
@@ -455,13 +458,14 @@ package body Pix2PgpPkg is
 
    end tKeepSet;
 
-   function fpgaHeaderMap (laneError: slv; lanePauseError: slv;
+   function fpgaHeaderMap (laneDecError: slv; lanePauseError: slv; laneFull : slv;
                            laneTimeout: slv; laneValid: slv) return slv is
       variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retHeader(FPGA_LANERX_ERROR_POS_C)       := resize(laneError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_DEC_ERROR_POS_C)   := resize(laneDecError, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_PAUSE_ERROR_POS_C) := resize(lanePauseError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_FULL_POS_C)        := resize(laneFull, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_TIMEOUT_POS_C)     := resize(laneTimeout, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_VALID_POS_C)       := resize(laneValid, NUM_OF_SERIALIZERS_C);
 

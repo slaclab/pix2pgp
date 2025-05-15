@@ -47,7 +47,7 @@ entity Pix2PgpLaneRxFilter is
       -- ASIC Rx Interface
       laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      laneError      : out sl;
+      laneDecError   : out sl;
       laneFull       : out sl;
       lanePauseError : out sl;
       laneMetaValid  : out sl;
@@ -86,26 +86,26 @@ architecture rtl of Pix2PgpLaneRxFilter is
    signal r   : RegType;
    signal rin : RegType;
 
-   signal sAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal sAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal sAxisMaster       : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal sAxisSlave        : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal obAxisMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxisSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal obAxisMaster      : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal obAxisSlave       : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal metaDout     : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
-   signal metaFull     : sl := '0';
-   signal metaRdEn     : sl := '0';
-   signal metaValid    : sl := '0';
+   signal metaDout          : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
+   signal metaFull          : sl := '0';
+   signal metaRdEn          : sl := '0';
+   signal metaValid         : sl := '0';
 
-   signal laneErrorDly : sl := '0';
-   signal metaFullDly  : sl := '0';
+   signal laneDecErrorDly   : sl := '0';
+   signal metaFullDly       : sl := '0';
 
-   signal axiFifoRst   : sl := '0';
+   signal axiFifoRst        : sl := '0';
 
-   signal axiFull      : sl := '0';
-   signal axiFullDly   : sl := '0';
+   signal axiFull           : sl := '0';
+   signal axiFullDly        : sl := '0';
 
-   signal laneRxFullDly  : sl := '0';
+   signal laneRxFullDly     : sl := '0';
 
    signal axiFifoAlmFull    : sl := '0';
    signal axiFifoAlmFullDly : sl := '0';
@@ -306,7 +306,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => metaDout(LANE_DEC_ERROR_POS_C),
-         dout(0) => laneErrorDly);
+         dout(0) => laneDecErrorDly);
 
    U_PipelineMetaFull : entity surf.SlvDelay
       generic map (
@@ -350,9 +350,9 @@ begin
          din(0)  => laneRxFull,
          dout(0) => laneRxFullDly);
 
-   laneError <= laneErrorDly;
-   laneFull  <= axiFullDly    or axiFifoAlmFullDly or
-                laneRxFullDly or metaFullDly;
+   laneDecError <= laneDecErrorDly;
+   laneFull     <= axiFullDly    or axiFifoAlmFullDly or
+                   laneRxFullDly or metaFullDly;
 
    -----------------------------------------
    -- Reverses on a per-word basis

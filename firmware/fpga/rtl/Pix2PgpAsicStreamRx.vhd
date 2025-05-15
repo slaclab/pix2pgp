@@ -68,6 +68,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '1');
    constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
    constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   constant MAX_CNT_C               : slv(5 downto 0) := (others => '1');
 
    type timeoutArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
 
@@ -80,7 +81,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal laneError       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -126,56 +127,70 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    type RegType is record
       -- Internal
-      asicSro       : sl;
-      fpgaTrgCnt    : slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffWr     : sl;
-      trgBuffRd     : sl;
-      trgCntBuff    : slv(TRGCNT_WIDTH_C-1 downto 0);
-      armTimeout    : sl;
-      laneSel       : slv(BITMAX_SERIALIZERS_C downto 0);
-      laneRst       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      waitLaneSel   : sl;
-      laneMetaRd    : sl;
-      waitCnt       : slv(1 downto 0);
-      state         : StateType;
+      asicSro         : sl;
+      fpgaTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffWr       : sl;
+      trgBuffRd       : sl;
+      trgCntBuff      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      armTimeout      : sl;
+      laneSel         : slv(BITMAX_SERIALIZERS_C downto 0);
+      laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      waitLaneSel     : sl;
+      laneMetaRd      : sl;
+      waitCnt         : slv(1 downto 0);
+      state           : StateType;
       -- Registers
-      discBadColTrg : sl;
-      fpgaId        : slv(15 downto 0);
-      timeoutLimit  : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      laneEnable    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      discBadColTrg   : sl;
+      cntRst          : sl;
+      fpgaId          : slv(15 downto 0);
+      timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDecErr      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseErr    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDecErrCnt   : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneFullCnt     : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
-      obAxisMaster  : AxiStreamMasterType;
-      laneRxSlaves  : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
+      obAxisMaster    : AxiStreamMasterType;
+      laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Lite
-      readSlave     : AxiLiteReadSlaveType;
-      writeSlave    : AxiLiteWriteSlaveType;
+      readSlave       : AxiLiteReadSlaveType;
+      writeSlave      : AxiLiteWriteSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       -- Internal
-      asicSro       => '0',
-      fpgaTrgCnt    => FPGA_TRGCNT_DEFAULT_C,
-      trgBuffWr     => '0',
-      trgBuffRd     => '0',
-      trgCntBuff    => (others => '0'),
-      armTimeout    => '0',
-      laneSel       => (others => '0'),
-      laneRst       => (others => '0'),
-      waitLaneSel   => '0',
-      laneMetaRd    => '0',
-      waitCnt       => (others => '0'),
-      state         => IDLE_S,
+      asicSro         => '0',
+      fpgaTrgCnt      => FPGA_TRGCNT_DEFAULT_C,
+      trgBuffWr       => '0',
+      trgBuffRd       => '0',
+      trgCntBuff      => (others => '0'),
+      armTimeout      => '0',
+      laneSel         => (others => '0'),
+      laneRst         => (others => '0'),
+      waitLaneSel     => '0',
+      laneMetaRd      => '0',
+      waitCnt         => (others => '0'),
+      state           => IDLE_S,
       -- Registers
-      discBadColTrg => toSl(DISCARD_BAD_COL_TRG_G),
-      fpgaId        => FPGA_ID_DEFAULT_C,
-      timeoutLimit  => TIMEOUT_LIMIT_DEFAULT_C,
-      laneEnable    => LANE_ENABLE_DEFAULT_C,
+      discBadColTrg   => toSl(DISCARD_BAD_COL_TRG_G),
+      cntRst          => '1',
+      fpgaId          => FPGA_ID_DEFAULT_C,
+      timeoutLimit    => TIMEOUT_LIMIT_DEFAULT_C,
+      laneEnable      => LANE_ENABLE_DEFAULT_C,
+      laneDecErr      => (others => '0'),
+      lanePauseErr    => (others => '0'),
+      laneFull        => (others => '0'),
+      laneDecErrCnt   => (others => (others => '0')),
+      lanePauseErrCnt => (others => (others => '0')),
+      laneFullCnt     => (others => (others => '0')),
       -- AXI-Stream
-      obAxisMaster  => AXI_STREAM_MASTER_INIT_C,
-      laneRxSlaves  => (others => AXI_STREAM_SLAVE_INIT_C),
+      obAxisMaster    => AXI_STREAM_MASTER_INIT_C,
+      laneRxSlaves    => (others => AXI_STREAM_SLAVE_INIT_C),
       -- AXI-Lite
-      readSlave     => AXI_LITE_READ_SLAVE_INIT_C,
-      writeSlave    => AXI_LITE_WRITE_SLAVE_INIT_C);
+      readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave      => AXI_LITE_WRITE_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -234,7 +249,7 @@ begin
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid, laneFull,
-                   asicRstSync, trgBuffDout, laneTimeout, laneError, lanePauseError,
+                   asicRstSync, trgBuffDout, laneTimeout, laneDecError, lanePauseError,
                    laneRxMasters, laneTrgCnt, laneMetaValid, r) is
 
       variable v      : RegType;
@@ -249,7 +264,7 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneDecErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
    begin
       -- Latch the current value
@@ -259,6 +274,7 @@ begin
       v.trgBuffWr  := '0';
       v.trgBuffRd  := '0';
       v.laneMetaRd := '0';
+      v.cntRst     := '0';
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -282,20 +298,21 @@ begin
       axiSlaveWaitTxn(axilEp, writeMaster, readMaster, v.writeSlave, v.readSlave);
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-         -- StartAddr=0x300, Sride=4Byte
-         axiSlaveRegisterR(axilEp, toSlv(768+4*i, 12), 0, laneTrgCnt(i));
+         -- (Stride=4 bytes)
+         axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErr(i));   -- StartAddr=0x200
+         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.lanePauseErr(i)); -- StartAddr=0x300
+         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.laneFull(i));     -- StartAddr=0x400
+         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, laneTrgCnt(i));     -- StartAddr=0x500
       end loop;
 
-      axiSlaveRegister (axilEp, x"400", 0, v.fpgaId);
-      axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
-      axiSlaveRegister (axilEp, x"408", 0, v.laneEnable);
-      axiSlaveRegister (axilEp, x"40C", 0, v.discBadColTrg);
+      axiSlaveRegister (axilEp, x"600", 0, v.fpgaId);
+      axiSlaveRegister (axilEp, x"604", 0, v.timeoutLimit);
+      axiSlaveRegister (axilEp, x"608", 0, v.laneEnable);
+      axiSlaveRegister (axilEp, x"60C", 0, v.discBadColTrg);
 
-      axiSlaveRegisterR(axilEp, x"410", 0, r.fpgaTrgCnt);
+      axiSlaveRegisterR(axilEp, x"610", 0, r.fpgaTrgCnt);
 
-      axiSlaveRegisterR(axilEp, x"414", 0, laneErrorMask);
-      axiSlaveRegisterR(axilEp, x"418", 0, lanePauseError);
-      axiSlaveRegisterR(axilEp, x"41C", 0, laneFull);
+      axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -324,19 +341,50 @@ begin
       -- lane ready indicates that some action needs to be taken: either reset or read-out data
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-         laneErrorMask(lane) := laneError(lane) and laneMetaValid(lane);
+         laneDecErrorMask(lane) := laneDecError(lane) and laneMetaValid(lane);
 
-         laneValid(lane)     := laneRxMasters(lane).tValid and not(laneErrorMask(lane)) and
+         laneValid(lane)     := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
                                     not(laneTimeout(lane)) and not(laneFull(lane));
 
          if r.laneEnable(lane) = '1' then
             laneReady(lane) := (laneValid(lane) and laneMetaValid(lane)) or
-                               (laneTimeout(lane) or laneFull(lane) or laneErrorMask(lane));
+                               (laneTimeout(lane) or laneFull(lane) or laneDecErrorMask(lane));
          else
             laneReady(lane) := '1';
          end if;
 
       end loop;
+
+      ----------------------------------------------------------------------------------------------
+      -- status counters
+      v.laneDecErr   := laneDecErrorMask;
+      v.lanePauseErr := lanePauseError;
+      v.laneFull     := laneFull;
+
+      for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
+         -- increment counters on rising edge
+         if  (v.laneDecErr(i) = '1' and r.laneDecErr(i) = '0') and (r.laneEnable(i) = '1')
+         and (r.laneDecErrCnt(i) /= MAX_CNT_C) then
+            v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
+         end if;
+
+         if  (v.lanePauseErr(i) = '1' and r.lanePauseErr(i) = '0') and (r.laneEnable(i) = '1')
+         and (r.lanePauseErrCnt(i) /= MAX_CNT_C) then
+            v.lanePauseErrCnt(i) := r.lanePauseErrCnt(i) + 1;
+         end if;
+
+         if  (v.laneFull(i) = '1' and r.laneFull(i) = '0') and (r.laneEnable(i) = '1')
+         and (r.laneFullCnt(i) /= MAX_CNT_C) then
+            v.laneFullCnt(i) := r.laneFullCnt(i) + 1;
+         end if;
+
+         if (r.cntRst = '1') then
+            v.laneDecErrCnt(i)   := (others => '0');
+            v.lanePauseErrCnt(i) := (others => '0');
+            v.laneFullCnt(i)     := (others => '0');
+         end if;
+      end loop;
+      ----------------------------------------------------------------------------------------------
 
       preamble := fpgaPreambleMap(PIX2PGP_ID_C,
                                   toSlv(ASIC_TYPE_C, 32),
@@ -344,8 +392,9 @@ begin
                                   r.fpgaId,
                                   r.trgCntBuff);
 
-      header := fpgaHeaderMap(laneErrorMask,
+      header := fpgaHeaderMap(laneDecErrorMask,
                               lanePauseError,
+                              laneFull,
                               laneTimeout,
                               laneValid);
 
@@ -364,19 +413,17 @@ begin
             v.laneRst    := (others => '0');
             v.laneSel    := (others => '0');
 
-            -- new trigger in queue; register and pop the value
+            -- new trigger in queue; start read-out
             if trgBuffValid = '1' and toBoolean(uOr(r.laneEnable)) then
                v.trgCntBuff := trgBuffDout;
                v.armTimeout := '1';
                v.state      := TX_PREAMBLE_S;
             end if;
 
-            -- error detected...timeout time
-            if toBoolean(uOr(laneErrorMask)) and not(toBoolean(uAnd(r.laneRst))) then
-               for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                  v.armTimeout := '1';
-                  v.state      := TX_PREAMBLE_S;
-               end loop;
+            -- or...error detected
+            if toBoolean(uOr(laneDecErrorMask)) then
+               v.armTimeout := '1';
+               v.state      := TX_PREAMBLE_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -405,7 +452,9 @@ begin
 
                   -- reset the troubled lanes
                   for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                     v.laneRst(lane) := laneErrorMask(lane) or laneTimeout(lane) or laneFull(lane);
+                     v.laneRst(lane) := laneDecErrorMask(lane) or
+                                        laneTimeout(lane) or
+                                        laneFull(lane);
                   end loop;
 
                   v.armTimeout := '0'; -- release timeout
@@ -608,7 +657,7 @@ begin
             discBadColTrg  => discBadColTrg(lane),
             laneTrgCnt     => laneTrgCnt(lane),
             laneFrameSize  => laneFrameSize(lane),
-            laneError      => laneError(lane),
+            laneDecError   => laneDecError(lane),
             laneFull       => laneFull(lane),
             lanePauseError => lanePauseError(lane),
             laneMetaValid  => laneMetaValid(lane),

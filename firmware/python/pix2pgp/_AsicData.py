@@ -80,7 +80,7 @@ class AsicData(object):
         self.headerErr      = False
         self.laneValid      = [None] * self.numOfLanes
         self.laneTimeout    = [None] * self.numOfLanes
-        self.laneError      = [None] * self.numOfLanes
+        self.laneDecError   = [None] * self.numOfLanes
         self.lanePauseError = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
 
@@ -220,24 +220,31 @@ class AsicData(object):
         """
         _dict = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
 
-        self.laneError      = [(_dict['laneError'] >> i) & 1 == 1 for i in range(
+        self.laneDecError   = [(_dict['laneDecError'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
         self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.laneFull       = [(_dict['laneFull'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
         self.laneTimeout    = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
         self.laneValid      = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
 
-        self.headerErr = _dict['laneError'] > 0 or _dict['laneTimeout'] > 0
+        self.headerErr = ( _dict['laneDecError'] > 0 or
+                           _dict['laneTimeout']  > 0 or
+                           _dict['laneFull'] > 0)
 
-        _padding = (" " * 4)
+        _padding = (" " * 1)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'LaneError=0x{0:<02X} {1} LanePauseError=0x{2:<02X} {3} LaneTimeout=0x{4:<02X}   LaneValid=0x{5:<02X}'
+            _format = 'LaneDecError=0x{0:<02X} {1} LanePauseError=0x{2:<02X} {3} LaneFull=0x{4:<02X} {5} LaneTimeout=0x{6:<02X} {7} LaneValid=0x{8:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(_dict['laneError'], _padding, _dict['lanePauseError'], _padding,
-                                 _dict['laneTimeout'], _dict['laneValid']))
+            print(_format.format(_dict['laneDecError'], _padding,
+                                 _dict['lanePauseError'], _padding,
+                                 _dict['laneFull'], _padding,
+                                 _dict['laneTimeout'], _padding,
+                                 _dict['laneValid']))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 pix2pgp.Tools.printError('Header')

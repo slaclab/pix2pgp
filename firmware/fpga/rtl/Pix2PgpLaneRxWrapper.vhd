@@ -42,7 +42,7 @@ entity Pix2PgpLaneRxWrapper is
       discBadColTrg  : in  sl;
       laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      laneError      : out sl;
+      laneDecError   : out sl;
       laneFull       : out sl;
       lanePauseError : out sl;
       laneMetaValid  : out sl;
@@ -108,7 +108,7 @@ begin
          -- ASIC Rx Interface
          laneTrgCnt     => laneTrgCnt,
          laneFrameSize  => laneFrameSize,
-         laneError      => laneError,
+         laneDecError   => laneDecError,
          laneFull       => laneFull,
          lanePauseError => lanePauseError,
          laneMetaValid  => laneMetaValid,
