@@ -43,6 +43,7 @@ entity Pix2PgpLaneRxWrapper is
       laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       laneError      : out sl;
+      laneFull       : out sl;
       lanePauseError : out sl;
       laneMetaValid  : out sl;
       laneMetaRd     : in  sl;
@@ -55,7 +56,8 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal frameMetaRd     : sl := '0';
    signal frameMetaDout   : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaValid  : sl := '0';
-   signal laneFull        : sl := '0';
+   signal laneRxFull      : sl := '0';
+   signal pauseError      : sl := '0';
    signal filterAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal filterAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
@@ -78,7 +80,8 @@ begin
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
-         laneFull       => laneFull,
+         laneRxFull     => laneRxFull,
+         pauseError     => pauseError,
          -- AXI-Stream to Filter
          obAxisMaster   => filterAxiMaster,
          obAxisSlave    => filterAxiSlave);
@@ -97,7 +100,8 @@ begin
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
-         laneFull       => laneFull,
+         laneRxFull     => laneRxFull,
+         pauseError     => pauseError,
          -- AXI-Stream from Lane
          ibAxisMaster   => filterAxiMaster,
          ibAxisSlave    => filterAxiSlave,
@@ -105,6 +109,7 @@ begin
          laneTrgCnt     => laneTrgCnt,
          laneFrameSize  => laneFrameSize,
          laneError      => laneError,
+         laneFull       => laneFull,
          lanePauseError => lanePauseError,
          laneMetaValid  => laneMetaValid,
          laneMetaRd     => laneMetaRd,

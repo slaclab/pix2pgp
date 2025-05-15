@@ -115,19 +115,17 @@ package Pix2PgpPkg is
    constant LANERX_FIFO_ADDR_WIDTH_C  : integer := 6;
    constant LANERX_FRAME_SIZE_WIDTH_C : integer := 16;
    constant LANERX_META_ADDR_WIDTH_C  : integer := 4;
--- trigger counter, plus frame size, plus decError and pauseError
-   constant LANERX_META_DWIDTH_C      : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+2;
+   -- trigger counter, plus frame size, plus decError
+   constant LANERX_META_DWIDTH_C      : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+1;
 
    constant AXIS_FIFO_ADDR_WIDTH_C    : integer := 8;
 
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
-   constant LANE_DEC_ERROR_POS_C      : natural      := LANERX_META_DWIDTH_C-1;
-   constant LANE_PAUSE_ERROR_POS_C    : natural      := LANERX_META_DWIDTH_C-2;
-   subtype  LANE_SIZE_POS_C          is natural range   LANERX_META_DWIDTH_C-3 downto
-                                                        TRGCNT_WIDTH_C;
-   subtype  LANE_TRGCNT_POS_C        is natural range   TRGCNT_WIDTH_C-1 downto 0;
+   constant LANE_DEC_ERROR_POS_C : natural      := LANERX_META_DWIDTH_C-1;
+   subtype  LANE_SIZE_POS_C     is natural range   LANERX_META_DWIDTH_C-2 downto TRGCNT_WIDTH_C;
+   subtype  LANE_TRGCNT_POS_C   is natural range   TRGCNT_WIDTH_C-1 downto 0;
 
    -- ***************************************************************************
    -- ************************ Tunable parameters end ***************************

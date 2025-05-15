@@ -43,7 +43,8 @@ entity Pix2PgpLaneRx is
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
-      laneFull       : out sl;
+      laneRxFull     : out sl;
+      pauseError     : out sl;
       -- AXI-Stream to Filter
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -112,6 +113,11 @@ architecture rtl of Pix2PgpLaneRx is
    signal frameMetaFull : sl := '0';
    signal axiFifoFull   : sl := '0';
 
+   signal laneFifoSlave : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+
+   signal laneFifoAlmFull : sl := '0';
+   signal axiFifoAlmFull  : sl := '0';
+
 begin
 
    -----------------------------
@@ -132,7 +138,7 @@ begin
          sAxisClk    => laneClk,
          sAxisRst    => axiFifoRst,
          sAxisMaster => pgp4RxMaster,
-         sAxisSlave  => pgp4RxSlave,
+         sAxisSlave  => laneFifoSlave,
          -- Status Port
          fifoFull    => laneFifoFull,
          -- Master Port
@@ -151,8 +157,8 @@ begin
       -- header
       variable overOcc    : sl := '0';
       variable pause      : sl := '0';
-      variable colError   : sl := '0';
-      variable pauseError : sl := '0';
+      variable colErr     : sl := '0';
+      variable pauseErr   : sl := '0';
       variable timeout    : sl := '0';
       variable dummy      : sl := '0';
       variable sof        : sl := '0';
@@ -179,8 +185,8 @@ begin
       -- header variables
       overOcc     := v.din(OVEROCC_FLAG_POS_C);
       pause       := v.din(PAUSE_FLAG_POS_C);
-      colError    := v.din(COLUMN_ERROR_FLAG_POS_C);
-      pauseError  := v.din(PAUSE_ERROR_FLAG_POS_C);
+      colErr      := v.din(COLUMN_ERROR_FLAG_POS_C);
+      pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
       timeout     := v.din(TIMEOUT_FLAG_POS_C);
       dummy       := toSl(isDummy(v.din));
       colBitmask  := v.din(COL_BITMASK_POS_C);
@@ -221,8 +227,8 @@ begin
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   v.axiFifoMaster.tValid := '1'; -- write to axiFifo
                   v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
-                  v.inPause              := pause or pauseError;
-                  v.pauseError           := pauseError;
+                  v.inPause              := pause or pauseErr;
+                  v.pauseError           := pauseErr;
                   v.trgCntHeader         := trgCnt;
 
                   if uOr(colBitmask) = '0' then
@@ -336,13 +342,13 @@ begin
       v.frameMetaWr := (r.axiFifoMaster.tLast and axiFifoSlave.tReady) or
                        (v.decError and not(r.decError));
 
-      v.frameMetaDin(LANE_DEC_ERROR_POS_C)   := v.decError;
-      v.frameMetaDin(LANE_PAUSE_ERROR_POS_C) := r.pauseError;
-      v.frameMetaDin(LANE_SIZE_POS_C)        := r.frameSizeCnt;
-      v.frameMetaDin(LANE_TRGCNT_POS_C)      := r.trgCntHeader;
+      v.frameMetaDin(LANE_DEC_ERROR_POS_C) := v.decError;
+      v.frameMetaDin(LANE_SIZE_POS_C)      := r.frameSizeCnt;
+      v.frameMetaDin(LANE_TRGCNT_POS_C)    := r.trgCntHeader;
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
+      pauseError    <= r.pauseError;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
@@ -419,7 +425,14 @@ begin
    -- AXI-Stream FIFO does not have RST_POLARITY_G
    axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
-   -- all full signals
-   laneFull <= axiFifoFull or frameMetaFull or laneFifoFull;
+   laneFifoAlmFull <= not(laneFifoSlave.tReady);
+   axiFifoAlmFull  <= not(axiFifoSlave.tReady);
+
+   -- all full and almost-full flags
+   laneRxFull <= laneFifoFull or laneFifoAlmFull or
+                 axiFifoFull  or axiFifoAlmFull  or
+                 frameMetaFull;
+
+   pgp4RxSlave <= laneFifoSlave;
 
 end rtl;

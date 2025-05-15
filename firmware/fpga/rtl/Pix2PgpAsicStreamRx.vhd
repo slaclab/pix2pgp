@@ -81,6 +81,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal laneError       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal asicSroSync     : sl := '0';
@@ -232,7 +233,7 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid,
+                   asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid, laneFull,
                    asicRstSync, trgBuffDout, laneTimeout, laneError, lanePauseError,
                    laneRxMasters, laneTrgCnt, laneMetaValid, r) is
 
@@ -243,13 +244,12 @@ begin
       variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)   := (others => '0');
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
       variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable allLanesReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneReady     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneAxiStream : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneErrorMask      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable lanePauseErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
    begin
       -- Latch the current value
@@ -290,7 +290,12 @@ begin
       axiSlaveRegister (axilEp, x"404", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"408", 0, v.laneEnable);
       axiSlaveRegister (axilEp, x"40C", 0, v.discBadColTrg);
+
       axiSlaveRegisterR(axilEp, x"410", 0, r.fpgaTrgCnt);
+
+      axiSlaveRegisterR(axilEp, x"414", 0, laneErrorMask);
+      axiSlaveRegisterR(axilEp, x"418", 0, lanePauseError);
+      axiSlaveRegisterR(axilEp, x"41C", 0, laneFull);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -314,19 +319,23 @@ begin
          v.trgBuffWr := '1';
       end if;
 
-      -- global lane status loop
+      -- global lane status loop;
+      -- lane valid indicates data from that lane can be read-out;
+      -- lane ready indicates that some action needs to be taken: either reset or read-out data
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         laneValid(lane)          := laneRxMasters(lane).tValid;
-         laneErrorMask(lane)      := laneError(lane) and laneMetaValid(lane);
-         lanePauseErrorMask(lane) := lanePauseError(lane) and laneMetaValid(lane);
+
+         laneErrorMask(lane) := laneError(lane) and laneMetaValid(lane);
+
+         laneValid(lane)     := laneRxMasters(lane).tValid and not(laneErrorMask(lane)) and
+                                    not(laneTimeout(lane)) and not(laneFull(lane));
 
          if r.laneEnable(lane) = '1' then
-            allLanesReady(lane) := (laneError(lane) and laneMetaValid(lane)) or
-                                   (laneValid(lane) and laneMetaValid(lane)) or
-                                   laneTimeout(lane);
+            laneReady(lane) := (laneValid(lane) and laneMetaValid(lane)) or
+                               (laneTimeout(lane) or laneFull(lane) or laneErrorMask(lane));
          else
-            allLanesReady(lane) := '1';
+            laneReady(lane) := '1';
          end if;
+
       end loop;
 
       preamble := fpgaPreambleMap(PIX2PGP_ID_C,
@@ -336,7 +345,7 @@ begin
                                   r.trgCntBuff);
 
       header := fpgaHeaderMap(laneErrorMask,
-                              lanePauseErrorMask,
+                              lanePauseError,
                               laneTimeout,
                               laneValid);
 
@@ -388,7 +397,7 @@ begin
 
             if v.obAxisMaster.tValid = '0' then
                -- done; either all lanes are valid, or all in timeout/error state
-               if allBits(allLanesReady, '1') then
+               if allBits(laneReady, '1') then
                   v.obAxisMaster.tValid := '1';
 
                   v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
@@ -396,7 +405,7 @@ begin
 
                   -- reset the troubled lanes
                   for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                     v.laneRst(lane) := laneErrorMask(lane) or laneTimeout(lane);
+                     v.laneRst(lane) := laneErrorMask(lane) or laneTimeout(lane) or laneFull(lane);
                   end loop;
 
                   v.armTimeout := '0'; -- release timeout
@@ -412,11 +421,10 @@ begin
 
                v.obAxisMaster.tValid := '1';
                v.obAxisMaster.tKeep  := tKeepSet(LANERX_FRAME_SIZE_WIDTH_C);
+               v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
 
-               if laneValid(laneIdx) = '0' or r.laneRst(laneIdx) = '1' then
+               if laneValid(laneIdx) = '0' then
                   v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
-               else
-                  v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
                end if;
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
@@ -432,7 +440,7 @@ begin
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
          when SWITCH_MUX_S =>
-            if laneValid(laneIdx) = '0' or r.laneRst(laneIdx) = '1' then
+            if laneValid(laneIdx) = '0' then
                --
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.state := TX_TRAILER_S;
@@ -601,6 +609,7 @@ begin
             laneTrgCnt     => laneTrgCnt(lane),
             laneFrameSize  => laneFrameSize(lane),
             laneError      => laneError(lane),
+            laneFull       => laneFull(lane),
             lanePauseError => lanePauseError(lane),
             laneMetaValid  => laneMetaValid(lane),
             laneMetaRd     => laneMetaRd(lane),
