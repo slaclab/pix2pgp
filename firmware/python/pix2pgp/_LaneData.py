@@ -248,26 +248,16 @@ class LaneData(object):
         _colBitmask = sum((1 << i) for i, bit in enumerate(self.colBitmask) if bool(bit))
         _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-        _formatFlags = ""
-        if self.overOcc:
-            _formatFlags += "    Over-Occupancy"
-        if self.pause:
-            _formatFlags += "    Pause"
-        if self.colErr:
-            _formatFlags += "    Column-Error"
-        if self.pauseErr:
-            _formatFlags += "    Pause-Error"
-        if self.timeout:
-            _formatFlags += "    Timeout"
-
         _bitmaskPadding = int(self.numOfCols/4)
-        _printPadding = (" " * abs(36-_bitmaskPadding))
+        _printPadding = (" " * abs(36 - _bitmaskPadding))
 
-        _format = f'ColumnBitmask = 0x{{0:0{_bitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
+        # Change to True/False format
+        _flags = 'OverOcc,  Pause,  ColErr,  PauseErr,  Timeout     =    0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}'
+        _bmskTrg = f'ColumnBitmask = 0x{{0:0{_bitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
+
         print(_lanePrint)
-        print(_format.format(_colBitmask, _printPadding, self.trgCnt))
-        if len(_formatFlags) > 1:
-            print(_formatFlags)
+        print(_flags.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout))
+        print(_bmskTrg.format(_colBitmask, _printPadding, self.trgCnt))
         print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #################################################################
 

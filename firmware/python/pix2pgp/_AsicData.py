@@ -235,16 +235,13 @@ class AsicData(object):
                            _dict['laneTimeout']  > 0 or
                            _dict['laneFull'] > 0)
 
-        _padding = (" " * 1)
-
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'LaneDecError=0x{0:<02X} {1} LanePauseError=0x{2:<02X} {3} LaneFull=0x{4:<02X} {5} LaneTimeout=0x{6:<02X} {7} LaneValid=0x{8:<02X}'
+            _format = 'LaneDecError, LanePauseError, LaneFull, LaneTimeout  =  0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(_dict['laneDecError'], _padding,
-                                 _dict['lanePauseError'], _padding,
-                                 _dict['laneFull'], _padding,
-                                 _dict['laneTimeout'], _padding,
-                                 _dict['laneValid']))
+            print(_format.format(
+                _dict['laneDecError'], _dict['lanePauseError'],
+                _dict['laneFull'], _dict['laneTimeout'],
+            ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 pix2pgp.Tools.printError('Header')
