@@ -32,7 +32,7 @@ entity Pix2PgpLaneRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1'; -- '1' for active high rst, '0' for active low
       META_FIFO_ADDR_WIDTH_G : positive := 4;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 10);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 12);
    port(
       -- General Interface
       laneClk        : in  sl;
@@ -47,7 +47,7 @@ entity Pix2PgpLaneRx is
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
       laneRxFull     : out sl;
-      laneRxReady    : out sl;
+      laneRxOk       : out sl;
       pauseError     : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
@@ -75,7 +75,7 @@ architecture rtl of Pix2PgpLaneRx is
       inPause       : sl;
       rxError       : sl;
       pauseError    : sl;
-      laneRxReady   : sl;
+      laneRxOk      : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt  : slv(BITMAX_COL_MANAGERS_C downto 0);
       dummyCnt      : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
@@ -95,7 +95,7 @@ architecture rtl of Pix2PgpLaneRx is
       inPause       => '0',
       rxError       => '0',
       pauseError    => '0',
-      laneRxReady   => '0',
+      laneRxOk      => '0',
       trgCntHeader  => (others => '0'),
       activeColCnt  => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -186,7 +186,7 @@ begin
       -- Defaults
       v.frameMetaWr        := '0';
       v.rxFifoSlave.tReady := '0';
-      v.laneRxReady        := '1';
+      v.laneRxOk           := '1';
 
       v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       v.axiFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.din;
@@ -249,6 +249,7 @@ begin
                   v.inPause              := pause or pauseErr;
                   v.pauseError           := pauseErr;
                   v.trgCntHeader         := trgCnt;
+                  v.state                := WAIT_DUMMY_S;
 
                   if uOr(colBitmask) = '0' then
                      v.axiFifoMaster.tLast := '1'; -- EoF
@@ -259,7 +260,6 @@ begin
                end if;
 
             end if;
-
 
          ----------------------------------------------------------------------
          -- parse column metadata
@@ -334,7 +334,7 @@ begin
          -- check for dummies; after a configurable amount, go-to header eval
          -- don't write dummies to axiFifo
          when WAIT_DUMMY_S =>
-            v.laneRxReady := '0';
+            v.laneRxOk := '0';
 
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                v.rxFifoSlave.tReady := '1';  -- read rxFifo
@@ -353,8 +353,8 @@ begin
          ------------------------------------------------------------------------
          -- stay here until reset
          when ERROR_S =>
-            v.laneRxReady := '0';
-            v.decError    := '1';
+            v.laneRxOk := '0';
+            v.decError := '1';
 
       end case;
       ---------------------------------------------------------------------------
@@ -370,7 +370,7 @@ begin
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
       pauseError    <= r.pauseError;
-      laneRxReady   <= r.laneRxReady;
+      laneRxOk      <= r.laneRxOk;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then

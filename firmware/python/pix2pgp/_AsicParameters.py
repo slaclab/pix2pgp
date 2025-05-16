@@ -15,8 +15,8 @@ class AsicParameterBase:
     * a asicParamExtract() method, same as this base class
     '''
     asicTypeDict = {
-        0: "SparkPixS",
-        1: "SparkPixT"}
+        1: "SparkPixS",
+        2: "SparkPixT"}
 
     def asicParamExtract(self):
         raise NotImplementedError("This method should be overridden by subclasses")

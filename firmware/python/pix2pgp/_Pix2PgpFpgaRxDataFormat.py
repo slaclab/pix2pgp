@@ -54,17 +54,19 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
 
         return preamble_dict
 
-    def fpgaHeaderDecoder(self, header):
+    def fpgaHeaderDecoder(self, header, numOfLanes=8):
         '''
-        FPGA Header Decoder (To-Do: this might have to change with numOfLanes)
+        FPGA Header Decoder (default is 8xlanes)
         '''
         _header = int(header, 16)
 
-        header_dict = {'laneDecError'   : (_header >> 32) & 0xFF,
-                       'lanePauseError' : (_header >> 24) & 0xFF,
-                       'laneFull'       : (_header >> 16) & 0xFF,
-                       'laneTimeout'    : (_header >>  8) & 0xFF,
-                       'laneValid'      : (_header >>  0) & 0xFF}
+        _bitmask = (1 << numOfLanes) - 1
+
+        header_dict = {'laneDecError'   : (_header >> numOfLanes*4) & _bitmask,
+                       'lanePauseError' : (_header >> numOfLanes*3) & _bitmask,
+                       'laneFull'       : (_header >> numOfLanes*2) & _bitmask,
+                       'laneTimeout'    : (_header >> numOfLanes*1) & _bitmask,
+                       'laneValid'      : (_header >>  0) & _bitmask}
 
         return header_dict
 

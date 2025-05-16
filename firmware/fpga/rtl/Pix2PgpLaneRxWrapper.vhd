@@ -32,7 +32,7 @@ entity Pix2PgpLaneRxWrapper is
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       PIPE_STAGES_G          : natural  := 1;
       META_FIFO_ADDR_WIDTH_G : positive := 4;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 10);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 12);
    port(
       -- General Interface
       laneClk        : in  sl;
@@ -47,7 +47,7 @@ entity Pix2PgpLaneRxWrapper is
       laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       laneDecError   : out sl;
       laneFull       : out sl;
-      laneReady      : out sl;
+      laneOk         : out sl;
       lanePauseError : out sl;
       laneMetaValid  : out sl;
       laneMetaRd     : in  sl;
@@ -65,7 +65,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
    signal discard        : sl := '0';
-   signal laneRxReady    : sl := '0';
+   signal laneRxOk       : sl := '0';
    signal obAxiMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxiSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
@@ -92,7 +92,7 @@ begin
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
          laneRxFull     => laneRxFull,
-         laneRxReady    => laneRxReady,
+         laneRxOk       => laneRxOk,
          pauseError     => pauseError,
          -- AXI-Stream to StreamRx
          obAxisMaster   => obAxiMaster,
@@ -200,42 +200,42 @@ begin
          din(0)  => frameMetaDout(LANE_DEC_ERROR_POS_C),
          dout(0) => laneDecError);
 
-   U_PipelineLaneRxReady : entity surf.SlvDelay
+   U_PipelineLaneRxOk : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => laneRxReady,
-         dout(0) => laneReady);
+         din(0)  => laneRxOk,
+         dout(0) => laneOk);
 
-   GEN_PIPE: if PIPE_STAGES_G > 0 generate
+   --GEN_PIPE: if PIPE_STAGES_G > 0 generate
 
-      U_Pipe : entity surf.AxiStreamPipeline
-         generic map (
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            PIPE_STAGES_G  => PIPE_STAGES_G)
-         port map (
-            -- Clock and Reset
-            axisClk     => laneClk,
-            axisRst     => laneRst,
-            -- Slave Port
-            sAxisMaster => obAxiMaster,
-            sAxisSlave  => obAxiSlave,
-            -- Master Port
-            mAxisMaster => laneRxMaster,
-            mAxisSlave  => laneRxSlave);
+   --   U_Pipe : entity surf.AxiStreamPipeline
+   --      generic map (
+   --         TPD_G          => TPD_G,
+   --         RST_ASYNC_G    => RST_ASYNC_G,
+   --         RST_POLARITY_G => RST_POLARITY_G,
+   --         PIPE_STAGES_G  => PIPE_STAGES_G)
+   --      port map (
+   --         -- Clock and Reset
+   --         axisClk     => laneClk,
+   --         axisRst     => laneRst,
+   --         -- Slave Port
+   --         sAxisMaster => obAxiMaster,
+   --         sAxisSlave  => obAxiSlave,
+   --         -- Master Port
+   --         mAxisMaster => laneRxMaster,
+   --         mAxisSlave  => laneRxSlave);
 
-   end generate GEN_PIPE;
+   --end generate GEN_PIPE;
 
-   GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
+   --GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
 
       obAxiSlave   <= laneRxSlave;
       laneRxMaster <= obAxiMaster;
 
-   end generate GEN_NO_PIPE;
+   --end generate GEN_NO_PIPE;
 
 end rtl;
