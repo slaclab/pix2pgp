@@ -31,7 +31,7 @@ entity Pix2PgpLaneRxWrapper is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       PIPE_STAGES_G          : natural  := 1;
-      META_FIFO_ADDR_WIDTH_G : positive := 4;
+      META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 12);
    port(
       -- General Interface
