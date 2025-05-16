@@ -162,8 +162,8 @@ begin
       -- flow control check
       if sAxisSlave.tReady = '1' then
 
-         -- SparkPix-S -> ASIC_TYPE_C=0; emulate AXI behavior of SparkPix-S
-         if ASIC_TYPE_C > 0 then
+         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
+         if ASIC_TYPE_C > 1 then
             v.sAxisMaster.tUser := (others => '0');
             v.sAxisMaster.tLast := '0';
          end if;
@@ -174,8 +174,8 @@ begin
       end if;
 
       -- default flags
-      if ASIC_TYPE_C = 0 then
-         -- SparkPix-S -> ASIC_TYPE_C=0; emulate AXI behavior of SparkPix-S
+      if ASIC_TYPE_C = 1 then
+         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
          v.sAxisMaster.tUser := (others => '0');
          v.sAxisMaster.tLast := '0';
       end if;
@@ -314,9 +314,15 @@ begin
                   end if;
 
                   if r.dummyCnt = toSlv(TX_DUMMY_MAX_C, r.dummyCnt'length) then
-                     v.sAxisMaster.tValid := uOr(toSlv(ASIC_TYPE_C, 32));
-                     v.sAxisMaster.tLast  := '1';
-                     v.state              := IDLE_S;
+                     v.sAxisMaster.tValid := '1';
+
+                     -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
+                     if ASIC_TYPE_C = 1 then
+                        v.sAxisMaster.tValid := '0';
+                     end if;
+
+                     v.sAxisMaster.tLast := '1';
+                     v.state             := IDLE_S;
                   end if;
                end if;
             end if;
