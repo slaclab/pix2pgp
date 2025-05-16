@@ -6,4 +6,9 @@ from pix2pgp._Pix2PgpFpgaRxDataFormat  import *
 from pix2pgp._AsicData                 import *
 from pix2pgp._LaneData                 import *
 from pix2pgp._Tools                    import *
-from pix2pgp._AsicStreamRx             import *
+
+try:
+    import pyrogue as pr
+    from pix2pgp._AsicStreamRx import *
+except ImportError:
+    print("[WARNING]: pyrogue package NOT found; skipping import of _AsicStreamRx python class...")
