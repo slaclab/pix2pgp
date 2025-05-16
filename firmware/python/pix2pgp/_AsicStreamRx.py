@@ -18,7 +18,7 @@ class AsicStreamRx(pr.Device):
             timeoutLimitWidth = 12,
             statusCntWidth = 5,
             trgCntWidth = 6,
-            sysClkFreq = 185.714E+6 # Units of Hz
+            sysClkFreq = 185.714E+6, # Units of Hz
             **kwargs):
         super().__init__(**kwargs)
 

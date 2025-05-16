@@ -138,6 +138,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       waitLaneSel     : sl;
       laneMetaRd      : sl;
+      asicEnable      : sl;
       waitCnt         : slv(3 downto 0);
       maxWait         : slv(3 downto 0);
       state           : StateType;
@@ -147,6 +148,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       fpgaId          : slv(15 downto 0);
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneEnableSet   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecErr      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseErr    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -175,6 +177,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       => (others => '0'),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
+      asicEnable      => '0',
       waitCnt         => (others => '0'),
       maxWait         => (others => '1'),
       state           => PRE_IDLE_S,
@@ -183,7 +186,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
       cntRst          => '1',
       fpgaId          => FPGA_ID_DEFAULT_C,
       timeoutLimit    => TIMEOUT_LIMIT_DEFAULT_C,
-      laneEnable      => LANE_ENABLE_DEFAULT_C,
+      laneEnable      => (others => '0'),
+      laneEnableSet   => LANE_ENABLE_DEFAULT_C,
       laneDecErr      => (others => '0'),
       lanePauseErr    => (others => '0'),
       laneFull        => (others => '0'),
@@ -281,6 +285,7 @@ begin
       v.laneMetaRd := '0';
       v.cntRst     := '0';
       v.armTimeout := '0';
+      v.asicEnable := '0';
       laneTimeout  := (others => '0');
 
       -- flow control check
@@ -316,7 +321,7 @@ begin
 
       axiSlaveRegister (axilEp, x"604", 0, v.fpgaId);
       axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
-      axiSlaveRegister (axilEp, x"60C", 0, v.laneEnable);
+      axiSlaveRegister (axilEp, x"60C", 0, v.laneEnableSet);
       axiSlaveRegister (axilEp, x"610", 0, v.discBadColTrg);
 
       axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
@@ -330,24 +335,34 @@ begin
       -- Register inputs
       v.asicSro := asicSroSync;
 
+      -- trigger counter management
+      -------------------------------
       if asicRstSync = '0' then
          v.fpgaTrgCnt := FPGA_TRGCNT_DEFAULT_C;
       end if;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' then
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and asicRstSync = '1' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' then
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and asicRstSync = '1' then
          v.trgBuffWr := '1';
+      end if;
+      -------------------------------
+
+      -- used in downstream logic
+      if asicRstSync = '1' then
+         v.asicEnable := '1';
       end if;
 
       -- global lane status loop;
       -- lane valid indicates data from that lane can be read-out;
       -- lane ready indicates that some action needs to be taken: either reset or read-out data
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+
+         v.laneEnable(lane) := r.laneEnableSet(lane) and r.asicEnable;
 
          laneDecErrorMask(lane) := laneDecError(lane) and laneMetaValid(lane);
 
