@@ -306,21 +306,20 @@ begin
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- (Stride=4 bytes)
-         axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErr(i));   -- StartAddr=0x200
-         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.lanePauseErr(i)); -- StartAddr=0x300
-         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.laneFull(i));     -- StartAddr=0x400
-         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, laneTrgCnt(i));     -- StartAddr=0x500
+         axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErrCnt(i));   -- StartAddr=0x200
+         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.lanePauseErrCnt(i)); -- StartAddr=0x300
+         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.laneFullCnt(i));     -- StartAddr=0x400
+         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, laneTrgCnt(i));        -- StartAddr=0x500
       end loop;
 
-      axiSlaveRegister (axilEp, x"600", 0, v.fpgaId);
-      axiSlaveRegister (axilEp, x"604", 0, v.timeoutLimit);
-      axiSlaveRegister (axilEp, x"608", 0, v.laneEnable);
-      axiSlaveRegister (axilEp, x"60C", 0, v.discBadColTrg);
+      axiSlaveRegisterR(axilEp, x"600", 0, r.fpgaTrgCnt);
 
-      axiSlaveRegisterR(axilEp, x"610", 0, r.fpgaTrgCnt);
+      axiSlaveRegister (axilEp, x"604", 0, v.fpgaId);
+      axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
+      axiSlaveRegister (axilEp, x"60C", 0, v.laneEnable);
+      axiSlaveRegister (axilEp, x"610", 0, v.discBadColTrg);
 
       axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
-
       axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
 
       -- Closeout the transaction

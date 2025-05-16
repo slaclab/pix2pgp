@@ -299,8 +299,9 @@ begin
          TIMEOUT_LIMIT_WIDTH_G  => 12,
          LANE_PIPE_STAGES_G     => 1,
          STREAM_PIPE_STAGES_G   => 1,
+         TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 4,
-         AXIS_FIFO_ADDR_WIDTH_G => 10)
+         AXIS_FIFO_ADDR_WIDTH_G => 12)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
