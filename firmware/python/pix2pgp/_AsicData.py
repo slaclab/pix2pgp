@@ -112,6 +112,9 @@ class AsicData(object):
         # trailer
         self.trailerErr  = False
 
+        # trigger misalignment flag
+        self.asicGlblTrgCntMisalign = False
+
         # data index
         self.dataIndexStart = 0
         self.dataIndexEnd   = 0
@@ -244,7 +247,7 @@ class AsicData(object):
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
-                pix2pgp.Tools.printError('Header')
+                pix2pgp.Tools.printError('FPGA Header')
     #################################################################
 
     #################################################################
@@ -262,14 +265,13 @@ class AsicData(object):
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
             if self.trailerErr:
-                pix2pgp.Tools.printError('Trailer')
+                pix2pgp.Tools.printError('FPGA Trailer')
     #################################################################
 
     #################################################################
     def allocWide(self, oldVar, newVar, offset):
         oldVar[offset:offset + self.numOfCols] = [
-            newVar[idx] for idx in range(self.numOfCols)
-        ]
+            newVar[idx] for idx in range(self.numOfCols)]
     #################################################################
 
     #################################################################
@@ -417,6 +419,11 @@ class AsicData(object):
 
         if self.done:
             self.dataIndexEnd = index
+
+            # trigger counter check
+            if not(all(x == self.asicGlblTrgCnt[0] for x in self.asicGlblTrgCnt)):
+                self.asicGlblTrgCntMisalign = True
+
             self.asicDataPrinter()
     #################################################################
 
@@ -425,6 +432,10 @@ class AsicData(object):
         """
         Prints out all the data
         """
-        if self._verbose > 2:
+        if self.asicGlblTrgCntMisalign and self._verbose > 0:
+            pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch')
+
+        if self._verbose > 3:
             for name, value in self.__dict__.items():
                 print(f"self.asicData.{name} = {value}")
+    #################################################################

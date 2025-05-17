@@ -246,7 +246,7 @@ begin
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   v.axiFifoMaster.tValid := '1'; -- write to axiFifo
                   v.frameSizeCnt         := r.frameSizeCnt + 1; -- increment the frameSize counter
-                  v.inPause              := pause or pauseErr;
+                  v.inPause              := pause and not(pauseErr);
                   v.pauseError           := pauseErr;
                   v.trgCntHeader         := trgCnt;
                   v.state                := WAIT_DUMMY_S;

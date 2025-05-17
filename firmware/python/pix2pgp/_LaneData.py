@@ -188,12 +188,12 @@ class LaneData(object):
         if _colBitmask == 0:
             self.isEmpty = True
 
-        self.headerErr = bool(self.colErr or self.pauseErr or self.timeout)
+        self.headerErr = bool(self.colErr or self.timeout)
 
-        if self.headerErr and self._verbose > 0 and not(self.dummy):
-            self.headerPrinter()
-        if self.headerErr and self._verbose > 0:
-            pix2pgp.Tools.printError('Header')
+        if self.headerErr and self._verbose > 1:
+            pix2pgp.Tools.printError('Lane Header')
+        if self.pauseErr and self._verbose > 2:
+            pix2pgp.Tools.printWarning('Pause-Error')
 
     #################################################################
 
@@ -214,13 +214,13 @@ class LaneData(object):
 
         if self.colId[colBmskId] != colBmskId:
             self.decErr = True
-            if self._verbose > 0:
-                print(f"self.colId[colBmskId] = {self.colId[colBmskId]}")
+            if self._verbose > 1:
+                print(f"self.colId[{colBmskId}] = {self.colId[colBmskId]}")
                 print(f"colBmskId = {colBmskId}")
                 pix2pgp.Tools.printError('Column ID Decoding')
 
-        if self.colTrgCnt[colBmskId] != self.trgCnt and self._verbose > 0:
-            print(f"self.colTrgCnt[colBmskId] = {self.colTrgCnt[colBmskId]}")
+        if self.colTrgCnt[colBmskId] != self.trgCnt and self._verbose > 2:
+            print(f"self.colTrgCnt[{colBmskId}] = {self.colTrgCnt[colBmskId]}")
             print(f"self.trgCnt = {self.trgCnt}")
             pix2pgp.Tools.printWarning('Trigger Counter Mismatch')
     #################################################################
@@ -339,7 +339,7 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "checkPause_s":
                 colSel = 0
-                if self.currPause or self.currPauseErr:
+                if self.currPause and not(self.currPauseErr):
                     # more data
                     state = "header_s"
                 else:
@@ -360,10 +360,10 @@ class LaneData(object):
         """
         Prints out all the data
         """
-        if self._verbose > 1:
+        if self._verbose > 2:
             self.headerPrinter()
 
-        if self._verbose > 3:
+        if self._verbose > 4:
             for name, value in self.__dict__.items():
                 print(f"self.laneDecoder.{name} = {value}")
     #################################################################
