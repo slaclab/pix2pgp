@@ -32,7 +32,7 @@ entity Pix2PgpLaneRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1'; -- '1' for active high rst, '0' for active low
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 12);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 8);
    port(
       -- General Interface
       laneClk        : in  sl;

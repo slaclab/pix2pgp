@@ -39,7 +39,7 @@ entity Pix2PgpAsicStreamRx is
       STREAM_PIPE_STAGES_G   : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 12;
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
       DISCARD_BAD_COL_TRG_G  : boolean  := true);
    port(
       -- General Interface

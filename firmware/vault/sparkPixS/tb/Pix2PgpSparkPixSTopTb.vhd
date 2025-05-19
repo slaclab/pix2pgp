@@ -299,7 +299,7 @@ begin
          STREAM_PIPE_STAGES_G   => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
-         AXIS_FIFO_ADDR_WIDTH_G => 12)
+         AXIS_FIFO_ADDR_WIDTH_G => 8)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
