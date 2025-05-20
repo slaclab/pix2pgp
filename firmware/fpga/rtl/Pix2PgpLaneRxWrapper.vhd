@@ -210,32 +210,32 @@ begin
          din(0)  => laneRxOk,
          dout(0) => laneOk);
 
-   --GEN_PIPE: if PIPE_STAGES_G > 0 generate
+   GEN_PIPE: if PIPE_STAGES_G > 0 generate
 
-   --   U_Pipe : entity surf.AxiStreamPipeline
-   --      generic map (
-   --         TPD_G          => TPD_G,
-   --         RST_ASYNC_G    => RST_ASYNC_G,
-   --         RST_POLARITY_G => RST_POLARITY_G,
-   --         PIPE_STAGES_G  => PIPE_STAGES_G)
-   --      port map (
-   --         -- Clock and Reset
-   --         axisClk     => laneClk,
-   --         axisRst     => laneRst,
-   --         -- Slave Port
-   --         sAxisMaster => obAxiMaster,
-   --         sAxisSlave  => obAxiSlave,
-   --         -- Master Port
-   --         mAxisMaster => laneRxMaster,
-   --         mAxisSlave  => laneRxSlave);
+      U_Pipe : entity surf.AxiStreamPipeline
+         generic map (
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            PIPE_STAGES_G  => PIPE_STAGES_G)
+         port map (
+            -- Clock and Reset
+            axisClk     => laneClk,
+            axisRst     => laneRst,
+            -- Slave Port
+            sAxisMaster => obAxiMaster,
+            sAxisSlave  => obAxiSlave,
+            -- Master Port
+            mAxisMaster => laneRxMaster,
+            mAxisSlave  => laneRxSlave);
 
-   --end generate GEN_PIPE;
+   end generate GEN_PIPE;
 
-   --GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
+   GEN_NO_PIPE: if PIPE_STAGES_G <= 0 generate
 
       obAxiSlave   <= laneRxSlave;
       laneRxMaster <= obAxiMaster;
 
-   --end generate GEN_NO_PIPE;
+   end generate GEN_NO_PIPE;
 
 end rtl;
