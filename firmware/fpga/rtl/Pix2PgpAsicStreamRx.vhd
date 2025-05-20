@@ -82,8 +82,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
    signal laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneOk          : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal asicSroSync     : sl := '0';
@@ -259,7 +261,8 @@ begin
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid, laneFull,
                    asicRstSync, trgBuffDout, timeout, laneDecError, lanePauseError,
-                   laneRxMasters, laneTrgCnt, laneMetaValid, laneOk, r) is
+                   laneOverOcc, lanePause, laneRxMasters, laneTrgCnt, laneMetaValid,
+                   laneOk, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -420,6 +423,8 @@ begin
                                   r.trgCntBuff);
 
       header := fpgaHeaderMap(laneDecErrorMask,
+                              laneOverOcc,
+                              lanePause,
                               lanePauseError,
                               laneFull,
                               laneTimeout,
@@ -692,9 +697,11 @@ begin
             laneTrgCnt     => laneTrgCnt(lane),
             laneFrameSize  => laneFrameSize(lane),
             laneDecError   => laneDecError(lane),
+            lanePauseError => lanePauseError(lane),
+            laneOverOcc    => laneOverOcc(lane),
+            lanePause      => lanePause(lane),
             laneFull       => laneFull(lane),
             laneOk         => laneOk(lane),
-            lanePauseError => lanePauseError(lane),
             laneMetaValid  => laneMetaValid(lane),
             laneMetaRd     => laneMetaRd(lane),
             laneRxMaster   => laneRxMasters(lane),

@@ -433,7 +433,7 @@ class AsicData(object):
         Prints out all the data
         """
         if self.asicGlblTrgCntMisalign and self._verbose > 0:
-            pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch. Values below:')
+            pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch. Values below')
             print(', '.join(str(value) for value in self.asicGlblTrgCnt))
 
         if self._verbose > 3:

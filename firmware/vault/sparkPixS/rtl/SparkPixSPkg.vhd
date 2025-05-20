@@ -117,15 +117,18 @@ package Pix2PgpPkg is
    -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
    constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   -- trigger counter, plus frame size, plus decError
-   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+1;
+   -- trigger counter, plus frame size, plus decError, overOcc, pause, pauseError
+   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+4;
 
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
-   constant LANE_DEC_ERROR_POS_C : natural      := LANERX_META_DWIDTH_C-1;
-   subtype  LANE_SIZE_POS_C     is natural range   LANERX_META_DWIDTH_C-2 downto TRGCNT_WIDTH_C;
-   subtype  LANE_TRGCNT_POS_C   is natural range   TRGCNT_WIDTH_C-1 downto 0;
+   constant LANE_DEC_ERROR_POS_C   : natural := LANERX_META_DWIDTH_C-1;
+   constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-2;
+   constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-3;
+   constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-4;
+   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-5 downto TRGCNT_WIDTH_C;
+   subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
 
    -- ***************************************************************************
    -- ************************ Tunable parameters end ***************************
@@ -207,8 +210,11 @@ package Pix2PgpPkg is
    function isDummy        (din : slv) return boolean;
    function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
-   function fpgaHeaderMap  (laneDecError: slv; lanePauseError: slv; laneFull: slv;
-                            laneTimeout: slv; laneValid: slv) return slv;
+   function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
+                            lanePauseError: slv; laneFull: slv; laneTimeout: slv;
+                            laneValid: slv) return slv;
+   function laneMetaMap    (decError: sl; overOcc: sl; pause: sl;
+                            pauseError: sl; frameSize: slv; trgCnt: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
 
@@ -255,15 +261,22 @@ package Pix2PgpPkg is
 
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
-   -- 5 fields; laneDecError, lanePauseError, laneFull, laneTimeout, and laneValid
+   -- 7 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
+   --           laneFull, laneTimeout, and laneValid
    ------------------------------------------------------------------------------
-   constant FPGA_HEADER_FIELDS_C   : natural := 5;
+   constant FPGA_HEADER_FIELDS_C   : natural := 7;
    constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
    constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
                                                                    NUM_OF_SERIALIZERS_C);
    ------------------------------------------------------------------------------
    subtype FPGA_LANERX_DEC_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
                                              FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
+
+   subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*6-1 downto
+                                             FPGA_HEADER_STRADDLE_C*5;
+
+   subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*5-1 downto
+                                             FPGA_HEADER_STRADDLE_C*4;
 
    subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
                                              FPGA_HEADER_STRADDLE_C*3;
@@ -458,12 +471,15 @@ package body Pix2PgpPkg is
 
    end tKeepSet;
 
-   function fpgaHeaderMap (laneDecError: slv; lanePauseError: slv; laneFull : slv;
-                           laneTimeout: slv; laneValid: slv) return slv is
+   function fpgaHeaderMap (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
+                           lanePauseError: slv; laneFull: slv; laneTimeout: slv;
+                           laneValid: slv) return slv is
       variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
    begin
 
       retHeader(FPGA_LANERX_DEC_ERROR_POS_C)   := resize(laneDecError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_OVEROCC_POS_C)     := resize(laneOverOcc, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_PAUSE_POS_C)       := resize(lanePause, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_PAUSE_ERROR_POS_C) := resize(lanePauseError, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_FULL_POS_C)        := resize(laneFull, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_TIMEOUT_POS_C)     := resize(laneTimeout, NUM_OF_SERIALIZERS_C);
@@ -472,5 +488,24 @@ package body Pix2PgpPkg is
       return retHeader;
 
    end fpgaHeaderMap;
+
+   function laneMetaMap (decError: sl; overOcc: sl; pause: sl; pauseError: sl;
+                         frameSize: slv; trgCnt: slv) return slv is
+      variable retLaneMeta: slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
+   begin
+
+      retLaneMeta(LANE_DEC_ERROR_POS_C)   := decError;
+      retLaneMeta(LANE_OVEROCC_POS_C)     := overOcc;
+      retLaneMeta(LANE_PAUSE_POS_C)       := pause;
+      retLaneMeta(LANE_PAUSE_ERROR_POS_C) := pauseError;
+      retLaneMeta(LANE_SIZE_POS_C)        := resize(frameSize, rangeToLen(LANE_SIZE_POS_C'high,
+                                                                          LANE_SIZE_POS_C'low));
+
+      retLaneMeta(LANE_TRGCNT_POS_C)      := resize(trgCnt, rangeToLen(LANE_TRGCNT_POS_C'high,
+                                                                       LANE_TRGCNT_POS_C'low));
+
+      return retLaneMeta;
+
+   end laneMetaMap;
 
 end package body Pix2PgpPkg;
