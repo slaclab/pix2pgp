@@ -339,7 +339,7 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "checkPause_s":
                 colSel = 0
-                if self.currPause and not(self.currPauseErr):
+                if self.currPause or self.currPauseErr:
                     # more data
                     state = "header_s"
                 else:

@@ -288,7 +288,7 @@ begin
                      v.state := PARSE_COL_METADATA_S;
                   else
                      -- close data frame if not expecting more data
-                     tLast   := not(r.inPause);
+                     tLast   := not(r.inPause) and not(r.inPauseError);
                      v.state := WAIT_DUMMY_S;
                   end if;
                end if;
@@ -327,7 +327,7 @@ begin
                      v.state := PARSE_COL_METADATA_S;
                   else
                      -- close data frame if not expecting more data
-                     tLast   := not(r.inPause);
+                     tLast   := not(r.inPause) and not(r.inPauseError);
                      v.state := WAIT_DUMMY_S;
                   end if;
 
@@ -466,10 +466,10 @@ begin
    laneFifoAlmFull <= not(laneFifoSlave.tReady);
    axiFifoAlmFull  <= not(axiFifoSlave.tReady);
 
-   -- all full and almost-full flags
+   -- all full and almost-full flags; also monitor frame size counter overflow
    laneRxFull <= laneFifoFull or laneFifoAlmFull or
                  axiFifoFull  or axiFifoAlmFull  or
-                 frameMetaFull;
+                 frameMetaFull or uAnd(r.frameSizeCnt);
 
    pgp4RxSlave <= laneFifoSlave;
 
