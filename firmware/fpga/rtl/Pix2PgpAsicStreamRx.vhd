@@ -72,21 +72,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
    constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
    constant MAX_CNT_C               : slv(4 downto 0) := (others => '1');
 
-   type trgCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TRGCNT_WIDTH_C-1 downto 0);
-
-   signal laneTrgCnt      : trgCntArray := (others => (others => '0'));
-
    signal laneRxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_MASTER_INIT_C);
    signal laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneOk          : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneStatus      : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
 
    signal asicSroSync     : sl := '0';
    signal asicSroEnaSync  : sl := '0';
@@ -259,10 +250,8 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, laneFrameSize, laneRst, trgBuffValid, laneFull,
-                   asicRstSync, trgBuffDout, timeout, laneDecError, lanePauseError,
-                   laneOverOcc, lanePause, laneRxMasters, laneTrgCnt, laneMetaValid,
-                   laneOk, r) is
+                   asicSroEnaSync, laneRst, trgBuffValid, laneStatus, asicRstSync,
+                   trgBuffDout, timeout, laneRxMasters, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -277,6 +266,9 @@ begin
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
       variable laneDecErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneOk           : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneOverOcc      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable lanePause        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
    begin
       -- Latch the current value
@@ -317,7 +309,7 @@ begin
          axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErrCnt(i));   -- StartAddr=0x200
          axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.lanePauseErrCnt(i)); -- StartAddr=0x300
          axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.laneFullCnt(i));     -- StartAddr=0x400
-         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, laneTrgCnt(i));        -- StartAddr=0x500
+         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, laneStatus(i).trgCnt); -- StartAddr=0x500
       end loop;
 
       axiSlaveRegisterR(axilEp, x"600", 0, r.fpgaTrgCnt);
@@ -365,16 +357,22 @@ begin
       -- lane ready indicates that some action needs to be taken: either reset or read-out data
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
+         v.laneFull(lane)     := laneStatus(lane).overflow;
+         v.lanePauseErr(lane) := laneStatus(lane).pauseError;
+         laneOk(lane)         := laneStatus(lane).rxOk;
+         laneOverOcc(lane)    := laneStatus(lane).overOcc;
+         lanePause(lane)      := laneStatus(lane).pause;
+
          v.laneEnable(lane) := r.laneEnableSet(lane) and r.asicEnable;
 
-         laneDecErrorMask(lane) := laneDecError(lane) and laneMetaValid(lane);
+         laneDecErrorMask(lane) := laneStatus(lane).decError and laneStatus(lane).valid;
 
          laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
-                            not(laneFull(lane));
+                            not(laneStatus(lane).overflow);
 
          if r.laneEnable(lane) = '1' then
-            v.laneReady(lane) := (laneValid(lane) and laneMetaValid(lane)) or
-                                 (laneFull(lane) or laneDecErrorMask(lane));
+            v.laneReady(lane) := (laneValid(lane) and laneStatus(lane).valid) or
+                                 (laneStatus(lane).overflow or laneDecErrorMask(lane));
          else
             v.laneReady(lane) := '1';
          end if;
@@ -387,9 +385,7 @@ begin
 
       ----------------------------------------------------------------------------------------------
       -- status counters
-      v.laneDecErr   := laneDecErrorMask;
-      v.lanePauseErr := lanePauseError;
-      v.laneFull     := laneFull;
+      v.laneDecErr := laneDecErrorMask;
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- increment counters on rising edge
@@ -422,11 +418,11 @@ begin
                                   r.fpgaId,
                                   r.trgCntBuff);
 
-      header := fpgaHeaderMap(laneDecErrorMask,
+      header := fpgaHeaderMap(r.laneDecErr,
                               laneOverOcc,
                               lanePause,
-                              lanePauseError,
-                              laneFull,
+                              r.lanePauseErr,
+                              r.laneFull,
                               laneTimeout,
                               laneValid);
 
@@ -434,7 +430,7 @@ begin
 
       laneAxiStream := laneRxMasters(laneIdx);
 
-      frameSize := resize(laneFrameSize(laneIdx), STREAMRX_FRAME_SIZE_WIDTH_C);
+      frameSize := resize(laneStatus(laneIdx).frameSize, STREAMRX_FRAME_SIZE_WIDTH_C);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -460,7 +456,7 @@ begin
             if uOr(r.laneEnable) = '1' then
 
                -- if new trigger in queue, or if registering errors or getting full
-               if trgBuffValid = '1' or uOr(laneDecErrorMask) = '1' or uOr(laneFull) = '1' then
+               if trgBuffValid = '1' or uOr(laneDecErrorMask) = '1' or uOr(r.laneFull) = '1' then
                   v.trgCntBuff := trgBuffDout;
                   v.state      := TX_PREAMBLE_S;
                end if;
@@ -500,7 +496,7 @@ begin
                   for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
                      v.laneRst(lane) := laneDecErrorMask(lane) or
                                         laneTimeout(lane) or
-                                        laneFull(lane);
+                                        r.laneFull(lane);
                   end loop;
 
                   v.state := TX_FRAME_SIZE_S;
@@ -694,15 +690,7 @@ begin
             -- ASIC Rx Interface
             discBadColTrg  => discBadColTrg(lane),
             lanePostError  => lanePostError(lane),
-            laneTrgCnt     => laneTrgCnt(lane),
-            laneFrameSize  => laneFrameSize(lane),
-            laneDecError   => laneDecError(lane),
-            lanePauseError => lanePauseError(lane),
-            laneOverOcc    => laneOverOcc(lane),
-            lanePause      => lanePause(lane),
-            laneFull       => laneFull(lane),
-            laneOk         => laneOk(lane),
-            laneMetaValid  => laneMetaValid(lane),
+            laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),
             laneRxMaster   => laneRxMasters(lane),
             laneRxSlave    => laneRxSlaves(lane));

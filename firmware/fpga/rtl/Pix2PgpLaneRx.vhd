@@ -62,6 +62,7 @@ architecture rtl of Pix2PgpLaneRx is
       WAIT_HEADER_S,
       PARSE_COL_METADATA_S,
       PARSE_DATA_S,
+      CLOSE_FRAME_S,
       WAIT_DUMMY_S,
       ERROR_S);
 
@@ -74,6 +75,9 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc     : sl;
       inPause       : sl;
       inPauseError  : sl;
+      oocMeta       : sl;
+      pauseMeta     : sl;
+      pauseErrMeta  : sl;
       rxError       : sl;
       laneRxOk      : sl;
       trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -95,6 +99,9 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc     => '0',
       inPause       => '0',
       inPauseError  => '0',
+      oocMeta       => '0',
+      pauseMeta     => '0',
+      pauseErrMeta  => '0',
       rxError       => '0',
       laneRxOk      => '0',
       trgCntHeader  => (others => '0'),
@@ -221,15 +228,16 @@ begin
          v.axiFifoMaster.tValid := '0';
          v.axiFifoMaster.tLast  := '0';
          v.axiFifoMaster.tUser  := (others => '0');
+         v.axiFifoMaster.tKeep  := tKeepSet(ASIC_DATABUS_DWIDTH_C);
       end if;
 
       -- PGP error check
       v.decError := (v.rxError and not(r.rxError));
 
-      -- Reset counter
-      if r.frameMetaWr = '1' then
-         v.frameSizeCnt := (others => '0');
-      end if;
+      -- status flags into the FIFO are sticky
+      v.oocMeta      := r.inOverOcc    or r.oocMeta;
+      v.pauseMeta    := r.inPause      or r.pauseMeta;
+      v.pauseErrMeta := r.inPauseError or r.pauseErrMeta;
 
       ---------------------------------------------------------------------------
       case r.state is
@@ -244,7 +252,7 @@ begin
 
             -- decoding error detected
             elsif v.decError = '1' then
-               v.state := ERROR_S;
+               v.state := CLOSE_FRAME_S;
 
             -- nominal
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
@@ -258,10 +266,9 @@ begin
                   v.inPause      := pause;
                   v.inPauseError := pauseErr;
                   v.trgCntHeader := trgCnt;
-                  v.state        := WAIT_DUMMY_S;
 
                   if uOr(colBitmask) = '0' then
-                     tLast := '1'; -- EoF
+                     v.state := CLOSE_FRAME_S;
                   else
                      v.activeColCnt := onesCount(colBitmask);
                      v.state        := PARSE_COL_METADATA_S;
@@ -288,8 +295,7 @@ begin
                      v.state := PARSE_COL_METADATA_S;
                   else
                      -- close data frame if not expecting more data
-                     tLast   := not(r.inPause) and not(r.inPauseError);
-                     v.state := WAIT_DUMMY_S;
+                     v.state := CLOSE_FRAME_S;
                   end if;
                end if;
 
@@ -299,13 +305,12 @@ begin
                if (metaTrgCnt /= r.trgCntHeader and discard = '1') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
-                  v.state    := ERROR_S;
                end if;
             end if;
 
             -- error detected!
             if v.decError = '1' then
-               v.state := ERROR_S;
+               v.state := CLOSE_FRAME_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -327,8 +332,7 @@ begin
                      v.state := PARSE_COL_METADATA_S;
                   else
                      -- close data frame if not expecting more data
-                     tLast   := not(r.inPause) and not(r.inPauseError);
-                     v.state := WAIT_DUMMY_S;
+                     v.state := CLOSE_FRAME_S;
                   end if;
 
                end if;
@@ -336,14 +340,46 @@ begin
 
             -- error detected!
             if v.decError = '1' then
-               v.state := ERROR_S;
+               v.state := CLOSE_FRAME_S;
+            end if;
+
+         ------------------------------------------------------------------------
+         -- determine whether to issue tLast or not;
+         -- also determine whether to write into the metadata FIFO or not
+         when CLOSE_FRAME_S =>
+
+            if axiFifoSlave.tReady = '1' then
+               -- close frame (no valid data; tKeep is low)
+               if r.inPause = '0' and r.inPauseError = '0' then
+                  v.axiFifoMaster.tKeep := (others => '0');
+                  tLast         := '1';
+                  tValid        := '1';
+                  v.frameMetaWr := '1';
+               end if;
+
+               -- go-to dummy wait state by default
+               v.state := WAIT_DUMMY_S;
+
+               -- keep the flag high and go to the error state
+               if r.decError = '1' then
+                  v.decError := '1';
+                  v.state    := ERROR_S;
+               end if;
             end if;
 
          ----------------------------------------------------------------------
          -- check for dummies; after a configurable amount, go-to header eval
-         -- don't write dummies to axiFifo
+         -- don't write dummies to axiFifo;
+         -- reset status FIFO fields if closed the frame
          when WAIT_DUMMY_S =>
             v.laneRxOk := '0';
+
+            if r.frameMetaWr = '1' then
+               v.oocMeta      := '0';
+               v.pauseMeta    := '0';
+               v.pauseErrMeta := '0';
+               v.frameSizeCnt := (others => '0');
+            end if;
 
             if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
@@ -373,14 +409,10 @@ begin
       v.axiFifoMaster.tLast  := tLast;
       v.rxFifoSlave.tReady   := tReady;
 
-
-      v.frameMetaWr := (r.axiFifoMaster.tLast and axiFifoSlave.tReady) or
-                       (v.decError and not(r.decError));
-
       v.frameMetaDin := laneMetaMap(v.decError,
-                                    v.inOverOcc,
-                                    v.inPause,
-                                    v.inPauseError,
+                                    v.oocMeta,
+                                    v.pauseMeta,
+                                    v.pauseErrMeta,
                                     r.frameSizeCnt,
                                     r.trgCntHeader);
 

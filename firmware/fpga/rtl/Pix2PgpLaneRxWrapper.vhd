@@ -43,15 +43,7 @@ entity Pix2PgpLaneRxWrapper is
       -- ASIC Rx Interface
       discBadColTrg  : in  sl;
       lanePostError  : in  sl;
-      laneTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      laneFrameSize  : out slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      laneDecError   : out sl;
-      lanePauseError : out sl;
-      laneOverOcc    : out sl;
-      lanePause      : out sl;
-      laneFull       : out sl;
-      laneOk         : out sl;
-      laneMetaValid  : out sl;
+      laneStatus     : out Pix2PgpLaneStatusType;
       laneMetaRd     : in  sl;
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
@@ -128,26 +120,6 @@ begin
          din(0)  => discBadColTrg,
          dout(0) => discard);
 
-   U_PipelineLaneRxFull : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => laneRxFull,
-         dout(0) => laneFull);
-
-   U_PipelineLaneMetaValid : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => frameMetaValid,
-         dout(0) => laneMetaValid);
-
    U_PipelineLaneMetaRd : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
@@ -158,6 +130,26 @@ begin
          din(0)  => laneMetaRd,
          dout(0) => frameMetaRd);
 
+   U_PipelineLaneMetaValid : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => frameMetaValid,
+         dout(0) => laneStatus.valid);
+
+   U_PipelineLaneRxFull : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => laneRxFull,
+         dout(0) => laneStatus.overflow);
+
    U_PipelineLaneOverOcc : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
@@ -166,7 +158,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => frameMetaDout(LANE_OVEROCC_POS_C),
-         dout(0) => laneOverOcc);
+         dout(0) => laneStatus.overOcc);
 
    U_PipelineLanePause : entity surf.SlvDelay
       generic map (
@@ -176,7 +168,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => frameMetaDout(LANE_PAUSE_POS_C),
-         dout(0) => lanePause);
+         dout(0) => laneStatus.pause);
 
    U_PipelineLanePauseError : entity surf.SlvDelay
       generic map (
@@ -186,7 +178,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => frameMetaDout(LANE_PAUSE_ERROR_POS_C),
-         dout(0) => lanePauseError);
+         dout(0) => laneStatus.pauseError);
 
    U_PipelineTrgCnt : entity surf.SlvDelay
       generic map (
@@ -197,7 +189,7 @@ begin
       port map (
          clk  => laneClk,
          din  => frameMetaDout(LANE_TRGCNT_POS_C),
-         dout => laneTrgCnt);
+         dout => laneStatus.trgCnt);
 
    U_PipelineFrameSize : entity surf.SlvDelay
       generic map (
@@ -208,7 +200,7 @@ begin
       port map (
          clk  => laneClk,
          din  => frameMetaDout(LANE_SIZE_POS_C),
-         dout => laneFrameSize);
+         dout => laneStatus.frameSize);
 
    U_PipelineDecError : entity surf.SlvDelay
       generic map (
@@ -218,7 +210,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => frameMetaDout(LANE_DEC_ERROR_POS_C),
-         dout(0) => laneDecError);
+         dout(0) => laneStatus.decError);
 
    U_PipelineLaneRxOk : entity surf.SlvDelay
       generic map (
@@ -228,7 +220,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => laneRxOk,
-         dout(0) => laneOk);
+         dout(0) => laneStatus.rxOk);
 
    GEN_PIPE: if PIPE_STAGES_G > 0 generate
 

@@ -303,6 +303,35 @@ package Pix2PgpPkg is
 
    type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
 
+   type Pix2PgpLaneStatusType is record
+      -- flags begin
+      decError    : sl;
+      overOcc     : sl;
+      pause       : sl;
+      pauseError  : sl;
+      overflow    : sl;
+      rxOk        : sl;
+      valid       : sl;
+      -- flags end
+      trgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      frameSize   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
+      -- flags begin
+      decError    => '0',
+      overOcc     => '0',
+      pause       => '0',
+      pauseError  => '0',
+      overflow    => '0',
+      rxOk        => '0',
+      valid       => '0',
+      -- flags end
+      trgCnt      => (others => '0'),
+      frameSize   => (others => '0'));
+
+   type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
+
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C    => false,
@@ -458,12 +487,12 @@ package body Pix2PgpPkg is
 
    function tKeepSet (dataLen : natural) return slv is
       variable retTkeep: slv(AXI_STREAM_MAX_TKEEP_WIDTH_C-1 downto 0) := (others => '0');
-      variable preambleBytes : natural := 1;
+      variable bytes : natural := 1;
    begin
 
-      preambleBytes := dataLen/8;
+      bytes := dataLen/8;
 
-      for i in 0 to preambleBytes-1 loop
+      for i in 0 to bytes-1 loop
          retTkeep(i) := '1';
       end loop;
 
