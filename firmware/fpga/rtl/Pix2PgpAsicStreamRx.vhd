@@ -40,7 +40,7 @@ entity Pix2PgpAsicStreamRx is
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
-      DISCARD_BAD_COL_TRG_G  : boolean  := true);
+      DROP_BAD_COL_TRG_G     : boolean  := true);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -96,7 +96,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
-   signal discBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal dropBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
@@ -135,7 +135,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       maxWait         : slv(3 downto 0);
       state           : StateType;
       -- Registers
-      discBadColTrg   : sl;
+      dropBadColTrg   : sl;
       cntRst          : sl;
       fpgaId          : slv(15 downto 0);
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
@@ -175,7 +175,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       maxWait         => (others => '1'),
       state           => PRE_IDLE_S,
       -- Registers
-      discBadColTrg   => toSl(DISCARD_BAD_COL_TRG_G),
+      dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
       cntRst          => '1',
       fpgaId          => FPGA_ID_DEFAULT_C,
       timeoutLimit    => TIMEOUT_LIMIT_DEFAULT_C,
@@ -316,7 +316,7 @@ begin
       axiSlaveRegister (axilEp, x"604", 0, v.fpgaId);
       axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"60C", 0, v.laneEnableSet);
-      axiSlaveRegister (axilEp, x"610", 0, v.discBadColTrg);
+      axiSlaveRegister (axilEp, x"610", 0, v.dropBadColTrg);
 
       axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
       axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
@@ -612,7 +612,7 @@ begin
       lanePostError <= r.lanePostError;
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         discBadColTrg(lane) <= r.discBadColTrg; -- fan-out
+         dropBadColTrg(lane) <= r.dropBadColTrg; -- fan-out
          laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
 
          -- enable mapping
@@ -699,7 +699,7 @@ begin
             pgp4RxMaster   => pgp4RxMaster(lane),
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
-            discBadColTrg  => discBadColTrg(lane),
+            dropBadColTrg  => dropBadColTrg(lane),
             lanePostError  => lanePostError(lane),
             laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),

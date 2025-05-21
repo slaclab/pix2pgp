@@ -42,7 +42,7 @@ entity Pix2PgpLaneRx is
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- StreamRx Interface
       postError      : in  sl;
-      discard        : in  sl;
+      dropBadTrg     : in  sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
@@ -174,7 +174,7 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, discard, laneFull, postError) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, dropBadTrg, laneFull, postError) is
 
       -- omnipresent
       variable v : RegType;
@@ -342,7 +342,7 @@ begin
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
                -- 2. check if the data length of this column is within the limits
-               if (metaTrgCnt /= r.trgCntHeader and discard = '1') or
+               if (metaTrgCnt /= r.trgCntHeader and dropBadTrg = '1') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
                   v.state    := CLOSE_FRAME_S;
