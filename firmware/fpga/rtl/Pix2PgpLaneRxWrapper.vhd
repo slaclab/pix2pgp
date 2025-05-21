@@ -41,6 +41,7 @@ entity Pix2PgpLaneRxWrapper is
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- ASIC Rx Interface
+      allLanesOk     : in  sl;
       dropBadColTrg  : in  sl;
       lanePostError  : in  sl;
       laneStatus     : out Pix2PgpLaneStatusType;
@@ -59,6 +60,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal postError      : sl := '0';
    signal dropBadTrg     : sl := '0';
    signal laneRxOk       : sl := '0';
+   signal lanesOk        : sl := '0';
    signal obAxiMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxiSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
@@ -79,6 +81,7 @@ begin
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
          -- StreamRx Interface
+         lanesOk        => lanesOk,
          postError      => postError,
          dropBadTrg     => dropBadTrg,
          frameMetaRd    => frameMetaRd,
@@ -99,6 +102,16 @@ begin
          clk     => laneClk,
          din(0)  => laneRst,
          dout(0) => laneRxRst);
+
+   U_PipelineAllLanesOk : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => allLanesOk,
+         dout(0) => lanesOk);
 
    U_PipelineLanePostError : entity surf.SlvDelay
       generic map (

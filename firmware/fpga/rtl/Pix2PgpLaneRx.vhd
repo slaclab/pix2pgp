@@ -41,6 +41,7 @@ entity Pix2PgpLaneRx is
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- StreamRx Interface
+      lanesOk        : in  sl;
       postError      : in  sl;
       dropBadTrg     : in  sl;
       frameMetaRd    : in  sl;
@@ -174,7 +175,8 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, dropBadTrg, laneFull, postError) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave,
+                   dropBadTrg, laneFull, postError, lanesOk) is
 
       -- omnipresent
       variable v : RegType;
@@ -275,8 +277,13 @@ begin
          -- discard dummies; register important flags
          when WAIT_HEADER_S =>
 
+            -- all lane receivers should be in the same state;
+            -- if not, stay here and wait
+            if lanesOk = '0' then
+               v.state := WAIT_HEADER_S;
+
             -- post-error state takes precedence; look for dummy headers
-            if postError = '1' then
+            elsif postError = '1' then
                v.state := WAIT_DUMMY_S;
 
             -- decoding error detected

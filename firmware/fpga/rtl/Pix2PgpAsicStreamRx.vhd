@@ -104,6 +104,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal allLanesOk      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type StateType is (
       PRE_IDLE_S,
@@ -129,6 +130,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      allLanesOk      : sl;
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       asicEnable      : sl;
@@ -170,6 +172,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       => (others => '0'),
       laneValid       => (others => '0'),
       laneTimeout     => (others => '0'),
+      allLanesOk      => '0',
       waitLaneSel     => '0',
       laneMetaRd      => '0',
       asicEnable      => '0',
@@ -281,6 +284,7 @@ begin
       v.cntRst     := '0';
       v.armTimeout := '0';
       v.asicEnable := '0';
+      v.allLanesOk := '0';
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -374,6 +378,10 @@ begin
          end if;
 
       end loop;
+
+      if (r.laneEnable and laneOk) = r.laneEnable then
+         v.allLanesOk := '1';
+      end if;
 
       ----------------------------------------------------------------------------------------------
       -- status counters
@@ -614,6 +622,7 @@ begin
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          dropBadColTrg(lane) <= r.dropBadColTrg; -- fan-out
          laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
+         allLanesOk(lane)    <= r.allLanesOk;    -- fan-out
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
@@ -699,6 +708,7 @@ begin
             pgp4RxMaster   => pgp4RxMaster(lane),
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
+            allLanesOk     => allLanesOk(lane),
             dropBadColTrg  => dropBadColTrg(lane),
             lanePostError  => lanePostError(lane),
             laneStatus     => laneStatus(lane),
