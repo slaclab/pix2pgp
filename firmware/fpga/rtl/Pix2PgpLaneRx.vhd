@@ -287,8 +287,12 @@ begin
                v.state := WAIT_DUMMY_S;
 
             -- decoding error detected
-            elsif r.decError = '1' or r.inFull = '1' then
+            elsif r.decError = '1' then
                v.state := CLOSE_FRAME_S;
+
+            -- lane full
+            elsif r.inFull = '1' then
+               v.state := ERROR_S;
 
             -- nominal
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
@@ -357,8 +361,12 @@ begin
             end if;
 
             -- error detected!
-            if r.decError = '1' or r.inFull = '1' then
+            if r.decError = '1' then
                v.state := CLOSE_FRAME_S;
+            end if;
+
+            if r.inFull = '1' then
+               v.state := ERROR_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -387,8 +395,12 @@ begin
             end if;
 
             -- error detected!
-            if r.decError = '1' or r.inFull = '1' then
+            if r.decError = '1' then
                v.state := CLOSE_FRAME_S;
+            end if;
+
+            if r.inFull = '1' then
+               v.state := ERROR_S;
             end if;
 
          ------------------------------------------------------------------------
@@ -401,7 +413,7 @@ begin
                v.pauseErrTrgCnt := r.trgCntHeader;
             end if;
 
-            if axiFifoSlave.tReady = '1' and r.inFull = '0' then
+            if axiFifoSlave.tReady = '1' then
                -- close frame (no valid data is sent on this cycle; tKeep is low)
                if r.inPause = '0' or r.inPauseError = '1' then
                   v.axiFifoMaster.tKeep := (others => '0');
@@ -419,10 +431,6 @@ begin
                   v.frameMetaWr := '1';
                   v.state       := ERROR_S;
                end if;
-            end if;
-
-            if r.inFull = '1' then
-               v.state := ERROR_S;
             end if;
 
          ----------------------------------------------------------------------
@@ -447,10 +455,9 @@ begin
             end if;
 
          ------------------------------------------------------------------------
-         -- stay here until reset; inhibit decError if got here due to full-FIFO
+         -- stay here until reset;
          when ERROR_S =>
             v.laneRxOk := '0';
-            v.decError := not(r.inFull);
 
       end case;
       ---------------------------------------------------------------------------

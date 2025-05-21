@@ -459,7 +459,7 @@ begin
             if uOr(r.laneEnable) = '1' then
 
                -- if new trigger in queue, or if registering errors or getting full
-               if trgBuffValid = '1' or uOr(laneDecErrorMask) = '1' or uOr(r.laneFull) = '1' then
+               if trgBuffValid = '1' or uOr(r.laneDecErr) = '1' or uOr(r.laneFull) = '1' then
                   v.trgCntBuff := trgBuffDout;
                   v.state      := TX_PREAMBLE_S;
                end if;
@@ -491,7 +491,7 @@ begin
             -- lane loop; assignl laneValid and any timeouts
             for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-               v.laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
+               v.laneValid(lane) := laneRxMasters(lane).tValid and not(r.laneDecErr(lane)) and
                                 not(laneStatus(lane).overflow);
 
                if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
@@ -538,7 +538,7 @@ begin
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
          when SWITCH_MUX_S =>
-            if r.laneValid(laneIdx) = '0' then
+            if r.laneValid(laneIdx) = '0' or r.laneDecErr(laneIdx) = '1' then
                --
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.state := TX_TRAILER_S;
@@ -592,7 +592,7 @@ begin
 
             -- reset all lanes in case of error;
             -- cannot just reset one lane -> if we do that, it will lead to trg misalignment
-            if (uOr(laneDecErrorMask) or uOr(r.laneTimeout) or uOr(r.laneFull)) = '1' then
+            if (uOr(r.laneDecErr) or uOr(r.laneTimeout) or uOr(r.laneFull)) = '1' then
                v.maxWait       := (others => '1');
                v.laneRst       := (others => '1');
                v.lanePostError := (others => '1');
@@ -605,7 +605,7 @@ begin
                v.obAxisMaster.tValid := '1';
                v.obAxisMaster.tLast  := '1';
                v.laneMetaRd          := '1';
-               v.trgBuffRd           := '1';
+               v.trgBuffRd           := trgBuffValid;
                v.state               := PRE_IDLE_S;
             end if;
 

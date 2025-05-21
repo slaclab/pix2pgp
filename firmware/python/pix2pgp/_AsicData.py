@@ -371,7 +371,7 @@ class AsicData(object):
             elif state == "laneValidCheck_s":
 
                 if laneSel < self.numOfLanes:
-                    if self.laneValid[laneSel]:
+                    if self.laneValid[laneSel] and not(self.laneDecError[laneSel]):
                         state = "lane_s"
                     else:
                         laneSel += 1
