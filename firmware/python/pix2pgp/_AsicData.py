@@ -421,8 +421,13 @@ class AsicData(object):
             self.dataIndexEnd = index
 
             # trigger counter check
-            if not(all(x == self.asicGlblTrgCnt[0] for x in self.asicGlblTrgCnt)):
-                self.asicGlblTrgCntMisalign = True
+            validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)
+
+            for lane in range(self.numOfLanes):
+                if self.asicGlblTrgCnt[lane] != self.asicGlblTrgCnt[validLane]:
+                    if self.laneValid[lane]:
+                        self.asicGlblTrgCntMisalign = True
+                        break
 
             self.asicDataPrinter()
     #################################################################

@@ -277,7 +277,7 @@ class LaneData(object):
         subLen = 0
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        while not(self.done):
+        while not(self.done) and index <= size:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             # --------------------------------------------------------------------------------------
@@ -339,7 +339,7 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "checkPause_s":
                 colSel = 0
-                if self.currPause or self.currPauseErr:
+                if self.currPause and not(self.currPauseErr):
                     # more data
                     state = "header_s"
                 else:

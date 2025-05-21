@@ -102,8 +102,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal laneFrameSize   : Pix2PgpLaneFrameSizeArray := (others => (others => '0'));
-
    signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -125,10 +123,11 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffRd       : sl;
       trgCntBuff      : slv(TRGCNT_WIDTH_C-1 downto 0);
       armTimeout      : sl;
-      lanePostError   : sl;
+      lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneSel         : slv(BITMAX_SERIALIZERS_C downto 0);
       laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       asicEnable      : sl;
@@ -163,11 +162,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffWr       => '0',
       trgBuffRd       => '0',
       trgCntBuff      => (others => '0'),
-      lanePostError   => '0',
+      lanePostError   => (others => '0'),
       armTimeout      => '0',
       laneSel         => (others => '0'),
       laneRst         => (others => '0'),
       laneReady       => (others => '0'),
+      laneValid       => (others => '0'),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
       asicEnable      => '0',
@@ -259,7 +259,6 @@ begin
       -- internal variables
       variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)   := (others => '0');
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
-      variable laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneAxiStream : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       variable laneTimeout   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneIdx       : natural := 0;
@@ -367,17 +366,14 @@ begin
 
          laneDecErrorMask(lane) := laneStatus(lane).decError and laneStatus(lane).valid;
 
-         laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
-                            not(laneStatus(lane).overflow);
-
          if r.laneEnable(lane) = '1' then
-            v.laneReady(lane) := (laneValid(lane) and laneStatus(lane).valid) or
+            v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
                                  (laneStatus(lane).overflow or laneDecErrorMask(lane));
          else
             v.laneReady(lane) := '1';
          end if;
 
-         if timeout = '1' and laneValid(lane) = '0' and r.laneReady(lane) = '0' then
+         if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
             laneTimeout(lane) := '1';
          end if;
 
@@ -424,7 +420,7 @@ begin
                               r.lanePauseErr,
                               r.laneFull,
                               laneTimeout,
-                              laneValid);
+                              r.laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
 
@@ -439,7 +435,6 @@ begin
          -- FifoFull signals need time to re-settle after reset (bc pipeline)
          -- FifoValid signals need time to re-settle for the same reason
          when PRE_IDLE_S =>
-            v.laneRst := (others => '0');
             v.laneSel := (others => '0');
 
             v.waitCnt := r.waitCnt + 1;
@@ -452,6 +447,8 @@ begin
          ----------------------------------------------------------------------
          -- wait for a word to be written into the sro/trigger buffer
          when IDLE_S =>
+            v.lanePostError := (others => '0');
+
             -- first check if anything is enabled
             if uOr(r.laneEnable) = '1' then
 
@@ -478,6 +475,11 @@ begin
          ----------------------------------------------------------------------
          -- wait for lanes to present data
          when WAIT_LANES_S =>
+
+            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+               v.laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
+                                not(laneStatus(lane).overflow);
+            end loop;
 
             -- set timeout counter if not all ready and if the state is not changing
             if uOr(r.laneReady) = '1' and uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
@@ -513,7 +515,7 @@ begin
                v.obAxisMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
                v.obAxisMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
 
-               if laneValid(laneIdx) = '0' then
+               if r.laneValid(laneIdx) = '0' then
                   v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
                end if;
 
@@ -530,7 +532,7 @@ begin
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
          when SWITCH_MUX_S =>
-            if laneValid(laneIdx) = '0' then
+            if r.laneValid(laneIdx) = '0' then
                --
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.state := TX_TRAILER_S;
@@ -575,10 +577,19 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- transmit trailer;
+         -- transmit trailer; also release any resets and issue post-error signals
+         -- unless something got reset, set maxWait to 3 (status signals are faster to re-settle)
          -- pop the metadata and internal trigger buffer info FIFOs
-         -- set the max-wait-cnt to 3 (status signals are faster to re-settle)
          when TX_TRAILER_S =>
+
+            v.maxWait       := (others => '1');
+            v.laneRst       := (others => '0');
+            v.lanePostError := r.laneRst;
+
+            if allBits(r.laneRst, '0') then
+               v.maxWait := toSlv(3, v.maxWait'length);
+            end if;
+
             if v.obAxisMaster.tValid = '0' then
                v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
                v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
@@ -587,7 +598,6 @@ begin
                v.obAxisMaster.tLast  := '1';
                v.laneMetaRd          := '1';
                v.trgBuffRd           := '1';
-               v.maxWait             := toSlv(3, v.maxWait'length);
                v.state               := PRE_IDLE_S;
             end if;
 
@@ -599,9 +609,10 @@ begin
       -- Outputs
       ----------------------------------------------------------------------------------------------
 
+      lanePostError <= r.lanePostError;
+
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          discBadColTrg(lane) <= r.discBadColTrg; -- fan-out
-         lanePostError(lane) <= r.lanePostError; -- fan-out
          laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
 
          -- enable mapping
