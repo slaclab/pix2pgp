@@ -128,6 +128,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       asicEnable      : sl;
@@ -168,6 +169,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneRst         => (others => '0'),
       laneReady       => (others => '0'),
       laneValid       => (others => '0'),
+      laneTimeout     => (others => '0'),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
       asicEnable      => '0',
@@ -260,7 +262,6 @@ begin
       variable preamble      : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)   := (others => '0');
       variable header        : slv(FPGA_HEADER_LEN_C-1 downto 0)     := (others => '0');
       variable laneAxiStream : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-      variable laneTimeout   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
@@ -280,7 +281,6 @@ begin
       v.cntRst     := '0';
       v.armTimeout := '0';
       v.asicEnable := '0';
-      laneTimeout  := (others => '0');
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -366,15 +366,11 @@ begin
 
          laneDecErrorMask(lane) := laneStatus(lane).decError and laneStatus(lane).valid;
 
-         if r.laneEnable(lane) = '1' then
+         if r.laneEnable(lane) = '1' and r.laneTimeout(lane) = '0' then
             v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
                                  (laneStatus(lane).overflow or laneDecErrorMask(lane));
          else
             v.laneReady(lane) := '1';
-         end if;
-
-         if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
-            laneTimeout(lane) := '1';
          end if;
 
       end loop;
@@ -419,7 +415,7 @@ begin
                               lanePause,
                               r.lanePauseErr,
                               r.laneFull,
-                              laneTimeout,
+                              r.laneTimeout,
                               r.laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
@@ -435,7 +431,8 @@ begin
          -- FifoFull signals need time to re-settle after reset (bc pipeline)
          -- FifoValid signals need time to re-settle for the same reason
          when PRE_IDLE_S =>
-            v.laneSel := (others => '0');
+            v.laneRst     := (others => '0');
+            v.laneTimeout := (others => '0');
 
             v.waitCnt := r.waitCnt + 1;
 
@@ -448,6 +445,7 @@ begin
          -- wait for a word to be written into the sro/trigger buffer
          when IDLE_S =>
             v.lanePostError := (others => '0');
+            v.laneSel       := (others => '0');
 
             -- first check if anything is enabled
             if uOr(r.laneEnable) = '1' then
@@ -473,37 +471,37 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- wait for lanes to present data
+         -- wait for lanes to present data;
+         -- evaluate, change, and register statuses
          when WAIT_LANES_S =>
-
-            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-               v.laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
-                                not(laneStatus(lane).overflow);
-            end loop;
 
             -- set timeout counter if not all ready and if the state is not changing
             if uOr(r.laneReady) = '1' and uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
                v.armTimeout := '1';
             end if;
 
-            if v.obAxisMaster.tValid = '0' then
-               -- done; either all lanes are valid, or all in timeout/error state
-               if uAnd(r.laneReady) = '1' then
-                  v.obAxisMaster.tValid := '1';
+            -- lane loop; assignl laneValid and any timeouts
+            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-                  v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
-                  v.obAxisMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
+                                not(laneStatus(lane).overflow);
 
-                  -- reset the troubled lanes
-                  for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-                     v.laneRst(lane) := laneDecErrorMask(lane) or
-                                        laneTimeout(lane) or
-                                        r.laneFull(lane);
-                  end loop;
-
-                  v.state := TX_FRAME_SIZE_S;
-
+               if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
+                  v.laneTimeout(lane) := '1';
                end if;
+
+            end loop;
+
+            -- essentially waits for all lanes to have something; either valid data or some error
+            if v.obAxisMaster.tValid = '0' and uAnd(r.laneReady) = '1' then
+
+               v.obAxisMaster.tValid := '1';
+
+               v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
+               v.obAxisMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+
+               v.state := TX_FRAME_SIZE_S;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -577,17 +575,19 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- transmit trailer; also release any resets and issue post-error signals
+         -- transmit trailer; also issue any resets
          -- unless something got reset, set maxWait to 3 (status signals are faster to re-settle)
          -- pop the metadata and internal trigger buffer info FIFOs
          when TX_TRAILER_S =>
 
-            v.maxWait       := (others => '1');
-            v.laneRst       := (others => '0');
-            v.lanePostError := r.laneRst;
+            v.maxWait := toSlv(3, v.maxWait'length);
 
-            if allBits(r.laneRst, '0') then
-               v.maxWait := toSlv(3, v.maxWait'length);
+            -- reset all lanes in case of error;
+            -- cannot just reset one lane -> if we do that, it will lead to trg misalignment
+            if (uOr(laneDecErrorMask) or uOr(r.laneTimeout) or uOr(r.laneFull)) = '1' then
+               v.maxWait       := (others => '1');
+               v.laneRst       := (others => '1');
+               v.lanePostError := (others => '1');
             end if;
 
             if v.obAxisMaster.tValid = '0' then

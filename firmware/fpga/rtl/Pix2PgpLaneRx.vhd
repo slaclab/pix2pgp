@@ -287,10 +287,10 @@ begin
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
 
-               -- if just recovering from pause-error, check if this is the next event;
+               -- if just recovering from pause-error, check if this is a subsequent event;
                -- if it is, resume normal operation, if not, wait for next packet
                if dummy = '0' and sof = '1' and r.postPauseErr = '1' then
-                  if r.pauseErrTrgCnt + 1 = trgCnt then
+                  if trgCnt > r.pauseErrTrgCnt then
                      v.postPauseErr   := '0'; -- drop the flag to go to the next if-clause
                      v.pauseErrTrgCnt := (others => '0');
                   else

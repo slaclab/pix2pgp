@@ -239,11 +239,11 @@ class AsicData(object):
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'LaneDecError, LanePauseError, LaneFull, LaneTimeout  =  0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X}'
+            _format = 'LaneDecError, LaneFull, LaneTimeout, LaneValid     =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
-                _dict['laneDecError'], _dict['lanePauseError'],
-                _dict['laneFull'], _dict['laneTimeout'],
+                _dict['laneDecError'], _dict['laneFull'],
+                _dict['laneTimeout'], _dict['laneValid'],
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
@@ -348,11 +348,7 @@ class AsicData(object):
                 self.headerEval(wordHex)
 
                 index += self.headerLen
-
-                if any(self.laneValid):
-                    state = "frameSize_s"
-                else:
-                    state = "trailer_s"
+                state = "frameSize_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "frameSize_s":
@@ -424,8 +420,8 @@ class AsicData(object):
             validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)
 
             for lane in range(self.numOfLanes):
-                if self.asicGlblTrgCnt[lane] != self.asicGlblTrgCnt[validLane]:
-                    if self.laneValid[lane]:
+                if self.laneValid[lane]:
+                    if self.asicGlblTrgCnt[lane] != self.asicGlblTrgCnt[validLane]:
                         self.asicGlblTrgCntMisalign = True
                         break
 
