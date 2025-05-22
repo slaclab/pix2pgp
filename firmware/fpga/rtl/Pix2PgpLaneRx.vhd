@@ -41,7 +41,6 @@ entity Pix2PgpLaneRx is
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- StreamRx Interface
-      lanesOk        : in  sl;
       postError      : in  sl;
       dropBadTrg     : in  sl;
       frameMetaRd    : in  sl;
@@ -175,8 +174,7 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave,
-                   dropBadTrg, laneFull, postError, lanesOk) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, dropBadTrg, laneFull, postError) is
 
       -- omnipresent
       variable v : RegType;
@@ -277,22 +275,17 @@ begin
          -- discard dummies; register important flags
          when WAIT_HEADER_S =>
 
-            -- all lane receivers should be in the same state;
-            -- if not, stay here and wait
-            if lanesOk = '0' then
-               v.state := WAIT_HEADER_S;
-
-            -- post-error state takes precedence; look for dummy headers
-            elsif postError = '1' then
+            -- post-error state takes precedence; go look for dummy headers
+            if postError = '1' then
                v.state := WAIT_DUMMY_S;
-
-            -- decoding error detected
-            elsif r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
 
             -- lane full
             elsif r.inFull = '1' then
                v.state := ERROR_S;
+
+            -- decoding error detected
+            elsif r.decError = '1' then
+               v.state := CLOSE_FRAME_S;
 
             -- nominal
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
@@ -331,7 +324,16 @@ begin
          ----------------------------------------------------------------------
          -- parse column metadata
          when PARSE_COL_METADATA_S =>
-            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+
+            -- lane full
+            if r.inFull = '1' then
+               v.state := ERROR_S;
+
+            -- decoding error detected
+            elsif r.decError = '1' then
+               v.state := CLOSE_FRAME_S;
+
+            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
                tReady         := '1'; -- read rxFifo
                v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
@@ -360,19 +362,19 @@ begin
                end if;
             end if;
 
-            -- error detected!
-            if r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
-            end if;
-
-            if r.inFull = '1' then
-               v.state := ERROR_S;
-            end if;
-
          ----------------------------------------------------------------------
          -- parse column data
          when PARSE_DATA_S =>
-            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+
+            -- lane full
+            if r.inFull = '1' then
+               v.state := ERROR_S;
+
+            -- decoding error detected
+            elsif r.decError = '1' then
+               v.state := CLOSE_FRAME_S;
+
+            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
                tReady         := '1'; -- read rxFifo
                v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
@@ -392,15 +394,6 @@ begin
                   end if;
 
                end if;
-            end if;
-
-            -- error detected!
-            if r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
-            end if;
-
-            if r.inFull = '1' then
-               v.state := ERROR_S;
             end if;
 
          ------------------------------------------------------------------------
@@ -440,7 +433,11 @@ begin
          when WAIT_DUMMY_S =>
             v.laneRxOk := '0';
 
-            if axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
+            -- lane full
+            if r.inFull = '1' then
+               v.state := ERROR_S;
+
+            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' and postError = '0' then
                tReady := '1';  -- read rxFifo
 
                if dummy = '1' then
