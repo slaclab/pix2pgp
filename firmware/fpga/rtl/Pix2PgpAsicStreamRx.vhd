@@ -329,6 +329,7 @@ begin
       axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
       axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
+      axiSlaveRegisterR(axilEp, x"624", 0, r.asicEnable);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);

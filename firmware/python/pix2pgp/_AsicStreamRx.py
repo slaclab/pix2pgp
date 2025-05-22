@@ -187,5 +187,13 @@ class AsicStreamRx(pr.Device):
             mode         = 'RO',
         ))
 
+        self.add(pr.RemoteVariable(
+            name         = 'AsicEnable',
+            description  = 'ASIC has been Enabled',
+            offset       = 0x624,
+            bitSize      = 1,
+            mode         = 'RO',
+        ))
+
     def countReset(self):
         self.CntRst()
