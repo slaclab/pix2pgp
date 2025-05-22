@@ -42,7 +42,7 @@ class AsicStreamRx(pr.Device):
                 name         = name,
                 description  = description,
                 offset       = offset,
-                bitSize      = self.trgCntWidth,
+                bitSize      = self.timeoutLimitWidth,
                 bitOffset    = bitOffset,
                 mode         = mode,
                 units        = f'1/{self.sysClkFreq/1.0E+6}MHz',
@@ -118,14 +118,14 @@ class AsicStreamRx(pr.Device):
             disp        = '{:d}',
         )
 
-        self.addRemoteVariables(
+        self.add(pr.RemoteVariable(
             name        = 'FpgaTrgCnt',
             description = 'Value of last FPGA Trigger counter',
             offset      = 0x600,
             bitSize     = self.trgCntWidth,
             mode        = 'RO',
             disp        = '{:d}',
-        )
+        ))
 
         self.add(pr.RemoteVariable(
             name         = 'FpgaId',
