@@ -171,5 +171,21 @@ class AsicStreamRx(pr.Device):
             mode         = 'RO',
         ))
 
+        self.add(pr.RemoteVariable(
+            name         = 'LaneInError',
+            description  = 'Lane is stuck in an ERROR state',
+            offset       = 0x61C,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneFull',
+            description  = 'One of the Lane FIFOs got full and have not being reset',
+            offset       = 0x620,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
     def countReset(self):
         self.CntRst()

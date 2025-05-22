@@ -270,6 +270,7 @@ begin
 
       variable laneDecErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneOk           : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneInError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneOverOcc      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable lanePause        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
@@ -326,6 +327,8 @@ begin
 
       axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
       axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
+      axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
+      axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -365,6 +368,7 @@ begin
          v.laneFull(lane)     := laneStatus(lane).overflow;
          v.lanePauseErr(lane) := laneStatus(lane).pauseError;
          laneOk(lane)         := laneStatus(lane).rxOk;
+         laneInError(lane)    := laneStatus(lane).inError;
          laneOverOcc(lane)    := laneStatus(lane).overOcc;
          lanePause(lane)      := laneStatus(lane).pause;
 

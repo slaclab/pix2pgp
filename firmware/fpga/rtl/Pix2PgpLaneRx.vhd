@@ -48,6 +48,7 @@ entity Pix2PgpLaneRx is
       frameMetaValid : out sl;
       laneRxFull     : out sl;
       laneRxOk       : out sl;
+      laneInError    : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -82,6 +83,7 @@ architecture rtl of Pix2PgpLaneRx is
       laneRxOk       : sl;
       postPauseErr   : sl;
       inFull         : sl;
+      inError        : sl;
       laneFull       : sl;
       waitCnt        : slv(2 downto 0);
       pauseErrTrgCnt : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -111,6 +113,7 @@ architecture rtl of Pix2PgpLaneRx is
       laneRxOk       => '0',
       postPauseErr   => '0',
       inFull         => '0',
+      inError        => '0',
       laneFull       => '0',
       waitCnt        => (others => '0'),
       pauseErrTrgCnt => (others => '0'),
@@ -210,6 +213,7 @@ begin
       -- Defaults
       v.frameMetaWr := '0';
       v.laneRxOk    := '1';
+      v.inError     := '0';
       tValid        := '0';
       tLast         := '0';
       tReady        := '0';
@@ -455,6 +459,7 @@ begin
          -- stay here until reset;
          when ERROR_S =>
             v.laneRxOk := '0';
+            v.inError  := '1';
 
       end case;
       ---------------------------------------------------------------------------
@@ -474,6 +479,7 @@ begin
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
       laneRxOk      <= r.laneRxOk;
+      laneInError   <= r.inError;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
