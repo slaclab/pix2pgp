@@ -149,8 +149,8 @@ class AsicStreamRx(pr.Device):
         ))
 
         addBool(
-            name        = 'DiscardBadColumnTrigger',
-            description = 'If lane receiver detects uneven trigger numbers from columns in the same frame, it will drop the frame and raise a decoding error',
+            name        = 'DropBadColumnTrigger',
+            description = 'If True: Lane receiver will drop a frame with uneven trigger counter values from columns within the frame, and will raise a decoding error. Default (and recommended) is True',
             offset      = 0x610,
         )
 
@@ -164,7 +164,7 @@ class AsicStreamRx(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
-            name         = 'Lane OK',
+            name         = 'LaneOK',
             description  = 'Lane is not in an error state and is waiting for data',
             offset       = 0x618,
             bitSize      = self.numLanes,
