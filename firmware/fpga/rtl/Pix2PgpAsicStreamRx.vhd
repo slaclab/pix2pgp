@@ -341,25 +341,26 @@ begin
 
       -- trigger counter management
       -------------------------------
+
+      -- used in downstream logic
+      if (asicRstSync and uOr(r.laneEnableSet)) = '1' then
+         v.asicEnable := '1';
+      end if;
+
       if asicRstSync = '0' then
          v.fpgaTrgCnt := FPGA_TRGCNT_DEFAULT_C;
       end if;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and asicRstSync = '1' then
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and r.asicEnable = '1' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and asicRstSync = '1' then
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and r.asicEnable = '1' then
          v.trgBuffWr := '1';
       end if;
       -------------------------------
-
-      -- used in downstream logic
-      if asicRstSync = '1' then
-         v.asicEnable := '1';
-      end if;
 
       -- global lane status loop;
       -- lane valid indicates data from that lane can be read-out;
