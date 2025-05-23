@@ -560,12 +560,11 @@ begin
    axiFifoAlmFull  <= not(axiFifoSlave.tReady);
 
    -- all full and almost-full flags; also monitor frame size counter overflow
-   -- will stay high if a full signal was registered (look at r.inFull)
    laneFull <= laneFifoFull  or laneFifoAlmFull or axiFifoFull or
-               frameMetaFull or axiFifoAlmFull  or uAnd(r.frameSizeCnt) or r.inFull;
+               frameMetaFull or axiFifoAlmFull  or uAnd(r.frameSizeCnt);
 
    pgp4RxSlave <= laneFifoSlave;
 
-   laneRxFull <= laneFull;
+   laneRxFull <= r.inFull;
 
 end rtl;
