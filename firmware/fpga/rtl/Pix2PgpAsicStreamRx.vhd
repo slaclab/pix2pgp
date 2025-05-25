@@ -108,7 +108,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
-      WAIT_LANES_S,
+      EVAL_LANES_S,
       TX_HEADER_S,
       TX_FRAME_SIZE_S,
       SWITCH_MUX_S,
@@ -126,6 +126,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       armTimeout      : sl;
       laneRst         : sl;
       lanePostError   : sl;
+      laneEval        : sl;
       laneSel         : slv(BITMAX_SERIALIZERS_C downto 0);
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -167,6 +168,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       trgBuffRd       => '0',
       trgCntBuff      => (others => '0'),
       lanePostError   => '0',
+      laneEval        => '0',
       armTimeout      => '0',
       laneRst         => '0',
       laneSel         => (others => '0'),
@@ -270,24 +272,25 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneDecError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneOk        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneInError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
       variable laneTrgCntRef : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
       variable trgMisalign   : sl := '0';
+      variable inPause       : sl := '0';
 
    begin
       -- Latch the current value
       v := r;
 
       -- Defaults
-      v.trgBuffWr  := '0';
-      v.trgBuffRd  := '0';
-      v.laneMetaRd := '0';
-      v.cntRst     := '0';
-      v.armTimeout := '0';
-      v.asicEnable := '0';
+      v.trgBuffWr   := '0';
+      v.trgBuffRd   := '0';
+      v.laneMetaRd  := '0';
+      v.cntRst      := '0';
+      v.armTimeout  := '0';
+      v.asicEnable  := '0';
+      v.laneTimeout := (others => '0');
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -380,14 +383,47 @@ begin
 
          v.laneEnable(lane) := r.laneEnableSet(lane) and r.asicEnable;
 
-         if r.laneEnable(lane) = '1' and r.laneTimeout(lane) = '0' then
-            v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
-                                 (laneStatus(lane).overflow or laneDecError(lane));
-         else
-            v.laneReady(lane) := '1';
+         if r.laneEval = '1' then
+
+            inPause := '0'; -- always reset this flag when re-evaluating the lane statuses
+
+            if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
+               v.laneTimeout(lane) := '1';
+            end if;
+
+            if r.laneEnable(lane) = '1' and r.laneTimeout(lane) = '0' then
+               v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
+                                    (laneStatus(lane).overflow or r.laneDecError(lane));
+            else
+               v.laneReady(lane) := '1';
+            end if;
+
+            -- check for pause
+            if uOr(r.lanePause) = '0' then
+               v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                       not(r.laneDecError(lane)) and
+                                       not(laneStatus(lane).overflow);
+
+            else
+
+               v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                       not(r.laneDecError(lane)) and
+                                  not(laneStatus(lane).overflow) and
+                                     (r.lanePause(lane)); -- drain only in-pause lanes
+
+            end if;
+
          end if;
 
       end loop;
+
+      if r.laneEval = '1' then
+         -- set timeout counter if not all ready and if the state is not changing
+         if uOr(r.laneReady) = '1' and uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
+            v.armTimeout := '1';
+         end if;
+
+      end if;
 
       ----------------------------------------------------------------------------------------------
 
@@ -445,8 +481,6 @@ begin
          when IDLE_S =>
             v.laneRst       := '0';
             v.lanePostError := '0';
-            v.laneSel       := (others => '0');
-            v.laneTimeout   := (others => '0');
             v.waitCnt       := (others => '0');
 
             -- first check if anything is enabled
@@ -473,58 +507,42 @@ begin
                v.obAxisMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
                ssiSetUserSof(FPGA_RX_AXI_CONFIG_C, v.obAxisMaster, '1');
                v.obAxisMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
-               v.state := WAIT_LANES_S;
+               v.state := EVAL_LANES_S;
             end if;
 
          ----------------------------------------------------------------------
          -- wait for lanes to present data;
          -- evaluate, change, and register statuses
-         when WAIT_LANES_S =>
+         when EVAL_LANES_S =>
 
-            -- set timeout counter if not all ready and if the state is not changing
-            if uOr(r.laneReady) = '1' and uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
-               v.armTimeout := '1';
-            end if;
+            v.laneEval := '1';
 
-            -- lane loop; assign laneValid and any timeouts;
             -- observe the behavior for pause:
             -- if any lane is in-pause -> wait a bit before draining *only* the paused lanes
-            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-               if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
-                  v.laneTimeout(lane) := '1';
+            -- check for pause
+            if uOr(r.lanePause) = '0' then
+
+               if uAnd(r.laneReady) = '1' then
+                  v.state := TX_HEADER_S;
                end if;
 
-               -- check for pause
-               if uOr(r.lanePause) = '0' then
-                  v.laneValid(lane) := (laneRxMasters(lane).tValid) and
-                                    not(laneDecError(lane)) and
-                                    not(laneStatus(lane).overflow);
+            else
 
-                  if uAnd(r.laneReady) = '1' then
-                     v.state := TX_HEADER_S;
-                  end if;
+               v.waitCnt := r.waitCnt + 1;
 
-               else
-                  v.waitCnt := r.waitCnt + 1;
-
-                  v.laneValid(lane) := (laneRxMasters(lane).tValid) and
-                                    not(laneDecError(lane)) and
-                                    not(laneStatus(lane).overflow) and
-                                       (r.lanePause(lane)); -- drain only in-pause lanes
-
-                  if allBits(r.waitCnt, '1') then
-                     v.waitCnt := (others => '0');
-                     v.state   := TX_HEADER_S;
-                  end if;
-
+               if allBits(r.waitCnt, '1') then
+                  v.waitCnt := (others => '0');
+                  v.state   := TX_HEADER_S;
                end if;
 
-            end loop;
+            end if;
 
          ----------------------------------------------------------------------
          -- transmit event header infromation
          when TX_HEADER_S =>
+
+            v.laneEval := '0'; -- freeze the lane statuses
 
             -- essentially waits for all lanes to have something; either valid data or some error
             if v.obAxisMaster.tValid = '0' then
@@ -607,10 +625,11 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- transmit trailer, but only if this was not a pause event
+         -- transmit trailer and pop the trigger count;
+         -- but only if this was not a pause event
          when TX_TRAILER_S =>
 
-            if uOr(r.lanePause) = '0' and allBits(r.waitCnt, '0') then
+            if uOr(r.lanePause) = '0' then
 
                if v.obAxisMaster.tValid = '0' then
                   v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
@@ -619,25 +638,17 @@ begin
                   v.obAxisMaster.tValid := '1';
                   v.obAxisMaster.tLast  := '1';
                   v.trgBuffRd           := '1';
-                  v.laneMetaRd          := '1';
-                  v.state               := DONE_S;
+
                end if;
 
             else
 
-               -- wait before re-evaluating individual lanes for this sub-event
-               v.waitCnt := r.waitCnt + '1';
-
-               if allBits(r.waitCnt, '0') then
-                  v.laneMetaRd := '1';
-               elsif r.waitCnt = toSlv(4, r.waitCnt'length) then
-                  v.laneSel     := (others => '0');
-                  v.laneTimeout := (others => '0');
-                  v.waitCnt     := (others => '0');
-                  v.state       := WAIT_LANES_S;
-               end if;
+               inPause := '1';
 
             end if;
+
+            v.laneMetaRd := '1';
+            v.state      := DONE_S;
 
          ----------------------------------------------------------------------
          -- pop the metadata and internal trigger buffer info FIFOs;
@@ -645,6 +656,9 @@ begin
          -- issue resets if necessary
          when DONE_S =>
             trgMisalign := '0';
+            v.laneSel   := (others => '0');
+            v.laneReady := (others => '0');
+            v.laneValid := (others => '0');
             v.waitCnt   := r.waitCnt + 1;
 
             -- check if every trigger is aligned:
@@ -669,13 +683,19 @@ begin
             -- reset all lanes in case of error;
             -- cannot just reset one lane -> if we do that, it will lead to trg misalignment
             if (uOr(r.laneDecError) or uOr(r.laneTimeout) or
-                uOr(r.laneFull)   or trgMisalign) = '1' and r.laneRst = '0' then
+                uOr(r.laneFull)     or trgMisalign) = '1' and r.laneRst = '0' then
                v.laneRst       := '1';
                v.lanePostError := '1';
             end if;
 
-            if r.waitCnt = toSlv(3, r.waitCnt'length) then
-               v.state   := IDLE_S;
+            if r.waitCnt = toSlv(4, r.waitCnt'length) then
+
+               v.state := IDLE_S;
+
+               if inPause = '1' and r.lanePostError = '0' then
+                  v.state := EVAL_LANES_S;
+               end if;
+
             elsif r.waitCnt = toSlv(2, r.waitCnt'length) then
                v.laneRst := '0';
             end if;
