@@ -33,7 +33,6 @@ entity Pix2PgpAsicStreamRx is
       TPD_G                  : time     := 1 ns;
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
-      AXIS_CONFIG_C          : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
       ASIC_ID_G              : natural  := 0;
       TIMEOUT_LIMIT_WIDTH_G  : positive := 12;
       LANE_PIPE_STAGES_G     : natural  := 1;
@@ -89,6 +88,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffValid    : sl := '0';
    signal timeout         : sl := '0';
+   signal axiFifoRst      : sl := '0';
 
    signal readMaster      : AxiLiteReadMasterType;
    signal readSlave       : AxiLiteReadSlaveType;
@@ -102,9 +102,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
-   signal pipeAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal pipeAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
    signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -802,43 +799,6 @@ begin
             set     => r.armTimeout,
             timeout => timeout);
 
-   -----------------------------------
-   -- Gearbox to other config (or not)
-   -----------------------------------
-
-   GEN_GBOX: if AXIS_CONFIG_C /= PIX2PGP_FPGA_AXI_CONFIG_C generate
-
-      U_FpgaGearbox : entity surf.AxiStreamGearbox
-      generic map(
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_POLARITY_G      => RST_POLARITY_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => AXIS_CONFIG_C)
-      port map(
-         -- Clock and reset
-         axisClk     => pgpRxClk,
-         axisRst     => pgpRxRst,
-         -- Slave Port
-         sAxisMaster => obAxisMaster,
-         sSideBand   => (others => '0'),
-         sAxisSlave  => obAxisSlave,
-         -- Master Port
-         mAxisMaster => pipeAxisMaster,
-         mSideBand   => open,
-         mAxisSlave  => pipeAxisSlave);
-
-   end generate GEN_GBOX;
-
-   GEN_NO_GBOX: if AXIS_CONFIG_C = PIX2PGP_FPGA_AXI_CONFIG_C generate
-
-      pipeAxisMaster <= obAxisMaster;
-      obAxisSlave    <= pipeAxisSlave;
-
-   end generate GEN_NO_GBOX;
-
    --------------------------
    -- Pipeline Stage (or not)
    --------------------------
@@ -855,8 +815,8 @@ begin
             axisClk     => pgpRxClk,
             axisRst     => pgpRxRst,
             -- Slave Port
-            sAxisMaster => pipeAxisMaster,
-            sAxisSlave  => pipeAxisSlave,
+            sAxisMaster => obAxisMaster,
+            sAxisSlave  => obAxisSlave,
             -- Master Port
             mAxisMaster => asicRxMaster,
             mAxisSlave  => asicRxSlave);
@@ -865,8 +825,8 @@ begin
 
    GEN_NO_PIPE: if STREAM_PIPE_STAGES_G <= 0 generate
 
-      asicRxMaster  <= pipeAxisMaster;
-      pipeAxisSlave <= asicRxSlave;
+      asicRxMaster <= obAxisMaster;
+      obAxisSlave  <= asicRxSlave;
 
    end generate GEN_NO_PIPE;
 

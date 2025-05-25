@@ -49,8 +49,12 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matric clock sent to ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
-   constant CLK_PERIOD_PGP_RX_C : time := 4.5    ns; -- internal-to-FPGA
+   constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
+   constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
+
+   --constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
+   constant AXIS_CONFIG_C : AxiStreamConfigType := ssiAxiStreamConfig(16);
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
@@ -59,6 +63,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
    signal revRst    : sl := '0';
+   signal sysClk    : sl := '0';
+   signal axiFifoRst: sl := '0';
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
@@ -96,10 +102,13 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
+   signal ipIntegratorMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal ipIntegratorSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
+
    signal m_axis_tvalid  : sl := '0';
-   signal m_axis_tdata   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
-   signal m_axis_tstrb   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tkeep   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tdata   : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
    signal m_axis_tlast   : sl := '0';
    signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
    signal m_axis_tid     : slv(7 downto 0) := (others => '0');
@@ -139,6 +148,17 @@ begin
          SYNC_RESET_G      => true)
       port map (
          clkP => pgpRxClk,
+         clkN => open);
+
+   U_ClkRst_sysClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SYS_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sysClk,
          clkN => open);
 
   issueSroProcess: process(sparseClk)
@@ -299,7 +319,7 @@ begin
          STREAM_PIPE_STAGES_G   => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
-         AXIS_FIFO_ADDR_WIDTH_G => 8)
+         AXIS_FIFO_ADDR_WIDTH_G => 6)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
@@ -323,6 +343,31 @@ begin
          axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
          axilWriteSlave  => open);
 
+   U_Fifo : entity surf.AxiStreamFifoV2
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         FIFO_ADDR_WIDTH_G   => 8,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => AXIS_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => pgpRxClk,
+         sAxisRst    => axiFifoRst,
+         sAxisMaster => asicRxMaster,
+         sAxisSlave  => asicRxSlave,
+         -- Status Port
+         -- Master Port
+         mAxisClk    => sysClk,
+         mAxisRst    => axiFifoRst,
+         mAxisMaster => ipIntegratorMaster,
+         mAxisSlave  => ipIntegratorSlave);
+
+   axiFifoRst <= ite(toBoolean(REV_RST_POLARITY_C), revRst, not(revRst));
+
    -- Map PgpRxMasters to AXI
    axiMaster : entity surf.MasterAxiStreamIpIntegrator
       generic map (
@@ -330,10 +375,10 @@ begin
          TUSER_WIDTH     => 8,
          TID_WIDTH       => 8,
          TDEST_WIDTH     => 8,
-         TDATA_NUM_BYTES => PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C)
+         TDATA_NUM_BYTES => AXIS_CONFIG_C.TDATA_BYTES_C)
       port map (
          -- IP Integrator AXI Stream Interface
-         M_AXIS_ACLK    => pgpRxClk,
+         M_AXIS_ACLK    => sysClk,
          M_AXIS_ARESETN => '1',
          M_AXIS_TVALID  => m_axis_tvalid,
          M_AXIS_TDATA   => m_axis_tdata,
@@ -347,8 +392,8 @@ begin
          -- SURF AXI Stream Interface
          axisClk        => open,
          axisRst        => open,
-         axisMaster     => asicRxMaster,
-         axisSlave      => asicRxSlave);
+         axisMaster     => ipIntegratorMaster,
+         axisSlave      => ipIntegratorSlave);
 
   -- Generate the test stimulus
   stimulus: process begin
@@ -1937,14 +1982,14 @@ end loop;
   revRst <= not(rst);
 
   -- Process to Monitor AXI Stream and Write to File
-  FileWriteProcessAsic : process(pgpRxClk)
+  FileWriteProcessAsic : process(sysClk)
     file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
     variable row : line;
     variable byte : std_logic_vector(7 downto 0);
   begin
-    if rising_edge(pgpRxClk) then
+    if rising_edge(sysClk) then
       if m_axis_tvalid = '1' then
-        for i in 0 to PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C - 1 loop
+        for i in 0 to AXIS_CONFIG_C.TDATA_BYTES_C - 1 loop
           if m_axis_tkeep(i) = '1' then
             byte := m_axis_tdata((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);
