@@ -48,7 +48,7 @@ entity Pix2PgpLaneRx is
       frameMetaValid : out sl;
       laneRxFull     : out sl;
       laneRxOk       : out sl;
-      laneInError    : out sl;
+      laneRxInError  : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -76,9 +76,6 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      : sl;
       inPause        : sl;
       inPauseError   : sl;
-      oocMeta        : sl;
-      pauseMeta      : sl;
-      pauseErrMeta   : sl;
       rxError        : sl;
       laneRxOk       : sl;
       postPauseErr   : sl;
@@ -106,9 +103,6 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      => '0',
       inPause        => '0',
       inPauseError   => '0',
-      oocMeta        => '0',
-      pauseMeta      => '0',
-      pauseErrMeta   => '0',
       rxError        => '0',
       laneRxOk       => '0',
       postPauseErr   => '0',
@@ -259,17 +253,12 @@ begin
          v.waitCnt := r.waitCnt + 1;
       end if;
 
-      -- status flags into the FIFO are sticky
-      v.oocMeta      := r.inOverOcc    or r.oocMeta;
-      v.pauseMeta    := r.inPause      or r.pauseMeta;
-      v.pauseErrMeta := r.inPauseError or r.pauseErrMeta;
-
       if r.frameMetaWr = '1' then
-         v.decError     := '0';
-         v.oocMeta      := '0';
-         v.pauseMeta    := '0';
-         v.pauseErrMeta := '0';
-         v.frameSizeCnt := (others => '0');
+         v.decError      := '0';
+         v.inOverOcc     := '0';
+         v.inPause       := '0';
+         v.inPauseError  := '0';
+         v.frameSizeCnt  := (others => '0');
       end if;
 
       ---------------------------------------------------------------------------
@@ -311,7 +300,7 @@ begin
                   tValid         := '1';                -- write to axiFifo
                   v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
                   v.inOverOcc    := overOcc;
-                  v.inPause      := pause;
+                  v.inPause      := pause and not(pauseErr); -- mask if in pause-error
                   v.inPauseError := pauseErr;
                   v.trgCntHeader := trgCnt;
 
@@ -351,7 +340,7 @@ begin
                      v.activeColCnt := r.activeColCnt - 1;
                      v.state := PARSE_COL_METADATA_S;
                   else
-                     -- close data frame if not expecting more data
+                     -- close data frame
                      v.state := CLOSE_FRAME_S;
                   end if;
                end if;
@@ -393,7 +382,7 @@ begin
                      v.activeColCnt := r.activeColCnt - 1;
                      v.state := PARSE_COL_METADATA_S;
                   else
-                     -- close data frame if not expecting more data
+                     -- close data frame
                      v.state := CLOSE_FRAME_S;
                   end if;
 
@@ -412,12 +401,10 @@ begin
 
             if axiFifoSlave.tReady = '1' then
                -- close frame (no valid data is sent on this cycle; tKeep is low)
-               if r.inPause = '0' or r.inPauseError = '1' then
-                  v.axiFifoMaster.tKeep := (others => '0');
-                  tLast         := '1';
-                  tValid        := '1';
-                  v.frameMetaWr := '1';
-               end if;
+               v.axiFifoMaster.tKeep := (others => '0');
+               tLast         := '1';
+               tValid        := '1';
+               v.frameMetaWr := '1';
 
                -- go-to dummy wait state by default
                v.state := WAIT_DUMMY_S;
@@ -470,16 +457,16 @@ begin
       v.rxFifoSlave.tReady   := tReady;
 
       v.frameMetaDin := laneMetaMap(r.decError,
-                                    r.oocMeta,
-                                    r.pauseMeta,
-                                    r.pauseErrMeta,
+                                    r.inOverOcc,
+                                    r.inPause,
+                                    r.inPauseError,
                                     r.frameSizeCnt,
                                     r.trgCntHeader);
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
       laneRxOk      <= r.laneRxOk;
-      laneInError   <= r.inError;
+      laneRxInError <= r.inError;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then

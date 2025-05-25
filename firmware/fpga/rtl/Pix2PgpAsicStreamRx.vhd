@@ -109,6 +109,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       IDLE_S,
       TX_PREAMBLE_S,
       WAIT_LANES_S,
+      TX_HEADER_S,
       TX_FRAME_SIZE_S,
       SWITCH_MUX_S,
       WAIT_TLAST_S,
@@ -133,7 +134,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       asicEnable      : sl;
-      waitCnt         : slv(1 downto 0);
+      waitCnt         : slv(3 downto 0);
       state           : StateType;
       -- Registers
       dropBadColTrg   : sl;
@@ -142,8 +143,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneEnableSet   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneDecErr      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePauseErr    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecErrCnt   : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -183,8 +186,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
       timeoutLimit    => TIMEOUT_LIMIT_DEFAULT_C,
       laneEnable      => (others => '0'),
       laneEnableSet   => LANE_ENABLE_DEFAULT_C,
-      laneDecErr      => (others => '0'),
-      lanePauseErr    => (others => '0'),
+      laneDecError    => (others => '0'),
+      lanePauseError  => (others => '0'),
+      laneOverOcc     => (others => '0'),
+      lanePause       => (others => '0'),
       laneFull        => (others => '0'),
       laneDecErrCnt   => (others => (others => '0')),
       lanePauseErrCnt => (others => (others => '0')),
@@ -265,11 +270,9 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneDecErrorMask : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable laneOk           : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable laneInError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable laneOverOcc      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
-      variable lanePause        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneDecError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneOk        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneInError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
       variable laneTrgCntRef : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
       variable trgMisalign   : sl := '0';
@@ -364,20 +367,22 @@ begin
       -- lane ready indicates that some action needs to be taken: either reset or read-out data
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
+         -- not from metadata FIFO
          v.laneFull(lane)     := laneStatus(lane).overflow;
-         v.lanePauseErr(lane) := laneStatus(lane).pauseError;
          laneOk(lane)         := laneStatus(lane).rxOk;
          laneInError(lane)    := laneStatus(lane).inError;
-         laneOverOcc(lane)    := laneStatus(lane).overOcc;
-         lanePause(lane)      := laneStatus(lane).pause;
+
+         -- from metadata FIFO
+         v.lanePauseError(lane) := laneStatus(lane).pauseError and laneStatus(lane).valid;
+         v.laneOverOcc(lane)    := laneStatus(lane).overOcc and laneStatus(lane).valid;
+         v.lanePause(lane)      := laneStatus(lane).pause and laneStatus(lane).valid;
+         v.laneDecError(lane)   := laneStatus(lane).decError and laneStatus(lane).valid;
 
          v.laneEnable(lane) := r.laneEnableSet(lane) and r.asicEnable;
 
-         laneDecErrorMask(lane) := laneStatus(lane).decError and laneStatus(lane).valid;
-
          if r.laneEnable(lane) = '1' and r.laneTimeout(lane) = '0' then
             v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
-                                 (laneStatus(lane).overflow or laneDecErrorMask(lane));
+                                 (laneStatus(lane).overflow or laneDecError(lane));
          else
             v.laneReady(lane) := '1';
          end if;
@@ -385,17 +390,15 @@ begin
       end loop;
 
       ----------------------------------------------------------------------------------------------
-      -- status counters
-      v.laneDecErr := laneDecErrorMask;
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- increment counters on rising edge
-         if  (v.laneDecErr(i) = '1' and r.laneDecErr(i) = '0') and (r.laneEnable(i) = '1')
+         if  (v.laneDecError(i) = '1' and r.laneDecError(i) = '0') and (r.laneEnable(i) = '1')
          and (r.laneDecErrCnt(i) /= MAX_CNT_C) then
             v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
          end if;
 
-         if  (v.lanePauseErr(i) = '1' and r.lanePauseErr(i) = '0') and (r.laneEnable(i) = '1')
+         if  (v.lanePauseError(i) = '1' and r.lanePauseError(i) = '0') and (r.laneEnable(i) = '1')
          and (r.lanePauseErrCnt(i) /= MAX_CNT_C) then
             v.lanePauseErrCnt(i) := r.lanePauseErrCnt(i) + 1;
          end if;
@@ -419,10 +422,10 @@ begin
                                   r.fpgaId,
                                   r.trgCntBuff);
 
-      header := fpgaHeaderMap(r.laneDecErr,
-                              laneOverOcc,
-                              lanePause,
-                              r.lanePauseErr,
+      header := fpgaHeaderMap(r.laneDecError,
+                              r.laneOverOcc,
+                              r.lanePause,
+                              r.lanePauseError,
                               r.laneFull,
                               r.laneTimeout,
                               r.laneValid);
@@ -483,20 +486,48 @@ begin
                v.armTimeout := '1';
             end if;
 
-            -- lane loop; assign laneValid and any timeouts
+            -- lane loop; assign laneValid and any timeouts;
+            -- observe the behavior for pause:
+            -- if any lane is in-pause -> wait a bit before draining *only* the paused lanes
             for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-
-               v.laneValid(lane) := laneRxMasters(lane).tValid and not(laneDecErrorMask(lane)) and
-                                not(laneStatus(lane).overflow);
 
                if timeout = '1' and r.laneValid(lane) = '0' and r.laneReady(lane) = '0' then
                   v.laneTimeout(lane) := '1';
                end if;
 
+               -- check for pause
+               if uOr(r.lanePause) = '0' then
+                  v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                    not(laneDecError(lane)) and
+                                    not(laneStatus(lane).overflow);
+
+                  if uAnd(r.laneReady) = '1' then
+                     v.state := TX_HEADER_S;
+                  end if;
+
+               else
+                  v.waitCnt := r.waitCnt + 1;
+
+                  v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                    not(laneDecError(lane)) and
+                                    not(laneStatus(lane).overflow) and
+                                       (r.lanePause(lane)); -- drain only in-pause lanes
+
+                  if allBits(r.waitCnt, '1') then
+                     v.waitCnt := (others => '0');
+                     v.state   := TX_HEADER_S;
+                  end if;
+
+               end if;
+
             end loop;
 
+         ----------------------------------------------------------------------
+         -- transmit event header infromation
+         when TX_HEADER_S =>
+
             -- essentially waits for all lanes to have something; either valid data or some error
-            if v.obAxisMaster.tValid = '0' and uAnd(r.laneReady) = '1' then
+            if v.obAxisMaster.tValid = '0' then
 
                v.obAxisMaster.tValid := '1';
 
@@ -518,7 +549,7 @@ begin
                v.obAxisMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
                v.laneTrgCnt(laneIdx) := laneStatus(laneIdx).trgCnt;
 
-               if r.laneValid(laneIdx) = '0' or r.laneDecErr(laneIdx) = '1' then
+               if r.laneValid(laneIdx) = '0' then
                   v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
                end if;
 
@@ -535,7 +566,7 @@ begin
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
          when SWITCH_MUX_S =>
-            if r.laneValid(laneIdx) = '0' or r.laneDecErr(laneIdx) = '1' then
+            if r.laneValid(laneIdx) = '0' then
                --
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.state := TX_TRAILER_S;
@@ -576,17 +607,36 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- transmit trailer; also pop the status word and trigger word
+         -- transmit trailer, but only if this was not a pause event
          when TX_TRAILER_S =>
-            if v.obAxisMaster.tValid = '0' then
-               v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
-               v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
-                  resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-               v.obAxisMaster.tValid := '1';
-               v.obAxisMaster.tLast  := '1';
-               v.laneMetaRd          := '1';
-               v.trgBuffRd           := trgBuffValid;
-               v.state               := DONE_S;
+
+            if uOr(r.lanePause) = '0' and allBits(r.waitCnt, '0') then
+
+               if v.obAxisMaster.tValid = '0' then
+                  v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
+                  v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
+                     resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
+                  v.obAxisMaster.tValid := '1';
+                  v.obAxisMaster.tLast  := '1';
+                  v.trgBuffRd           := '1';
+                  v.laneMetaRd          := '1';
+                  v.state               := DONE_S;
+               end if;
+
+            else
+
+               -- wait before re-evaluating individual lanes for this sub-event
+               v.waitCnt := r.waitCnt + '1';
+
+               if allBits(r.waitCnt, '0') then
+                  v.laneMetaRd := '1';
+               elsif r.waitCnt = toSlv(4, r.waitCnt'length) then
+                  v.laneSel     := (others => '0');
+                  v.laneTimeout := (others => '0');
+                  v.waitCnt     := (others => '0');
+                  v.state       := WAIT_LANES_S;
+               end if;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -594,13 +644,13 @@ begin
          -- check the trigger counters and make sure they have the same value;
          -- issue resets if necessary
          when DONE_S =>
-            trgMisalign   := '0';
-            v.waitCnt     := r.waitCnt + 1;
+            trgMisalign := '0';
+            v.waitCnt   := r.waitCnt + 1;
 
             -- check if every trigger is aligned:
             -- first get the first valid trigger...
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-               if r.laneValid(lane) = '1' and r.laneDecErr(lane) = '0' then
+               if r.laneValid(lane) = '1' and r.laneDecError(lane) = '0' then
                   laneTrgCntRef := r.laneTrgCnt(lane);
                   exit;
                end if;
@@ -608,7 +658,7 @@ begin
 
             -- then check against the rest...
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-               if r.laneValid(lane) = '1' and r.laneDecErr(lane) = '0' then
+               if r.laneValid(lane) = '1' and r.laneDecError(lane) = '0' then
                   if r.laneTrgCnt(lane) /= laneTrgCntRef then
                      trgMisalign := '1';
                      exit;
@@ -618,13 +668,13 @@ begin
 
             -- reset all lanes in case of error;
             -- cannot just reset one lane -> if we do that, it will lead to trg misalignment
-            if (uOr(r.laneDecErr) or uOr(r.laneTimeout) or
+            if (uOr(r.laneDecError) or uOr(r.laneTimeout) or
                 uOr(r.laneFull)   or trgMisalign) = '1' and r.laneRst = '0' then
                v.laneRst       := '1';
                v.lanePostError := '1';
             end if;
 
-            if allBits(r.waitCnt, '1') then
+            if r.waitCnt = toSlv(3, r.waitCnt'length) then
                v.state   := IDLE_S;
             elsif r.waitCnt = toSlv(2, r.waitCnt'length) then
                v.laneRst := '0';
@@ -639,8 +689,9 @@ begin
       ----------------------------------------------------------------------------------------------
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          dropBadColTrg(lane) <= r.dropBadColTrg; -- fan-out
-         laneMetaRd(lane)    <= r.laneMetaRd;    -- fan-out
          lanePostError(lane) <= r.lanePostError; -- fan-out
+
+         laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane)); -- only read the valid lanes
 
          -- enable mapping
          if RST_POLARITY_G = '1' then

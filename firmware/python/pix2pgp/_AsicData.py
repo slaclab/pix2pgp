@@ -20,7 +20,6 @@ class AsicData(object):
                  asicType   = "SparkPixS",
                  asicData   = False,
                  fpgaTbData = False,
-                 selfRst    = False,
                  verbose    = 0,
                  **kwargs):
         """
@@ -32,7 +31,6 @@ class AsicData(object):
         self._asicType   = asicType
         self._asicData   = asicData
         self._fpgaTbData = fpgaTbData
-        self._selfRst    = selfRst
         self._verbose    = verbose
 
         # the real initialization method
@@ -107,10 +105,10 @@ class AsicData(object):
         # lane-decoder-assigned flags
         self.laneHeaderErr = [False] * self.numOfLanes
         self.laneDecErr    = [False] * self.numOfLanes
-        self.laneIsEmpty   = [False] * self.numOfLanes
+        self.laneHasData   = [False] * self.numOfLanes
 
         # trailer
-        self.trailerErr  = False
+        self.trailerErr = False
 
         # trigger misalignment flag
         self.asicGlblTrgCntMisalign = False
@@ -269,47 +267,83 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def allocWide(self, oldVar, newVar, offset):
-        oldVar[offset:offset + self.numOfCols] = [
-            newVar[idx] for idx in range(self.numOfCols)]
-    #################################################################
-
-    #################################################################
     def extractLaneData(self, laneSel):
         """
         Extracts lane data from the lane decoder into the AsicData class arrays.
         """
-        if laneSel < self.numOfLanes:
-            # ~~~~~~~~~~~~~~~~~~~~~~~~~
-            # header data
-            # ~~~~~~~~~~~~~~~~~~~~~~~~~
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~
+        # header data
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~
+        self.asicGlblOverOcc[laneSel] = (
+            np.array(self.asicGlblOverOcc[laneSel]) |
+            np.array(self.laneDecoder.overOcc))
 
-            self.asicGlblOverOcc[laneSel]    = self.laneDecoder.overOcc
-            self.asicGlblPause[laneSel]      = self.laneDecoder.pause
-            self.asicGlblColErr[laneSel]     = self.laneDecoder.colErr
-            self.asicGlblPauseErr[laneSel]   = self.laneDecoder.pauseErr
-            self.asicGlblDummy[laneSel]      = self.laneDecoder.dummy
-            self.asicGlblColTimeout[laneSel] = self.laneDecoder.timeout
-            self.asicGlblTrgCnt[laneSel]     = self.laneDecoder.trgCnt
+        self.asicGlblPause[laneSel] = (
+            np.array(self.asicGlblOverOcc[laneSel]) |
+            np.array(self.laneDecoder.pause))
 
-            # Errors and status flags
-            self.laneHeaderErr[laneSel]      = self.laneDecoder.headerErr
-            self.laneDecErr[laneSel]         = self.laneDecoder.decErr
-            self.laneIsEmpty[laneSel]        = self.laneDecoder.isEmpty
+        self.asicGlblColErr[laneSel] = (
+            np.array(self.asicGlblColErr[laneSel]) |
+            np.array(self.laneDecoder.colErr))
 
-            offset = laneSel * self.numOfCols
+        self.asicGlblPauseErr[laneSel] = (
+            np.array(self.asicGlblPauseErr[laneSel]) |
+            np.array(self.laneDecoder.pauseErr))
 
-            self.colBitmask[offset:offset  + self.numOfCols] = self.laneDecoder.colBitmask
-            self.colOverOcc[offset:offset  + self.numOfCols] = self.laneDecoder.colOverOcc
-            self.colPause[offset:offset    + self.numOfCols] = self.laneDecoder.colPause
-            self.colLen[offset:offset      + self.numOfCols] = self.laneDecoder.colLen
-            self.colDecColId[offset:offset + self.numOfCols] = self.laneDecoder.colId
-            self.colTrgCnt[offset:offset   + self.numOfCols] = self.laneDecoder.colTrgCnt
+        self.asicGlblDummy[laneSel] = (
+            np.array(self.asicGlblDummy[laneSel]) |
+            np.array(self.laneDecoder.dummy))
 
-            # Actual hits
-            if not self.laneIsEmpty[laneSel]:
-                for colIdx in range(self.numOfCols):
-                    self.asicHits[offset + colIdx].extend((self.laneDecoder.laneHits[colIdx]))
+        self.asicGlblColTimeout[laneSel] = (
+            np.array(self.asicGlblColTimeout[laneSel]) |
+            np.array(self.laneDecoder.timeout))
+
+        # should not change within the same event
+        self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
+
+        # Errors and status flags
+        self.laneHeaderErr[laneSel] = (
+            np.array(self.laneHeaderErr[laneSel]) |
+            np.array(self.laneDecoder.headerErr))
+
+        self.laneDecErr[laneSel] = (
+            np.array(self.laneDecErr[laneSel]) |
+            np.array(self.laneDecoder.decErr))
+
+        self.laneHasData[laneSel] = (
+            np.array(self.laneHasData[laneSel]) |
+            np.array(self.laneDecoder.hasData))
+
+        offset = laneSel * self.numOfCols
+
+        self.colBitmask[offset:offset + self.numOfCols] = (
+            np.array(self.colBitmask[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colBitmask))
+
+        self.colOverOcc[offset:offset + self.numOfCols] = (
+            np.array(self.colOverOcc[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colOverOcc))
+
+        self.colPause[offset:offset + self.numOfCols] = (
+            np.array(self.colPause[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colPause))
+
+        self.colDecColId[offset:offset + self.numOfCols] = (
+            np.array(self.colDecColId[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colId))
+
+        # each column-length accumulates on itself for each frame
+        self.colLen[offset:offset + self.numOfCols] = (
+            np.array(self.colLen[offset:offset + self.numOfCols]) +
+            np.array(self.laneDecoder.colLen))
+
+        # should not change within the same event
+        self.colTrgCnt[offset:offset + self.numOfCols] = self.laneDecoder.colTrgCnt
+
+        # Actual hits
+        if self.laneHasData[laneSel]:
+            for colIdx in range(self.numOfCols):
+                self.asicHits[offset + colIdx].extend(self.laneDecoder.laneHits[colIdx])
     #################################################################
 
     #################################################################
@@ -322,10 +356,11 @@ class AsicData(object):
         then the trailer.
         """
 
-        state   = "preamble_s"
-        index   = self.dataIndexStart
-        laneSel = 0
-        pause   = False
+        state      = "preamble_s"
+        index      = self.dataIndexStart
+        _frameSize = [0] * self.numOfLanes
+        laneSel    = 0
+        inPause    = False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not(self.done):
@@ -360,7 +395,10 @@ class AsicData(object):
                     _slice = frame[index:index + self.frameSizeLen]
 
                     wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                    self.frameSize[laneSel] = int(wordHex, 16)
+                    _frameSize[laneSel] = int(wordHex, 16)
+
+                    # accumulate frameSize
+                    self.frameSize[laneSel] = _frameSize[laneSel] + self.frameSize[laneSel]
 
                     index += self.frameSizeLen
                     laneSel += 1
@@ -374,7 +412,7 @@ class AsicData(object):
             elif state == "laneValidCheck_s":
 
                 if laneSel < self.numOfLanes:
-                    if self.laneValid[laneSel] and not(self.laneDecError[laneSel]):
+                    if self.laneValid[laneSel]:
                         state = "lane_s"
                     else:
                         laneSel += 1
@@ -383,7 +421,7 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
-                _frameSlice = frame[index:index + self.frameSize[laneSel] * self.wordLen]
+                _frameSlice = frame[index:index + _frameSize[laneSel] * self.wordLen]
 
                 _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen)
 
@@ -393,10 +431,13 @@ class AsicData(object):
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
 
+                self.extractLaneData(laneSel=laneSel)
+
                 # update the index
                 index += self.laneDecoder.dataIndexEnd
 
-                self.extractLaneData(laneSel=laneSel)
+                inPause = self.laneDecoder.pause or inPause
+
                 self.laneDecoder.reset()
 
                 laneSel += 1
@@ -405,20 +446,30 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                _slice = frame[index:index + self.trailerLen]
+                if not(inPause):
+                    _slice = frame[index:index + self.trailerLen]
 
-                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                self.trailerEval(wordHex)
-                index += self.trailerLen
+                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                    self.trailerEval(wordHex)
+                    index += self.trailerLen
 
-                laneSel = 0
-                self.done = self._selfRst
+                    laneSel = 0
+
+                    self.done = True
+                else:
+                    # reset and parse in another frame for this event
+                    laneSel    = 0
+                    _frameSize = [0] * self.numOfLanes
+                    inPause    = False
+                    state      = "header_s"
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+        # determine if another frame/event needs to be read
         if index >= size:
-            self.done = True
+            self.done = True # terminate no matter what
 
+        # done; print-out anything that is needed, and determine if there was a trigger misalignment
         if self.done:
             self.dataIndexEnd = index
 

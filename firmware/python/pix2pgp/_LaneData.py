@@ -87,11 +87,7 @@ class LaneData(object):
         self.dataIndexEnd   = 0
 
         # empty event
-        self.isEmpty = False
-
-        # current sub-frame is in pause or pause-error
-        self.currPause    = False
-        self.currPauseErr = False
+        self.hasData = False
 
         # flag indicating that we are done processing
         self.done = False
@@ -170,23 +166,19 @@ class LaneData(object):
         _colBitmask = 0
         _dict = self.headerFormat.headerDecoder(header=header)
 
-        self.currPause    = _dict['pause']
-        self.currPauseErr = _dict['pauseErr']
+        self.overOcc  = _dict['overOcc']
+        self.pause    = _dict['pause']
+        self.pauseErr = _dict['pauseErr']
+        self.colErr   = _dict['colErr']
+        self.dummy    = _dict['dummy']
+        self.timeout  = _dict['timeout']
+        _colBitmask   = _dict['colBitmask']
+        self.trgCnt   = _dict['trgCnt']
 
-        self.overOcc = _dict['overOcc'] or self.overOcc
-        self.colErr  = _dict['colErr'] or self.colErr
-        self.dummy   = _dict['dummy'] or self.dummy
-        self.timeout = _dict['timeout'] or self.timeout
-        _colBitmask  = _dict['colBitmask']
-        self.trgCnt  = _dict['trgCnt']
+        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
 
-        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)] or self.colBitmask
-
-        self.pause    = self.currPause or self.pause
-        self.pauseErr = self.currPauseErr or self.pauseErr
-
-        if _colBitmask == 0:
-            self.isEmpty = True
+        if _colBitmask != 0:
+            self.hasData = True
 
         self.headerErr = bool(self.colErr or self.timeout)
 
@@ -204,8 +196,8 @@ class LaneData(object):
         """
         _dict = self.colMetadataFormat.colMetadataDecoder(colMeta=colMeta)
 
-        self.colOverOcc[colBmskId] = _dict['colOverOcc'] or self.colOverOcc[colBmskId]
-        self.colPause[colBmskId]   = _dict['colPause'] or self.colPause[colBmskId]
+        self.colOverOcc[colBmskId] = _dict['colOverOcc']
+        self.colPause[colBmskId]   = _dict['colPause']
         self.colId[colBmskId]      = _dict['colId']
         self.colTrgCnt[colBmskId]  = _dict['colTrgCnt']
 
@@ -277,7 +269,7 @@ class LaneData(object):
         subLen = 0
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        while not(self.done) and index <= size:
+        while index < size and not(self.done):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             # --------------------------------------------------------------------------------------
@@ -288,10 +280,10 @@ class LaneData(object):
 
                 index += self.wordLen
 
-                if not(self.isEmpty) and self.dummy == False:
+                if self.hasData and self.dummy == False:
                     state = "bitmaskCheck_s"
                 else:
-                    state = "checkPause_s"
+                    self.done = True
 
             # --------------------------------------------------------------------------------------
             elif state == "bitmaskCheck_s":
@@ -301,7 +293,7 @@ class LaneData(object):
                     else:
                         colSel += 1
                 else:
-                    state = "checkPause_s"
+                    self.done = True
 
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
@@ -335,15 +327,6 @@ class LaneData(object):
                     colSel += 1
                     subLen = 0
                     state  = "bitmaskCheck_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "checkPause_s":
-                colSel = 0
-                if self.currPause and not(self.currPauseErr):
-                    # more data
-                    state = "header_s"
-                else:
-                    self.done = True
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
