@@ -525,7 +525,7 @@ begin
          FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => FPGA_RX_AXI_CONFIG_C)
+         MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
       port map (
          -- Slave Port
          sAxisClk    => laneClk,

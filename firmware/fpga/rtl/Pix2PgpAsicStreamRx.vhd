@@ -505,7 +505,7 @@ begin
                v.obAxisMaster.tValid := '1';
 
                v.obAxisMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               ssiSetUserSof(FPGA_RX_AXI_CONFIG_C, v.obAxisMaster, '1');
+               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxisMaster, '1');
                v.obAxisMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
                v.state := EVAL_LANES_S;
             end if;

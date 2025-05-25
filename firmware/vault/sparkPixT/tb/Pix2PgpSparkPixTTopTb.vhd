@@ -101,9 +101,9 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
    signal m_axis_tvalid  : sl := '0';
-   signal m_axis_tdata   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
-   signal m_axis_tstrb   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tkeep   : slv(FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tdata   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep   : slv(PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
    signal m_axis_tlast   : sl := '0';
    signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
    signal m_axis_tid     : slv(7 downto 0) := (others => '0');
@@ -332,7 +332,7 @@ begin
          TUSER_WIDTH     => 8,
          TID_WIDTH       => 8,
          TDEST_WIDTH     => 8,
-         TDATA_NUM_BYTES => FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C)
+         TDATA_NUM_BYTES => PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C)
       port map (
          -- IP Integrator AXI Stream Interface
          M_AXIS_ACLK    => pgpRxClk,
@@ -1982,7 +1982,7 @@ end loop;
   begin
     if rising_edge(pgpRxClk) then
       if m_axis_tvalid = '1' then
-        for i in 0 to FPGA_RX_AXI_CONFIG_C.TDATA_BYTES_C - 1 loop
+        for i in 0 to PIX2PGP_FPGA_AXI_CONFIG_C.TDATA_BYTES_C - 1 loop
           if m_axis_tkeep(i) = '1' then
             byte := m_axis_tdata((i*8+7) downto (i*8));
             hwrite(row, byte, LEFT, 0);

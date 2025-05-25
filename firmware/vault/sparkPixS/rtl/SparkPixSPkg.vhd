@@ -353,7 +353,7 @@ package Pix2PgpPkg is
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_NORMAL_C);
 
-   constant FPGA_RX_AXI_CONFIG_C : AxiStreamConfigType := (
+   constant PIX2PGP_FPGA_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C    => false,
       TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C  => 4,
