@@ -335,7 +335,8 @@ class AsicData(object):
             if state == "preamble_s":
                 laneSel = 0
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.preambleLen])
+                _slice = frame[index:index + self.preambleLen]
+                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
                 self.preambleEval(wordHex)
 
                 index += self.preambleLen
@@ -344,7 +345,9 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.headerLen])
+                _slice = frame[index:index + self.headerLen]
+
+                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
                 self.headerEval(wordHex)
 
                 index += self.headerLen
@@ -354,9 +357,9 @@ class AsicData(object):
             elif state == "frameSize_s":
                 if laneSel < self.numOfLanes:
 
-                    wordHex = ''.join(format(x, '02x') for x in frame[
-                        index:index + self.frameSizeLen])
+                    _slice = frame[index:index + self.frameSizeLen]
 
+                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
                     self.frameSize[laneSel] = int(wordHex, 16)
 
                     index += self.frameSizeLen
@@ -380,11 +383,12 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
-
                 _frameSlice = frame[index:index + self.frameSize[laneSel] * self.wordLen]
 
+                _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen)
+
                 self.laneDecoder.laneIdSet(laneId=laneSel)
-                self.laneDecoder.formatter(data=_frameSlice, dataLen=len(_frameSlice))
+                self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSlice))
 
                 while not(self.laneDecoder.done):
                     time.sleep(0.1) # crude; sleep before checking again
@@ -401,7 +405,9 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.trailerLen])
+                _slice = frame[index:index + self.trailerLen]
+
+                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
                 self.trailerEval(wordHex)
                 index += self.trailerLen
 

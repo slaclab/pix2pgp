@@ -64,25 +64,20 @@ class Tools:
 
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def wordSwap(inByteArray, wordLen, groupSize):
+    def wordSwap(inList, groupSize):
+        '''
+        Swap the endianness on a per-group basis;
+        i.e. if inList = [0, 1, 2, 3, 4];
+           _inListSwap = [2, 1, 0, 4, 3];
+           (for groupSize = 3)
+        '''
 
-        _wordList = [inByteArray[i * wordLen : (i + 1) * wordLen]
-                     for i in range(len(inByteArray))]
+        _inListSwap = []
 
-        _swapEndian     = []
-        _flatSwapEndian = []
+        for i in range(0, len(inList), groupSize):
+            subList = inList[i:i + groupSize]
+            _rev = subList[::-1]
+            _inListSwap.extend(_rev)
 
-        for i in range(0, len(_wordList), groupSize):
-            group = _wordList[i:i + groupSize]
-            if len(group) == groupSize:
-                # Swap elements within the group (reverse)
-                _swappedGroup = group[::-1]
-                _swapEndian.extend(_swappedGroup)
-            else:
-                # Reverse the remaining elements
-                _swapEndian.extend(group[::-1])
-
-        _flatSwapEndian = [item for sublist in _swapEndian for item in sublist]
-
-        return _flatSwapEndian
+        return _inListSwap
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

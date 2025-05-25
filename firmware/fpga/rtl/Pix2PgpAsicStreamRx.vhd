@@ -106,7 +106,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type StateType is (
-      PRE_IDLE_S,
       IDLE_S,
       TX_PREAMBLE_S,
       WAIT_LANES_S,
@@ -134,8 +133,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       asicEnable      : sl;
-      waitCnt         : slv(3 downto 0);
-      maxWait         : slv(3 downto 0);
+      waitCnt         : slv(1 downto 0);
       state           : StateType;
       -- Registers
       dropBadColTrg   : sl;
@@ -177,8 +175,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneMetaRd      => '0',
       asicEnable      => '0',
       waitCnt         => (others => '0'),
-      maxWait         => (others => '1'),
-      state           => PRE_IDLE_S,
+      state           => IDLE_S,
       -- Registers
       dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
       cntRst          => '1',
@@ -439,27 +436,15 @@ begin
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
-         -- need to wait before evaluating lane statuses;
-         -- FifoFull signals need time to re-settle after reset (bc pipeline)
-         -- FifoValid signals need time to re-settle for the same reason
-         -- if issued an internal reset on the lanes:
-         -- release post-error signal a bit later -> lanes will align with stream
-         when PRE_IDLE_S =>
-            v.laneRst       := '0';
-            v.laneTimeout   := (others => '0');
-
-            v.waitCnt := r.waitCnt + 1;
-
-            if r.waitCnt = r.maxWait then
-               v.waitCnt := (others => '0');
-               v.state   := IDLE_S;
-            elsif r.waitCnt = toSlv(1, r.waitCnt'length) then
-               v.lanePostError := '0';
-            end if;
 
          ----------------------------------------------------------------------
          -- wait for a word to be written into the sro/trigger buffer
          when IDLE_S =>
+            v.laneRst       := '0';
+            v.lanePostError := '0';
+            v.laneSel       := (others => '0');
+            v.laneTimeout   := (others => '0');
+            v.waitCnt       := (others => '0');
 
             -- first check if anything is enabled
             if uOr(r.laneEnable) = '1' then
@@ -569,10 +554,6 @@ begin
          -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
             if v.obAxisMaster.tValid = '0' then
-               axiStreamEndianSwap(laneAxiStream,
-                                   FPGA_RX_AXI_CONFIG_C,
-                                   ASIC_DATA_AXI_CONFIG_C.TDATA_BYTES_C);
-
                v.obAxisMaster.tKeep := laneAxiStream.tKeep;
                v.obAxisMaster.tData := laneAxiStream.tData;
 
@@ -595,7 +576,7 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- transmit trailer
+         -- transmit trailer; also pop the status word and trigger word
          when TX_TRAILER_S =>
             if v.obAxisMaster.tValid = '0' then
                v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
@@ -603,22 +584,20 @@ begin
                   resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
                v.obAxisMaster.tValid := '1';
                v.obAxisMaster.tLast  := '1';
+               v.laneMetaRd          := '1';
+               v.trgBuffRd           := trgBuffValid;
                v.state               := DONE_S;
             end if;
 
          ----------------------------------------------------------------------
-         -- unless something got reset, set maxWait to 3 (status signals are faster to re-settle)
-         -- pop the metadata and internal trigger buffer info FIFOs
-         -- check the trigger counters and make sure they have the same value
+         -- pop the metadata and internal trigger buffer info FIFOs;
+         -- check the trigger counters and make sure they have the same value;
+         -- issue resets if necessary
          when DONE_S =>
-            v.maxWait    := toSlv(3, v.maxWait'length);
-            trgMisalign  := '0';
-            v.laneMetaRd := '1';
-            v.trgBuffRd  := trgBuffValid;
-            v.laneSel    := (others => '0');
+            trgMisalign   := '0';
+            v.waitCnt     := r.waitCnt + 1;
 
-            -- check if every trigger is aligned
-
+            -- check if every trigger is aligned:
             -- first get the first valid trigger...
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
                if r.laneValid(lane) = '1' and r.laneDecErr(lane) = '0' then
@@ -640,13 +619,16 @@ begin
             -- reset all lanes in case of error;
             -- cannot just reset one lane -> if we do that, it will lead to trg misalignment
             if (uOr(r.laneDecErr) or uOr(r.laneTimeout) or
-                uOr(r.laneFull)   or trgMisalign) = '1' then
-               v.maxWait       := (others => '1');
+                uOr(r.laneFull)   or trgMisalign) = '1' and r.laneRst = '0' then
                v.laneRst       := '1';
                v.lanePostError := '1';
             end if;
 
-            v.state := PRE_IDLE_S;
+            if allBits(r.waitCnt, '1') then
+               v.state   := IDLE_S;
+            elsif r.waitCnt = toSlv(2, r.waitCnt'length) then
+               v.laneRst := '0';
+            end if;
 
       end case;
       -------------------------------------------------------------------------
@@ -668,9 +650,6 @@ begin
          end if;
 
       end loop;
-
-      -- endianness swap (per-byte)
-      axiStreamEndianSwap(v.obAxisMaster, FPGA_RX_AXI_CONFIG_C, 1);
 
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
