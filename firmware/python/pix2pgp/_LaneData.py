@@ -107,13 +107,9 @@ class LaneData(object):
         - Extracted fields are stored in their respective attributes of the class.
         """
 
-        # Convert input data to 64-bit unsigned integers for consistent processing
-        _dat = np.array(data)
-
-        dat = _dat.view(np.uint64)
-
+        # Convert input data to 64-bit unsigned integers for consistent processing;
         # Parse them in
-        self.eventParseFsm(frame=dat, size=dataLen)
+        self.eventParseFsm(frame=np.array(data), size=dataLen)
     #################################################################
 
     #################################################################
