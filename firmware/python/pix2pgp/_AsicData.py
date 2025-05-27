@@ -149,6 +149,24 @@ class AsicData(object):
     #################################################################
 
     #################################################################
+    def verboseSet(self, verbose):
+        """
+        Externally set the verbosity level
+        """
+        self._verbose = _verbose
+        self.laneDecoder.verboseSet(_verbose)
+    #################################################################
+
+    #################################################################
+    def dataTypeSet(self, dataType):
+        """
+        Externally set the data type;
+        It is either gonna be asicData=True or False
+        """
+        self.laneDecoder.dataTypeSet(dataType)
+    #################################################################
+
+    #################################################################
     def fpgaParameterSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type

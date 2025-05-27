@@ -31,11 +31,13 @@ class SparkPixSDataFormat(SparseDataFormatBase):
         hit1     = (_hitData >>  0) & 0xFFFFF
 
         if asicData:
-            _hitData0_dict = {'row'    : (hit0 >>  0) & 0x3FF,
-                              'adc'    : (hit0 >> 10) & 0xFFFFF}
+            _hitData0_dict = {'row'    : (hit0 >> 10) & 0x1FF,
+                              'L/R'    : (hit0 >> 19) & 0x1,
+                              'adc'    : (hit0 >>  0) & 0x3FF}
 
-            _hitData1_dict = {'row'    : (hit1 >>  0) & 0x3FF,
-                              'adc'    : (hit1 >> 10) & 0xFFFFF}
+            _hitData1_dict = {'row'    : (hit1 >> 10) & 0x1FF,
+                              'L/R'    : (hit1 >> 19) & 0x1,
+                              'adc'    : (hit1 >>  0) & 0x3FF}
 
         elif fpgaTbData:
             _hitData0_dict = {'serId'  : (hit0 >>  0) & 0x07,

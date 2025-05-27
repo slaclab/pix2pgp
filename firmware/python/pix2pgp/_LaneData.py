@@ -121,6 +121,23 @@ class LaneData(object):
     #################################################################
 
     #################################################################
+    def verboseSet(self, verbose):
+        """
+        Externally set the verbosity level
+        """
+        self._verbose = _verbose
+    #################################################################
+
+    #################################################################
+    def dataTypeSet(self, dataType):
+        """
+        Externally set the data type;
+        It is either gonna be asicData=True or False
+        """
+        self._asicData  = dataType
+    #################################################################
+
+    #################################################################
     def laneIdSet(self, laneId):
         """
         Externally set the data index
