@@ -93,6 +93,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgpDataAsic      : pgpDataAsicType := (others => (others => '0'));
    signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpDataAsicReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal linkReady        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -297,6 +298,7 @@ begin
           pgpRxClk     => pgpRxClk,
           phyRxClk     => pgpClk,
           rst          => revRst,
+          linkReady    => linkReady(lane),
           -- Pix2Pgp Interface
           pgpDin       => pgpDataAsic(lane),
           pgpDinValid  => pgpDataAsicValid(lane),
@@ -306,6 +308,8 @@ begin
           pgp4RxSlave  => pgp4RxSlave(lane));
 
    end generate GEN_LANE;
+
+   pgp4RxLinkUp <= uAnd(linkReady);
 
    -- asic stream receiver and merger
    U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
@@ -332,6 +336,7 @@ begin
          -- PGP4Rx Interface (on pgpRxClk domain)
          pgp4RxMaster    => pgp4RxMaster,
          pgp4RxSlave     => pgp4RxSlave,
+         pgp4RxLinkUp    => pgp4RxLinkUp,
          -- AXI-Stream Rx Interface (on pgpRxClk domain)
          asicRxMaster    => asicRxMaster,
          asicRxSlave     => asicRxSlave,

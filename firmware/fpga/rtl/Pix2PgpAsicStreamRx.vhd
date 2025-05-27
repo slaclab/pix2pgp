@@ -53,6 +53,7 @@ entity Pix2PgpAsicStreamRx is
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
+      pgp4RxLinkUp    : in  sl;
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
@@ -89,6 +90,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal trgBuffValid    : sl := '0';
    signal timeout         : sl := '0';
    signal axiFifoRst      : sl := '0';
+   signal linkUp          : sl := '0';
 
    signal readMaster      : AxiLiteReadMasterType;
    signal readSlave       : AxiLiteReadSlaveType;
@@ -237,6 +239,16 @@ begin
          dataIn  => asicRst,
          dataOut => asicRstSync);
 
+   U_SyncRst : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpRxClk,
+         dataIn  => pgp4RxLinkUp,
+         dataOut => linkUp);
+
    U_AxiLiteAsync : entity surf.AxiLiteAsync
       generic map (
          TPD_G           => TPD_G,
@@ -259,7 +271,7 @@ begin
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnaSync, trgBuffValid, laneStatus, asicRstSync,
-                   trgBuffDout, timeout, laneRxMasters, r) is
+                   trgBuffDout, timeout, laneRxMasters, linkUp, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -330,6 +342,7 @@ begin
       axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
       axiSlaveRegisterR(axilEp, x"624", 0, r.asicEnable);
+      axiSlaveRegisterR(axilEp, x"628", 0, linkUp);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -343,7 +356,7 @@ begin
       -------------------------------
 
       -- used in downstream logic
-      if (asicRstSync and uOr(r.laneEnableSet)) = '1' then
+      if (asicRstSync and uOr(r.laneEnableSet) and linkUp) = '1' then
          v.asicEnable := '1';
       end if;
 
@@ -449,8 +462,8 @@ begin
             v.laneTimeout   := (others => '0');
             v.waitCnt       := (others => '0');
 
-            -- first check if anything is enabled
-            if uOr(r.laneEnable) = '1' then
+            -- first check if anything is enabled and if the PGP link is up
+            if uOr(r.laneEnable) and linkUp = '1' then
 
                -- if got full, go-to reset state
                if uOr(r.laneFull) = '1' then

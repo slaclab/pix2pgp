@@ -195,5 +195,14 @@ class AsicStreamRx(pr.Device):
             mode         = 'RO',
         ))
 
+        self.add(pr.RemoteVariable(
+            name         = 'Pgp4RxLinkUp',
+            description  = 'PGP4 Link is Up and Stable',
+            offset       = 0x628,
+            bitSize      = 1,
+            mode         = 'RO',
+        ))
+
+
     def countReset(self):
         self.CntRst()
