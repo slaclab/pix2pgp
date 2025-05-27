@@ -154,7 +154,7 @@ class AsicData(object):
         Externally set the verbosity level
         """
         self._verbose = verbose
-        self.laneDecoder.verboseSet(_verbose)
+        self.laneDecoder.verboseSet(verbose)
     #################################################################
 
     #################################################################
