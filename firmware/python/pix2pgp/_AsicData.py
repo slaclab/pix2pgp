@@ -493,4 +493,16 @@ class AsicData(object):
         if self._verbose > 3:
             for name, value in self.__dict__.items():
                 print(f"self.asicData.{name} = {value}")
+
+        if self._verbose == 3:
+            _empty = True
+s
+            for colIdx, colHits in enumerate(self.asicHits):
+                if colHits:
+                    print(f"Column {colIdx}: {colHits}")
+                    print("-" * 40)
+                    _empty = False
+
+            if _empty:
+                print(f"Empty Event...")
     #################################################################
