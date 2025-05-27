@@ -134,7 +134,7 @@ class LaneData(object):
         Externally set the data type;
         It is either gonna be asicData=True or False
         """
-        self._asicData  = dataType
+        self._asicData = dataType
     #################################################################
 
     #################################################################

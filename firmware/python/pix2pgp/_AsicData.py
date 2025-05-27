@@ -33,6 +33,12 @@ class AsicData(object):
         self._fpgaTbData = fpgaTbData
         self._verbose    = verbose
 
+        # initialize the lane decoding class
+        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
+                                            asicData=self._asicData,
+                                            fpgaTbData=self._fpgaTbData,
+                                            verbose=self._verbose)
+
         # the real initialization method
         self.reset()
 
@@ -66,12 +72,6 @@ class AsicData(object):
 
         # initialize the values
         self.fpgaParameterSet()
-
-        # initialize the lane decoding class
-        self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
-                                            asicData=self._asicData,
-                                            fpgaTbData=self._fpgaTbData,
-                                            verbose=self._verbose)
 
         # call after self.fpgaParameterSet
         # fpga header
@@ -163,6 +163,7 @@ class AsicData(object):
         Externally set the data type;
         It is either gonna be asicData=True or False
         """
+        self._asicData = dataType
         self.laneDecoder.dataTypeSet(dataType)
     #################################################################
 
@@ -515,11 +516,20 @@ class AsicData(object):
         if self._verbose == 3:
             _empty = True
 
-            for colIdx, colHits in enumerate(self.asicHits):
-                if colHits:
-                    print(f"Column {colIdx}: {colHits}")
-                    print("-" * 40)
-                    _empty = False
+            for lane in range(self.numOfLanes):
+                if self.laneValid[lane]:
+                    for col in range(lane * self.numOfCols, (lane + 1) * self.numOfCols):
+
+                        if col < len(self.asicHits):
+
+                            for hit in self.asicHits[col]:
+
+                                if self._asicData:
+                                    print(f"col: {col + col*int(hit['L/R'])}, row: {hit['row']}, adc: {hit['adc']}")
+                                else:
+                                    print(f"col: {col}, hit: {hit}")
+
+                                _empty = False
 
             if _empty:
                 print(f"Empty Event...")
