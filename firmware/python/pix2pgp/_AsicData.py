@@ -496,7 +496,7 @@ class AsicData(object):
 
         if self._verbose == 3:
             _empty = True
-s
+
             for colIdx, colHits in enumerate(self.asicHits):
                 if colHits:
                     print(f"Column {colIdx}: {colHits}")
