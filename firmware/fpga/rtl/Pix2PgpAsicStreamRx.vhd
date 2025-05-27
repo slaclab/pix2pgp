@@ -239,7 +239,7 @@ begin
          dataIn  => asicRst,
          dataOut => asicRstSync);
 
-   U_SyncRst : entity surf.Synchronizer
+   U_SyncLinkUp : entity surf.Synchronizer
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
@@ -463,7 +463,7 @@ begin
             v.waitCnt       := (others => '0');
 
             -- first check if anything is enabled and if the PGP link is up
-            if uOr(r.laneEnable) and linkUp = '1' then
+            if uOr(r.laneEnable) = '1' and linkUp = '1' then
 
                -- if got full, go-to reset state
                if uOr(r.laneFull) = '1' then

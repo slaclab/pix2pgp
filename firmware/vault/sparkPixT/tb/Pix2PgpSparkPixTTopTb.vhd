@@ -98,6 +98,7 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgpDataAsicReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal linkReady        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgp4RxLinkUp     : sl := '0';
 
    signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
