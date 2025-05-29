@@ -53,7 +53,7 @@ entity Pix2PgpAsicStreamRx is
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
-      pgp4RxLinkUp    : in  sl;
+      pgp4RxLinkUp    : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
@@ -87,10 +87,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal asicRstSync     : sl := '0';
 
    signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
-   signal trgBuffValid    : sl := '0';
-   signal timeout         : sl := '0';
-   signal axiFifoRst      : sl := '0';
-   signal linkUp          : sl := '0';
+   signal trgBuffValid    : sl  := '0';
+   signal timeout         : sl  := '0';
+   signal axiFifoRst      : sl  := '0';
+   signal linkUpSync      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal readMaster      : AxiLiteReadMasterType;
    signal readSlave       : AxiLiteReadSlaveType;
@@ -136,7 +136,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneTrgCnt      : TrgCntArray;
       waitLaneSel     : sl;
       laneMetaRd      : sl;
-      asicEnable      : sl;
+      asicRxEnable    : sl;
       waitCnt         : slv(3 downto 0);
       state           : StateType;
       -- Registers
@@ -179,7 +179,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneTrgCnt      => (others => (others => '0')),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
-      asicEnable      => '0',
+      asicRxEnable    => '0',
       waitCnt         => (others => '0'),
       state           => IDLE_S,
       -- Registers
@@ -239,15 +239,14 @@ begin
          dataIn  => asicRst,
          dataOut => asicRstSync);
 
-   U_SyncLinkUp : entity surf.Synchronizer
+   U_SyncLinkUp : entity surf.SynchronizerVector
       generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
+         TPD_G   => TPD_G,
+         WIDTH_G => NUM_OF_SERIALIZERS_C)
       port map (
          clk     => pgpRxClk,
          dataIn  => pgp4RxLinkUp,
-         dataOut => linkUp);
+         dataOut => linkUpSync);
 
    U_AxiLiteAsync : entity surf.AxiLiteAsync
       generic map (
@@ -271,7 +270,7 @@ begin
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnaSync, trgBuffValid, laneStatus, asicRstSync,
-                   trgBuffDout, timeout, laneRxMasters, linkUp, r) is
+                   trgBuffDout, timeout, laneRxMasters, linkUpSync, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -294,12 +293,12 @@ begin
       v := r;
 
       -- Defaults
-      v.trgBuffWr  := '0';
-      v.trgBuffRd  := '0';
-      v.laneMetaRd := '0';
-      v.cntRst     := '0';
-      v.armTimeout := '0';
-      v.asicEnable := '0';
+      v.trgBuffWr    := '0';
+      v.trgBuffRd    := '0';
+      v.laneMetaRd   := '0';
+      v.cntRst       := '0';
+      v.armTimeout   := '0';
+      v.asicRxEnable := '0';
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -341,8 +340,8 @@ begin
       axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
       axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
-      axiSlaveRegisterR(axilEp, x"624", 0, r.asicEnable);
-      axiSlaveRegisterR(axilEp, x"628", 0, linkUp);
+      axiSlaveRegisterR(axilEp, x"624", 0, r.asicRxEnable);
+      axiSlaveRegisterR(axilEp, x"628", 0, linkUpSync);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -352,25 +351,30 @@ begin
       -- Register inputs
       v.asicSro := asicSroSync;
 
+      -- lane-enable controls the downstream logic
+      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         v.laneEnable(lane) := r.laneEnableSet(lane) and linkUpSync(lane) and asicRstSync;
+      end loop;
+
+      -- used in downstream logic
+      if uOr(r.laneEnable) = '1' then
+         v.asicRxEnable := '1';
+      end if;
+
       -- trigger counter management
       -------------------------------
 
-      -- used in downstream logic
-      if (asicRstSync and uOr(r.laneEnableSet) and linkUp) = '1' then
-         v.asicEnable := '1';
-      end if;
-
-      if asicRstSync = '0' then
+      if uOr(r.laneEnable) = '0' then
          v.fpgaTrgCnt := FPGA_TRGCNT_DEFAULT_C;
       end if;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and r.asicEnable = '1' then
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and r.asicRxEnable = '1' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and r.asicEnable = '1' then
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and r.asicRxEnable = '1' then
          v.trgBuffWr := '1';
       end if;
       -------------------------------
@@ -381,17 +385,15 @@ begin
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
          -- not from metadata FIFO
-         v.laneFull(lane)     := laneStatus(lane).overflow;
-         laneOk(lane)         := laneStatus(lane).rxOk;
-         laneInError(lane)    := laneStatus(lane).inError;
+         v.laneFull(lane)  := laneStatus(lane).overflow;
+         laneOk(lane)      := laneStatus(lane).rxOk;
+         laneInError(lane) := laneStatus(lane).inError;
 
          -- from metadata FIFO
          v.lanePauseError(lane) := laneStatus(lane).pauseError and laneStatus(lane).valid;
-         v.laneOverOcc(lane)    := laneStatus(lane).overOcc and laneStatus(lane).valid;
-         v.lanePause(lane)      := laneStatus(lane).pause and laneStatus(lane).valid;
-         v.laneDecError(lane)   := laneStatus(lane).decError and laneStatus(lane).valid;
-
-         v.laneEnable(lane) := r.laneEnableSet(lane) and r.asicEnable;
+         v.laneOverOcc(lane)    := laneStatus(lane).overOcc    and laneStatus(lane).valid;
+         v.lanePause(lane)      := laneStatus(lane).pause      and laneStatus(lane).valid;
+         v.laneDecError(lane)   := laneStatus(lane).decError   and laneStatus(lane).valid;
 
          if r.laneEnable(lane) = '1' and r.laneTimeout(lane) = '0' then
             v.laneReady(lane) := (r.laneValid(lane) and laneStatus(lane).valid) or
@@ -463,7 +465,7 @@ begin
             v.waitCnt       := (others => '0');
 
             -- first check if anything is enabled and if the PGP link is up
-            if uOr(r.laneEnable) = '1' and linkUp = '1' then
+            if r.asicRxEnable = '1' then
 
                -- if got full, go-to reset state
                if uOr(r.laneFull) = '1' then

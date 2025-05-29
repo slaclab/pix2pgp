@@ -188,8 +188,8 @@ class AsicStreamRx(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
-            name         = 'AsicEnable',
-            description  = 'ASIC has been Enabled',
+            name         = 'AsicRxEnable',
+            description  = 'ASIC Receiver is enabled',
             offset       = 0x624,
             bitSize      = 1,
             mode         = 'RO',
