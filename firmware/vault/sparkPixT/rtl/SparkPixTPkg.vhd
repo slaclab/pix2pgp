@@ -325,7 +325,7 @@ package Pix2PgpPkg is
    ------------------------------------------------------------------------------
 
    -- maximum number of ASICs per FPGA-connected carrier
-   constant MAX_NUM_OF_ASICS_C := natural := 4;
+   constant MAX_NUM_OF_ASICS_C : natural := 4;
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
    constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
@@ -334,7 +334,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
 
-   type Pgp4RxLinkUpArray is array of (MAX_NUM_OF_ASICS_C-1 downto 0) of slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+   type Pgp4RxLinkUpArray is array (MAX_NUM_OF_ASICS_C-1 downto 0) of slv(NUM_OF_SERIALIZERS_C-1 downto 0);
 
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
 
