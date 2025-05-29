@@ -545,10 +545,10 @@ class AsicData(object):
             pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch. Values below')
             print(', '.join(str(value) for value in self.asicGlblTrgCnt))
 
-        if self._verbose == 3:
+        if self._verbose == 4:
             self.hitPrinter()
 
-        if self._verbose > 3:
+        if self._verbose == 5:
             for name, value in self.__dict__.items():
                 print(f"self.asicData.{name} = {value}")
     #################################################################

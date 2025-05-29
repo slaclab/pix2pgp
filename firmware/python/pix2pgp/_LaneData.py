@@ -359,7 +359,7 @@ class LaneData(object):
         if self._verbose > 2:
             self.headerPrinter()
 
-        if self._verbose > 4:
+        if self._verbose == 6:
             for name, value in self.__dict__.items():
                 print(f"self.laneDecoder.{name} = {value}")
     #################################################################
