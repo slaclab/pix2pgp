@@ -282,6 +282,42 @@ class AsicData(object):
     #################################################################
 
     #################################################################
+    def hitPrinter(self):
+        """
+        # To-Do: move this to the asic-specific classes
+        """
+        _empty = True
+
+        if self._asicType == 'SparkPixS':
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ADC = {2:<8}'
+        elif self._asicType == 'SparkPixT':
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToaF = {2:<4} ToaC = {3:<4} TOT = {4:<8}'
+
+        _formatRaw  = 'Col = {0:<4} Raw = {2:<24}'
+
+        for lane in range(self.numOfLanes):
+            if self.laneValid[lane]:
+                for col in range(lane * self.numOfCols, (lane + 1) * self.numOfCols):
+
+                    if col < len(self.asicHits):
+
+                        for hit in self.asicHits[col]:
+
+                            if self._asicData:
+                                if self._asicType == 'SparkPixS':
+                                    print(_formatAsic.format((col + col*int(hit['L/R'])), hit['row'], hit['adc']))
+                                elif self._asicType == 'SparkPixT':
+                                    print(_formatAsic.format(col, hit['row'], hit['toaF'], hit['toaC'], hit['tot']))
+                            else:
+                                print(_formatRaw.format(col, '', str(hit)))
+
+                            _empty = False
+
+        if _empty:
+            print(f"Empty Event...")
+    #################################################################
+
+    #################################################################
     def extractLaneData(self, laneSel):
         """
         Extracts lane data from the lane decoder into the AsicData class arrays.
@@ -509,28 +545,10 @@ class AsicData(object):
             pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch. Values below')
             print(', '.join(str(value) for value in self.asicGlblTrgCnt))
 
+        if self._verbose == 3:
+            self.hitPrinter()
+
         if self._verbose > 3:
             for name, value in self.__dict__.items():
                 print(f"self.asicData.{name} = {value}")
-
-        if self._verbose == 3:
-            _empty = True
-
-            for lane in range(self.numOfLanes):
-                if self.laneValid[lane]:
-                    for col in range(lane * self.numOfCols, (lane + 1) * self.numOfCols):
-
-                        if col < len(self.asicHits):
-
-                            for hit in self.asicHits[col]:
-
-                                if self._asicData:
-                                    print(f"col: {col + col*int(hit['L/R'])}, row: {hit['row']}, adc: {hit['adc']}")
-                                else:
-                                    print(f"col: {col}, hit: {hit}")
-
-                                _empty = False
-
-            if _empty:
-                print(f"Empty Event...")
     #################################################################
