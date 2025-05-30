@@ -154,21 +154,19 @@ class AsicStreamRx(pr.Device):
             offset      = 0x610,
         )
 
+        addBool(
+            name        = 'DropData',
+            description = 'Drop All Inbound Data',
+            offset      = 0x614,
+        )
+
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',
-            offset       = 0x614,
+            offset       = 0x618,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'LaneOK',
-            description  = 'Lane is not in an error state and is waiting for data',
-            offset       = 0x618,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
         ))
 
         self.add(pr.RemoteVariable(
@@ -199,10 +197,9 @@ class AsicStreamRx(pr.Device):
             name         = 'Pgp4RxLinkUp',
             description  = 'PGP4 Link is Up and Stable',
             offset       = 0x628,
-            bitSize      = 1,
+            bitSize      = self.numLanes,
             mode         = 'RO',
         ))
-
 
     def countReset(self):
         self.CntRst()

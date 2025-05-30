@@ -298,7 +298,6 @@ package Pix2PgpPkg is
       pause       : sl;
       pauseError  : sl;
       overflow    : sl;
-      rxOk        : sl;
       valid       : sl;
       -- flags end
       trgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -313,7 +312,6 @@ package Pix2PgpPkg is
       pause       => '0',
       pauseError  => '0',
       overflow    => '0',
-      rxOk        => '0',
       valid       => '0',
       -- flags end
       trgCnt      => (others => '0'),

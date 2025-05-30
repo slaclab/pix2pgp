@@ -330,7 +330,7 @@ begin
          asicClk         => sparseClk,
          asicRst         => rst,
          asicSro         => sroFinal,
-         asicSroEna      => '1',
+         asicSroEn       => '1',
          -- PGP4Rx Interface (on pgpRxClk domain)
          pgp4RxMaster    => pgp4RxMaster,
          pgp4RxSlave     => pgp4RxSlave,

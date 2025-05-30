@@ -49,7 +49,7 @@ entity Pix2PgpAsicStreamRx is
       asicClk         : in  sl;
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
-      asicSroEna      : in  sl;
+      asicSroEn       : in  sl;
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
@@ -68,11 +68,6 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   constant FPGA_TRGCNT_DEFAULT_C   : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '1');
-   constant TIMEOUT_LIMIT_DEFAULT_C : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0) := (others => '1');
-   constant LANE_ENABLE_DEFAULT_C   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
-   constant MAX_CNT_C               : slv(4 downto 0) := (others => '1');
-
    signal laneRxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                           := (others => AXI_STREAM_MASTER_INIT_C);
    signal laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
@@ -83,7 +78,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneStatus      : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
 
    signal asicSroSync     : sl := '0';
-   signal asicSroEnaSync  : sl := '0';
+   signal asicSroEnSync   : sl := '0';
    signal asicRstSync     : sl := '0';
 
    signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
@@ -100,6 +95,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
    signal dropBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal dropData        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
@@ -141,6 +137,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       state           : StateType;
       -- Registers
       dropBadColTrg   : sl;
+      dropData        : sl;
       cntRst          : sl;
       fpgaId          : slv(15 downto 0);
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
@@ -165,7 +162,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    constant REG_INIT_C : RegType := (
       -- Internal
       asicSro         => '0',
-      fpgaTrgCnt      => FPGA_TRGCNT_DEFAULT_C,
+      fpgaTrgCnt      => (others => '1'),
       trgBuffWr       => '0',
       trgBuffRd       => '0',
       trgCntBuff      => (others => '0'),
@@ -184,11 +181,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
       state           => IDLE_S,
       -- Registers
       dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
+      dropData        => '0',
       cntRst          => '1',
       fpgaId          => FPGA_ID_DEFAULT_C,
-      timeoutLimit    => TIMEOUT_LIMIT_DEFAULT_C,
+      timeoutLimit    => (others => '1'),
       laneEnable      => (others => '0'),
-      laneEnableSet   => LANE_ENABLE_DEFAULT_C,
+      laneEnableSet   => (others => '1'),
       laneDecError    => (others => '0'),
       lanePauseError  => (others => '0'),
       laneOverOcc     => (others => '0'),
@@ -219,15 +217,15 @@ begin
          dataIn  => asicSro,
          dataOut => asicSroSync);
 
-   U_SyncSroEna : entity surf.Synchronizer
+   U_SyncSroEn : entity surf.Synchronizer
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          RST_ASYNC_G    => RST_ASYNC_G)
       port map (
          clk     => pgpRxClk,
-         dataIn  => asicSroEna,
-         dataOut => asicSroEnaSync);
+         dataIn  => asicSroEn,
+         dataOut => asicSroEnSync);
 
    U_SyncRst : entity surf.Synchronizer
       generic map (
@@ -269,7 +267,7 @@ begin
          mAxiWriteSlave  => writeSlave);
 
    comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
-                   asicSroEnaSync, trgBuffValid, laneStatus, asicRstSync,
+                   asicSroEnSync, trgBuffValid, laneStatus, asicRstSync,
                    trgBuffDout, timeout, laneRxMasters, linkUpSync, r) is
 
       variable v      : RegType;
@@ -282,7 +280,6 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneOk        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneInError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
       variable laneTrgCntRef : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
@@ -335,9 +332,9 @@ begin
       axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"60C", 0, v.laneEnableSet);
       axiSlaveRegister (axilEp, x"610", 0, v.dropBadColTrg);
-
-      axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
-      axiSlaveRegisterR(axilEp, x"618", 0, laneOk);
+      axiSlaveRegister (axilEp, x"614", 0, v.dropData);
+      axiSlaveRegister (axilEp, x"618", 0, v.cntRst);
+      --
       axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
       axiSlaveRegisterR(axilEp, x"624", 0, r.asicRxEnable);
@@ -365,17 +362,17 @@ begin
       -------------------------------
 
       if uOr(r.laneEnable) = '0' then
-         v.fpgaTrgCnt := FPGA_TRGCNT_DEFAULT_C;
+         v.fpgaTrgCnt := (others => '1');
       end if;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnaSync = '1' and r.asicRxEnable = '1' then
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnSync = '1' and r.asicRxEnable = '1' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnaSync = '1' and r.asicRxEnable = '1' then
-         v.trgBuffWr := '1';
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnSync = '1' and r.asicRxEnable = '1' then
+         v.trgBuffWr := not(r.dropData);
       end if;
       -------------------------------
 
@@ -386,7 +383,6 @@ begin
 
          -- not from metadata FIFO
          v.laneFull(lane)  := laneStatus(lane).overflow;
-         laneOk(lane)      := laneStatus(lane).rxOk;
          laneInError(lane) := laneStatus(lane).inError;
 
          -- from metadata FIFO
@@ -409,17 +405,17 @@ begin
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- increment counters on rising edge
          if  (v.laneDecError(i) = '1' and r.laneDecError(i) = '0') and (r.laneEnable(i) = '1')
-         and (r.laneDecErrCnt(i) /= MAX_CNT_C) then
+         and uAnd(r.laneDecErrCnt(i)) /= '1' then
             v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
          end if;
 
          if  (v.lanePauseError(i) = '1' and r.lanePauseError(i) = '0') and (r.laneEnable(i) = '1')
-         and (r.lanePauseErrCnt(i) /= MAX_CNT_C) then
+         and  uAnd(r.lanePauseErrCnt(i)) /= '1' then
             v.lanePauseErrCnt(i) := r.lanePauseErrCnt(i) + 1;
          end if;
 
          if  (v.laneFull(i) = '1' and r.laneFull(i) = '0') and (r.laneEnable(i) = '1')
-         and (r.laneFullCnt(i) /= MAX_CNT_C) then
+         and  uAnd(r.laneFullCnt(i)) /= '1' then
             v.laneFullCnt(i) := r.laneFullCnt(i) + 1;
          end if;
 
@@ -703,10 +699,14 @@ begin
       -- Outputs
       ----------------------------------------------------------------------------------------------
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         dropBadColTrg(lane) <= r.dropBadColTrg; -- fan-out
-         lanePostError(lane) <= r.lanePostError; -- fan-out
 
-         laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane)); -- only read the valid lanes
+         -- fan-out
+         dropBadColTrg(lane) <= r.dropBadColTrg;
+         lanePostError(lane) <= r.lanePostError;
+         dropData(lane)      <= r.dropData;
+
+          -- only read the valid lanes
+         laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane));
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
@@ -790,6 +790,7 @@ begin
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
             dropBadColTrg  => dropBadColTrg(lane),
+            dropData       => dropData(lane),
             lanePostError  => lanePostError(lane),
             laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),

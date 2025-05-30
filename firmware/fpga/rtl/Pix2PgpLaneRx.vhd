@@ -43,6 +43,7 @@ entity Pix2PgpLaneRx is
       -- StreamRx Interface
       postError      : in  sl;
       dropBadTrg     : in  sl;
+      dropRxData     : in  sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
@@ -171,7 +172,8 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, dropBadTrg, laneFull, postError) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave,
+                   dropBadTrg, laneFull, postError, dropRxData) is
 
       -- omnipresent
       variable v : RegType;
@@ -404,17 +406,16 @@ begin
                v.axiFifoMaster.tKeep := (others => '0');
                tLast         := '1';
                tValid        := '1';
-               v.frameMetaWr := '1';
+               v.frameMetaWr := not(dropRxData);
 
                -- go-to dummy wait state by default
                v.state := WAIT_DUMMY_S;
 
-               -- write the status metadata; useful for upstream logic
-               -- go-to error state and stay there
+               -- override; go-to error state and stay there
                if r.decError = '1' then
-                  v.frameMetaWr := '1';
-                  v.state       := ERROR_S;
+                  v.state := ERROR_S;
                end if;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -452,8 +453,8 @@ begin
       ---------------------------------------------------------------------------
 
       -- Outputs
-      v.axiFifoMaster.tValid := tValid;
-      v.axiFifoMaster.tLast  := tLast;
+      v.axiFifoMaster.tValid := tValid and not(dropRxData);
+      v.axiFifoMaster.tLast  := tLast  and not(dropRxData);
       v.rxFifoSlave.tReady   := tReady;
 
       v.frameMetaDin := laneMetaMap(r.decError,
