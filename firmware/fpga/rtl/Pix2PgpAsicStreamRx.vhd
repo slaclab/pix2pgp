@@ -95,7 +95,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
    signal dropBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal dropData        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
@@ -132,12 +131,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneTrgCnt      : TrgCntArray;
       waitLaneSel     : sl;
       laneMetaRd      : sl;
-      asicRxEnable    : sl;
       waitCnt         : slv(3 downto 0);
       state           : StateType;
       -- Registers
       dropBadColTrg   : sl;
-      dropData        : sl;
       cntRst          : sl;
       fpgaId          : slv(15 downto 0);
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
@@ -176,12 +173,10 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneTrgCnt      => (others => (others => '0')),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
-      asicRxEnable    => '0',
       waitCnt         => (others => '0'),
       state           => IDLE_S,
       -- Registers
       dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
-      dropData        => '0',
       cntRst          => '1',
       fpgaId          => FPGA_ID_DEFAULT_C,
       timeoutLimit    => (others => '1'),
@@ -295,7 +290,6 @@ begin
       v.laneMetaRd   := '0';
       v.cntRst       := '0';
       v.armTimeout   := '0';
-      v.asicRxEnable := '0';
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -332,13 +326,11 @@ begin
       axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
       axiSlaveRegister (axilEp, x"60C", 0, v.laneEnableSet);
       axiSlaveRegister (axilEp, x"610", 0, v.dropBadColTrg);
-      axiSlaveRegister (axilEp, x"614", 0, v.dropData);
-      axiSlaveRegister (axilEp, x"618", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
       --
-      axiSlaveRegisterR(axilEp, x"61C", 0, laneInError);
-      axiSlaveRegisterR(axilEp, x"620", 0, r.laneFull);
-      axiSlaveRegisterR(axilEp, x"624", 0, r.asicRxEnable);
-      axiSlaveRegisterR(axilEp, x"628", 0, linkUpSync);
+      axiSlaveRegisterR(axilEp, x"618", 0, laneInError);
+      axiSlaveRegisterR(axilEp, x"61C", 0, r.laneFull);
+      axiSlaveRegisterR(axilEp, x"620", 0, linkUpSync);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -353,26 +345,29 @@ begin
          v.laneEnable(lane) := r.laneEnableSet(lane) and linkUpSync(lane) and asicRstSync;
       end loop;
 
-      -- used in downstream logic
-      if uOr(r.laneEnable) = '1' then
-         v.asicRxEnable := '1';
-      end if;
-
       -- trigger counter management
       -------------------------------
 
-      if uOr(r.laneEnable) = '0' then
+      if asicRstSync = '0' then
          v.fpgaTrgCnt := (others => '1');
       end if;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEnSync = '1' and r.asicRxEnable = '1' then
-         v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+      if v.asicSro = '1' and r.asicSro = '0' then
+
+         if (asicRstSync and asicSroEnSync) = '1' then
+            v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+         end if;
+
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEnSync = '1' and r.asicRxEnable = '1' then
-         v.trgBuffWr := not(r.dropData);
+      if v.asicSro = '0' and r.asicSro = '1' then
+
+         if (asicRstSync and asicSroEnSync and uOr(r.laneEnable)) = '1' then
+            v.trgBuffWr := '1';
+         end if;
+
       end if;
       -------------------------------
 
@@ -461,7 +456,7 @@ begin
             v.waitCnt       := (others => '0');
 
             -- first check if anything is enabled and if the PGP link is up
-            if r.asicRxEnable = '1' then
+            if uOr(r.laneEnable) = '1' then
 
                -- if got full, go-to reset state
                if uOr(r.laneFull) = '1' then
@@ -703,7 +698,6 @@ begin
          -- fan-out
          dropBadColTrg(lane) <= r.dropBadColTrg;
          lanePostError(lane) <= r.lanePostError;
-         dropData(lane)      <= r.dropData;
 
           -- only read the valid lanes
          laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane));
@@ -790,7 +784,6 @@ begin
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
             dropBadColTrg  => dropBadColTrg(lane),
-            dropData       => dropData(lane),
             lanePostError  => lanePostError(lane),
             laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),

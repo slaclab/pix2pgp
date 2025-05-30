@@ -154,16 +154,11 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset      = 0x610,
         )
 
-        addBool(
-            name        = 'DropData',
-            description = 'Drop All Inbound Data',
-            offset      = 0x614,
-        )
 
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',
-            offset       = 0x618,
+            offset       = 0x614,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
@@ -172,7 +167,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneInError',
             description  = 'Lane is stuck in an ERROR state',
-            offset       = 0x61C,
+            offset       = 0x618,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -180,23 +175,15 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneFull',
             description  = 'One of the Lane FIFOs got full and have not being reset',
-            offset       = 0x620,
+            offset       = 0x61C,
             bitSize      = self.numLanes,
-            mode         = 'RO',
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'AsicRxEnable',
-            description  = 'ASIC Receiver is enabled',
-            offset       = 0x624,
-            bitSize      = 1,
             mode         = 'RO',
         ))
 
         self.add(pr.RemoteVariable(
             name         = 'Pgp4RxLinkUp',
             description  = 'PGP4 Link is Up and Stable',
-            offset       = 0x628,
+            offset       = 0x620,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
