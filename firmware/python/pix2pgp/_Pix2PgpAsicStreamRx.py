@@ -12,7 +12,7 @@ import pyrogue as pr
 
 import pix2pgp
 
-class AsicStreamRx(pr.Device):
+class Pix2PgpAsicStreamRx(pr.Device):
     def __init__(self,
             numLanes=8,
             timeoutLimitWidth = 12,

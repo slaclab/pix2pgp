@@ -9,6 +9,6 @@ from pix2pgp._Tools                    import *
 
 try:
     import pyrogue as pr
-    from pix2pgp._AsicStreamRx import *
+    from pix2pgp._Pix2PgpAsicStreamRx import *
 except ImportError:
-    print("[WARNING]: pyrogue package NOT found; skipping import of _AsicStreamRx python class...")
+    print("[WARNING]: pyrogue package NOT found; skipping import of _Pix2PgpAsicStreamRx python class...")
