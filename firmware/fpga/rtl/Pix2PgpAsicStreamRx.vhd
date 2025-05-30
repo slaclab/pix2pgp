@@ -40,7 +40,8 @@ entity Pix2PgpAsicStreamRx is
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 6;
-      DROP_BAD_COL_TRG_G     : boolean  := true);
+      DROP_BAD_COL_TRG_G     : boolean  := true;
+      SWAP_LANES_G           : boolean  := false);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -102,6 +103,11 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal ibPgp4Masters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                          := (others => AXI_STREAM_MASTER_INIT_C);
+   signal ibPgp4Slaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                          := (others => AXI_STREAM_SLAVE_INIT_C);
 
    type StateType is (
       IDLE_S,
@@ -780,8 +786,8 @@ begin
             laneClk        => pgpRxClk,
             laneRst        => laneRst(lane),
             -- RX FIFO Interface
-            pgp4RxMaster   => pgp4RxMaster(lane),
-            pgp4RxSlave    => pgp4RxSlave(lane),
+            pgp4RxMaster   => ibPgp4Masters(lane),
+            pgp4RxSlave    => ibPgp4Slaves(lane),
             -- ASIC Rx Interface
             dropBadColTrg  => dropBadColTrg(lane),
             lanePostError  => lanePostError(lane),
@@ -838,6 +844,45 @@ begin
       obAxisSlave  <= asicRxSlave;
 
    end generate GEN_NO_PIPE;
+
+   --------------------------
+   -- Inbound Stream Swapping
+   --------------------------
+
+   -- swapping (provisional)
+   GEN_SWAP: if SWAP_LANES_G generate
+
+      ibPgp4Masters(0) <= pgp4RxMaster(7);
+      ibPgp4Masters(1) <= pgp4RxMaster(6);
+      ibPgp4Masters(2) <= pgp4RxMaster(5);
+      ibPgp4Masters(3) <= pgp4RxMaster(4);
+      ibPgp4Masters(4) <= pgp4RxMaster(3);
+      ibPgp4Masters(5) <= pgp4RxMaster(2);
+      ibPgp4Masters(6) <= pgp4RxMaster(1);
+      ibPgp4Masters(7) <= pgp4RxMaster(0);
+
+      pgp4RxSlave(0)   <= ibPgp4Slaves(7);
+      pgp4RxSlave(1)   <= ibPgp4Slaves(6);
+      pgp4RxSlave(2)   <= ibPgp4Slaves(5);
+      pgp4RxSlave(3)   <= ibPgp4Slaves(4);
+      pgp4RxSlave(4)   <= ibPgp4Slaves(3);
+      pgp4RxSlave(5)   <= ibPgp4Slaves(2);
+      pgp4RxSlave(6)   <= ibPgp4Slaves(1);
+      pgp4RxSlave(7)   <= ibPgp4Slaves(0);
+
+   end generate GEN_SWAP;
+
+   -- no swapping (default)
+   GEN_NO_SWAP: if not(SWAP_LANES_G) generate
+
+      GEN_CONNECT: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+         ibPgp4Masters(lane) <= pgp4RxMaster(lane);
+         pgp4RxSlave(lane)   <= ibPgp4Slaves(lane);
+
+      end generate GEN_CONNECT;
+
+   end generate GEN_NO_SWAP;
 
 
 end rtl;
