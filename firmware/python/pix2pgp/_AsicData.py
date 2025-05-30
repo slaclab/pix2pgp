@@ -305,7 +305,7 @@ class AsicData(object):
 
                             if self._asicData:
                                 if self._asicType == 'SparkPixS':
-                                    print(_formatAsic.format((col + col*int(hit['L/R'])), hit['row'], hit['adc']))
+                                    print(_formatAsic.format((2*col + int(hit['L/R'])), hit['row'], hit['adc']))
                                 elif self._asicType == 'SparkPixT':
                                     print(_formatAsic.format(col, hit['row'], hit['toaF'], hit['toaC'], hit['tot']))
                             else:
