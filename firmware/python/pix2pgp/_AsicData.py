@@ -17,10 +17,9 @@ import pix2pgp
 
 class AsicData(object):
     def __init__(self,
-                 asicType   = "SparkPixS",
-                 asicData   = False,
-                 fpgaTbData = False,
-                 verbose    = 0,
+                 asicType = "SparkPixS",
+                 rawData  = False,
+                 verbose  = 0,
                  **kwargs):
         """
         Class for the entire ASIC dataset.
@@ -28,15 +27,13 @@ class AsicData(object):
         """
 
         # class parameters (parameters have _ prefix)
-        self._asicType   = asicType
-        self._asicData   = asicData
-        self._fpgaTbData = fpgaTbData
-        self._verbose    = verbose
+        self._asicType = asicType
+        self._rawData  = rawData
+        self._verbose  = verbose
 
         # initialize the lane decoding class
         self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
-                                            asicData=self._asicData,
-                                            fpgaTbData=self._fpgaTbData,
+                                            rawData=self._rawData,
                                             verbose=self._verbose)
 
         # the real initialization method
@@ -100,7 +97,7 @@ class AsicData(object):
         self.colDecColId = [0]     * totalCols
         self.colTrgCnt   = [0]     * totalCols
         self.colLen      = [0]     * totalCols
-        self.asicHits    = [[] for _ in range(totalCols)]
+        self.asicHits    = []
 
         # lane-decoder-assigned flags
         self.laneHeaderErr = [False] * self.numOfLanes
@@ -158,13 +155,21 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def dataTypeSet(self, dataType):
+    def rawDataSet(self):
         """
         Externally set the data type;
-        It is either gonna be asicData=True or False
         """
-        self._asicData = dataType
-        self.laneDecoder.dataTypeSet(dataType)
+        self._rawData = True
+        self.laneDecoder.rawDataSet()
+    #################################################################
+
+    #################################################################
+    def rawDataUnset(self):
+        """
+        Externally set the data type;
+        """
+        self._rawData = False
+        self.laneDecoder.rawDataUnset()
     #################################################################
 
     #################################################################
@@ -282,42 +287,6 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def hitPrinter(self):
-        """
-        # To-Do: move this to the asic-specific classes
-        """
-        _empty = True
-
-        if self._asicType == 'SparkPixS':
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ADC = {2:<8}'
-        elif self._asicType == 'SparkPixT':
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToaF = {2:<4} ToaC = {3:<4} TOT = {4:<8}'
-
-        _formatRaw  = 'Col = {0:<4} Raw = {2:<24}'
-
-        for lane in range(self.numOfLanes):
-            if self.laneValid[lane]:
-                for col in range(lane * self.numOfCols, (lane + 1) * self.numOfCols):
-
-                    if col < len(self.asicHits):
-
-                        for hit in self.asicHits[col]:
-
-                            if self._asicData:
-                                if self._asicType == 'SparkPixS':
-                                    print(_formatAsic.format((2*col + int(hit['L/R'])), hit['row'], hit['adc']))
-                                elif self._asicType == 'SparkPixT':
-                                    print(_formatAsic.format(col, hit['row'], hit['toaF'], hit['toaC'], hit['tot']))
-                            else:
-                                print(_formatRaw.format(col, '', str(hit)))
-
-                            _empty = False
-
-        if _empty:
-            print(f"Empty Event...")
-    #################################################################
-
-    #################################################################
     def extractLaneData(self, laneSel):
         """
         Extracts lane data from the lane decoder into the AsicData class arrays.
@@ -393,8 +362,8 @@ class AsicData(object):
 
         # Actual hits
         if self.laneHasData[laneSel]:
-            for colIdx in range(self.numOfCols):
-                self.asicHits[offset + colIdx].extend(self.laneDecoder.laneHits[colIdx])
+            for hit in self.laneDecoder.laneHits:
+                self.asicHits.append(hit)
     #################################################################
 
     #################################################################
@@ -546,7 +515,7 @@ class AsicData(object):
             print(', '.join(str(value) for value in self.asicGlblTrgCnt))
 
         if self._verbose == 4:
-            self.hitPrinter()
+            self.laneDecoder.dataFormat.dataPrinter(self.asicHits, self._rawData)
 
         if self._verbose == 5:
             for name, value in self.__dict__.items():

@@ -15,81 +15,146 @@ class SparseDataFormatBase:
     every ASIC class should have:
     * a dataDecoder() method, same as this base class
     '''
-    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
+        raise NotImplementedError("This method should be overridden by subclasses")
+    def dataPrinter(self, asicHits=None, rawData=False):
         raise NotImplementedError("This method should be overridden by subclasses")
 
 class SparkPixSDataFormat(SparseDataFormatBase):
     '''
     SparkPix-S Data Format
     '''
-    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
         '''
         Hit data mapping and decoding
         '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
         _hitData = int(hitData, 16)
-        hit0     = (_hitData >> 20) & 0xFFFFF
-        hit1     = (_hitData >>  0) & 0xFFFFF
 
-        if asicData:
-            _hitData0_dict = {'row'    : (hit0 >> 10) & 0x1FF,
-                              'L/R'    : (hit0 >> 19) & 0x1,
-                              'adc'    : (hit0 >>  0) & 0x3FF}
+        _hit = []
+        ret  = []
 
-            _hitData1_dict = {'row'    : (hit1 >> 10) & 0x1FF,
-                              'L/R'    : (hit1 >> 19) & 0x1,
-                              'adc'    : (hit1 >>  0) & 0x3FF}
+        _hit.append((_hitData >> 20) & 0xFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFF)
 
-        elif fpgaTbData:
-            _hitData0_dict = {'serId'  : (hit0 >>  0) & 0x07,
-                              'colId'  : (hit0 >>  3) & 0x1F,
-                              'hitCnt' : (hit0 >>  8) & 0x3F,
-                              'hitTrg' : (hit0 >> 14) & 0x3F}
-
-            _hitData1_dict = {'serId'  : (hit1 >>  0) & 0x07,
-                              'colId'  : (hit1 >>  3) & 0x1F,
-                              'hitCnt' : (hit1 >>  8) & 0x3F,
-                              'hitTrg' : (hit1 >> 14) & 0x3F}
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
 
         else:
-            _hitData0_dict = {'raw': hex(hit0).upper().replace('0X', '0x')}
-            _hitData1_dict = {'raw': hex(hit1).upper().replace('0X', '0x')}
+            _row = []
+            _LR  = []
+            _adc = []
 
-        return _hitData0_dict, _hitData1_dict
+            _row.append((_hit[0] >> 10) & 0x1FF)
+            _LR.append ((_hit[0] >> 19) & 0x1)
+            _adc.append((_hit[0] >>  0) & 0x3FF)
+
+            _row.append((_hit[1] >> 10) & 0x1FF)
+            _LR.append ((_hit[1] >> 19) & 0x1)
+            _adc.append((_hit[1] >>  0) & 0x3FF)
+
+            ret.append({'col': (2*colId + _LR[0]),
+                        'row': _row[0],
+                        'adc': _adc[0]})
+
+            ret.append({'col': (2*colId + _LR[1]),
+                        'row': _row[1],
+                        'adc': _adc[1]})
+
+        return ret
+
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ADC = {2:<8}'
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['adc']))
 
 class SparkPixTDataFormat(SparseDataFormatBase):
     '''
     SparkPix-T Data Format
     '''
-    def dataDecoder(self, hitData, hitLen=2, asicData=False, fpgaTbData=False):
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
         '''
         Hit data mapping and decoding
         '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
         _hitData = int(hitData, 16)
-        hit0 = (_hitData >> 32) & 0xFFFFFFFF
-        hit1 = (_hitData >>  0) & 0xFFFFFFFF
 
-        if asicData:
-            _hitData0_dict = {'toaF'   : (hit0 >>  0) & 0xFF,
-                              'toaC'   : (hit0 >>  8) & 0xFF,
-                              'tot'    : (hit0 >> 16) & 0xFF,
-                              'row'    : (hit0 >> 24) & 0xFF}
+        _hit = []
+        ret  = []
 
-            _hitData1_dict = {'toaF'   : (hit1 >>  0) & 0xFF,
-                              'toaC'   : (hit1 >>  8) & 0xFF,
-                              'tot'    : (hit1 >> 16) & 0xFF,
-                              'row'    : (hit1 >> 24) & 0xFF}
-        elif fpgaTbData:
-            _hitData0_dict = {'serId'  : (hit0 >>  0) & 0x07,
-                              'colId'  : (hit0 >>  3) & 0x1F,
-                              'hitCnt' : (hit0 >>  8) & 0x3F,
-                              'hitTrg' : (hit0 >> 14) & 0x3F}
+        _hit.append((_hitData >> 32) & 0xFFFFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFFFFF)
 
-            _hitData1_dict = {'serId'  : (hit1 >>  0) & 0x07,
-                              'colId'  : (hit1 >>  3) & 0x1F,
-                              'hitCnt' : (hit1 >>  8) & 0x3F,
-                              'hitTrg' : (hit1 >> 14) & 0x3F}
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
+
         else:
-            _hitData0_dict = {'raw': hex(hit0).upper().replace('0X', '0x')}
-            _hitData1_dict = {'raw': hex(hit1).upper().replace('0X', '0x')}
+            _row  = []
+            _toaF = []
+            _toaC = []
+            _toa  = []
+            _tot  = []
 
-        return _hitData0_dict, _hitData1_dict
+            _row.append ((_hit[0] >> 24) & 0xFF)
+            _toaF.append((_hit[0] >>  0) & 0xFF)
+            _toaC.append((_hit[0] >>  8) & 0xFF)
+            _tot.append( (_hit[0] >> 16) & 0xFF)
+
+            _row.append ((_hit[1] >> 24) & 0xFF)
+            _toaF.append((_hit[1] >>  0) & 0xFF)
+            _toaC.append((_hit[1] >>  8) & 0xFF)
+            _tot.append( (_hit[1] >> 16) & 0xFF)
+
+            _toa.append((_toaC[0] << 8) | _toaF[0])
+            _toa.append((_toaC[1] << 8) | _toaF[1])
+
+            ret.append({'col': colId,
+                        'row': _row[0],
+                        'toa': _toa[0],
+                        'tot': _tot[0]})
+
+            ret.append({'col': colId,
+                        'row': _row[1],
+                        'toa': _toa[1],
+                        'tot': _tot[1]})
+
+        return ret
+
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<4} TOT = {3:<8}'
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))

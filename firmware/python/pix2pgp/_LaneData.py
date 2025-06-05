@@ -16,11 +16,10 @@ import pix2pgp
 
 class LaneData(object):
     def __init__(self,
-                 asicType   = "SparkPixS",
-                 asicData   = False,
-                 fpgaTbData = False,
-                 verbose    = 0,
-                 laneId     = 0,
+                 asicType = "SparkPixS",
+                 rawData  = False,
+                 verbose  = 0,
+                 laneId   = 0,
                  **kwargs):
 
         """
@@ -29,8 +28,7 @@ class LaneData(object):
 
         # class parameters (parameters have _ prefix)
         self._asicTypeSet = asicType
-        self._asicData    = asicData
-        self._fpgaTbData  = fpgaTbData
+        self._rawData     = rawData
         self._verbose     = verbose
         self._laneId      = laneId
 
@@ -76,7 +74,7 @@ class LaneData(object):
         self.currColLen = [0]     * self.numOfCols
 
         # lane hits
-        self.laneHits = [[] for _ in range(self.numOfCols)]
+        self.laneHits = []
 
         # evaluated by this class
         self.headerErr = False
@@ -129,12 +127,19 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def dataTypeSet(self, dataType):
+    def rawDataSet(self):
         """
         Externally set the data type;
-        It is either gonna be asicData=True or False
         """
-        self._asicData = dataType
+        self._rawData = True
+    #################################################################
+
+    #################################################################
+    def rawDataUnset(self):
+        """
+        Externally set the data type;
+        """
+        self._rawData = False
     #################################################################
 
     #################################################################
@@ -233,18 +238,18 @@ class LaneData(object):
     #################################################################
     def hitAlloc(self, colBmskId, hitData, hitLen):
         """
-        Populates the associated data type with the hits
-        """
-        _hit0, _hit1 = self.dataFormat.dataDecoder(hitData=hitData,
-                                                   hitLen=hitLen,
-                                                   asicData=self._asicData,
-                                                   fpgaTbData=self._fpgaTbData)
+        Populates the laneHits with the associated hits based on decoded data.
 
-        if hitLen > 1:
-            self.laneHits[colBmskId].append(_hit0)
-            self.laneHits[colBmskId].append(_hit1)
-        else:
-            self.laneHits[colBmskId].append(_hit0)
+        Parameters:
+        colBmskId (int): The column mask ID used in data decoding.
+        hitData (str): The hit data in hexadecimal format.
+        hitLen (int): The number of hits expected from the data.
+        """
+        _hits = self.dataFormat.dataDecoder(colId=colBmskId,
+                                            hitData=hitData,
+                                            rawData=self._rawData)
+
+        return _hits
 
     #################################################################
 
@@ -330,7 +335,12 @@ class LaneData(object):
             elif state == "parseHits_s":
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                self.hitAlloc(colSel, wordHex, subLen)
+
+                if subLen > 0:
+                    _hits = self.hitAlloc(colSel, wordHex, subLen)
+                    if _hits:
+                        for hit in _hits:
+                           self.laneHits.append(hit)
 
                 index += self.wordLen
 
