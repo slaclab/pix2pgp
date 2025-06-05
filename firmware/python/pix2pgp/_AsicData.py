@@ -155,21 +155,12 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def rawDataSet(self):
+    def rawDataFormatSet(self, rawData):
         """
-        Externally set the data type;
+        Externally set the raw data type;
         """
-        self._rawData = True
-        self.laneDecoder.rawDataSet()
-    #################################################################
-
-    #################################################################
-    def rawDataUnset(self):
-        """
-        Externally set the data type;
-        """
-        self._rawData = False
-        self.laneDecoder.rawDataUnset()
+        self._rawData = rawData
+        self.laneDecoder.rawDataFormatSet(rawData)
     #################################################################
 
     #################################################################

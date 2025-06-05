@@ -127,19 +127,11 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def rawDataSet(self):
+    def rawDataFormatSet(self, rawData):
         """
-        Externally set the data type;
+        Externally set the raw data type;
         """
-        self._rawData = True
-    #################################################################
-
-    #################################################################
-    def rawDataUnset(self):
-        """
-        Externally set the data type;
-        """
-        self._rawData = False
+        self._rawData = rawData
     #################################################################
 
     #################################################################
