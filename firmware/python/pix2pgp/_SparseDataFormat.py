@@ -154,7 +154,7 @@ class SparkPixTDataFormat(SparseDataFormatBase):
                 click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
 
         else:
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<4} TOT = {3:<8}'
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<5} TOT = {3:<8}'
 
             for hit in asicHits:
                 click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))
