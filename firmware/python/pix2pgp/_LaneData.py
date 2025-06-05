@@ -237,11 +237,18 @@ class LaneData(object):
         hitData (str): The hit data in hexadecimal format.
         hitLen (int): The number of hits expected from the data.
         """
-        _hits = self.dataFormat.dataDecoder(colId=colBmskId,
+
+        _col = self._laneId*self.numOfCols + colBmskId
+
+        _hits = self.dataFormat.dataDecoder(colId=_col,
                                             hitData=hitData,
                                             rawData=self._rawData)
 
-        return _hits
+        if hitLen > 1:
+           self.laneHits.append(_hits[0])
+           self.laneHits.append(_hits[1])
+        else:
+           self.laneHits.append(_hits[0])
 
     #################################################################
 
@@ -329,10 +336,7 @@ class LaneData(object):
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
 
                 if subLen > 0:
-                    _hits = self.hitAlloc(colSel, wordHex, subLen)
-                    if _hits:
-                        for hit in _hits:
-                           self.laneHits.append(hit)
+                    self.hitAlloc(colSel, wordHex, subLen)
 
                 index += self.wordLen
 
