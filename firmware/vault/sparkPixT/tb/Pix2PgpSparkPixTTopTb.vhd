@@ -119,6 +119,16 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal m_axis_tid     : slv(7 downto 0) := (others => '0');
    signal m_axis_tuser   : slv(7 downto 0) := (others => '0');
 
+   signal cfgSel            : sl := '1';
+   signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
+   signal cfgPauseLimit     : slv(11 downto 0) := toSlv(12, 12);
+   signal cfgColumnEnable   : slv(23 downto 0) := (others => '1');
+   signal cfgColBusy        : sl := '0';
+   signal cfgColDataEmpty   : sl := '1';
+   signal cfgColStatusEmpty : sl := '1';
+   signal cfgSuperBusy      : sl := '0';
+   signal cfgArbBusy        : sl := '0';
+
 begin
 
    -- clocks
@@ -230,54 +240,58 @@ begin
                RST_POLARITY_G             => RST_POLARITY_G,
                DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
                STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
-               TIMEOUT_LIMIT_WIDTH_G      => TIMEOUT_LIMIT_WIDTH_G,
                PIPELINE_DATA_G            => PIPELINE_DATA_G,
                PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
                COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
                COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
             port map(
-               sparseClk    => sparseClk,
-               sparseRst    => rst,
-               pgpClk       => pgpClk,
-               pgpRst       => rst,
-               sel          => '1',
-               timeoutLimit => x"000",
-               pauseLimit   => x"00C",
-               columnEnable => x"FFFFFF",
-               pause        => pause(ser),
-               sof          => sof(ser),
-               eof          => eof(ser),
-               busy         => busy(ser),
-               overOcc      => overOcc(ser),
-               pauseAck     => pauseAck(ser),
-               wrEn         => wrEn(ser),
-               din0         => din(ser)(0),
-               din1         => din(ser)(1),
-               din2         => din(ser)(2),
-               din3         => din(ser)(3),
-               din4         => din(ser)(4),
-               din5         => din(ser)(5),
-               din6         => din(ser)(6),
-               din7         => din(ser)(7),
-               din8         => din(ser)(8),
-               din9         => din(ser)(9),
-               din10        => din(ser)(10),
-               din11        => din(ser)(11),
-               din12        => din(ser)(12),
-               din13        => din(ser)(13),
-               din14        => din(ser)(14),
-               din15        => din(ser)(15),
-               din16        => din(ser)(16),
-               din17        => din(ser)(17),
-               din18        => din(ser)(18),
-               din19        => din(ser)(19),
-               din20        => din(ser)(20),
-               din21        => din(ser)(21),
-               din22        => din(ser)(22),
-               din23        => din(ser)(23),
-               pgpDout      => pgpDataAsic(ser),
-               pgpDoutValid => pgpDataAsicValid(ser),
-               pgpDoutReady => pgpDataAsicReady(ser));
+               sparseClk         => sparseClk,
+               sparseRst         => rst,
+               pgpClk            => pgpClk,
+               pgpRst            => rst,
+               cfgSel            => cfgSel,
+               cfgTimeoutLimit   => cfgTimeoutLimit,
+               cfgPauseLimit     => cfgPauseLimit,
+               cfgColumnEnable   => cfgColumnEnable,
+               cfgColBusy        => cfgColBusy,
+               cfgColDataEmpty   => cfgColDataEmpty,
+               cfgColStatusEmpty => cfgColStatusEmpty,
+               cfgSuperBusy      => cfgSuperBusy,
+               cfgArbBusy        => cfgArbBusy,
+               pause             => pause(ser),
+               sof               => sof(ser),
+               eof               => eof(ser),
+               busy              => busy(ser),
+               overOcc           => overOcc(ser),
+               pauseAck          => pauseAck(ser),
+               wrEn              => wrEn(ser),
+               din0              => din(ser)(0),
+               din1              => din(ser)(1),
+               din2              => din(ser)(2),
+               din3              => din(ser)(3),
+               din4              => din(ser)(4),
+               din5              => din(ser)(5),
+               din6              => din(ser)(6),
+               din7              => din(ser)(7),
+               din8              => din(ser)(8),
+               din9              => din(ser)(9),
+               din10             => din(ser)(10),
+               din11             => din(ser)(11),
+               din12             => din(ser)(12),
+               din13             => din(ser)(13),
+               din14             => din(ser)(14),
+               din15             => din(ser)(15),
+               din16             => din(ser)(16),
+               din17             => din(ser)(17),
+               din18             => din(ser)(18),
+               din19             => din(ser)(19),
+               din20             => din(ser)(20),
+               din21             => din(ser)(21),
+               din22             => din(ser)(22),
+               din23             => din(ser)(23),
+               pgpDout           => pgpDataAsic(ser),
+               pgpDoutValid      => pgpDataAsicValid(ser),
+               pgpDoutReady      => pgpDataAsicReady(ser));
 
    end generate GEN_SERIALIZER;
 
@@ -318,7 +332,7 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          ASIC_ID_G              => 0,
-         TIMEOUT_LIMIT_WIDTH_G  => 12,
+         TIMEOUT_LIMIT_WIDTH_G  => TIMEOUT_LIMIT_WIDTH_G,
          LANE_PIPE_STAGES_G     => 1,
          STREAM_PIPE_STAGES_G   => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,

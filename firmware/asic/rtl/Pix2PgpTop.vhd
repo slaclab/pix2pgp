@@ -33,7 +33,6 @@ entity Pix2PgpTop is
       RST_POLARITY_G            : std_logic := '1';
       PIPELINE_DATA_G           : boolean   := false;
       PIPELINE_STATUS_G         : boolean   := true;
-      TIMEOUT_LIMIT_WIDTH_G     : positive  := 12;
       COLMANAGER_DATA_DEPTH_G   : integer   := 7;
       COLMANAGER_STATUS_DEPTH_G : integer   := 6;
       DATAFIFO_PIPE_G           : natural   := 1;
@@ -44,10 +43,8 @@ entity Pix2PgpTop is
       pgpClk       : in  sl;
       sparseRst    : in  sl;
       pgpRst       : in  sl;
-      timeoutLimit : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      pauseLimit   : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      columnEnable : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      asicFeedback : out Pix2PgpAsicFeedbackType;
+      config       : in  Pix2PgpCfgConfigType;
+      readback     : out Pix2PgpCfgReadbackType;
       -- Column Manager Interface
       din          : in  Pix2PgpSparseDinArray;
       wrEn         : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -130,20 +127,17 @@ begin
    ---------------------------------------
    U_ColumnSupervisor : entity pix2pgp.Pix2PgpColumnSupervisor
       generic map(
-         TPD_G                 => TPD_G,
-         RST_ASYNC_G           => RST_ASYNC_G,
-         RST_POLARITY_G        => RST_POLARITY_G,
-         PIPELINE_STATUS_G     => PIPELINE_STATUS_G,
-         TIMEOUT_LIMIT_WIDTH_G => TIMEOUT_LIMIT_WIDTH_G)
+         TPD_G             => TPD_G,
+         RST_ASYNC_G       => RST_ASYNC_G,
+         RST_POLARITY_G    => RST_POLARITY_G,
+         PIPELINE_STATUS_G => PIPELINE_STATUS_G)
       port map(
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
          sparseClk     => sparseClk,
          sparseRst     => sparseRst,
-         timeoutLimit  => timeoutLimit,
-         pauseLimit    => pauseLimit,
-         columnEnable  => columnEnable,
+         config        => config,
          superBusy     => superBusy,
          -- Column Manager Interface
          colBusy       => anyColBusy,
@@ -201,11 +195,11 @@ begin
    -- busy internal (sparseClk domain; re-sync if necessary)
    anyColBusy <= uOr(colBusy);
 
-   -- feedback bus glue logic
-   asicFeedback.cfgColBusy        <= uOr(colBusy);
-   asicFeedback.cfgColDataEmpty   <= uOr(colDataEmpty);
-   asicFeedback.cfgColStatusEmpty <= uOr(colStatusEmpty);
-   asicFeedback.cfgSuperBusy      <= superBusy;
-   asicFeedback.cfgArbBusy        <= arbBusy;
+   -- readback bus glue logic
+   readback.cfgColBusy        <= uOr(colBusy);
+   readback.cfgColDataEmpty   <= uOr(colDataEmpty);
+   readback.cfgColStatusEmpty <= uOr(colStatusEmpty);
+   readback.cfgSuperBusy      <= superBusy;
+   readback.cfgArbBusy        <= arbBusy;
 
 end rtl;

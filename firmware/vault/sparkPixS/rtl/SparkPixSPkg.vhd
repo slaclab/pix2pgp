@@ -58,8 +58,11 @@ package Pix2PgpPkg is
    -- 2^DATALEN_WIDTH_C-1 events should fit in ColManager data FIFO
    constant DATALEN_WIDTH_C : natural := 5;
 
-    -- 6-bit counter to double-check alignment
+   --  counter to double-check alignment
    constant TRGCNT_WIDTH_C : natural := 6;
+
+   -- timeout counter
+   constant TIMEOUT_LIMIT_WIDTH_C : natural := 12;
 
    -- data bus width is twice the pixel data width to maximize bandwidth
    constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
@@ -168,13 +171,31 @@ package Pix2PgpPkg is
    subtype STATUSFIFO_DATALEN_POS_C  is natural range DATALEN_WIDTH_C-1
                                                 downto 0;
 
-   type Pix2PgpAsicFeedbackType is record
+   type Pix2PgpCfgConfigType is record
+      columnEnable : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      pauseLimit   : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_CONFIG_C : Pix2PgpCfgConfigType := (
+      columnEnable => (others => '1'),
+      timeoutLimit => (others => '1'),
+      pauseLimit   => (others => '1'));
+
+   type Pix2PgpCfgReadbackType is record
       cfgColBusy        : sl;
       cfgColDataEmpty   : sl;
       cfgColStatusEmpty : sl;
       cfgSuperBusy      : sl;
       cfgArbBusy        : sl;
    end record;
+
+   constant DEFAULT_PIX2PGP_ASICRDBK_C : Pix2PgpCfgReadbackType := (
+      cfgColBusy        => '0',
+      cfgColDataEmpty   => '1',
+      cfgColStatusEmpty => '1',
+      cfgSuperBusy      => '0',
+      cfgArbBusy        => '0');
 
    type Pix2PgpStatusBusType is record
       -- flags begin
@@ -196,13 +217,6 @@ package Pix2PgpPkg is
       -- flags end
       trgCnt      => (others => '1'),
       dataLen     => (others => '0'));
-
-   constant DEFAULT_PIX2PGP_ASICFDBK_C : Pix2PgpAsicFeedbackType := (
-      cfgColBusy        => '0',
-      cfgColDataEmpty   => '1',
-      cfgColStatusEmpty => '1',
-      cfgSuperBusy      => '0',
-      cfgArbBusy        => '0');
 
    type Pix2PgpStatusBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpStatusBusType;
 

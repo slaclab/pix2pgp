@@ -23,7 +23,6 @@ entity Pix2PgpSparkPixTTop is
       RST_POLARITY_G            : std_logic := '0';
       PIPELINE_DATA_G           : boolean   := false; -- pipeline data FIFO output downstream
       PIPELINE_STATUS_G         : boolean   := true;  -- pipeline status FIFO output downstream
-      TIMEOUT_LIMIT_WIDTH_G     : positive  := 12;    -- bitwidth of timeout counter
       COLMANAGER_DATA_DEPTH_G   : integer   := 8;     -- colManager data FIFO depth (holds *2 hits)
       COLMANAGER_STATUS_DEPTH_G : integer   := 8;     -- colManager status FIFO depth (1 per event)
       DATAFIFO_PIPE_G           : natural   := 1;     -- colManager data FIFO I/O pipeline stages
@@ -31,61 +30,66 @@ entity Pix2PgpSparkPixTTop is
       SER_GBOX_PIPE_G           : natural   := 0);    -- *only* set when synthesizing (*not* in sim)
    port(
       -- General Interface
-      sparseClk    : in  std_logic;
-      pgpClk       : in  std_logic;
-      sparseRst    : in  std_logic;
-      pgpRst       : in  std_logic;
-      sel          : in  std_logic;
-      timeoutLimit : in  std_logic_vector(11 downto 0);
-      pauseLimit   : in  std_logic_vector(11 downto 0);
-      columnEnable : in  std_logic_vector(23 downto 0);
+      sparseClk         : in  std_logic;
+      pgpClk            : in  std_logic;
+      sparseRst         : in  std_logic;
+      pgpRst            : in  std_logic;
+      -- Configuration Registers
+      cfgSel            : in  std_logic;
+      cfgTimeoutLimit   : in  std_logic_vector(11 downto 0);
+      cfgPauseLimit     : in  std_logic_vector(11 downto 0);
+      cfgColumnEnable   : in  std_logic_vector(23 downto 0);
+      cfgColBusy        : out std_logic;
+      cfgColDataEmpty   : out std_logic;
+      cfgColStatusEmpty : out std_logic;
+      cfgSuperBusy      : out std_logic;
+      cfgArbBusy        : out std_logic;
       -- Column Manager Interface
       -- dataIn
-      din0         : in  std_logic_vector(31 downto 0);
-      din1         : in  std_logic_vector(31 downto 0);
-      din2         : in  std_logic_vector(31 downto 0);
-      din3         : in  std_logic_vector(31 downto 0);
-      din4         : in  std_logic_vector(31 downto 0);
-      din5         : in  std_logic_vector(31 downto 0);
-      din6         : in  std_logic_vector(31 downto 0);
-      din7         : in  std_logic_vector(31 downto 0);
-      din8         : in  std_logic_vector(31 downto 0);
-      din9         : in  std_logic_vector(31 downto 0);
-      din10        : in  std_logic_vector(31 downto 0);
-      din11        : in  std_logic_vector(31 downto 0);
-      din12        : in  std_logic_vector(31 downto 0);
-      din13        : in  std_logic_vector(31 downto 0);
-      din14        : in  std_logic_vector(31 downto 0);
-      din15        : in  std_logic_vector(31 downto 0);
-      din16        : in  std_logic_vector(31 downto 0);
-      din17        : in  std_logic_vector(31 downto 0);
-      din18        : in  std_logic_vector(31 downto 0);
-      din19        : in  std_logic_vector(31 downto 0);
-      din20        : in  std_logic_vector(31 downto 0);
-      din21        : in  std_logic_vector(31 downto 0);
-      din22        : in  std_logic_vector(31 downto 0);
-      din23        : in  std_logic_vector(31 downto 0);
+      din0              : in  std_logic_vector(31 downto 0);
+      din1              : in  std_logic_vector(31 downto 0);
+      din2              : in  std_logic_vector(31 downto 0);
+      din3              : in  std_logic_vector(31 downto 0);
+      din4              : in  std_logic_vector(31 downto 0);
+      din5              : in  std_logic_vector(31 downto 0);
+      din6              : in  std_logic_vector(31 downto 0);
+      din7              : in  std_logic_vector(31 downto 0);
+      din8              : in  std_logic_vector(31 downto 0);
+      din9              : in  std_logic_vector(31 downto 0);
+      din10             : in  std_logic_vector(31 downto 0);
+      din11             : in  std_logic_vector(31 downto 0);
+      din12             : in  std_logic_vector(31 downto 0);
+      din13             : in  std_logic_vector(31 downto 0);
+      din14             : in  std_logic_vector(31 downto 0);
+      din15             : in  std_logic_vector(31 downto 0);
+      din16             : in  std_logic_vector(31 downto 0);
+      din17             : in  std_logic_vector(31 downto 0);
+      din18             : in  std_logic_vector(31 downto 0);
+      din19             : in  std_logic_vector(31 downto 0);
+      din20             : in  std_logic_vector(31 downto 0);
+      din21             : in  std_logic_vector(31 downto 0);
+      din22             : in  std_logic_vector(31 downto 0);
+      din23             : in  std_logic_vector(31 downto 0);
       -- flags
-      sof          : in  std_logic_vector(23 downto 0);
-      eof          : in  std_logic_vector(23 downto 0);
-      overOcc      : in  std_logic_vector(23 downto 0);
-      pauseAck     : in  std_logic_vector(23 downto 0);
-      wrEn         : in  std_logic_vector(23 downto 0);
-      busy         : out std_logic_vector(23 downto 0);
-      pause        : out std_logic_vector(23 downto 0);
+      sof               : in  std_logic_vector(23 downto 0);
+      eof               : in  std_logic_vector(23 downto 0);
+      overOcc           : in  std_logic_vector(23 downto 0);
+      pauseAck          : in  std_logic_vector(23 downto 0);
+      wrEn              : in  std_logic_vector(23 downto 0);
+      busy              : out std_logic_vector(23 downto 0);
+      pause             : out std_logic_vector(23 downto 0);
       -- Serializer Interface
-      pgpDout      : out std_logic_vector(31 downto 0);
-      pgpDoutValid : out std_logic;
-      pgpDoutReady : in  std_logic);
+      pgpDout           : out std_logic_vector(31 downto 0);
+      pgpDoutValid      : out std_logic;
+      pgpDoutReady      : in  std_logic);
 end entity Pix2PgpSparkPixTTop;
 
 architecture rtl of Pix2PgpSparkPixTTop is
 
    signal din                : Pix2PgpSparseDinArray;
-   signal timeoutLimitMuxed  : std_logic_vector(11 downto 0);
-   signal pauseLimitMuxed    : std_logic_vector(11 downto 0);
-   signal columnEnableSparse : std_logic_vector(23 downto 0);
-   signal columnEnablePgp    : std_logic_vector(23 downto 0);
+   signal readback           : Pix2PgpCfgReadbackType;
+   signal config             : Pix2PgpCfgConfigType;
+   signal sparseColumnEnable : std_logic_vector(23 downto 0);
 
    signal pgpTxMaster        : AxiStreamMasterType;
    signal pgpTxSlave         : AxiStreamSlaveType;
@@ -113,11 +117,11 @@ begin
    -- check the length equivalence with asserts
    -- avoid tying input port widths to generics; hardcode them instead
    -- ...ASIC flow tools can be annoying...
-   assert (timeoutLimit'length = TIMEOUT_LIMIT_WIDTH_G)
-      report "[ERROR]: Pix2PgpSparkPixTTop; Please match timeoutLimit port width with TIMEOUT_LIMIT_WIDTH_G generic" severity failure;
+   assert (cfgTimeoutLimit'length = TIMEOUT_LIMIT_WIDTH_C)
+      report "[ERROR]: Pix2PgpSparkPixTTop; Please match cfgTimeoutLimit port width with TIMEOUT_LIMIT_WIDTH_C generic" severity failure;
 
-   assert (columnEnable'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixTTop; Please match columnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+   assert (cfgColumnEnable'length = NUM_OF_COL_MANAGERS_C)
+      report "[ERROR]: Pix2PgpSparkPixTTop; Please match cfgColumnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (sof'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixTTop; Please match sof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
@@ -150,7 +154,6 @@ begin
          RST_POLARITY_G            => RST_POLARITY_G,
          COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
-         TIMEOUT_LIMIT_WIDTH_G     => TIMEOUT_LIMIT_WIDTH_G,
          PIPELINE_DATA_G           => PIPELINE_DATA_G,
          PIPELINE_STATUS_G         => PIPELINE_STATUS_G,
          DATAFIFO_PIPE_G           => DATAFIFO_PIPE_G,
@@ -161,9 +164,8 @@ begin
          pgpClk       => pgpClk,
          sparseRst    => glblSparseRst,
          pgpRst       => glblPgpRst,
-         timeoutLimit => timeoutLimitMuxed,
-         pauseLimit   => pauseLimitMuxed,
-         columnEnable => columnEnablePgp,
+         config       => config,
+         readback     => readback,
          -- Column Manager Interface
          sof          => sof,
          eof          => eof,
@@ -279,12 +281,12 @@ begin
    process(pgpRst, pgpClk)
    begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         columnEnablePgp <= (others => '0');
+         config.columnEnable <= (others => '0');
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
-            columnEnablePgp <= (others => '0');
-         elsif sel = '1' then
-            columnEnablePgp <= columnEnable;
+            config.columnEnable <= (others => '0');
+         elsif cfgSel = '1' then
+            config.columnEnable <= cfgColumnEnable;
          end if;
       end if;
    end process;
@@ -292,18 +294,18 @@ begin
    process(sparseRst, sparseClk)
    begin
       if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
-         timeoutLimitMuxed  <= (others => '0');
-         columnEnableSparse <= (others => '0');
-         pauseLimitMuxed    <= (others => '0');
+         config.timeoutLimit <= (others => '0');
+         sparseColumnEnable  <= (others => '0');
+         config.pauseLimit   <= (others => '0');
       elsif (rising_edge(sparseClk)) then
          if sparseRst = RST_POLARITY_G then
-            timeoutLimitMuxed  <= (others => '0');
-            columnEnableSparse <= (others => '0');
-            pauseLimitMuxed    <= (others => '0');
-         elsif sel = '1' then
-            timeoutLimitMuxed  <= timeoutLimit;
-            columnEnableSparse <= columnEnable;
-            pauseLimitMuxed    <= pauseLimit;
+            config.timeoutLimit <= (others => '0');
+            sparseColumnEnable  <= (others => '0');
+            config.pauseLimit   <= (others => '0');
+         elsif cfgSel = '1' then
+            config.timeoutLimit <= cfgTimeoutLimit;
+            sparseColumnEnable  <= cfgColumnEnable;
+            config.pauseLimit   <= cfgPauseLimit;
          end if;
       end if;
    end process;
@@ -316,28 +318,65 @@ begin
       elsif (rising_edge(sparseClk)) then
 
          if RST_POLARITY_G = '1' then
-            glblSparseRst <= sparseRst or uAnd(not(columnEnableSparse));
+            glblSparseRst <= sparseRst or uAnd(not(sparseColumnEnable));
          else
-            glblSparseRst <= sparseRst and uOr(columnEnableSparse);
+            glblSparseRst <= sparseRst and uOr(sparseColumnEnable);
          end if;
 
       end if;
    end process;
 
-   process(pgpRst, pgpClk)
+   process(pgpRst, pgpClk, config)
+
+      variable columnEnable : std_logic_vector(23 downto 0);
    begin
+      columnEnable := config.columnEnable;
+
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
          glblPgpRst <= pgpRst;
       elsif (rising_edge(pgpClk)) then
 
          if RST_POLARITY_G = '1' then
-            glblPgpRst <= pgpRst or uAnd(not(columnEnablePgp));
+            glblPgpRst <= pgpRst or uAnd(not(columnEnable));
          else
-            glblPgpRst <= pgpRst and uOr(columnEnablePgp);
+            glblPgpRst <= pgpRst and uOr(columnEnable);
          end if;
 
       end if;
    end process;
 
+   -- feedback signals
+   U_SyncColBusy : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpClk,
+         dataIn  => readback.cfgColBusy,
+         dataOut => cfgColBusy);
+
+   U_SyncColDataEmpty : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpClk,
+         dataIn  => readback.cfgColDataEmpty,
+         dataOut => cfgColDataEmpty);
+
+   U_SyncColStatusEmpty : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpClk,
+         dataIn  => readback.cfgColStatusEmpty,
+         dataOut => cfgColStatusEmpty);
+
+      cfgSuperBusy <= readback.cfgSuperBusy;
+      cfgArbBusy   <= readback.cfgArbBusy;
 
 end architecture;

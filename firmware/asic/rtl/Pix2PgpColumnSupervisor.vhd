@@ -27,20 +27,17 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G                 : time      := 1 ns;
-      RST_ASYNC_G           : boolean   := false;
-      RST_POLARITY_G        : std_logic := '1';
-      PIPELINE_STATUS_G     : boolean   := false;
-      TIMEOUT_LIMIT_WIDTH_G : positive  := 12);
+      TPD_G             : time      := 1 ns;
+      RST_ASYNC_G       : boolean   := false;
+      RST_POLARITY_G    : std_logic := '1';
+      PIPELINE_STATUS_G : boolean   := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl;
       sparseClk     : in  sl;
       sparseRst     : in  sl;
-      timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      pauseLimit    : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      config        : in  Pix2PgpCfgConfigType;
       superBusy     : out sl;
       -- Column Manager Interface
       colBusy       : in  sl;
@@ -155,7 +152,7 @@ begin
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable,
+   comb : process (r, pgpRst, statusBus, arbiterBusy, config,
                    timeout, colBusySync, timeoutPause) is
 
       variable v             : RegType;
@@ -183,12 +180,13 @@ begin
 
       -- Register inputs
       v.arbiterBusy  := arbiterBusy;
-      v.columnEnable := columnEnable;
       v.timeout      := timeout;
       v.timeoutPause := timeoutPause;
 
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+
+         v.columnEnable := config.columnEnable;
 
          -- column is ready when its status FIFO has a word;
          v.dataReady(col) := not(statusBusInt(col).columnEmpty) and v.columnEnable(col);
@@ -467,12 +465,12 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
       port map(
          -- General Interface
          clk     => sparseClk,
          rst     => sparseRst,
-         limit   => timeoutLimit,
+         limit   => config.timeoutLimit,
          -- Control Interface
          set     => setTimeoutWtdg,
          timeout => timeoutWtdg);
@@ -504,12 +502,12 @@ begin
             TPD_G          => TPD_G,
             RST_ASYNC_G    => RST_ASYNC_G,
             RST_POLARITY_G => RST_POLARITY_G,
-            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
          port map(
             -- General Interface
             clk     => sparseClk,
             rst     => sparseRst,
-            limit   => pauseLimit,
+            limit   => config.pauseLimit,
             -- Control Interface
             set     => setTimeoutPauseWtdg,
             timeout => timeoutPauseWtdg);
