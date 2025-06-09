@@ -251,7 +251,7 @@ class AsicData(object):
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'Lane: DecError, Full, Timeout, Down, Valid = 0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X} 0x{4:<02X}'
+            _format = 'Lane: DecError, Full, Timeout, Down, Valid    =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X} 0x{4:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
                 _dict['laneDecError'], _dict['laneFull'],
@@ -261,7 +261,7 @@ class AsicData(object):
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
-            if self.laneTimeout > 0 and self._verbose > 2:
+            if any(self.laneTimeout) and self._verbose > 2:
                 pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
     #################################################################
 

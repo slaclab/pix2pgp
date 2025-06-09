@@ -34,7 +34,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         Parameter dictionary
         '''
         param_dict = {'preambleLen'  : 20,
-                      'headerLen'    : 7,
+                      'headerLen'    : 8,
                       'frameSizeLen' : 2,
                       'trailerLen'   : 8}
 
