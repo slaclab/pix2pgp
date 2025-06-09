@@ -34,7 +34,7 @@ entity Pix2PgpAsicStreamRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G              : natural  := 0;
-      TIMEOUT_LIMIT_WIDTH_G  : positive := 12;
+      TIMEOUT_LIMIT_WIDTH_G  : positive := 16;
       LANE_PIPE_STAGES_G     : natural  := 1;
       STREAM_PIPE_STAGES_G   : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
@@ -103,6 +103,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
+   type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
+
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
@@ -129,6 +131,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTrgCnt      : TrgCntArray;
+      laneUpCnt       : LaneUpCntArray;
       waitLaneSel     : sl;
       laneMetaRd      : sl;
       waitCnt         : slv(3 downto 0);
@@ -145,6 +148,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneStable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecErrCnt   : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFullCnt     : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -171,6 +175,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneValid       => (others => '0'),
       laneTimeout     => (others => '0'),
       laneTrgCnt      => (others => (others => '0')),
+      laneUpCnt       => (others => (others => '0')),
       waitLaneSel     => '0',
       laneMetaRd      => '0',
       waitCnt         => (others => '0'),
@@ -187,6 +192,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneOverOcc     => (others => '0'),
       lanePause       => (others => '0'),
       laneFull        => (others => '0'),
+      laneStable      => (others => '0'),
       laneDecErrCnt   => (others => (others => '0')),
       lanePauseErrCnt => (others => (others => '0')),
       laneFullCnt     => (others => (others => '0')),
@@ -276,6 +282,7 @@ begin
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
       variable laneInError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+      variable laneDown      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
       variable laneTrgCntRef : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
       variable trgMisalign   : sl := '0';
@@ -285,11 +292,12 @@ begin
       v := r;
 
       -- Defaults
-      v.trgBuffWr    := '0';
-      v.trgBuffRd    := '0';
-      v.laneMetaRd   := '0';
-      v.cntRst       := '0';
-      v.armTimeout   := '0';
+      v.trgBuffWr  := '0';
+      v.trgBuffRd  := '0';
+      v.laneMetaRd := '0';
+      v.cntRst     := '0';
+      v.armTimeout := '0';
+      v.laneStable := (others => '0');
 
       -- flow control check
       if obAxisSlave.tReady = '1' then
@@ -330,7 +338,7 @@ begin
       --
       axiSlaveRegisterR(axilEp, x"618", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"61C", 0, r.laneFull);
-      axiSlaveRegisterR(axilEp, x"620", 0, linkUpSync);
+      axiSlaveRegisterR(axilEp, x"620", 0, laneDown);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -340,14 +348,8 @@ begin
       -- Register inputs
       v.asicSro := asicSroSync;
 
-      -- lane-enable controls the downstream logic
-      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-         v.laneEnable(lane) := r.laneEnableSet(lane) and linkUpSync(lane) and asicRstSync;
-      end loop;
-
       -- trigger counter management
       -------------------------------
-
       if asicRstSync = '0' then
          v.fpgaTrgCnt := (others => '1');
       end if;
@@ -370,11 +372,28 @@ begin
 
       end if;
       -------------------------------
-
       -- global lane status loop;
+      -- lane enable indicates a lane has been enabled by the user and is stable
       -- lane valid indicates data from that lane can be read-out;
       -- lane ready indicates that some action needs to be taken: either reset or read-out data
+      -- note that a link must be up for consecutive cycles before being labeled as stable
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+
+         -- link stability counters
+         if linkUpSync(lane) = '1' and uAnd(r.laneUpCnt(lane)) /= '1' then
+            v.laneUpCnt(lane) := r.laneUpCnt(lane) + 1;
+         end if;
+
+         if linkUpSync(lane) = '0' then
+            v.laneUpCnt(lane) := (others => '0');
+         end if;
+
+         v.laneStable(lane) := uAnd(r.laneUpCnt(lane));
+
+         laneDown(lane) := not(r.laneStable(lane));
+
+         -- lane-enable controls the downstream logic
+         v.laneEnable(lane) := r.laneEnableSet(lane) and not(laneDown(lane)) and asicRstSync;
 
          -- not from metadata FIFO
          v.laneFull(lane)  := laneStatus(lane).overflow;
@@ -396,7 +415,7 @@ begin
       end loop;
 
       ----------------------------------------------------------------------------------------------
-
+      -- status counters
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- increment counters on rising edge
          if  (v.laneDecError(i) = '1' and r.laneDecError(i) = '0') and (r.laneEnable(i) = '1')
@@ -434,6 +453,7 @@ begin
                               r.lanePauseError,
                               r.laneFull,
                               r.laneTimeout,
+                              laneDown,
                               r.laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
@@ -488,7 +508,7 @@ begin
          when EVAL_LANES_S =>
 
             -- set timeout counter if not all ready and if the state is not changing
-            if uOr(r.laneReady) = '1' and uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
+            if uAnd(r.laneReady) = '0' and r.laneReady = v.laneReady then
                v.armTimeout := '1';
             end if;
 
@@ -504,6 +524,7 @@ begin
                -- check for pause
                if uOr(r.lanePause) = '0' then
                   v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                    not(laneDown(lane)) and
                                     not(r.laneDecError(lane)) and
                                     not(laneStatus(lane).overflow);
 
@@ -515,6 +536,7 @@ begin
                   v.waitCnt := r.waitCnt + 1;
 
                   v.laneValid(lane) := (laneRxMasters(lane).tValid) and
+                                    not(laneDown(lane)) and
                                     not(r.laneDecError(lane)) and
                                     not(laneStatus(lane).overflow) and
                                        (r.lanePause(lane)); -- drain only in-pause lanes

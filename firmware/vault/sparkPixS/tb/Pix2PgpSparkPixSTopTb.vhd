@@ -26,7 +26,7 @@ entity Pix2PgpSparkPixSTopTb is
       FPGA_SYNTH_G              : boolean  := false;
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
-      TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
+      TIMEOUT_LIMIT_WIDTH_G     : positive := 16;
       COLMANAGER_DATA_DEPTH_G   : integer  := 8;
       COLMANAGER_STATUS_DEPTH_G : integer  := 8;
       DATAFIFO_PIPE_G           : natural  := 1;

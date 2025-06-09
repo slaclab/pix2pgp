@@ -15,7 +15,7 @@ import pix2pgp
 class Pix2PgpAsicStreamRx(pr.Device):
     def __init__(self,
             numLanes=8,
-            timeoutLimitWidth = 12,
+            timeoutLimitWidth = 16,
             statusCntWidth = 5,
             trgCntWidth = 6,
             sysClkFreq = 185.714E+6, # Units of Hz
@@ -181,8 +181,8 @@ class Pix2PgpAsicStreamRx(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
-            name         = 'Pgp4RxLinkUp',
-            description  = 'PGP4 Link is Up and Stable',
+            name         = 'Pgp4RxLinkDown',
+            description  = 'PGP4 Link is Down',
             offset       = 0x620,
             bitSize      = self.numLanes,
             mode         = 'RO',

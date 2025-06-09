@@ -77,6 +77,7 @@ class AsicData(object):
         self.laneTimeout    = [None] * self.numOfLanes
         self.laneDecError   = [None] * self.numOfLanes
         self.lanePauseError = [None] * self.numOfLanes
+        self.laneDown       = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
@@ -240,23 +241,28 @@ class AsicData(object):
                                                                                 self.numOfLanes)]
         self.laneTimeout    = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
+        self.laneDown       = [(_dict['laneDown'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
         self.laneValid      = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
 
         self.headerErr = ( _dict['laneDecError'] > 0 or
-                           _dict['laneTimeout']  > 0 or
+                           _dict['laneDown']  > 0 or
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'LaneDecError, LaneFull, LaneTimeout, LaneValid     =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X}'
+            _format = 'Lane: DecError, Full, Timeout, Down, Valid    =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X} 0x{4:<02X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
                 _dict['laneDecError'], _dict['laneFull'],
-                _dict['laneTimeout'], _dict['laneValid'],
+                _dict['laneTimeout'], _dict['laneDown'],
+                _dict['laneValid']
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             if self.headerErr:
-                pix2pgp.Tools.printError('FPGA Header')
+                pix2pgp.Tools.printError('FPGA Rx: Lane')
+            if any(self.laneTimeout) and self._verbose > 2:
+                pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
     #################################################################
 
     #################################################################
