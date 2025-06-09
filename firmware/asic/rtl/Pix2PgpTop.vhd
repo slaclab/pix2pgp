@@ -197,8 +197,8 @@ begin
 
    -- readback bus glue logic
    readback.cfgColBusy        <= uOr(colBusy);
-   readback.cfgColDataEmpty   <= uOr(colDataEmpty);
-   readback.cfgColStatusEmpty <= uOr(colStatusEmpty);
+   readback.cfgColDataEmpty   <= uAnd(colDataEmpty);
+   readback.cfgColStatusEmpty <= uAnd(colStatusEmpty);
    readback.cfgSuperBusy      <= superBusy;
    readback.cfgArbBusy        <= arbBusy;
 

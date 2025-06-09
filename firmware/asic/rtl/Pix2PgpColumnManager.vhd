@@ -129,7 +129,8 @@ begin
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck, dataRd,
                    statusFifoDout, statusFifoAlmFull, statusRdErrorDly,
-                   dataRdErrorDly, overOcc, dataFifoAlmFull) is
+                   dataRdErrorDly, overOcc, dataFifoAlmFull, dataFifoEmpty,
+                   statusFifoEmpty) is
 
       variable v : RegType;
    begin
