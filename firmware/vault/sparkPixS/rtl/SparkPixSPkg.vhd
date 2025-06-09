@@ -273,19 +273,19 @@ package Pix2PgpPkg is
                                              FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
 
    subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*7-1 downto
-                                             FPGA_HEADER_STRADDLE_C*5;
+                                             FPGA_HEADER_STRADDLE_C*6;
 
    subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*6-1 downto
-                                             FPGA_HEADER_STRADDLE_C*4;
+                                             FPGA_HEADER_STRADDLE_C*5;
 
    subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*5-1 downto
-                                             FPGA_HEADER_STRADDLE_C*3;
+                                             FPGA_HEADER_STRADDLE_C*4;
 
    subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
-                                             FPGA_HEADER_STRADDLE_C*2;
+                                             FPGA_HEADER_STRADDLE_C*3;
 
    subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
-                                             FPGA_HEADER_STRADDLE_C;
+                                             FPGA_HEADER_STRADDLE_C*2;
 
    subtype FPGA_LANERX_DOWN_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
                                              FPGA_HEADER_STRADDLE_C;
