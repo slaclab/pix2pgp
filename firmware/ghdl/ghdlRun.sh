@@ -70,17 +70,22 @@ SPARKPIX_T_TOP=${SPARKPIX_T_RTL_DIR}/Pix2PgpSparkPixTTop.vhd
 # Surf stuff
 SURF_DIR=${ASIC_RTL_DIR}/surf
 SURF=${SURF_DIR}/*.vhd
+
+SURF_FPGA_DIR=${FPGA_RTL_DIR}/surf
+SURF_FPGA=${SURF_FPGA_DIR}/*.vhd
+
 SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
 # note that the packages hav to be declared separately in order to be imported first
 # the order of the packages *matter*.
 SURF_PKG_DIR=${SURF_DIR}/pkg
-SURF_PKG_ALL=${SURF_PKG_DIR}/*Pkg.vhd
+SURF_FPGA_PKG_DIR=${SURF_FPGA_DIR}/pkg
+
 SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
-          "${SURF_PKG_DIR}/TextUtilPkg.vhd"
+          "${SURF_FPGA_PKG_DIR}/TextUtilPkg.vhd"
           "${SURF_PKG_DIR}/CrcPkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPkg.vhd"
-          "${SURF_PKG_DIR}/AxiLitePkg.vhd"
+          "${SURF_FPGA_PKG_DIR}/AxiLitePkg.vhd"
           "${SURF_PKG_DIR}/SsiPkg.vhd"
           "${SURF_PKG_DIR}/Pgp4Pkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPacketizer2Pkg.vhd"
@@ -138,7 +143,7 @@ ghdlAnalyze()
   echo "$(ls ${FPGA_TB})"
   echo "$(ls ${GHDL_FIFO})"
 
-  echo "List of SURF stuff..."
+  echo "List of ASIC SURF stuff..."
   checkFileExists ${SURF}
   surf_exists=$?
 
@@ -151,6 +156,7 @@ ghdlAnalyze()
       ${GHDL_IMPORT_SURF} $package
     done
     ${GHDL_IMPORT_SURF} ${SURF}
+    ${GHDL_IMPORT_SURF} ${SURF_FPGA}
   else
     echo "[ERROR]: No surf files found..."
     exit 1
