@@ -35,42 +35,44 @@ entity Pix2PgpColumnManager is
       STATUS_DEPTH_G    : integer   := 32);
    port(
       -- General Interface
-      sparseClk : in  sl;
-      pgpClk    : in  sl;
-      sparseRst : in  sl;
+      sparseClk   : in  sl;
+      pgpClk      : in  sl;
+      sparseRst   : in  sl;
+      dataEmpty   : out sl;
+      statusEmpty : out sl;
       -- Sparse Logic Interface
-      din       : in  slv(SPARSE_DWIDTH_C-1 downto 0);
-      wrEn      : in  sl;
-      sof       : in  sl;
-      eof       : in  sl;
-      overOcc   : in  sl;
-      pauseAck  : in  sl;
-      busy      : out sl;
-      pause     : out sl;
+      din         : in  slv(SPARSE_DWIDTH_C-1 downto 0);
+      wrEn        : in  sl;
+      sof         : in  sl;
+      eof         : in  sl;
+      overOcc     : in  sl;
+      pauseAck    : in  sl;
+      busy        : out sl;
+      pause       : out sl;
       -- Arbiter Interface
-      statusRd  : in  sl;
-      dataRd    : in  sl;
-      statusBus : out Pix2PgpStatusBusType;
-      dataBus   : out Pix2PgpDataBusType);
+      statusRd    : in  sl;
+      dataRd      : in  sl;
+      statusBus   : out Pix2PgpStatusBusType;
+      dataBus     : out Pix2PgpDataBusType);
 end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   signal statusFifoDout      : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-   signal dataFifoEmpty       : sl;
-   signal statusFifoEmpty     : sl;
-   signal statusFifoFullRd    : sl;
-   signal statusFifoAlmFull   : sl;
-   signal dataFifoAlmFull     : sl;
-   signal dataRdError         : sl;
-   signal DataRdErrorDly      : sl;
-   signal statusRdError       : sl;
-   signal statusRdErrorDly    : sl;
+   signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+   signal dataFifoEmpty      : sl;
+   signal statusFifoEmpty    : sl;
+   signal statusFifoFullRd   : sl;
+   signal statusFifoAlmFull  : sl;
+   signal dataFifoAlmFull    : sl;
+   signal dataRdError        : sl;
+   signal DataRdErrorDly     : sl;
+   signal statusRdError      : sl;
+   signal statusRdErrorDly   : sl;
 
-   signal statusWrEn          : sl;
-   signal statusDin           : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-   signal dataWrEn            : sl;
-   signal dataDin             : slv(SPARSE_DWIDTH_C-1 downto 0);
+   signal statusWrEn         : sl;
+   signal statusDin          : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+   signal dataWrEn           : sl;
+   signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0);
 
    type RegType is record
       -- i/o
@@ -127,7 +129,8 @@ begin
    ------------------------------------------------
    comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck, dataRd,
                    statusFifoDout, statusFifoAlmFull, statusRdErrorDly,
-                   dataRdErrorDly, overOcc, dataFifoAlmFull) is
+                   dataRdErrorDly, overOcc, dataFifoAlmFull, dataFifoEmpty,
+                   statusFifoEmpty) is
 
       variable v : RegType;
    begin
@@ -250,8 +253,11 @@ begin
       v.pause := dataFifoAlmFull or statusFifoAlmFull;
 
       -- Outputs
-      pause <= v.pause;
-      busy  <= v.busy;
+      pause       <= v.pause;
+      busy        <= v.busy;
+      dataEmpty   <= dataFifoEmpty;
+      statusEmpty <= statusFifoEmpty;
+
       -- status bus assignments (in pgpClk domain)
       statusBus.overOcc   <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
       statusBus.pause     <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
@@ -334,7 +340,7 @@ begin
          din      => statusDin,
          aEmptyWr => open,
          aFullWr  => statusFifoAlmFull,
-         emptyWr  => statusFifoEmpty, -- for debugging
+         emptyWr  => statusFifoEmpty,
          -- Read Interface
          rdClk    => pgpClk,
          rdEn     => statusRd,
@@ -398,7 +404,7 @@ begin
          wrEn     => dataWrEn,
          din      => dataDin,
          aFullWr  => dataFifoAlmFull,
-         emptyWr  => dataFifoEmpty,  -- for debugging
+         emptyWr  => dataFifoEmpty,
          -- Read Interface
          rdClk    => pgpClk,
          rdEn     => dataRd,

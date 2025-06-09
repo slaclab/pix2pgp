@@ -27,18 +27,18 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpColumnSupervisor is
    generic(
-      TPD_G                 : time      := 1 ns;
-      RST_ASYNC_G           : boolean   := false;
-      RST_POLARITY_G        : std_logic := '1';
-      PIPELINE_STATUS_G     : boolean   := false;
-      TIMEOUT_LIMIT_WIDTH_G : positive  := 12);
+      TPD_G             : time      := 1 ns;
+      RST_ASYNC_G       : boolean   := false;
+      RST_POLARITY_G    : std_logic := '1';
+      PIPELINE_STATUS_G : boolean   := false);
    port(
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl;
-      timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      pauseLimit    : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
-      columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      sparseClk     : in  sl;
+      sparseRst     : in  sl;
+      config        : in  Pix2PgpCfgConfigType;
+      superBusy     : out sl;
       -- Column Manager Interface
       colBusy       : in  sl;
       statusBus     : in  Pix2PgpStatusBusArray;
@@ -75,6 +75,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    : sl;
       timeoutError    : sl;
       colPause        : sl;
+      superBusy       : sl;
       statusBus       : Pix2PgpStatusBusArray;
       colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -107,6 +108,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    => '0',
       timeoutError    => '0',
       colPause        => '0',
+      superBusy       => '0',
       statusBus       => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask      => (others => '0'),
       trgCntGlbl      => (others => '1'),
@@ -133,18 +135,24 @@ architecture rtl of Pix2PgpColumnSupervisor is
    signal r   : RegType;
    signal rin : RegType;
 
-   signal setTimeout      : sl;
-   signal setTimeoutPause : sl;
-   signal timeout         : sl;
-   signal timeoutPause    : sl;
-   signal colBusySync     : sl;
+   signal setTimeout          : sl;
+   signal setTimeoutPause     : sl;
+   signal timeout             : sl;
+   signal timeoutPause        : sl;
+
+   signal setTimeoutWtdg      : sl;
+   signal setTimeoutPauseWtdg : sl;
+   signal timeoutWtdg         : sl;
+   signal timeoutPauseWtdg    : sl;
+
+   signal colBusySync         : sl;
 
 begin
 
    ------------------------------------------------
    -- Column Supervisor FSM
    ------------------------------------------------
-   comb : process (r, pgpRst, statusBus, arbiterBusy, columnEnable,
+   comb : process (r, pgpRst, statusBus, arbiterBusy, config,
                    timeout, colBusySync, timeoutPause) is
 
       variable v             : RegType;
@@ -168,15 +176,17 @@ begin
       v.statusRd        := '0';
       v.setTimeout      := '0';
       v.setTimeoutPause := '0';
+      v.superBusy       := '1';
 
       -- Register inputs
       v.arbiterBusy  := arbiterBusy;
-      v.columnEnable := columnEnable;
       v.timeout      := timeout;
       v.timeoutPause := timeoutPause;
 
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+
+         v.columnEnable := config.columnEnable;
 
          -- column is ready when its status FIFO has a word;
          v.dataReady(col) := not(statusBusInt(col).columnEmpty) and v.columnEnable(col);
@@ -242,6 +252,7 @@ begin
             v.pause        := '0';
             v.timeoutError := '0';
             v.pauseError   := '0';
+            v.superBusy    := '0';
 
             -- pause flag and (short) timeout if needed
             if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
@@ -386,6 +397,7 @@ begin
       arbiterStart    <= r.arbiterStart; -- delay for one cycle
       trgCntGlbl      <= r.trgCntGlbl;
       timeoutError    <= r.timeoutError;
+      superBusy       <= r.superBusy;
 
       setTimeout      <= r.setTimeout;
       setTimeoutPause <= r.setTimeoutPause;
@@ -428,37 +440,77 @@ begin
          dataIn  => colBusy,
          dataOut => colBusySync);
 
+   U_SyncSetTmo : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => sparseClk,
+         dataIn  => setTimeout,
+         dataOut => setTimeoutWtdg);
+
+   U_SyncTmo : entity surf.Synchronizer
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G)
+      port map (
+         clk     => pgpClk,
+         dataIn  => timeoutWtdg,
+         dataOut => timeout);
+
    U_TimeoutWatchdog : entity pix2pgp.Pix2PgpWatchdog
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
       port map(
          -- General Interface
-         clk     => pgpClk,
-         rst     => pgpRst,
-         limit   => timeoutLimit,
+         clk     => sparseClk,
+         rst     => sparseRst,
+         limit   => config.timeoutLimit,
          -- Control Interface
-         set     => setTimeout,
-         timeout => timeout);
+         set     => setTimeoutWtdg,
+         timeout => timeoutWtdg);
 
    GEN_PAUSE_WATCHDOG: if ENA_PAUSE_TIMEOUT_C generate
+
+      U_SyncSetTmoPause : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            RST_ASYNC_G    => RST_ASYNC_G)
+         port map (
+            clk     => sparseClk,
+            dataIn  => setTimeoutPause,
+            dataOut => setTimeoutPauseWtdg);
+
+      U_SyncTmoPause : entity surf.Synchronizer
+         generic map (
+            TPD_G          => TPD_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            RST_ASYNC_G    => RST_ASYNC_G)
+         port map (
+            clk     => pgpClk,
+            dataIn  => timeoutPauseWtdg,
+            dataOut => timeoutPause);
 
       U_PauseWatchdog : entity pix2pgp.Pix2PgpWatchdog
          generic map(
             TPD_G          => TPD_G,
             RST_ASYNC_G    => RST_ASYNC_G,
             RST_POLARITY_G => RST_POLARITY_G,
-            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
          port map(
             -- General Interface
-            clk     => pgpClk,
-            rst     => pgpRst,
-            limit   => pauseLimit,
+            clk     => sparseClk,
+            rst     => sparseRst,
+            limit   => config.pauseLimit,
             -- Control Interface
-            set     => setTimeoutPause,
-            timeout => timeoutPause);
+            set     => setTimeoutPauseWtdg,
+            timeout => timeoutPauseWtdg);
 
    end generate GEN_PAUSE_WATCHDOG;
 

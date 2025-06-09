@@ -39,6 +39,7 @@ entity Pix2PgpArbiter is
       -- General Interface
       pgpClk        : in  sl;
       pgpRst        : in  sl;
+      arbBusy       : out sl;
       -- Column Manager Interface
       statusBus     : in  Pix2PgpStatusBusArray;
       dataBus       : in  Pix2PgpDataBusArray;
@@ -52,7 +53,6 @@ entity Pix2PgpArbiter is
       colPause      : in  sl;
       trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      arbBusy       : out sl;
       -- Pgp4TxLite Interface
       pgpTxMaster   : out AxiStreamMasterType;
       pgpTxSlave    : in  AxiStreamSlaveType);
@@ -136,13 +136,13 @@ begin
 
       variable v : RegType;
       -- temp variables for status bus
-      variable pauseSel     : sl;
-      variable overOccSel   : sl;
-      variable flagsSel     : slv(7 downto 0);
-      variable dataLenSel   : slv(DATALEN_WIDTH_C-1 downto 0);
-      variable trgCntSel    : slv(TRGCNT_WIDTH_C-1 downto 0);
+      variable pauseSel    : sl;
+      variable overOccSel  : sl;
+      variable flagsSel    : slv(7 downto 0);
+      variable dataLenSel  : slv(DATALEN_WIDTH_C-1 downto 0);
+      variable trgCntSel   : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- temp variables for data bus
-      variable dataBusSel   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      variable dataBusSel  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 

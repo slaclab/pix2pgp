@@ -2,7 +2,6 @@ ROOT_DIR := .
 
 ASIC_SOURCED := 0
 
-ASIC_SYNTH := 0
 ##################################################
 ifeq ($(ASIC), SparkPixS)
     ASIC_SOURCED  := 1
@@ -28,11 +27,17 @@ GHDL_DIR := $(ROOT_DIR)/ghdl
 ASIC_RTL_DIR := $(ROOT_DIR)/asic/rtl
 ASIC_TB_DIR := $(ROOT_DIR)/asic/tb
 
+FPGA_RTL_DIR := $(ROOT_DIR)/fpga/rtl
+FPGA_TB_DIR := $(ROOT_DIR)/fpga/tb
+
 PIX2PGP_ASIC_TOP_DIR := $(ASIC_RTL_DIR)/asicTop
 PIX2PGP_PKG_DIR := $(ASIC_RTL_DIR)/pkg
 
 SURF_DIR := $(ASIC_RTL_DIR)/surf
 SURF_PKG_DIR := $(SURF_DIR)/pkg
+
+SURF_FPGA_DIR := $(FPGA_RTL_DIR)/surf
+SURF_FPGA_PKG_DIR := $(SURF_FPGA_DIR)/pkg
 
 SURF_SUBMODULE_DIR := $(ROOT_DIR)/submodules/surf
 
@@ -43,6 +48,8 @@ PIX2PGP_ASIC_TOP_FILES := $(wildcard $(PIX2PGP_ASIC_TOP_DIR)/*.vhd)
 ASIC_TB_FILES          := $(wildcard $(ASIC_TB_DIR)/*.vhd)
 SURF_FILES             := $(wildcard $(SURF_DIR)/*.vhd)
 SURF_PKG_FILES         := $(wildcard $(SURF_PKG_DIR)/*.vhd)
+SURF_FPGA_FILES        := $(wildcard $(SURF_FPGA_DIR)/*.vhd)
+SURF_FPGA_PKG_FILES    := $(wildcard $(SURF_FPGA_PKG_DIR)/*.vhd)
 GHDL_FILES             := $(wildcard $(GHDL_DIR)/*.cf $(GHDL_DIR)/*.ghw $(GHDL_DIR)/*.vcd $(GHDL_DIR)/*.fst $(GHDL_DIR)/*.o)
 
 ASIC_LINK_TB_FILES     := $(wildcard $(ASIC_LINK_DIR)/tb/*.vhd)
@@ -63,6 +70,8 @@ clean:
 	rm -f $(PIX2PGP_PKG_FILES)
 	rm -f $(PIX2PGP_ASIC_TOP_FILES)
 	rm -f $(ASIC_TB_FILES)
+	rm -f $(SURF_FILES)
+	rm -f $(SURF_PKG_FILES)
 	rm -f $(SURF_FILES)
 	rm -f $(SURF_PKG_FILES)
 	rm -f $(GHDL_FILES)
@@ -114,15 +123,13 @@ prepareSurf:
 	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamGearbox.vhd)                      $(SURF_DIR)/AxiStreamGearbox.vhd
 	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd)                       $(SURF_DIR)/AxiStreamResize.vhd
 
-	@if [ "$(ASIC_SYNTH)" = 0 ]; then \
-		echo "[INFO]: Linking extra FPGA libraries...";\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/TextUtilPkg.vhd)                             $(SURF_PKG_DIR)/TextUtilPkg.vhd ;\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd)                              $(SURF_PKG_DIR)/AxiLitePkg.vhd ;\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/Fifo.vhd)                                       $(SURF_DIR)/Fifo.vhd ;\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd)                            $(SURF_DIR)/AxiLiteAsync.vhd ;\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd) $(SURF_DIR)/MasterAxiStreamIpIntegrator.vhd ;\
-		ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd)                       $(SURF_DIR)/AxiStreamFifoV2.vhd ;\
-	fi
+	@echo "[INFO]: Linking extra FPGA libraries..."
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/TextUtilPkg.vhd)                             $(SURF_FPGA_PKG_DIR)/TextUtilPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd)                              $(SURF_FPGA_PKG_DIR)/AxiLitePkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/Fifo.vhd)                                       $(SURF_FPGA_DIR)/Fifo.vhd
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd)                            $(SURF_FPGA_DIR)/AxiLiteAsync.vhd
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd) $(SURF_FPGA_DIR)/MasterAxiStreamIpIntegrator.vhd
+	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd)                       $(SURF_FPGA_DIR)/AxiStreamFifoV2.vhd
 
 	@echo "[INFO]: surf preparation complete."
 
