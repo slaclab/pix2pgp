@@ -15,7 +15,7 @@ import pix2pgp
 class Pix2PgpAsicStreamRx(pr.Device):
     def __init__(self,
             numLanes=8,
-            timeoutLimitWidth = 12,
+            timeoutLimitWidth = 16,
             statusCntWidth = 5,
             trgCntWidth = 6,
             sysClkFreq = 185.714E+6, # Units of Hz
