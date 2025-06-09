@@ -168,6 +168,14 @@ package Pix2PgpPkg is
    subtype STATUSFIFO_DATALEN_POS_C  is natural range DATALEN_WIDTH_C-1
                                                 downto 0;
 
+   type Pix2PgpAsicFeedbackType is record
+      cfgColBusy        : sl;
+      cfgColDataEmpty   : sl;
+      cfgColStatusEmpty : sl;
+      cfgSuperBusy      : sl;
+      cfgArbBusy        : sl;
+   end record;
+
    type Pix2PgpStatusBusType is record
       -- flags begin
       overOcc     : sl;
@@ -188,6 +196,13 @@ package Pix2PgpPkg is
       -- flags end
       trgCnt      => (others => '1'),
       dataLen     => (others => '0'));
+
+   constant DEFAULT_PIX2PGP_ASICFDBK_C : Pix2PgpAsicFeedbackType := (
+      cfgColBusy        => '0',
+      cfgColDataEmpty   => '1',
+      cfgColStatusEmpty => '1',
+      cfgSuperBusy      => '0',
+      cfgArbBusy        => '0');
 
    type Pix2PgpStatusBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpStatusBusType;
 

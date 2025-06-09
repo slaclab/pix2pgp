@@ -41,6 +41,7 @@ entity Pix2PgpColumnSupervisor is
       timeoutLimit  : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       pauseLimit    : in  slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       columnEnable  : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      superBusy     : out sl;
       -- Column Manager Interface
       colBusy       : in  sl;
       statusBus     : in  Pix2PgpStatusBusArray;
@@ -77,6 +78,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    : sl;
       timeoutError    : sl;
       colPause        : sl;
+      superBusy       : sl;
       statusBus       : Pix2PgpStatusBusArray;
       colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -109,6 +111,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    => '0',
       timeoutError    => '0',
       colPause        => '0',
+      superBusy       => '0',
       statusBus       => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask      => (others => '0'),
       trgCntGlbl      => (others => '1'),
@@ -176,6 +179,7 @@ begin
       v.statusRd        := '0';
       v.setTimeout      := '0';
       v.setTimeoutPause := '0';
+      v.superBusy       := '1';
 
       -- Register inputs
       v.arbiterBusy  := arbiterBusy;
@@ -250,6 +254,7 @@ begin
             v.pause        := '0';
             v.timeoutError := '0';
             v.pauseError   := '0';
+            v.superBusy    := '0';
 
             -- pause flag and (short) timeout if needed
             if uOr(v.columnPause) = '1' and uOr(v.pauseErrorBmsk) = '0' then
@@ -394,6 +399,7 @@ begin
       arbiterStart    <= r.arbiterStart; -- delay for one cycle
       trgCntGlbl      <= r.trgCntGlbl;
       timeoutError    <= r.timeoutError;
+      superBusy       <= r.superBusy;
 
       setTimeout      <= r.setTimeout;
       setTimeoutPause <= r.setTimeoutPause;
