@@ -14,6 +14,7 @@ use pix2pgp.Pix2PgpPkg.all;
 
 library surf;
 use surf.AxiStreamPkg.all;
+use surf.StdRtlPkg.all;
 
 entity Pix2PgpSparkPixTTop is
    generic(
@@ -80,21 +81,25 @@ end entity Pix2PgpSparkPixTTop;
 
 architecture rtl of Pix2PgpSparkPixTTop is
 
-   signal din               : Pix2PgpSparseDinArray;
-   signal timeoutLimitMuxed : std_logic_vector(11 downto 0);
-   signal pauseLimitMuxed   : std_logic_vector(11 downto 0);
-   signal columnEnableMuxed : std_logic_vector(23 downto 0);
+   signal din                : Pix2PgpSparseDinArray;
+   signal timeoutLimitMuxed  : std_logic_vector(11 downto 0);
+   signal pauseLimitMuxed    : std_logic_vector(11 downto 0);
+   signal columnEnableSparse : std_logic_vector(23 downto 0);
+   signal columnEnablePgp    : std_logic_vector(23 downto 0);
 
-   signal pgpTxMaster       : AxiStreamMasterType;
-   signal pgpTxSlave        : AxiStreamSlaveType;
+   signal pgpTxMaster        : AxiStreamMasterType;
+   signal pgpTxSlave         : AxiStreamSlaveType;
 
-   signal phyTxValid        : std_logic;
-   signal phyTxReady        : std_logic;
-   signal phyTxData         : std_logic_vector(65 downto 0);
+   signal phyTxValid         : std_logic;
+   signal phyTxReady         : std_logic;
+   signal phyTxData          : std_logic_vector(65 downto 0);
 
-   signal serGboxReady      : std_logic;
-   signal serGboxValid      : std_logic;
-   signal serGboxData       : std_logic_vector(31 downto 0);
+   signal serGboxReady       : std_logic;
+   signal serGboxValid       : std_logic;
+   signal serGboxData        : std_logic_vector(31 downto 0);
+
+   signal glblSparseRst      : std_logic;
+   signal glblPgpRst         : std_logic;
 
 begin
 
@@ -154,11 +159,11 @@ begin
          -- General Interface
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
-         sparseRst    => sparseRst,
-         pgpRst       => pgpRst,
+         sparseRst    => glblSparseRst,
+         pgpRst       => glblPgpRst,
          timeoutLimit => timeoutLimitMuxed,
          pauseLimit   => pauseLimitMuxed,
-         columnEnable => columnEnableMuxed,
+         columnEnable => columnEnablePgp,
          -- Column Manager Interface
          sof          => sof,
          eof          => eof,
@@ -274,20 +279,65 @@ begin
    process(pgpRst, pgpClk)
    begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         timeoutLimitMuxed <= (others => '0');
-         columnEnableMuxed <= (others => '0');
-         pauseLimitMuxed   <= (others => '0');
+         columnEnablePgp <= (others => '0');
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
-            timeoutLimitMuxed <= (others => '0');
-            columnEnableMuxed <= (others => '0');
-            pauseLimitMuxed   <= (others => '0');
+            columnEnablePgp <= (others => '0');
          elsif sel = '1' then
-            timeoutLimitMuxed <= timeoutLimit;
-            columnEnableMuxed <= columnEnable;
-            pauseLimitMuxed   <= pauseLimit;
+            columnEnablePgp <= columnEnable;
          end if;
       end if;
    end process;
+
+   process(sparseRst, sparseClk)
+   begin
+      if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
+         timeoutLimitMuxed  <= (others => '0');
+         columnEnableSparse <= (others => '0');
+         pauseLimitMuxed    <= (others => '0');
+      elsif (rising_edge(sparseClk)) then
+         if sparseRst = RST_POLARITY_G then
+            timeoutLimitMuxed  <= (others => '0');
+            columnEnableSparse <= (others => '0');
+            pauseLimitMuxed    <= (others => '0');
+         elsif sel = '1' then
+            timeoutLimitMuxed  <= timeoutLimit;
+            columnEnableSparse <= columnEnable;
+            pauseLimitMuxed    <= pauseLimit;
+         end if;
+      end if;
+   end process;
+
+   -- Reset Management
+   process(sparseRst, sparseClk)
+   begin
+      if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
+         glblSparseRst <= sparseRst;
+      elsif (rising_edge(sparseClk)) then
+
+         if RST_POLARITY_G = '1' then
+            glblSparseRst <= sparseRst or uAnd(not(columnEnableSparse));
+         else
+            glblSparseRst <= sparseRst and uOr(columnEnableSparse);
+         end if;
+
+      end if;
+   end process;
+
+   process(pgpRst, pgpClk)
+   begin
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
+         glblPgpRst <= pgpRst;
+      elsif (rising_edge(pgpClk)) then
+
+         if RST_POLARITY_G = '1' then
+            glblPgpRst <= pgpRst or uAnd(not(columnEnablePgp));
+         else
+            glblPgpRst <= pgpRst and uOr(columnEnablePgp);
+         end if;
+
+      end if;
+   end process;
+
 
 end architecture;

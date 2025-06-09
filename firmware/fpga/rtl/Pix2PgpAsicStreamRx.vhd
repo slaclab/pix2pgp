@@ -68,40 +68,40 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   signal laneRxMasters   : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
-                          := (others => AXI_STREAM_MASTER_INIT_C);
-   signal laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
-                          := (others => AXI_STREAM_SLAVE_INIT_C);
+   signal laneRxMasters : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                        := (others => AXI_STREAM_MASTER_INIT_C);
+   signal laneRxSlaves  : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
+                        := (others => AXI_STREAM_SLAVE_INIT_C);
 
    type TrgCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TRGCNT_WIDTH_C-1 downto 0);
 
-   signal laneStatus      : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
+   signal laneStatus    : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
 
-   signal asicSroSync     : sl := '0';
-   signal asicSroEnSync   : sl := '0';
-   signal asicRstSync     : sl := '0';
+   signal asicSroSync   : sl := '0';
+   signal asicSroEnSync : sl := '0';
+   signal asicRstSync   : sl := '0';
 
-   signal trgBuffDout     : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
-   signal trgBuffValid    : sl  := '0';
-   signal timeout         : sl  := '0';
-   signal axiFifoRst      : sl  := '0';
-   signal linkUpSync      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal trgBuffDout   : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffValid  : sl  := '0';
+   signal timeout       : sl  := '0';
+   signal axiFifoRst    : sl  := '0';
+   signal linkUpSync    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal readMaster      : AxiLiteReadMasterType;
-   signal readSlave       : AxiLiteReadSlaveType;
-   signal writeMaster     : AxiLiteWriteMasterType;
-   signal writeSlave      : AxiLiteWriteSlaveType;
+   signal readMaster    : AxiLiteReadMasterType;
+   signal readSlave     : AxiLiteReadSlaveType;
+   signal writeMaster   : AxiLiteWriteMasterType;
+   signal writeSlave    : AxiLiteWriteSlaveType;
 
-   signal laneRst         : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
+   signal laneRst       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => not(RST_POLARITY_G));
 
-   signal dropBadColTrg   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal lanePostError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal dropBadColTrg : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal lanePostError : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal obAxisMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxisSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal obAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal obAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal laneMetaValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal laneMetaRd      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneMetaRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type StateType is (
       IDLE_S,

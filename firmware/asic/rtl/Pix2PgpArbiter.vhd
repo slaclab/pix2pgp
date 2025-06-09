@@ -136,13 +136,13 @@ begin
 
       variable v : RegType;
       -- temp variables for status bus
-      variable pauseSel     : sl;
-      variable overOccSel   : sl;
-      variable flagsSel     : slv(7 downto 0);
-      variable dataLenSel   : slv(DATALEN_WIDTH_C-1 downto 0);
-      variable trgCntSel    : slv(TRGCNT_WIDTH_C-1 downto 0);
+      variable pauseSel    : sl;
+      variable overOccSel  : sl;
+      variable flagsSel    : slv(7 downto 0);
+      variable dataLenSel  : slv(DATALEN_WIDTH_C-1 downto 0);
+      variable trgCntSel   : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- temp variables for data bus
-      variable dataBusSel   : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      variable dataBusSel  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 

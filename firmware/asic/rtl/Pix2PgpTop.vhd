@@ -137,6 +137,8 @@ begin
          -- General Interface
          pgpClk        => pgpClk,
          pgpRst        => pgpRst,
+         sparseClk     => sparseClk,
+         sparseRst     => sparseRst,
          timeoutLimit  => timeoutLimit,
          pauseLimit    => pauseLimit,
          columnEnable  => columnEnable,

@@ -56,21 +56,21 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
-   signal statusFifoDout      : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-   signal dataFifoEmpty       : sl;
-   signal statusFifoEmpty     : sl;
-   signal statusFifoFullRd    : sl;
-   signal statusFifoAlmFull   : sl;
-   signal dataFifoAlmFull     : sl;
-   signal dataRdError         : sl;
-   signal DataRdErrorDly      : sl;
-   signal statusRdError       : sl;
-   signal statusRdErrorDly    : sl;
+   signal statusFifoDout     : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+   signal dataFifoEmpty      : sl;
+   signal statusFifoEmpty    : sl;
+   signal statusFifoFullRd   : sl;
+   signal statusFifoAlmFull  : sl;
+   signal dataFifoAlmFull    : sl;
+   signal dataRdError        : sl;
+   signal DataRdErrorDly     : sl;
+   signal statusRdError      : sl;
+   signal statusRdErrorDly   : sl;
 
-   signal statusWrEn          : sl;
-   signal statusDin           : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
-   signal dataWrEn            : sl;
-   signal dataDin             : slv(SPARSE_DWIDTH_C-1 downto 0);
+   signal statusWrEn         : sl;
+   signal statusDin          : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
+   signal dataWrEn           : sl;
+   signal dataDin            : slv(SPARSE_DWIDTH_C-1 downto 0);
 
    type RegType is record
       -- i/o
