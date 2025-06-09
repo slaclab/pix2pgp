@@ -181,8 +181,8 @@ class Pix2PgpAsicStreamRx(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
-            name         = 'Pgp4RxLinkUp',
-            description  = 'PGP4 Link is Up and Stable',
+            name         = 'Pgp4RxLinkDown',
+            description  = 'PGP4 Link is Down',
             offset       = 0x620,
             bitSize      = self.numLanes,
             mode         = 'RO',
