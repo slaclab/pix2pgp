@@ -62,13 +62,14 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
 
         _bitmask = (1 << numOfLanes) - 1
 
-        header_dict = {'laneDecError'   : (_header >> numOfLanes*6) & _bitmask,
-                       'laneOverOcc'    : (_header >> numOfLanes*5) & _bitmask,
-                       'lanePause'      : (_header >> numOfLanes*4) & _bitmask,
-                       'lanePauseError' : (_header >> numOfLanes*3) & _bitmask,
-                       'laneFull'       : (_header >> numOfLanes*2) & _bitmask,
-                       'laneTimeout'    : (_header >> numOfLanes*1) & _bitmask,
-                       'laneValid'      : (_header >>  0) & _bitmask}
+        header_dict = {'laneDecError'   : (_header >> numOfLanes*7) & _bitmask,
+                       'laneOverOcc'    : (_header >> numOfLanes*6) & _bitmask,
+                       'lanePause'      : (_header >> numOfLanes*5) & _bitmask,
+                       'lanePauseError' : (_header >> numOfLanes*4) & _bitmask,
+                       'laneFull'       : (_header >> numOfLanes*3) & _bitmask,
+                       'laneTimeout'    : (_header >> numOfLanes*2) & _bitmask,
+                       'laneDown'       : (_header >> numOfLanes*1) & _bitmask,
+                       'laneValid'      : (_header >>            0) & _bitmask}
 
         return header_dict
 
