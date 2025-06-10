@@ -186,7 +186,7 @@ begin
       -- global status loop
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
 
-         v.columnEnable := config.colEnaPgp;
+         v.columnEnable := config.columnEnable;
 
          -- column is ready when its status FIFO has a word;
          v.dataReady(col) := not(statusBusInt(col).columnEmpty) and v.columnEnable(col);

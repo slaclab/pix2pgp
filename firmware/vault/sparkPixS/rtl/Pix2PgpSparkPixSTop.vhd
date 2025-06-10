@@ -289,7 +289,6 @@ begin
          WIDTH_G        => NUM_OF_COL_MANAGERS_C)
       port map (
          clk     => pgpClk,
-         rst     => pgpCfgSel,
          dataIn  => cfgColumnEnable,
          dataOut => cfgColumnEnablePgp);
 
@@ -301,7 +300,6 @@ begin
          WIDTH_G        => NUM_OF_COL_MANAGERS_C)
       port map (
          clk     => sparseClk,
-         rst     => sparseCfgSel,
          dataIn  => cfgColumnEnable,
          dataOut => cfgColumnEnableSparse);
 
@@ -313,7 +311,6 @@ begin
          WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
       port map (
          clk     => sparseClk,
-         rst     => sparseCfgSel,
          dataIn  => cfgTimeoutLimit,
          dataOut => cfgTimeoutLimitSparse);
 
@@ -325,7 +322,6 @@ begin
          WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
       port map (
          clk     => sparseClk,
-         rst     => sparseCfgSel,
          dataIn  => cfgPauseLimit,
          dataOut => cfgPauseLimitSparse);
 
@@ -342,10 +338,34 @@ begin
    cfgColDataEmpty     <= readback.cfgColDataEmpty;
    cfgColStatusEmpty   <= readback.cfgColStatusEmpty;
 
-   -- inbound config
-   config.colEnaPgp    <= cfgColumnEnablePgp;
-   config.timeoutLimit <= cfgTimeoutLimitSparse;
-   config.colEnaSparse <= cfgColumnEnableSparse;
-   config.pauseLimit   <= cfgPauseLimitSparse;
+   -- inbound config select
+   process(pgpRst, pgpClk)
+   begin
+      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
+         config.columnEnable <= (others => '0');
+      elsif (rising_edge(pgpClk)) then
+         if pgpRst = RST_POLARITY_G then
+            config.columnEnable <= (others => '0');
+         elsif cfgSel = '1' then
+            config.columnEnable <= cfgColumnEnablePgp;
+         end if;
+      end if;
+   end process;
+
+   process(sparseRst, sparseClk)
+   begin
+      if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
+         config.timeoutLimit <= (others => '0');
+         config.pauseLimit   <= (others => '0');
+      elsif (rising_edge(sparseClk)) then
+         if sparseRst = RST_POLARITY_G then
+            config.timeoutLimit <= (others => '0');
+            config.pauseLimit   <= (others => '0');
+         elsif cfgSel = '1' then
+            config.timeoutLimit <= cfgTimeoutLimitSparse;
+            config.pauseLimit   <= cfgPauseLimitSparse;
+         end if;
+      end if;
+   end process;
 
 end architecture;

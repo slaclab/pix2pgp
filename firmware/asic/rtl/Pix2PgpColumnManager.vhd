@@ -38,7 +38,6 @@ entity Pix2PgpColumnManager is
       sparseClk   : in  sl;
       pgpClk      : in  sl;
       sparseRst   : in  sl;
-      colEnable   : in  sl;
       dataEmpty   : out sl;
       statusEmpty : out sl;
       -- Sparse Logic Interface
@@ -58,8 +57,6 @@ entity Pix2PgpColumnManager is
 end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
-
-   signal colRst            : sl;
 
    signal statusFifoDout    : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
    signal dataFifoEmpty     : sl;
@@ -130,7 +127,7 @@ begin
    ------------------------------------------------
    -- Column Manager FSM
    ------------------------------------------------
-   comb : process (r, colRst, sof, eof, wrEn, din, pauseAck, dataRd,
+   comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck, dataRd,
                    statusFifoDout, statusFifoAlmFull, statusRdErrorDly,
                    dataRdErrorDly, overOcc, dataFifoAlmFull, dataFifoEmpty,
                    statusFifoEmpty) is
@@ -269,7 +266,7 @@ begin
       statusBus.fifoError <= statusRdErrorDly or dataRdErrorDly; -- FIFO underflow
 
       -- Reset
-      if (RST_ASYNC_G = false and colRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and sparseRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -278,9 +275,9 @@ begin
 
    end process comb;
 
-   seq : process (sparseClk, colRst) is
+   seq : process (sparseClk, sparseRst) is
    begin
-      if RST_ASYNC_G and colRst = RST_POLARITY_G then
+      if RST_ASYNC_G and sparseRst = RST_POLARITY_G then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(sparseClk) then
          r <= rin after TPD_G;
@@ -336,7 +333,7 @@ begin
          ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
-         rst      => colRst,
+         rst      => sparseRst,
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => statusWrEn,
@@ -401,7 +398,7 @@ begin
          ADDR_WIDTH_G    => 4) -- only for ghdl sim
       port map (
          -- Resets
-         rst      => colRst,
+         rst      => sparseRst,
          -- Write Interface
          wrClk    => sparseClk,
          wrEn     => dataWrEn,
@@ -415,8 +412,5 @@ begin
          fullRd   => open,
          rdErr    => dataRdError,
          dout     => dataBus.data);
-
-   colRst <= (sparseRst or  not(colEnable)) when RST_POLARITY_G = '1' else
-             (sparseRst and colEnable);
 
 end rtl;
