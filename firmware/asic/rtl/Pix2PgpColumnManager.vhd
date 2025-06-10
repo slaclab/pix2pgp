@@ -29,6 +29,7 @@ entity Pix2PgpColumnManager is
       TPD_G             : time      := 1 ns;
       RST_ASYNC_G       : boolean   := false;
       RST_POLARITY_G    : std_logic := '1';
+      COL_ID_G          : natural   := 0;
       DATAFIFO_PIPE_G   : natural   := 1;
       STATUSFIFO_PIPE_G : natural   := 1;
       DATA_DEPTH_G      : integer   := 32;
@@ -38,6 +39,7 @@ entity Pix2PgpColumnManager is
       sparseClk   : in  sl;
       pgpClk      : in  sl;
       sparseRst   : in  sl;
+      config      : in  Pix2PgpCfgConfigType;
       dataEmpty   : out sl;
       statusEmpty : out sl;
       -- Sparse Logic Interface
@@ -130,7 +132,7 @@ begin
    comb : process (r, sparseRst, sof, eof, wrEn, din, pauseAck, dataRd,
                    statusFifoDout, statusFifoAlmFull, statusRdErrorDly,
                    dataRdErrorDly, overOcc, dataFifoAlmFull, dataFifoEmpty,
-                   statusFifoEmpty) is
+                   statusFifoEmpty, config) is
 
       variable v : RegType;
    begin
@@ -254,7 +256,7 @@ begin
 
       -- Outputs
       pause       <= v.pause;
-      busy        <= v.busy;
+      busy        <= v.busy and config.colEnaSparse(COL_ID_G);
       dataEmpty   <= dataFifoEmpty;
       statusEmpty <= statusFifoEmpty;
 

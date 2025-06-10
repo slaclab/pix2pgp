@@ -342,12 +342,12 @@ begin
    process(pgpRst, pgpClk)
    begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         config.columnEnable <= (others => '0');
+         config.colEnaPgp <= (others => '0');
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
-            config.columnEnable <= (others => '0');
+            config.colEnaPgp <= (others => '0');
          elsif cfgSel = '1' then
-            config.columnEnable <= cfgColumnEnablePgp;
+            config.colEnaPgp <= cfgColumnEnablePgp;
          end if;
       end if;
    end process;
@@ -357,13 +357,16 @@ begin
       if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
          config.timeoutLimit <= (others => '0');
          config.pauseLimit   <= (others => '0');
+         config.colEnaSparse <= (others => '0');
       elsif (rising_edge(sparseClk)) then
          if sparseRst = RST_POLARITY_G then
             config.timeoutLimit <= (others => '0');
             config.pauseLimit   <= (others => '0');
+            config.colEnaSparse <= (others => '0');
          elsif cfgSel = '1' then
             config.timeoutLimit <= cfgTimeoutLimitSparse;
             config.pauseLimit   <= cfgPauseLimitSparse;
+            config.colEnaSparse <= cfgColumnEnableSparse;
          end if;
       end if;
    end process;

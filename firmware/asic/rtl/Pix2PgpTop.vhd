@@ -94,6 +94,7 @@ begin
             TPD_G             => TPD_G,
             RST_ASYNC_G       => RST_ASYNC_G,
             RST_POLARITY_G    => RST_POLARITY_G,
+            COL_ID_G          => col,
             DATAFIFO_PIPE_G   => DATAFIFO_PIPE_G,
             STATUSFIFO_PIPE_G => STATUSFIFO_PIPE_G,
             DATA_DEPTH_G      => COLMANAGER_DATA_DEPTH_G,
@@ -103,6 +104,7 @@ begin
             sparseClk   => sparseClk,
             pgpClk      => pgpClk,
             sparseRst   => sparseRst,
+            config      => config,
             dataEmpty   => colDataEmpty(col),
             statusEmpty => colStatusEmpty(col),
             -- Sparse Logic Interface
