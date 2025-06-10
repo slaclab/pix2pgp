@@ -103,6 +103,7 @@ begin
             sparseClk   => sparseClk,
             pgpClk      => pgpClk,
             sparseRst   => sparseRst,
+            colEnable   => config.colEnaSparse(col),
             dataEmpty   => colDataEmpty(col),
             statusEmpty => colStatusEmpty(col),
             -- Sparse Logic Interface

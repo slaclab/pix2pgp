@@ -172,13 +172,15 @@ package Pix2PgpPkg is
                                                 downto 0;
 
    type Pix2PgpCfgConfigType is record
-      columnEnable : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colEnaPgp    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colEnaSparse : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
       pauseLimit   : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_CONFIG_C : Pix2PgpCfgConfigType := (
-      columnEnable => (others => '1'),
+      colEnaPgp    => (others => '1'),
+      colEnaSparse => (others => '1'),
       timeoutLimit => (others => '1'),
       pauseLimit   => (others => '1'));
 

@@ -86,24 +86,28 @@ end entity Pix2PgpSparkPixTTop;
 
 architecture rtl of Pix2PgpSparkPixTTop is
 
-   signal din                : Pix2PgpSparseDinArray;
-   signal readback           : Pix2PgpCfgReadbackType;
-   signal config             : Pix2PgpCfgConfigType;
-   signal sparseColumnEnable : std_logic_vector(23 downto 0);
+   signal din                   : Pix2PgpSparseDinArray;
+   signal readback              : Pix2PgpCfgReadbackType;
+   signal config                : Pix2PgpCfgConfigType;
 
-   signal pgpTxMaster        : AxiStreamMasterType;
-   signal pgpTxSlave         : AxiStreamSlaveType;
+   signal pgpTxMaster           : AxiStreamMasterType;
+   signal pgpTxSlave            : AxiStreamSlaveType;
 
-   signal phyTxValid         : std_logic;
-   signal phyTxReady         : std_logic;
-   signal phyTxData          : std_logic_vector(65 downto 0);
+   signal phyTxValid            : std_logic;
+   signal phyTxReady            : std_logic;
+   signal phyTxData             : std_logic_vector(65 downto 0);
 
-   signal serGboxReady       : std_logic;
-   signal serGboxValid       : std_logic;
-   signal serGboxData        : std_logic_vector(31 downto 0);
+   signal serGboxReady          : std_logic;
+   signal serGboxValid          : std_logic;
+   signal serGboxData           : std_logic_vector(31 downto 0);
 
-   signal glblSparseRst      : std_logic;
-   signal glblPgpRst         : std_logic;
+   signal pgpCfgSel             : std_logic;
+   signal sparseCfgSel          : std_logic;
+
+   signal cfgColumnEnablePgp    : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal cfgTimeoutLimitSparse : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+   signal cfgColumnEnableSparse : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal cfgPauseLimitSparse   : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
 
 begin
 
@@ -162,8 +166,8 @@ begin
          -- General Interface
          sparseClk    => sparseClk,
          pgpClk       => pgpClk,
-         sparseRst    => glblSparseRst,
-         pgpRst       => glblPgpRst,
+         sparseRst    => sparseRst,
+         pgpRst       => pgpRst,
          config       => config,
          readback     => readback,
          -- Column Manager Interface
@@ -277,106 +281,71 @@ begin
       din(22) <= din22;
       din(23) <= din23;
 
-   -- Configurable Registers Management
-   process(pgpRst, pgpClk)
-   begin
-      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         config.columnEnable <= (others => '0');
-      elsif (rising_edge(pgpClk)) then
-         if pgpRst = RST_POLARITY_G then
-            config.columnEnable <= (others => '0');
-         elsif cfgSel = '1' then
-            config.columnEnable <= cfgColumnEnable;
-         end if;
-      end if;
-   end process;
-
-   process(sparseRst, sparseClk)
-   begin
-      if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
-         config.timeoutLimit <= (others => '0');
-         sparseColumnEnable  <= (others => '0');
-         config.pauseLimit   <= (others => '0');
-      elsif (rising_edge(sparseClk)) then
-         if sparseRst = RST_POLARITY_G then
-            config.timeoutLimit <= (others => '0');
-            sparseColumnEnable  <= (others => '0');
-            config.pauseLimit   <= (others => '0');
-         elsif cfgSel = '1' then
-            config.timeoutLimit <= cfgTimeoutLimit;
-            sparseColumnEnable  <= cfgColumnEnable;
-            config.pauseLimit   <= cfgPauseLimit;
-         end if;
-      end if;
-   end process;
-
-   -- Reset Management
-   process(sparseRst, sparseClk)
-   begin
-      if (RST_ASYNC_G and sparseRst = RST_POLARITY_G) then
-         glblSparseRst <= sparseRst;
-      elsif (rising_edge(sparseClk)) then
-
-         if RST_POLARITY_G = '1' then
-            glblSparseRst <= sparseRst or uAnd(not(sparseColumnEnable));
-         else
-            glblSparseRst <= sparseRst and uOr(sparseColumnEnable);
-         end if;
-
-      end if;
-   end process;
-
-   process(pgpRst, pgpClk, config)
-
-      variable columnEnable : std_logic_vector(23 downto 0);
-   begin
-      columnEnable := config.columnEnable;
-
-      if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         glblPgpRst <= pgpRst;
-      elsif (rising_edge(pgpClk)) then
-
-         if RST_POLARITY_G = '1' then
-            glblPgpRst <= pgpRst or uAnd(not(columnEnable));
-         else
-            glblPgpRst <= pgpRst and uOr(columnEnable);
-         end if;
-
-      end if;
-   end process;
-
-   -- feedback signals
-   U_SyncColBusy : entity surf.Synchronizer
+   U_SyncColEnaPgp : entity surf.SynchronizerVector
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => NUM_OF_COL_MANAGERS_C)
       port map (
          clk     => pgpClk,
-         dataIn  => readback.cfgColBusy,
-         dataOut => cfgColBusy);
+         rst     => pgpCfgSel,
+         dataIn  => cfgColumnEnable,
+         dataOut => cfgColumnEnablePgp);
 
-   U_SyncColDataEmpty : entity surf.Synchronizer
+   U_SyncColEnaSparse : entity surf.SynchronizerVector
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => NUM_OF_COL_MANAGERS_C)
       port map (
-         clk     => pgpClk,
-         dataIn  => readback.cfgColDataEmpty,
-         dataOut => cfgColDataEmpty);
+         clk     => sparseClk,
+         rst     => sparseCfgSel,
+         dataIn  => cfgColumnEnable,
+         dataOut => cfgColumnEnableSparse);
 
-   U_SyncColStatusEmpty : entity surf.Synchronizer
+   U_SyncTimeout : entity surf.SynchronizerVector
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
       port map (
-         clk     => pgpClk,
-         dataIn  => readback.cfgColStatusEmpty,
-         dataOut => cfgColStatusEmpty);
+         clk     => sparseClk,
+         rst     => sparseCfgSel,
+         dataIn  => cfgTimeoutLimit,
+         dataOut => cfgTimeoutLimitSparse);
 
-      cfgSuperBusy <= readback.cfgSuperBusy;
-      cfgArbBusy   <= readback.cfgArbBusy;
+   U_SyncTimeoutPause : entity surf.SynchronizerVector
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
+      port map (
+         clk     => sparseClk,
+         rst     => sparseCfgSel,
+         dataIn  => cfgPauseLimit,
+         dataOut => cfgPauseLimitSparse);
+
+   pgpCfgSel <= (pgpRst or  not(cfgSel)) when RST_POLARITY_G = '1' else
+                (pgpRst and cfgSel);
+
+   sparseCfgSel <= (sparseRst or  not(cfgSel)) when RST_POLARITY_G = '1' else
+                   (sparseRst and cfgSel);
+
+   -- status readback
+   cfgSuperBusy        <= readback.cfgSuperBusy;
+   cfgArbBusy          <= readback.cfgArbBusy;
+   cfgColBusy          <= readback.cfgColBusy;
+   cfgColDataEmpty     <= readback.cfgColDataEmpty;
+   cfgColStatusEmpty   <= readback.cfgColStatusEmpty;
+
+   -- inbound config
+   config.colEnaPgp    <= cfgColumnEnablePgp;
+   config.timeoutLimit <= cfgTimeoutLimitSparse;
+   config.colEnaSparse <= cfgColumnEnableSparse;
+   config.pauseLimit   <= cfgPauseLimitSparse;
 
 end architecture;
