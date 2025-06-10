@@ -81,6 +81,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal asicSroEnSync : sl := '0';
    signal asicRstSync   : sl := '0';
 
+   signal glblRst       : sl := not(RST_POLARITY_G);
+   signal usrRst        : sl := not(RST_POLARITY_G);
+
    signal trgBuffDout   : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffValid  : sl  := '0';
    signal timeout       : sl  := '0';
@@ -139,6 +142,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       -- Registers
       dropBadColTrg   : sl;
       cntRst          : sl;
+      usrRst          : sl;
       fpgaId          : slv(15 downto 0);
       timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
       laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -183,6 +187,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       -- Registers
       dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
       cntRst          => '1',
+      usrRst          => not(RST_POLARITY_G),
       fpgaId          => FPGA_ID_DEFAULT_C,
       timeoutLimit    => (others => '1'),
       laneEnable      => (others => '0'),
@@ -261,13 +266,13 @@ begin
          sAxiWriteSlave  => axilWriteSlave,
          -- Master Interface
          mAxiClk         => pgpRxClk,
-         mAxiClkRst      => pgpRxRst,
+         mAxiClkRst      => glblRst,
          mAxiReadMaster  => readMaster,
          mAxiReadSlave   => readSlave,
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, pgpRxRst, writeMaster, asicSroSync, obAxisSlave,
+   comb : process (readMaster, glblRst, writeMaster, asicSroSync, obAxisSlave,
                    asicSroEnSync, trgBuffValid, laneStatus, asicRstSync,
                    trgBuffDout, timeout, laneRxMasters, linkUpSync, r) is
 
@@ -297,6 +302,7 @@ begin
       v.laneMetaRd := '0';
       v.cntRst     := '0';
       v.armTimeout := '0';
+      v.usrRst     := '0';
       v.laneStable := (others => '0');
 
       -- flow control check
@@ -339,6 +345,8 @@ begin
       axiSlaveRegisterR(axilEp, x"618", 0, laneInError);
       axiSlaveRegisterR(axilEp, x"61C", 0, r.laneFull);
       axiSlaveRegisterR(axilEp, x"620", 0, laneDown);
+      --
+      axiSlaveRegister (axilEp, x"700", 0, v.usrRst);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -726,9 +734,9 @@ begin
 
          -- enable mapping
          if RST_POLARITY_G = '1' then
-            laneRst(lane) <= pgpRxRst or r.laneRst or not(r.laneEnable(lane));
+            laneRst(lane) <= glblRst or r.laneRst or not(r.laneEnable(lane));
          else
-            laneRst(lane) <= pgpRxRst and not(r.laneRst) and(r.laneEnable(lane));
+            laneRst(lane) <= glblRst and not(r.laneRst) and(r.laneEnable(lane));
          end if;
 
       end loop;
@@ -742,7 +750,7 @@ begin
       readSlave  <= r.readSlave;
 
       -- Reset
-      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and glblRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -751,9 +759,9 @@ begin
 
    end process comb;
 
-   seq : process (pgpRxClk, pgpRxRst) is
+   seq : process (pgpRxClk, glblRst) is
    begin
-      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and glblRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(pgpRxClk) then
          r <= rin after TPD_G;
@@ -773,7 +781,7 @@ begin
          DATA_WIDTH_G    => TRGCNT_WIDTH_C,
          ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
-         rst      => pgpRxRst,
+         rst      => glblRst,
          -- Write Ports
          wr_clk   => pgpRxClk,
          wr_en    => r.trgBuffWr,
@@ -814,21 +822,35 @@ begin
 
    end generate GEN_LANE;
 
-      -- Watchdog
-      U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
-         generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
-         port map(
-            -- General Interface
-            clk     => pgpRxClk,
-            rst     => pgpRxRst,
-            limit   => r.timeoutLimit,
-            -- Control Interface
-            set     => r.armTimeout,
-            timeout => timeout);
+   -- Internal Reset
+   U_UsrRst : entity surf.SynchronizerOneShot
+      generic map (
+         TPD_G         => TPD_G,
+         BYPASS_SYNC_G => true,
+         PULSE_WIDTH_G => 10)
+      port map (
+         clk     => pgpRxClk,
+         dataIn  => r.usrRst,
+         dataOut => usrRst);
+
+   glblRst <= (pgpRxRst or usrRst) when RST_POLARITY_G = '1' else
+              (pgpRxRst and not(usrRst));
+
+   -- Watchdog
+   U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+      port map(
+         -- General Interface
+         clk     => pgpRxClk,
+         rst     => pgpRxRst,
+         limit   => r.timeoutLimit,
+         -- Control Interface
+         set     => r.armTimeout,
+         timeout => timeout);
 
    --------------------------
    -- Pipeline Stage (or not)

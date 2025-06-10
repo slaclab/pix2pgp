@@ -154,7 +154,6 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset      = 0x610,
         )
 
-
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',
@@ -188,5 +187,17 @@ class Pix2PgpAsicStreamRx(pr.Device):
             mode         = 'RO',
         ))
 
+        self.add(pr.RemoteCommand(
+            name         = 'UsrRst',
+            description  = 'Reset Pix2PgpAsicStreamRx',
+            offset       = 0x700,
+            bitSize      = 1,
+            function     = lambda cmd: cmd.post(1),
+            hidden       = False,
+        ))
+
     def countReset(self):
         self.CntRst()
+
+    def HardReset(self):
+        self.UsrRst()
