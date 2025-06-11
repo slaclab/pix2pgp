@@ -117,7 +117,6 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
-   signal cfgPauseLimit     : slv(11 downto 0) := toSlv(12, 12);
    signal cfgColumnEnable   : slv(23 downto 0) := (others => '1');
    signal cfgColBusy        : sl := '0';
    signal cfgColDataEmpty   : sl := '1';
@@ -249,7 +248,6 @@ begin
             pgpRst            => rst,
             cfgSel            => cfgSel,
             cfgTimeoutLimit   => cfgTimeoutLimit,
-            cfgPauseLimit     => cfgPauseLimit,
             cfgColumnEnable   => cfgColumnEnable,
             cfgColBusy        => cfgColBusy,
             cfgColDataEmpty   => cfgColDataEmpty,
