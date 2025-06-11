@@ -81,3 +81,16 @@ class Tools:
 
         return _inListSwap
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def rawPrint(enable, label, hexData):
+        if enable:
+            _toPrint = hexData
+
+            if isinstance(hexData, list):
+                _toPrint = "".join(f"{x:02x}" for x in hexData)
+
+            click.secho(f"{label}: {_toPrint}")
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

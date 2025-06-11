@@ -280,10 +280,11 @@ class LaneData(object):
         for all columns with hits
         """
 
-        state  = "header_s"
-        index  = self.dataIndexStart
-        colSel = 0
-        subLen = 0
+        state    = "header_s"
+        index    = self.dataIndexStart
+        colSel   = 0
+        subLen   = 0
+        rawPrint = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not(self.done):
@@ -293,7 +294,10 @@ class LaneData(object):
             if state == "header_s":
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
+                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Header', wordHex)
+
                 self.headerEval(wordHex)
+
 
                 index += self.wordLen
 
@@ -316,7 +320,10 @@ class LaneData(object):
             elif state == "colMetaParse_s":
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
+                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.ColMetaData', wordHex)
+
                 self.colMetaEval(colSel, wordHex)
+
 
                 index += self.wordLen
 
@@ -334,6 +341,7 @@ class LaneData(object):
             elif state == "parseHits_s":
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
+                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Hits', wordHex)
 
                 if subLen > 0:
                     self.hitAlloc(colSel, wordHex, subLen)

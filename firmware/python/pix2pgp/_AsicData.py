@@ -378,6 +378,7 @@ class AsicData(object):
         _frameSize = [0] * self.numOfLanes
         laneSel    = 0
         inPause    = False
+        rawPrint   = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not(self.done):
@@ -389,7 +390,10 @@ class AsicData(object):
 
                 _slice = frame[index:index + self.preambleLen]
                 wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Preamble', wordHex)
+
                 self.preambleEval(wordHex)
+
 
                 index += self.preambleLen
                 state = "header_s"
@@ -400,7 +404,10 @@ class AsicData(object):
                 _slice = frame[index:index + self.headerLen]
 
                 wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Header', wordHex)
+
                 self.headerEval(wordHex)
+
 
                 index += self.headerLen
                 state = "frameSize_s"
@@ -412,6 +419,8 @@ class AsicData(object):
                     _slice = frame[index:index + self.frameSizeLen]
 
                     wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.FrameSize', wordHex)
+
                     _frameSize[laneSel] = int(wordHex, 16)
 
                     # accumulate frameSize
@@ -442,6 +451,9 @@ class AsicData(object):
 
                 _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen)
 
+                _label = 'AsicData.AllLaneData.Lane=' + str(laneSel)
+                pix2pgp.Tools.rawPrint(rawPrint, _label, _frameSliceSwap)
+
                 self.laneDecoder.laneIdSet(laneId=laneSel)
                 self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSlice))
 
@@ -467,6 +479,8 @@ class AsicData(object):
                     _slice = frame[index:index + self.trailerLen]
 
                     wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Trailer', wordHex)
+
                     self.trailerEval(wordHex)
                     index += self.trailerLen
 
