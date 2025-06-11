@@ -37,7 +37,6 @@ entity Pix2PgpSparkPixSTop is
       -- Configuration Registers
       cfgSel            : in  std_logic;
       cfgTimeoutLimit   : in  std_logic_vector(11 downto 0);
-      cfgPauseLimit     : in  std_logic_vector(11 downto 0);
       cfgColumnEnable   : in  std_logic_vector(23 downto 0);
       cfgColBusy        : out std_logic;
       cfgColDataEmpty   : out std_logic;
@@ -46,42 +45,42 @@ entity Pix2PgpSparkPixSTop is
       cfgArbBusy        : out std_logic;
       -- Column Manager Interface
       -- dataIn
-      din0         : in  std_logic_vector(19 downto 0);
-      din1         : in  std_logic_vector(19 downto 0);
-      din2         : in  std_logic_vector(19 downto 0);
-      din3         : in  std_logic_vector(19 downto 0);
-      din4         : in  std_logic_vector(19 downto 0);
-      din5         : in  std_logic_vector(19 downto 0);
-      din6         : in  std_logic_vector(19 downto 0);
-      din7         : in  std_logic_vector(19 downto 0);
-      din8         : in  std_logic_vector(19 downto 0);
-      din9         : in  std_logic_vector(19 downto 0);
-      din10        : in  std_logic_vector(19 downto 0);
-      din11        : in  std_logic_vector(19 downto 0);
-      din12        : in  std_logic_vector(19 downto 0);
-      din13        : in  std_logic_vector(19 downto 0);
-      din14        : in  std_logic_vector(19 downto 0);
-      din15        : in  std_logic_vector(19 downto 0);
-      din16        : in  std_logic_vector(19 downto 0);
-      din17        : in  std_logic_vector(19 downto 0);
-      din18        : in  std_logic_vector(19 downto 0);
-      din19        : in  std_logic_vector(19 downto 0);
-      din20        : in  std_logic_vector(19 downto 0);
-      din21        : in  std_logic_vector(19 downto 0);
-      din22        : in  std_logic_vector(19 downto 0);
-      din23        : in  std_logic_vector(19 downto 0);
+      din0              : in  std_logic_vector(19 downto 0);
+      din1              : in  std_logic_vector(19 downto 0);
+      din2              : in  std_logic_vector(19 downto 0);
+      din3              : in  std_logic_vector(19 downto 0);
+      din4              : in  std_logic_vector(19 downto 0);
+      din5              : in  std_logic_vector(19 downto 0);
+      din6              : in  std_logic_vector(19 downto 0);
+      din7              : in  std_logic_vector(19 downto 0);
+      din8              : in  std_logic_vector(19 downto 0);
+      din9              : in  std_logic_vector(19 downto 0);
+      din10             : in  std_logic_vector(19 downto 0);
+      din11             : in  std_logic_vector(19 downto 0);
+      din12             : in  std_logic_vector(19 downto 0);
+      din13             : in  std_logic_vector(19 downto 0);
+      din14             : in  std_logic_vector(19 downto 0);
+      din15             : in  std_logic_vector(19 downto 0);
+      din16             : in  std_logic_vector(19 downto 0);
+      din17             : in  std_logic_vector(19 downto 0);
+      din18             : in  std_logic_vector(19 downto 0);
+      din19             : in  std_logic_vector(19 downto 0);
+      din20             : in  std_logic_vector(19 downto 0);
+      din21             : in  std_logic_vector(19 downto 0);
+      din22             : in  std_logic_vector(19 downto 0);
+      din23             : in  std_logic_vector(19 downto 0);
       -- flags
-      sof          : in  std_logic_vector(23 downto 0);
-      eof          : in  std_logic_vector(23 downto 0);
-      overOcc      : in  std_logic_vector(23 downto 0);
-      pauseAck     : in  std_logic_vector(23 downto 0);
-      wrEn         : in  std_logic_vector(23 downto 0);
-      busy         : out std_logic_vector(23 downto 0);
-      pause        : out std_logic_vector(23 downto 0);
+      sof               : in  std_logic_vector(23 downto 0);
+      eof               : in  std_logic_vector(23 downto 0);
+      overOcc           : in  std_logic_vector(23 downto 0);
+      pauseAck          : in  std_logic_vector(23 downto 0);
+      wrEn              : in  std_logic_vector(23 downto 0);
+      busy              : out std_logic_vector(23 downto 0);
+      pause             : out std_logic_vector(23 downto 0);
       -- Serializer Interface
-      pgpDout      : out std_logic_vector(31 downto 0);
-      pgpDoutValid : out std_logic;
-      pgpDoutReady : in  std_logic);
+      pgpDout           : out std_logic_vector(31 downto 0);
+      pgpDoutValid      : out std_logic;
+      pgpDoutReady      : in  std_logic);
 end entity Pix2PgpSparkPixSTop;
 
 architecture rtl of Pix2PgpSparkPixSTop is
@@ -107,7 +106,6 @@ architecture rtl of Pix2PgpSparkPixSTop is
    signal cfgColumnEnablePgp    : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal cfgTimeoutLimitSparse : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
    signal cfgColumnEnableSparse : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
-   signal cfgPauseLimitSparse   : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
 
 begin
 
@@ -314,17 +312,6 @@ begin
          dataIn  => cfgTimeoutLimit,
          dataOut => cfgTimeoutLimitSparse);
 
-   U_SyncTimeoutPause : entity surf.SynchronizerVector
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
-      port map (
-         clk     => sparseClk,
-         dataIn  => cfgPauseLimit,
-         dataOut => cfgPauseLimitSparse);
-
    pgpCfgSel <= (pgpRst or  not(cfgSel)) when RST_POLARITY_G = '1' else
                 (pgpRst and cfgSel);
 
@@ -365,7 +352,7 @@ begin
             config.colEnaSparse <= (others => '0');
          elsif cfgSel = '1' then
             config.timeoutLimit <= cfgTimeoutLimitSparse;
-            config.pauseLimit   <= cfgPauseLimitSparse;
+            config.pauseLimit   <= (others => '0'); -- no such feature in sparkpix-s
             config.colEnaSparse <= cfgColumnEnableSparse;
          end if;
       end if;
