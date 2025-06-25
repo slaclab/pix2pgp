@@ -407,7 +407,7 @@ begin
                v.frameMetaWr := '1';
 
                -- go-to dummy wait state by default
-               v.state := WAIT_DUMMY_S;
+               v.state := WAIT_HEADER_S;
 
                -- override; go-to error state and stay there
                if r.decError = '1' then
