@@ -194,6 +194,8 @@ class LaneData(object):
             pix2pgp.Tools.printError('Lane Header')
         if self.pauseErr and self._verbose > 2:
             pix2pgp.Tools.printWarning('Pause-Error')
+        if self.timeout and self._verbose > 2:
+            pix2pgp.Tools.printWarning('Column Timeout')
 
     #################################################################
 
