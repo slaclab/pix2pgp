@@ -78,8 +78,7 @@ class LaneData(object):
         self.laneHits = []
 
         # evaluated by this class
-        self.headerErr = False
-        self.decErr    = False
+        self.decErr = False
 
         # data index
         self.dataIndexStart = 0
@@ -191,9 +190,7 @@ class LaneData(object):
         if _colBitmask != 0:
             self.hasData = True
 
-        self.headerErr = bool(self.colErr or self.timeout)
-
-        if self.headerErr and self._verbose > 1:
+        if self.colErr and self._verbose > 1:
             pix2pgp.Tools.printError('Lane Header')
         if self.pauseErr and self._verbose > 2:
             pix2pgp.Tools.printWarning('Pause-Error')
@@ -215,6 +212,10 @@ class LaneData(object):
 
         self.currColLen[colBmskId] = _dict['colLen']
         self.colLen[colBmskId]     = self.currColLen[colBmskId] + self.colLen[colBmskId]
+
+        if self.colTimeout[colBmskId] and self._verbose > 2:
+            print(f"colBmskId = {colBmskId}")
+            pix2pgp.Tools.printWarning('Column Timeout')
 
         if self.colId[colBmskId] != colBmskId:
             self.decErr = True

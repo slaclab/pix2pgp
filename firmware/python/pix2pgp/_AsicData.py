@@ -320,10 +320,6 @@ class AsicData(object):
         self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
 
         # Errors and status flags
-        self.laneHeaderErr[laneSel] = (
-            np.array(self.laneHeaderErr[laneSel]) |
-            np.array(self.laneDecoder.headerErr))
-
         self.laneDecErr[laneSel] = (
             np.array(self.laneDecErr[laneSel]) |
             np.array(self.laneDecoder.decErr))
