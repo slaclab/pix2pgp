@@ -77,6 +77,7 @@ architecture rtl of Pix2PgpTop is
    signal anyColBusy     : sl;
    signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
    signal colBitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal colTimeout     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal colBusy        : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal colDataEmpty   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal colStatusEmpty : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -154,7 +155,8 @@ begin
          timeoutError  => timeoutError,
          colPauseError => colPauseError,
          colPause      => colPause,
-         colBitmask    => colBitmask);
+         colBitmask    => colBitmask,
+         colTimeout    => colTimeout);
 
    -----------------------------------------
    -- Arbiter
@@ -184,6 +186,7 @@ begin
          timeoutError  => timeoutError,
          colPause      => colPause,
          colBitmask    => colBitmask,
+         colTimeout    => colTimeout,
          -- Pgp4TxLite Interface
          pgpTxMaster   => pgpTxMaster,
          pgpTxSlave    => pgpTxSlave);

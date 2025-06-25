@@ -53,6 +53,7 @@ entity Pix2PgpArbiter is
       colPause      : in  sl;
       trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colTimeout    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
       pgpTxMaster   : out AxiStreamMasterType;
       pgpTxSlave    : in  AxiStreamSlaveType);
@@ -72,6 +73,7 @@ architecture rtl of Pix2PgpArbiter is
       colPause     : sl;
       arbStart     : sl;
       colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colTimeout   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl   : slv(TRGCNT_WIDTH_C-1 downto 0);
       dataBus      : Pix2PgpDataBusArray;
       statusBus    : Pix2PgpStatusBusArray;
@@ -98,6 +100,7 @@ architecture rtl of Pix2PgpArbiter is
       colPause      => '0',
       arbStart      => '0',
       colBitmask    => (others => '0'),
+      colTimeout    => (others => '0'),
       trgCntGlbl    => (others => '0'),
       dataBus       => (others => DEFAULT_PIX2PGP_DATABUS_C),
       statusBus     => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
@@ -132,12 +135,13 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataBus, statusBus, arbStart, colFifoError,
                    overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
-                   trgCntGlbl, timeoutError) is
+                   trgCntGlbl, timeoutError, colTimeout) is
 
       variable v : RegType;
       -- temp variables for status bus
       variable pauseSel    : sl;
       variable overOccSel  : sl;
+      variable timeoutSel  : sl;
       variable flagsSel    : slv(7 downto 0);
       variable dataLenSel  : slv(DATALEN_WIDTH_C-1 downto 0);
       variable trgCntSel   : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -155,6 +159,7 @@ begin
       v.arbStart   := arbStart;
       v.statusBus  := statusBus;
       v.dataBus    := dataBus;
+      v.colTimeout := colTimeout;
 
       -- defaults
       v.dataRd := '0';
@@ -189,15 +194,17 @@ begin
          pauseSel     := r.statusBus(conv_integer(unsigned(r.colSel))).pause;
          dataLenSel   := r.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
          trgCntSel    := r.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         timeoutSel   := r.colTimeout(conv_integer(unsigned(r.colSel)));
       else
          overOccSel   := v.statusBus(conv_integer(unsigned(r.colSel))).overOcc;
          pauseSel     := v.statusBus(conv_integer(unsigned(r.colSel))).pause;
          dataLenSel   := v.statusBus(conv_integer(unsigned(r.colSel))).dataLen;
          trgCntSel    := v.statusBus(conv_integer(unsigned(r.colSel))).trgCnt;
+         timeoutSel   := v.colTimeout(conv_integer(unsigned(r.colSel)));
       end if;
 
       -- group the flags
-      flagsSel := resize(overOccSel & pauseSel, 8);
+      flagsSel := resize(timeoutSel & overOccSel & pauseSel, 8);
 
       -- data Mux
       dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;

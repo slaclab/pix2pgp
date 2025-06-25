@@ -27,7 +27,8 @@ class SparkPixSColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         _colMeta = int(colMeta, 16)
 
-        colMeta_dict = {'colOverOcc' : bool((_colMeta >> 25) & 0x1),
+        colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
+                        'colOverOcc' : bool((_colMeta >> 25) & 0x1),
                         'colPause'   : bool((_colMeta >> 24) & 0x1),
                         'colId'      :      (_colMeta >> 16) & 0xFF,
                         'colTrgCnt'  :      (_colMeta >>  8) & 0xFF,
@@ -45,7 +46,8 @@ class SparkPixTColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         _colMeta = int(colMeta, 16)
 
-        colMeta_dict = {'colOverOcc' : bool((_colMeta >> 25) & 0x1),
+        colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
+                        'colOverOcc' : bool((_colMeta >> 25) & 0x1),
                         'colPause'   : bool((_colMeta >> 24) & 0x1),
                         'colId'      :      (_colMeta >> 16) & 0xFF,
                         'colTrgCnt'  :      (_colMeta >>  8) & 0xFF,

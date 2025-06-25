@@ -52,7 +52,8 @@ entity Pix2PgpColumnSupervisor is
       colPauseError : out sl;
       colPause      : out sl;
       trgCntGlbl    : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0));
+      colBitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colTimeout    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0));
 end Pix2PgpColumnSupervisor;
 
 architecture rtl of Pix2PgpColumnSupervisor is
@@ -78,6 +79,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       superBusy       : sl;
       statusBus       : Pix2PgpStatusBusArray;
       colBitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colTimeout      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl      : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- internal
       pause           : sl;
@@ -111,6 +113,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       superBusy       => '0',
       statusBus       => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colBitmask      => (others => '0'),
+      colTimeout      => (others => '0'),
       trgCntGlbl      => (others => '1'),
       -- internal
       pause           => '0',
@@ -246,6 +249,7 @@ begin
             v.waitCnt      := (others => '0');
             v.statusRdBmsk := (others => '1');
             v.colBitmask   := v.hitmaskAll;
+            v.colTimeout   := (others => '0');
             v.colFifoError := uOr(v.colFifoErr);
             v.overOccError := uOr(v.colOverOccErr);
             v.pause        := '0';
@@ -291,8 +295,10 @@ begin
             -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             -- waited for too long for all columns to be ready,
             -- while some have been ready for some time...
+            -- apply timeout bitmask
             if v.timeout = '1' then
                v.timeoutError := '1';
+               v.colTimeout   := not(v.dataReady) and v.columnEnable;
                v.state        := ERROR_S;
             end if;
 
@@ -393,6 +399,7 @@ begin
       colPause        <= r.pause;
       colPauseError   <= r.pauseError;
       colBitmask      <= r.colBitmask;
+      colTimeout      <= r.colTimeout;
       arbiterStart    <= r.arbiterStart; -- delay for one cycle
       trgCntGlbl      <= r.trgCntGlbl;
       timeoutError    <= r.timeoutError;

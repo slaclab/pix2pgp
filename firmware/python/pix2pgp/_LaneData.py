@@ -66,6 +66,7 @@ class LaneData(object):
         self.trgCnt     = 0
 
         # column metadata
+        self.colTimeout = [False] * self.numOfCols
         self.colOverOcc = [False] * self.numOfCols
         self.colPause   = [False] * self.numOfCols
         self.colId      = [0]     * self.numOfCols
@@ -206,6 +207,7 @@ class LaneData(object):
         """
         _dict = self.colMetadataFormat.colMetadataDecoder(colMeta=colMeta)
 
+        self.colTimeout[colBmskId] = _dict['colTimeout']
         self.colOverOcc[colBmskId] = _dict['colOverOcc']
         self.colPause[colBmskId]   = _dict['colPause']
         self.colId[colBmskId]      = _dict['colId']

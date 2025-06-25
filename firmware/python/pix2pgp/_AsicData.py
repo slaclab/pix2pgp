@@ -93,6 +93,7 @@ class AsicData(object):
         totalCols = self.numOfLanes * self.numOfCols
 
         self.colBitmask  = [False] * totalCols
+        self.colTimeout  = [False] * totalCols
         self.colOverOcc  = [False] * totalCols
         self.colPause    = [False] * totalCols
         self.colDecColId = [0]     * totalCols
@@ -336,6 +337,10 @@ class AsicData(object):
         self.colBitmask[offset:offset + self.numOfCols] = (
             np.array(self.colBitmask[offset:offset + self.numOfCols]) |
             np.array(self.laneDecoder.colBitmask))
+
+        self.colTimeout[offset:offset + self.numOfCols] = (
+            np.array(self.colTimeout[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colTimeout))
 
         self.colOverOcc[offset:offset + self.numOfCols] = (
             np.array(self.colOverOcc[offset:offset + self.numOfCols]) |
