@@ -62,7 +62,7 @@ class LaneData(object):
         self.pauseErr   = False
         self.dummy      = False
         self.timeout    = False
-        self.colBitmask = [False] * self.numOfCols
+        self.colHitmask = [False] * self.numOfCols
         self.trgCnt     = 0
 
         # column metadata
@@ -173,7 +173,7 @@ class LaneData(object):
         Parses-in the header and determines if there is an error or not
         Also prints-out the header metadata if needed
         """
-        _colBitmask = 0
+        _colHitmask = 0
         _dict = self.headerFormat.headerDecoder(header=header)
 
         self.overOcc  = _dict['overOcc']
@@ -182,12 +182,12 @@ class LaneData(object):
         self.colErr   = _dict['colErr']
         self.dummy    = _dict['dummy']
         self.timeout  = _dict['timeout']
-        _colBitmask   = _dict['colBitmask']
+        _colHitmask   = _dict['colHitmask']
         self.trgCnt   = _dict['trgCnt']
 
-        self.colBitmask = [(_colBitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
+        self.colHitmask = [(_colHitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
 
-        if _colBitmask != 0:
+        if _colHitmask != 0:
             self.hasData = True
 
         if self.colErr and self._verbose > 1:
@@ -257,19 +257,19 @@ class LaneData(object):
 
     #################################################################
     def headerPrinter(self):
-        _colBitmask = sum((1 << i) for i, bit in enumerate(self.colBitmask) if bool(bit))
+        _colHitmask = sum((1 << i) for i, bit in enumerate(self.colHitmask) if bool(bit))
         _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-        _bitmaskPadding = int(self.numOfCols/4)
-        _printPadding = (" " * abs(36 - _bitmaskPadding))
+        _hitmaskPadding = int(self.numOfCols/4)
+        _printPadding = (" " * abs(36 - _hitmaskPadding))
 
         # Change to True/False format
         _flags = 'OverOcc,  Pause,  ColErr,  PauseErr,  Timeout     =    0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}'
-        _bmskTrg = f'ColumnBitmask = 0x{{0:0{_bitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
+        _hmskTrg = f'ColumnHitmask = 0x{{0:0{_hitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
 
         print(_lanePrint)
         print(_flags.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout))
-        print(_bmskTrg.format(_colBitmask, _printPadding, self.trgCnt))
+        print(_hmskTrg.format(_colHitmask, _printPadding, self.trgCnt))
         print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     #################################################################
 
@@ -305,14 +305,14 @@ class LaneData(object):
                 index += self.wordLen
 
                 if self.hasData and self.dummy == False:
-                    state = "bitmaskCheck_s"
+                    state = "hitmaskCheck_s"
                 else:
                     self.done = True
 
             # --------------------------------------------------------------------------------------
-            elif state == "bitmaskCheck_s":
+            elif state == "hitmaskCheck_s":
                 if colSel < self.numOfCols:
-                    if self.colBitmask[colSel]:
+                    if self.colHitmask[colSel]:
                         state = "colMetaParse_s"
                     else:
                         colSel += 1
@@ -338,7 +338,7 @@ class LaneData(object):
                     state = "parseHits_s"
                 else:
                     colSel += 1
-                    state = "bitmaskCheck_s"
+                    state = "hitmaskCheck_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
@@ -356,7 +356,7 @@ class LaneData(object):
                 if subLen <= 0:
                     colSel += 1
                     subLen = 0
-                    state  = "bitmaskCheck_s"
+                    state  = "hitmaskCheck_s"
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

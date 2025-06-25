@@ -94,8 +94,8 @@ package Pix2PgpPkg is
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7   -- [57:32]
                                               downto HEADER_DWIDTH_C-32;
    --------------------------
-   -- col-bitmask
-   subtype  COL_BITMASK_POS_C      is natural range  HEADER_DWIDTH_C-33  -- [31:8]
+   -- col-hitmask
+   subtype  COL_HITMASK_POS_C      is natural range  HEADER_DWIDTH_C-33  -- [31:8]
                                               downto HEADER_DWIDTH_C-56;
    --------------------------
    -- trigger counter
@@ -240,7 +240,7 @@ package Pix2PgpPkg is
    function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
    function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                          colBitmask: slv; trgCntGlbl: slv) return slv;
+                          colHitmask: slv; trgCntGlbl: slv) return slv;
    function isDummy        (din : slv) return boolean;
    function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
@@ -252,7 +252,7 @@ package Pix2PgpPkg is
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
 
-   -- the receiver can deduce which columns have data from the bitmask
+   -- the receiver can deduce which columns have data from the hitmask
    -- it can also deduce how many data each columns has; how?
    -- by reading the dataLen in the column metadata before each seq of hits
 
@@ -450,7 +450,7 @@ package body Pix2PgpPkg is
 
    function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
                            colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                           colBitmask: slv; trgCntGlbl: slv) return slv is
+                           colHitmask: slv; trgCntGlbl: slv) return slv is
       variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
@@ -461,7 +461,7 @@ package body Pix2PgpPkg is
       retHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(dummyHeader);
       retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
-      retHeader(COL_BITMASK_POS_C)       := colBitmask;
+      retHeader(COL_HITMASK_POS_C)       := colHitmask;
       retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, 8);
 
       return retHeader;

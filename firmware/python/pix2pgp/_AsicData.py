@@ -92,7 +92,7 @@ class AsicData(object):
         # unroll the list dimensions into a single list for each data point
         totalCols = self.numOfLanes * self.numOfCols
 
-        self.colBitmask  = [False] * totalCols
+        self.colHitmask  = [False] * totalCols
         self.colTimeout  = [False] * totalCols
         self.colOverOcc  = [False] * totalCols
         self.colPause    = [False] * totalCols
@@ -330,9 +330,9 @@ class AsicData(object):
 
         offset = laneSel * self.numOfCols
 
-        self.colBitmask[offset:offset + self.numOfCols] = (
-            np.array(self.colBitmask[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colBitmask))
+        self.colHitmask[offset:offset + self.numOfCols] = (
+            np.array(self.colHitmask[offset:offset + self.numOfCols]) |
+            np.array(self.laneDecoder.colHitmask))
 
         self.colTimeout[offset:offset + self.numOfCols] = (
             np.array(self.colTimeout[offset:offset + self.numOfCols]) |

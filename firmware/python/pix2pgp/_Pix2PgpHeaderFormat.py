@@ -33,7 +33,7 @@ class SparkPixSHeaderFormat(Pix2PgpHeaderFormatBase):
                        'pauseErr'   : bool((_header >> 36) & 0x1),
                        'dummy'      : bool((_header >> 35) & 0x1),
                        'timeout'    : bool((_header >> 34) & 0x1),
-                       'colBitmask' :      (_header >>  8) & 0xFFFFFF,
+                       'colHitmask' :      (_header >>  8) & 0xFFFFFF,
                        'trgCnt'     :      (_header >>  0) & 0xFF}
 
         return header_dict
@@ -54,7 +54,7 @@ class SparkPixTHeaderFormat(Pix2PgpHeaderFormatBase):
                        'pauseErr'   : bool((_header >> 60) & 0x1),
                        'dummy'      : bool((_header >> 59) & 0x1),
                        'timeout'    : bool((_header >> 58) & 0x1),
-                       'colBitmask' :      (_header >>  8) & 0xFFFFFF,
+                       'colHitmask' :      (_header >>  8) & 0xFFFFFF,
                        'trgCnt'     :      (_header >>  0) & 0xFF}
 
         return header_dict

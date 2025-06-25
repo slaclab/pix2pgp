@@ -187,7 +187,7 @@ begin
       variable dummy      : sl := '0';
       variable sof        : sl := '0';
       variable eof        : sl := '0';
-      variable colBitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
+      variable colHitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
       variable trgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)        := (others => '0');
 
       -- column metadata
@@ -225,7 +225,7 @@ begin
       pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
       timeout     := v.din(TIMEOUT_FLAG_POS_C);
       dummy       := toSl(isDummy(v.din));
-      colBitmask  := v.din(COL_BITMASK_POS_C);
+      colHitmask  := v.din(COL_HITMASK_POS_C);
       trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
       -- column metadata variables
       metaTrgCnt  := v.din(META_TRGCNT_POS_C);
@@ -304,10 +304,10 @@ begin
                   v.inPauseError := pauseErr;
                   v.trgCntHeader := trgCnt;
 
-                  if uOr(colBitmask) = '0' then
+                  if uOr(colHitmask) = '0' then
                      v.state := CLOSE_FRAME_S;
                   else
-                     v.activeColCnt := onesCount(colBitmask);
+                     v.activeColCnt := onesCount(colHitmask);
                      v.state        := PARSE_COL_METADATA_S;
                   end if;
                end if;

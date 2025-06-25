@@ -52,7 +52,7 @@ entity Pix2PgpArbiter is
       timeoutError  : in  sl;
       colPause      : in  sl;
       trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      colBitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colHitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colTimeout    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- Pgp4TxLite Interface
       pgpTxMaster   : out AxiStreamMasterType;
@@ -64,7 +64,7 @@ architecture rtl of Pix2PgpArbiter is
    type StateType is (
       IDLE_S,
       PARSE_HEADER_S,
-      CHECK_BITMASK_S,
+      CHECK_HITMASK_S,
       PARSE_DATA_S,
       TX_DUMMY_S);
 
@@ -72,7 +72,7 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       colPause     : sl;
       arbStart     : sl;
-      colBitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      colHitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colTimeout   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCntGlbl   : slv(TRGCNT_WIDTH_C-1 downto 0);
       dataBus      : Pix2PgpDataBusArray;
@@ -99,7 +99,7 @@ architecture rtl of Pix2PgpArbiter is
       -- inputs
       colPause      => '0',
       arbStart      => '0',
-      colBitmask    => (others => '0'),
+      colHitmask    => (others => '0'),
       colTimeout    => (others => '0'),
       trgCntGlbl    => (others => '0'),
       dataBus       => (others => DEFAULT_PIX2PGP_DATABUS_C),
@@ -134,7 +134,7 @@ begin
    -- Arbiter FSM
    ------------------------------------------------
    comb : process (r, pgpRst, dataBus, statusBus, arbStart, colFifoError,
-                   overOccError, colBitmask, colPause, colPauseError, sAxisSlave,
+                   overOccError, colHitmask, colPause, colPauseError, sAxisSlave,
                    trgCntGlbl, timeoutError, colTimeout) is
 
       variable v : RegType;
@@ -154,7 +154,7 @@ begin
       v := r;
 
       -- inputs
-      v.eventEmpty := not(uOr(colBitmask));
+      v.eventEmpty := not(uOr(colHitmask));
       v.sAxisSlave := sAxisSlave;
       v.arbStart   := arbStart;
       v.statusBus  := statusBus;
@@ -234,7 +234,7 @@ begin
                v.sAxisMaster.tValid   := '1';
                v.txData               := v.dataHeader;
 
-               v.state := CHECK_BITMASK_S;
+               v.state := CHECK_HITMASK_S;
 
                -- if empty, go-to state where dummy headers are TX'd
                if v.eventEmpty = '1' then
@@ -243,10 +243,10 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- check the bitmask value of the selected column
+         -- check the hitmask value of the selected column
          -- if non-zero, write the column metadata and start reading immediately
-         when CHECK_BITMASK_S =>
-            if colBitmask(conv_integer(unsigned(r.colSel))) = '0' then
+         when CHECK_HITMASK_S =>
+            if colHitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
                if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
                   v.state  := TX_DUMMY_S;
@@ -295,7 +295,7 @@ begin
             if r.dataRdCnt = r.dataRdCycles then
                --
                v.dataRd := '0';
-               v.state  := CHECK_BITMASK_S;
+               v.state  := CHECK_HITMASK_S;
                --
                -- Check if last column
                if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
@@ -341,7 +341,7 @@ begin
       -- override header elements if in dummy-header-TX mode
       --
       for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-         v.colBitmask(col) := colBitmask(col) and not(v.dummyHeader);
+         v.colHitmask(col) := colHitmask(col) and not(v.dummyHeader);
       end loop;
       --
       for i in 0 to TRGCNT_WIDTH_C-1 loop
@@ -350,7 +350,7 @@ begin
       --
       --
       v.dataHeader := asicHeaderMap(overOccError, colPause, colFifoError, colPauseError,
-                                    timeoutError, v.dummyHeader, v.colBitmask, v.trgCntGlbl);
+                                    timeoutError, v.dummyHeader, v.colHitmask, v.trgCntGlbl);
       --
       v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
       --
