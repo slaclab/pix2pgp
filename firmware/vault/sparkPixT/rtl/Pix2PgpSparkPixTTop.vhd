@@ -34,6 +34,7 @@ entity Pix2PgpSparkPixTTop is
       pgpClk            : in  std_logic;
       sparseRst         : in  std_logic;
       pgpRst            : in  std_logic;
+      pgpHardRst        : in  std_logic;
       -- Configuration Registers
       cfgSel            : in  std_logic;
       cfgTimeoutLimit   : in  std_logic_vector(11 downto 0);
@@ -100,9 +101,6 @@ architecture rtl of Pix2PgpSparkPixTTop is
    signal serGboxReady          : std_logic;
    signal serGboxValid          : std_logic;
    signal serGboxData           : std_logic_vector(31 downto 0);
-
-   signal pgpCfgSel             : std_logic;
-   signal sparseCfgSel          : std_logic;
 
    signal cfgColumnEnablePgp    : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal cfgTimeoutLimitSparse : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
@@ -192,7 +190,7 @@ begin
       port map(
         -- Clock and Reset
         clk         => pgpClk,
-        rst         => pgpRst,
+        rst         => pgpHardRst,
         -- 64-bit Input Framing Interface
         pgpTxMaster => pgpTxMaster,
         pgpTxSlave  => pgpTxSlave,
@@ -211,7 +209,7 @@ begin
       port map (
          -- Clock and Reset
          clk            => pgpClk,
-         rst            => pgpRst,
+         rst            => pgpHardRst,
          -- Slave Interface
          slaveValid     => phyTxValid,
          slaveReady     => phyTxReady,
@@ -325,18 +323,12 @@ begin
          dataIn  => cfgPauseLimit,
          dataOut => cfgPauseLimitSparse);
 
-   pgpCfgSel <= (pgpRst or  not(cfgSel)) when RST_POLARITY_G = '1' else
-                (pgpRst and cfgSel);
-
-   sparseCfgSel <= (sparseRst or  not(cfgSel)) when RST_POLARITY_G = '1' else
-                   (sparseRst and cfgSel);
-
    -- status readback
-   cfgSuperBusy        <= readback.cfgSuperBusy;
-   cfgArbBusy          <= readback.cfgArbBusy;
-   cfgColBusy          <= readback.cfgColBusy;
-   cfgColDataEmpty     <= readback.cfgColDataEmpty;
-   cfgColStatusEmpty   <= readback.cfgColStatusEmpty;
+   cfgSuperBusy      <= readback.cfgSuperBusy;
+   cfgArbBusy        <= readback.cfgArbBusy;
+   cfgColBusy        <= readback.cfgColBusy;
+   cfgColDataEmpty   <= readback.cfgColDataEmpty;
+   cfgColStatusEmpty <= readback.cfgColStatusEmpty;
 
    -- inbound config select
    process(pgpRst, pgpClk)

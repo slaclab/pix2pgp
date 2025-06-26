@@ -246,6 +246,7 @@ begin
             sparseRst         => rst,
             pgpClk            => pgpClk,
             pgpRst            => rst,
+            pgpHardRst        => rst,
             cfgSel            => cfgSel,
             cfgTimeoutLimit   => cfgTimeoutLimit,
             cfgColumnEnable   => cfgColumnEnable,
