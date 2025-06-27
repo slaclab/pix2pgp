@@ -12,6 +12,16 @@ As of `v2.2.0`, Pix2PGP supports the following two ASIC variants:
 * [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
 
+## Cloning
+
+```
+$ git clone --recurse-submodules https://github.com/slaclab/pix2pgp.git
+```
+
+Note the use of `https://github.com` instead of `git@github.com:`; please configure your client accordingly for HTTPS git repo management (via Github Tokens). If one includes pix2pgp as a submodule to their project, it has to be done via HTTPS.
+
+SLAC users can refer to [this Confluence Page](https://confluence.slac.stanford.edu/x/XYU8J) on how to set up their Github Token.
+
 ## Repository Description
 In general, one should *only* import the contents of `firmware/asic/` directory to their ASIC project. Note that when cloning the repo anew, the aforementioned directory is partially empty. This is because the importing step has to be executed first (described below). The importing step creates symbolic links from `surf` and `firmware/vault` to `firmware/asic`. The `firmware/vault` directory contains ASIC-specific files that vary depending on the implementation.
 
