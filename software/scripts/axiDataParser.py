@@ -4,7 +4,9 @@ import click
 import argparse
 import time
 
-import setupLibPaths
+top_level = os.path.realpath(__file__).split('software')[0]
+sys.path.append(top_level+'firmware/python/')
+
 import pix2pgp
 
 # Set the argument parser

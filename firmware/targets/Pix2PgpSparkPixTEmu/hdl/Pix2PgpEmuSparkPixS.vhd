@@ -21,9 +21,6 @@ use surf.AxiPkg.all;
 use surf.AxiLitePkg.all;
 use surf.AxiStreamPkg.all;
 
-library epix_hr_core;
-use epix_hr_core.EpixHrCorePkg.all;
-
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
@@ -325,84 +322,84 @@ begin
 --         smaTxN           => smaTxN
 --      );
 
-   U_Core : entity epix_hr_core.EpixHrCore
-      generic map (
-         TPD_G                => TPD_G,
-         NUM_LANES_G          => 3,
-         RATE_G               => "6.25Gbps",
-         BUILD_INFO_G         => BUILD_INFO_G,
-         ROGUE_SIM_EN_G       => ROGUE_SIM_EN_G,
-         ROGUE_SIM_PORT_NUM_G => ROGUE_SIM_PORT_NUM_G)
-      port map (
-         ----------------------
-         -- Top Level Interface
-         ----------------------
-         -- System Clock and Reset
-         sysClk           => sysClk,
-         sysRst           => sysRst,
-         -- AXI-Lite Register Interface (sysClk domain)
-         -- Register Address Range = [0x80000000:0xFFFFFFFF]
-         mAxilReadMaster  => axilReadMaster,
-         mAxilReadSlave   => axilReadSlave,
-         mAxilWriteMaster => axilWriteMaster,
-         mAxilWriteSlave  => axilWriteSlave,
-         -- AXI Stream, one per QSFP lane (sysClk domain)
-         sAxisMasters     => axisMasters(2 downto 0),
-         sAxisSlaves      => axisSlaves(2 downto 0),
-         -- Auxiliary AXI Stream, (sysClk domain)
-         -- 0 is pseudo scope, 1 is slow adc monitoring
-         sAuxAxisMasters  => auxMasters,
-         sAuxAxisSlaves   => auxSlaves,
-         -- DDR's AXI Memory Interface (sysClk domain)
-         -- DDR Address Range = [0x00000000:0x3FFFFFFF]
-         sAxiReadMaster   => axiReadMaster,
-         sAxiReadSlave    => axiReadSlave,
-         sAxiWriteMaster  => axiWriteMaster,
-         sAxiWriteSlave   => axiWriteSlave,
-         -- Microblaze's Interrupt bus (sysClk domain)
-         mbIrq            => mbIrq,
-         ----------------
-         -- Core Ports --
-         ----------------
-         -- Board IDs Ports
-         snIoAdcCard      => snIoAdcCard,
-         snIoCarrier      => snIoCarrier,
-         snCarrierOut     => asicDM,
-         -- QSFP Ports
-         qsfpRxP          => qsfpRxP(2 downto 0),
-         qsfpRxN          => qsfpRxN(2 downto 0),
-         qsfpTxP          => qsfpTxP(2 downto 0),
-         qsfpTxN          => qsfpTxN(2 downto 0),
-         qsfpClkP         => qsfpClkP,
-         qsfpClkN         => qsfpClkN,
-         qsfpLpMode       => qsfpLpMode,
-         qsfpModSel       => qsfpModSel,
-         qsfpInitL        => qsfpInitL,
-         qsfpRstL         => qsfpRstL,
-         qsfpPrstL        => qsfpPrstL,
-         qsfpScl          => qsfpScl,
-         qsfpSda          => qsfpSda,
-         -- DDR Ports
-         ddrClkP          => ddrClkP,
-         ddrClkN          => ddrClkN,
-         ddrBg            => ddrBg,
-         ddrCkP           => ddrCkP,
-         ddrCkN           => ddrCkN,
-         ddrCke           => ddrCke,
-         ddrCsL           => ddrCsL,
-         ddrOdt           => ddrOdt,
-         ddrAct           => ddrAct,
-         ddrRstL          => ddrRstL,
-         ddrA             => ddrA,
-         ddrBa            => ddrBa,
-         ddrDm            => ddrDm,
-         ddrDq            => ddrDq,
-         ddrDqsP          => ddrDqsP,
-         ddrDqsN          => ddrDqsN,
-         ddrPg            => ddrPg,
-         ddrPwrEn         => ddrPwrEn,
-         -- SYSMON Ports
-         vPIn             => vPIn,
-         vNIn             => vNIn);
+--   U_Core : entity epix_hr_core.EpixHrCore
+--      generic map (
+--         TPD_G                => TPD_G,
+--         NUM_LANES_G          => 3,
+--         RATE_G               => "6.25Gbps",
+--         BUILD_INFO_G         => BUILD_INFO_G,
+--         ROGUE_SIM_EN_G       => ROGUE_SIM_EN_G,
+--         ROGUE_SIM_PORT_NUM_G => ROGUE_SIM_PORT_NUM_G)
+--      port map (
+--         ----------------------
+--         -- Top Level Interface
+--         ----------------------
+--         -- System Clock and Reset
+--         sysClk           => sysClk,
+--         sysRst           => sysRst,
+--         -- AXI-Lite Register Interface (sysClk domain)
+--         -- Register Address Range = [0x80000000:0xFFFFFFFF]
+--         mAxilReadMaster  => axilReadMaster,
+--         mAxilReadSlave   => axilReadSlave,
+--         mAxilWriteMaster => axilWriteMaster,
+--         mAxilWriteSlave  => axilWriteSlave,
+--         -- AXI Stream, one per QSFP lane (sysClk domain)
+--         sAxisMasters     => axisMasters(2 downto 0),
+--         sAxisSlaves      => axisSlaves(2 downto 0),
+--         -- Auxiliary AXI Stream, (sysClk domain)
+--         -- 0 is pseudo scope, 1 is slow adc monitoring
+--         sAuxAxisMasters  => auxMasters,
+--         sAuxAxisSlaves   => auxSlaves,
+--         -- DDR's AXI Memory Interface (sysClk domain)
+--         -- DDR Address Range = [0x00000000:0x3FFFFFFF]
+--         sAxiReadMaster   => axiReadMaster,
+--         sAxiReadSlave    => axiReadSlave,
+--         sAxiWriteMaster  => axiWriteMaster,
+--         sAxiWriteSlave   => axiWriteSlave,
+--         -- Microblaze's Interrupt bus (sysClk domain)
+--         mbIrq            => mbIrq,
+--         ----------------
+--         -- Core Ports --
+--         ----------------
+--         -- Board IDs Ports
+--         snIoAdcCard      => snIoAdcCard,
+--         snIoCarrier      => snIoCarrier,
+--         snCarrierOut     => asicDM,
+--         -- QSFP Ports
+--         qsfpRxP          => qsfpRxP(2 downto 0),
+--         qsfpRxN          => qsfpRxN(2 downto 0),
+--         qsfpTxP          => qsfpTxP(2 downto 0),
+--         qsfpTxN          => qsfpTxN(2 downto 0),
+--         qsfpClkP         => qsfpClkP,
+--         qsfpClkN         => qsfpClkN,
+--         qsfpLpMode       => qsfpLpMode,
+--         qsfpModSel       => qsfpModSel,
+--         qsfpInitL        => qsfpInitL,
+--         qsfpRstL         => qsfpRstL,
+--         qsfpPrstL        => qsfpPrstL,
+--         qsfpScl          => qsfpScl,
+--         qsfpSda          => qsfpSda,
+--         -- DDR Ports
+--         ddrClkP          => ddrClkP,
+--         ddrClkN          => ddrClkN,
+--         ddrBg            => ddrBg,
+--         ddrCkP           => ddrCkP,
+--         ddrCkN           => ddrCkN,
+--         ddrCke           => ddrCke,
+--         ddrCsL           => ddrCsL,
+--         ddrOdt           => ddrOdt,
+--         ddrAct           => ddrAct,
+--         ddrRstL          => ddrRstL,
+--         ddrA             => ddrA,
+--         ddrBa            => ddrBa,
+--         ddrDm            => ddrDm,
+--         ddrDq            => ddrDq,
+--         ddrDqsP          => ddrDqsP,
+--         ddrDqsN          => ddrDqsN,
+--         ddrPg            => ddrPg,
+--         ddrPwrEn         => ddrPwrEn,
+--         -- SYSMON Ports
+--         vPIn             => vPIn,
+--         vNIn             => vNIn);
 
 end top_level;
