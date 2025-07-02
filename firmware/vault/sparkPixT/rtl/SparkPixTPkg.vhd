@@ -41,7 +41,7 @@ package Pix2PgpPkg is
    constant SPARSE_DWIDTH_C       : natural := 32; -- data width
 
    -- every ASIC implementation has a specific decimal identifier; no ASIC should be = 0
-   constant ASIC_TYPE_C : natural := 2; -- SparPix-T = 2
+   constant ASIC_TYPE_C : natural := 2; -- SparkPix-T = 2
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment
@@ -462,7 +462,8 @@ package body Pix2PgpPkg is
       retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       retHeader(COL_HITMASK_POS_C)       := colHitmask;
-      retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, 8);
+      retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, rangeToLen(TRGCNT_POS_C'high,
+                                                                TRGCNT_POS_C'low));
 
       return retHeader;
    end asicHeaderMap;
