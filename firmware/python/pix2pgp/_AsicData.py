@@ -45,7 +45,7 @@ class AsicData(object):
         Reset Class variables
         """
 
-        # populated by fpgaParameterSet() (parameters have _ prefix)
+        # populated by asicParamSet() (parameters have _ prefix)
         self.numOfLanes   = None
         self.numOfCols    = None
         self.wordLen      = None
@@ -68,9 +68,9 @@ class AsicData(object):
         self.fpgaDataFormat = None
 
         # initialize the values
-        self.fpgaParameterSet()
+        self.asicParamSet()
 
-        # call after self.fpgaParameterSet
+        # call after self.asicParamSet
         # fpga header
         self.headerErr      = False
         self.laneValid      = [None] * self.numOfLanes
@@ -166,20 +166,16 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def fpgaParameterSet(self):
+    def asicParamSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type
         """
         self.fpgaDataFormat = pix2pgp.FpgaRxDataFormat()
 
-        if self._asicType == 'SparkPixS':
-            self.asicParams = pix2pgp.SparkPixSParameters()
-
-        elif self._asicType == 'SparkPixT':
-            self.asicParams = pix2pgp.SparkPixTParameters()
-
-        else:
-            click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
+        try:
+            self.asicParams = pix2pgp.AsicParameterBase.asicParams[self._asicType]()
+        except KeyError:
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(_asicParams.keys())}", bg='red')
             sys.exit()
 
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']

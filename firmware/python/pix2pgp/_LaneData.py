@@ -27,10 +27,10 @@ class LaneData(object):
         """
 
         # class parameters (parameters have _ prefix)
-        self._asicTypeSet = asicType
-        self._rawData     = rawData
-        self._verbose     = verbose
-        self._laneId      = laneId
+        self._asicType = asicType
+        self._rawData  = rawData
+        self._verbose  = verbose
+        self._laneId   = laneId
 
         # the real initialization method
         self.reset()
@@ -42,7 +42,7 @@ class LaneData(object):
         Reset Class variables
         """
 
-        # populated by asicSet() (parameters have _ prefix)
+        # populated by laneParamSet() (parameters have _ prefix)
         self.numOfCols = None
         self.wordLen   = None
 
@@ -53,7 +53,7 @@ class LaneData(object):
         self.dataFormat        = None
 
         # initialize the values
-        self.asicSet()
+        self.laneParamSet()
 
         # header contents
         self.overOcc    = False
@@ -143,28 +143,22 @@ class LaneData(object):
     #################################################################
 
     #################################################################
-    def asicSet(self):
+    def laneParamSet(self):
         """
         Sets the parameters depending on the ASIC type
         """
-        if self._asicTypeSet == 'SparkPixS':
-            self.asicParams        = pix2pgp.SparkPixSParameters()
-            self.headerFormat      = pix2pgp.SparkPixSHeaderFormat()
-            self.colMetadataFormat = pix2pgp.SparkPixSColMetadataFormat()
-            self.dataFormat        = pix2pgp.SparkPixSDataFormat()
-
-        elif self._asicTypeSet == 'SparkPixT':
-            self.asicParams        = pix2pgp.SparkPixTParameters()
-            self.headerFormat      = pix2pgp.SparkPixTHeaderFormat()
-            self.colMetadataFormat = pix2pgp.SparkPixTColMetadataFormat()
-            self.dataFormat        = pix2pgp.SparkPixTDataFormat()
-
-        else:
-            click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
+        try:
+            self.asicParams = pix2pgp.AsicParameterBase.asicParams[self._asicType]()
+            self.headerFormat = pix2pgp.Pix2PgpHeaderFormatBase.asicHeader[self._asicType]()
+            self.colMetadataFormat = pix2pgp.Pix2PgpColMetadataFormatBase.asicMetadata[self._asicType]()
+            self.dataFormat = pix2pgp.SparseDataFormatBase.asicData[self._asicType]()
+        except KeyError:
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(_asicParams.keys())}", bg='red')
             sys.exit()
 
         self.numOfCols = self.asicParams.asicParamExtract()['numOfCols']
         self.wordLen   = self.asicParams.asicParamExtract()['wordLen']
+
     #################################################################
 
     #################################################################

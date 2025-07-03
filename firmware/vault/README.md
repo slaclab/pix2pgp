@@ -67,7 +67,60 @@ If the VCS simulation runs without any errors, one can go ahead and decode the d
 
 ## How-To Add a New ASIC in the Python Data Decoding Codebase
 
-### Test
+### _AsicParameters.py
+
+First, add a new entry in the `asicTypeDict` and `asicParams`. The number must correspond to the value of the `ASIC_TYPE_C` constant that was chosen in `NewAsicPkg.vhd`. If, e.g. that number was `3`:
+
+```Python
+
+    asicTypeDict = {
+        1: "SparkPixS",
+        2: "SparkPixT",
+        3: "NewAsic"}
+
+    asicParams = {
+        'SparkPixS': SparkPixSParameters,
+        'SparkPixT': SparkPixTParameters,
+        'NewAsic' : NewAsicParameters}
+```
+
+Next, add a new parameter class for `NewAsic`. For example, if for this given ASIC the number of serializers/lanes/pix2pgp instances is equal to `4`, the number of columns each pix2pgp instance is `40` (i.e. the total number of columns is `$4 \times 40 = 160$`), and the data bus width is `5` bytes, then `wordLen` is equal to _double_ that number.
+
+```Python
+class NewAsicParameters(AsicParameterBase):
+    '''
+    NewAsic Parameters
+    '''
+    @property
+    def asicTypeId(self):
+        for key, value in AsicParameterBase.asicTypeDict.items():
+            if value == "NewAsic":
+                return key
+        raise ValueError("ASIC type not found in asicTypeDict!")
+
+    def asicParamExtract(self):
+        '''
+        Parameter dictionary
+        '''
+
+        param_dict = {'asicTypeId' : self.asicTypeId,
+                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                      'numOfLanes' : 4,
+                      'numOfCols'  : 40,
+                      'wordLen'    : 10}
+
+        return param_dict
+
+```
+
+### _Pix2PgpHeaderFormat.py
+To-Do
+
+### _Pix2PgpColMetadataFormat.py
+To-Do
+
+### _Pix2PgpSparseDataFormat.py
+To-Do
 
 
 ## Limitations
