@@ -1,9 +1,9 @@
 # How-To Add a New ASIC
 Follow this guide to add support for a new ASIC.
 
-Use a previous ASIC as a template. For this purpose, we will use `SparkPix-T` as a template for a new ASIC, called `NewAsic`. The user should alter the name of `NewAsic` accordingly in all steps of this entire process.
+Use a previous ASIC as a template. For this example, `SparkPix-T` will be used. Throughout this guide, `NewAsic` will refer to this new ASIC. The user should alter the name of `NewAsic` accordingly in all steps of this entire process, depending on the actual name of the ASIC they want to add.
 
-It is assumed that `NewAsic` uses an `ERO` trigger to signal event closure (see the documentation link in this repo's top-level `README.md` file). This is the reason why `SparkPix-T` has been picked as its template. If the new ASIC you want to support does not feature an `ERO` trigger, then you should use `SparkPix-S` instead, which generates its event closure internally.
+It is assumed that `NewAsic` uses an `ERO` trigger to signal event closure (see the documentation link in this repo's top-level `README.md` file). This is the reason why `SparkPix-T` has been picked as its template. If the new ASIC the user wishes to support does not feature an `ERO` trigger, then the user should use `SparkPix-S` instead, which generates its event closure internally.
 
 ## How-To Add a New ASIC in the RTL Codebase
 
@@ -12,12 +12,12 @@ It is assumed that `NewAsic` uses an `ERO` trigger to signal event closure (see 
 Go-To `firmware/vault` and create a new directory for the `NewAsic`: do `$ cp -r sparkPixT newAsic`
 
 1. Under `newAsic/rtl`, do: `$ mv Pix2PgpSparkPixTTop.vhd Pix2PgpNewAsicTop.vhd` and `$ mv SparkPixTPkg.vhd NewAsicPkg.vhd`
-    1. Edit `NewAsicPkg.vhd` accordingly. Edit the parameters in the `*Pkg.vhd` file. Usually the parameters that need to be edited are within the first few lines, between the `Tunable parameters begin` and `Tunable parameters end` comments. Some examples of what should be edited are: `NUM_OF_COL_MANAGERS_C` (how many columns does each pix2pgp instance serve?), `NUM_OF_SERIALIZERS_C` (how many serializers/pix2pgp instances/lanes are on the ASIC?), etc.
-    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in; if the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition. For example, one needs to change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into pix2pgp by the Analog part of the ASIC must be the same as the width of each `dinXX` port.
+    1. Edit `NewAsicPkg.vhd` accordingly. Edit the parameters in the `*Pkg.vhd` file. Usually the parameters that need to be edited are within the first few lines, between the `Tunable parameters begin` and `Tunable parameters end` comments. Some examples of what should be edited are: `NUM_OF_COL_MANAGERS_C` (how many columns does each Pix2Pgp instance serve?), `NUM_OF_SERIALIZERS_C` (how many serializers/Pix2Pgp instances/lanes are on the ASIC?), etc. In general, the sections that have to be edited on the package file are the two aforementioned constants, plus the `SPARSE_DWIDTH_C` constant (which corresponds to the sparse data bus field width in bits), and the Pix2Pgp data frame header bitfield structure.
+    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. For example, one needs to change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the Analog part of the ASIC (i.e. the value of `SPARSE_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in; if the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition. 
 2. Under `newAsic/tb`, do: `$ mv DummySparkPixTPixel.vhd DummyNewAsicPixel.vhd` and `$ mv Pix2PgpSparkPixTTopTb.vhd Pix2PgpNewAsicTopTb.vhd`
-    1. Edit `DummyNewAsicPixel.vhd` accordingly. This is a behavioral model of the pixel of the new ASIC and should mimick (to some extent) the behavior of the ASIC. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-levl VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into pix2pgp.
-    2. Edit `Pix2PgpNewAsicTopTb.vhd` accordingly. Change the names of the VHDL entities and widths of the buses depending on the amount of columns each pix2pgp instance serves. Note that the testbench should be instantiating all Lanes of the ASIC (governed by the `NUM_OF_SERIALIZERS_C` parameter) and routing all of them into `Pix2PgpAsicStreamRx` (via `Pgp4Rx` instances), which is the ASIC RX logic instantiated in the FPGA of the in-silicon system.
-        1. The testbenches usually include a VHDL process that selects specific columns/pixels and assigns a `hitLen` value on a per-trigger/event basis (e.g., the line `hitLen(0)(3) <= toSlv(3, hitLen(0)(0)'length);` assigns three hits for a pixel in column 3 of lane 0). One can create random hit-lengths by using the `software/scripts/hitsToVhd.py` script (e.g. `$ python hitsToVhd.py --numOfLanes=2 --numOfCols=50 --minRange=0 --maxRange=4 --laneEnable=1,1`) will generate random stimuli for an ASIC with 50 columns-per-pix2pgp instance, and 2-lanes-per-ASIC.
+    1. Edit `DummyNewAsicPixel.vhd` accordingly. This is a behavioral model of the pixel of the new ASIC and should mimick (to some extent) the behavior of the ASIC. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-levl VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into Pix2Pgp.
+    2. Edit `Pix2PgpNewAsicTopTb.vhd` accordingly. Change the names of the VHDL entities and widths of the buses depending on the amount of columns each Pix2Pgp instance serves. Note that the testbench should be instantiating all Lanes of the ASIC (governed by the `NUM_OF_SERIALIZERS_C` parameter) and routing all of them into `Pix2PgpAsicStreamRx` (via `Pgp4Rx` instances), which is the ASIC RX logic instantiated in the FPGA of the in-silicon system.
+        1. The testbenches usually include a VHDL process that selects specific columns/pixels and assigns a `hitLen` value on a per-trigger/event basis (e.g., the line `hitLen(0)(3) <= toSlv(3, hitLen(0)(0)'length);` assigns three hits for a pixel in column 3 of lane 0). One can create random hit-lengths by using the `software/scripts/hitsToVhd.py` script (e.g. `$ python hitsToVhd.py --numOfLanes=4 --numOfCols=40 --minRange=0 --maxRange=4 --laneEnable=1,1,1,1`) will generate random stimuli for an ASIC with 40 columns-per-Pix2Pgp instance, and 2-lanes-per-ASIC.
 
 ### Create a New Entry In the `firmware/Makefile`
 
@@ -61,9 +61,9 @@ Go-To `firmware/targets` and crate a new directory for the `NewAsic`: do `$ cp -
 
 ### Run Testbench using VCS
 
-Follow the instructions on how to run VCS from the `README.md` file at the top-level of this repository (Just change the Pix2PgpSparkPixSEmu` reference in that section with `Pix2PgpNewAsicEmu`).
+Follow the instructions on how to run VCS from the `README.md` file at the top-level of this repository (Just change the `Pix2PgpSparkPixSEmu` reference in that section with `Pix2PgpNewAsicEmu`).
 
-If the VCS simulation runs without any errors, one can go ahead and decode the data dump using `software/scripts/axiDataParser.py`; however, in order to do this, one has to add the new ASIC definition into the pix2pgp Python data decoding classes. A How-To on this is included below.
+If the VCS simulation runs without any errors, one can go ahead and decode the data dump using `software/scripts/axiDataParser.py`; however, in order to do this, one has to add the new ASIC definition into the Pix2Pgp Python data decoding classes. A How-To on this is included below.
 
 ## How-To Add a New ASIC in the Python Data Decoding Codebase
 
@@ -81,10 +81,12 @@ First, add a new entry in the `asicTypeDict` and `asicParams`. The number must c
     asicParams = {
         'SparkPixS': SparkPixSParameters,
         'SparkPixT': SparkPixTParameters,
-        'NewAsic' : NewAsicParameters}
+        'NewAsic'  : NewAsicParameters}
 ```
 
-Next, add a new parameter class for `NewAsic`. For example, if for this given ASIC the number of serializers/lanes/pix2pgp instances is equal to `4`, the number of columns each pix2pgp instance is `40` (i.e. the total number of columns is `$4 \times 40 = 160$`), and the data bus width is `5` bytes, then `wordLen` is equal to _double_ that number.
+Note also the entry in the `asicParams` dictionary.
+
+Next, add a new parameter class for `NewAsic`. For example, if for this given ASIC the number of serializers/lanes/Pix2Pgp instances is equal to `4`, the number of columns each Pix2Pgp instance is `40` (i.e. the total number of columns is `4x40 = 160`), and the data bus width is `5` bytes, then the parameter set will have the following values:
 
 ```Python
 class NewAsicParameters(AsicParameterBase):
@@ -113,15 +115,171 @@ class NewAsicParameters(AsicParameterBase):
 
 ```
 
+All parameters above correspond to constants found in the `*Pkg.vhd` file. `numOfLanes` corresponds to `NUM_OF_SERIALIZERS_C`, `numOfCols` corresponds to `NUM_OF_COL_MANAGERS_C`, and `wordLen` corresponds to `ASIC_DATABUS_DWIDTH_C`, with the difference being that `wordLen` is the width in bytes, while the `VHDL` constant width is in bits.
+
+Note that the class name (`NewAsicParameters`) has the same name as the entry in the `asicParams` dictionary.
+
 ### _Pix2PgpHeaderFormat.py
-To-Do
+
+Add a new entry in the `self.asicHeader` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one set in the data header bitfield section of the `*Pkg.vhd` file. Example:
+
+```Python
+    @classmethod
+    def setHeader(self):
+        self.asicHeader = {
+            'SparkPixS': SparkPixSHeaderFormat,
+            'SparkPixT': SparkPixTHeaderFormat,
+            'NewAsic'  : NewAsicHeaderFormat}
+
+# [...]
+
+class NewAsicHeaderFormat(Pix2PgpHeaderFormatBase):
+    '''
+    NewAsic Header Format
+    '''
+    def headerDecoder(self, header):
+        '''
+        Header mapping and decoding
+        '''
+        _header = int(header, 16)
+
+        header_dict = {'overOcc'    : bool((_header >> 79) & 0x1),
+                       'pause'      : bool((_header >> 78) & 0x1),
+                       'colErr'     : bool((_header >> 77) & 0x1),
+                       'pauseErr'   : bool((_header >> 76) & 0x1),
+                       'dummy'      : bool((_header >> 75) & 0x1),
+                       'timeout'    : bool((_header >> 74) & 0x1),
+                       'colHitmask' :      (_header >>  8) & 0xFFFFFFFFFF,
+                       'trgCnt'     :      (_header >>  0) & 0xFF}
+
+        return header_dict
+```
+
+Note that the upper bit of the header corresponds to the `overOcc` flag, and its bit position (i.e. `79`) is associated with the overall length of the data word ('wordLen=10' in `_AsicParameters.py`; which is `10x8=80` bits). The `colHitmask` has a value of `0xFFFFFFFFFF`, which corresponds to the amount of columns (i.e. `numOfCols=40` in `_AsicParameters.py`) served by each Pix2Pgp instance of `NewAsic`.
+
 
 ### _Pix2PgpColMetadataFormat.py
-To-Do
+
+Add a new entry in the `self.asicMetadata` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one set in the data column metadata bitfield section of the `*Pkg.vhd` file. Example:
+
+```Python
+    @classmethod
+    def setMetadata(self):
+        self.asicMetadata = {
+            'SparkPixS': SparkPixSColMetadataFormat,
+            'SparkPixT': SparkPixTColMetadataFormat,
+            'NewAsic'  : NewAsicColMetadataFormat}
+# [...]
+
+class NewAsicColMetadataFormat(Pix2PgpColMetadataFormatBase):
+    '''
+    NewAsic colMetaData Format
+    '''
+    def colMetadataDecoder(self, colMeta):
+        '''
+        Column Metadata mapping and decoding
+        '''
+        _colMeta = int(colMeta, 16)
+
+        colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
+                        'colOverOcc' : bool((_colMeta >> 25) & 0x1),
+                        'colPause'   : bool((_colMeta >> 24) & 0x1),
+                        'colId'      :      (_colMeta >> 16) & 0xFF,
+                        'colTrgCnt'  :      (_colMeta >>  8) & 0xFF,
+                        'colLen'     :      (_colMeta >>  0) & 0xFF}
+
+        return colMeta_dict
+```
 
 ### _Pix2PgpSparseDataFormat.py
-To-Do
+
+Add a new entry in the `self.asicData` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one dictated by the analog/digital sparse logic of the ASIC. Example:
+
+```Python
+    @classmethod
+    def setData(self):
+        self.asicData = {
+            'SparkPixS': SparkPixSDataFormat,
+            'SparkPixT': SparkPixTDataFormat,
+            'NewAsic'  : NewAsicDataFormat}
+# [...]
+
+class NewAsicDataFormat(SparseDataFormatBase):
+    '''
+    NewAsic Data Format
+    '''
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
+        _hitData = int(hitData, 16)
+
+        _hit = []
+        ret  = []
+
+        _hit.append((_hitData >> 40) & 0xFFFFFFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFFFFFFF)
+
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
+
+        else:
+            _row = []
+            _adc = []
+
+            _row.append ((_hit[0] >> 20) & 0xFFFFF)
+            _adc.append ((_hit[0] >>  0) & 0xFFFFF)
+
+            _row.append ((_hit[1] >> 20) & 0xFFFFF)
+            _adc.append ((_hit[1] >>  0) & 0xFFFFF)
+
+            ret.append({'col': colId,
+                        'row': _row[0],
+                        'adc': _adc[0]})
+
+            ret.append({'col': colId,
+                        'row': _row[1],
+                        'adc': _adc[1]})
+
+        return ret
+
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<8} ADC = {2:<8} '
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['adc']))
+```
 
 
 ## Limitations
-TBD
+The width of the data coming into Pix2Pgp from the ASIC dictates how wide the data frame is. Pix2Pgp *doubles* the size of that bus, as can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
+
+```VHDL
+   -- data bus width is twice the pixel data width to maximize bandwidth
+   constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+```
+
+This sets a limitation on how many columns can be served by each Pix2Pgp instance. This is because of the structure of the Pix2Pgp header, which has to fit the following:
+
+* Header *Flags* (usually *six*)
+* The *Column Hitmask*, which has the same width as the amount of columns served
+* The *Trigger Counter*, that has a configurable width (usually *6-bit*)
+
+For example, If each Pix2Pgp instance of `NewAsic` serves `40` columns, then `SPARSE_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served.
