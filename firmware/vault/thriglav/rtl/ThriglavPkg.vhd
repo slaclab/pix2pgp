@@ -274,10 +274,10 @@ package Pix2PgpPkg is
 
    ------------------------------------------------------------------------------
    -- FPGA Preamble Mapping
-   constant FPGA_PREAMBLE_LEN_C : natural := 160;
-   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 96;
-   subtype ASIC_TYPE_POS_C     is natural range  95 downto 64;
-   subtype ASIC_ID_POS_C       is natural range  63 downto 32;
+   constant FPGA_PREAMBLE_LEN_C : natural := 128;
+   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 64;
+   subtype ASIC_TYPE_POS_C     is natural range  63 downto 48;
+   subtype ASIC_ID_POS_C       is natural range  47 downto 32;
    subtype FPGA_ID_POS_C       is natural range  31 downto 16;
    subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
    subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;

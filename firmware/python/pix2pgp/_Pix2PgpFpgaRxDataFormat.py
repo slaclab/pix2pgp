@@ -33,7 +33,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         Parameter dictionary
         '''
-        param_dict = {'preambleLen'  : 20,
+        param_dict = {'preambleLen'  : 16,
                       'headerLen'    : 8,
                       'frameSizeLen' : 2,
                       'trailerLen'   : 8}
@@ -46,9 +46,9 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         _preamble = int(preamble, 16)
 
-        preamble_dict = {'pix2pgpId'  : (_preamble >> 96) & 0xFFFFFFFFFFFFFFFF,
-                         'asicType'   : (_preamble >> 64) & 0xFFFFFFFF,
-                         'asicId'     : (_preamble >> 32) & 0xFFFFFFFF,
+        preamble_dict = {'pix2pgpId'  : (_preamble >> 64) & 0xFFFFFFFFFFFFFFFF,
+                         'asicType'   : (_preamble >> 48) & 0xFFFF,
+                         'asicId'     : (_preamble >> 32) & 0xFFFF,
                          'fpgaId'     : (_preamble >> 16) & 0xFFFF,
                          'fpgaTrgCnt' : (_preamble >>  0) & 0xFFFF}
 
