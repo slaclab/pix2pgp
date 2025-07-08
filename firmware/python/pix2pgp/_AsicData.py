@@ -181,6 +181,9 @@ class AsicData(object):
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
         self.numOfCols    = self.asicParams.asicParamExtract()['numOfCols']
         self.wordLen      = self.asicParams.asicParamExtract()['wordLen']
+
+        self.fpgaDataFormat.asicNumOfLanesSet(numOfLanes=self.numOfLanes)
+
         self.preambleLen  = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
         self.headerLen    = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
         self.frameSizeLen = self.fpgaDataFormat.fpgaParamExtract()['frameSizeLen']

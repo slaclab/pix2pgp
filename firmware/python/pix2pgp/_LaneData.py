@@ -257,7 +257,7 @@ class LaneData(object):
         _lanePrint  = f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LaneId = {self._laneId} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
         _hitmaskPadding = int(self.numOfCols/4)
-        _printPadding = (" " * abs(36 - _hitmaskPadding))
+        _printPadding = (" " * abs(35 - _hitmaskPadding))
 
         # Change to True/False format
         _flags = 'OverOcc,  Pause,  ColErr,  PauseErr,  Timeout     =    0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}'
