@@ -123,11 +123,11 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
    signal cfgPauseLimit     : slv(11 downto 0) := toSlv(12, 12);
    signal cfgColumnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
-   signal cfgColBusy        : sl := '0';
-   signal cfgColDataEmpty   : sl := '1';
-   signal cfgColStatusEmpty : sl := '1';
-   signal cfgSuperBusy      : sl := '0';
-   signal cfgArbBusy        : sl := '0';
+   signal cfgColBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgColDataEmpty   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgColStatusEmpty : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgSuperBusy      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgArbBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
 begin
 
@@ -254,11 +254,11 @@ begin
                cfgTimeoutLimit   => cfgTimeoutLimit,
                cfgPauseLimit     => cfgPauseLimit,
                cfgColumnEnable   => cfgColumnEnable,
-               cfgColBusy        => cfgColBusy,
-               cfgColDataEmpty   => cfgColDataEmpty,
-               cfgColStatusEmpty => cfgColStatusEmpty,
-               cfgSuperBusy      => cfgSuperBusy,
-               cfgArbBusy        => cfgArbBusy,
+               cfgColBusy        => cfgColBusy(ser),
+               cfgColDataEmpty   => cfgColDataEmpty(ser),
+               cfgColStatusEmpty => cfgColStatusEmpty(ser),
+               cfgSuperBusy      => cfgSuperBusy(ser),
+               cfgArbBusy        => cfgArbBusy(ser),
                pause             => pause(ser),
                sof               => sof(ser),
                eof               => eof(ser),
