@@ -251,7 +251,7 @@ class AsicData(object):
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'Lane: DecError, Full, Timeout, Down, Valid    =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X} 0x{4:<02X}'
+            _format = 'Lane: DecError, Full, Timeout, Down, Valid       =     0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X} 0x{4:<01X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
                 _dict['laneDecError'], _dict['laneFull'],
@@ -293,27 +293,27 @@ class AsicData(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~
         self.asicGlblOverOcc[laneSel] = (
             np.array(self.asicGlblOverOcc[laneSel]) |
-            np.array(self.laneDecoder.overOcc))
+            np.array(self.laneDecoder.overOcc)).tolist()
 
         self.asicGlblPause[laneSel] = (
             np.array(self.asicGlblOverOcc[laneSel]) |
-            np.array(self.laneDecoder.pause))
+            np.array(self.laneDecoder.pause)).tolist()
 
         self.asicGlblColErr[laneSel] = (
             np.array(self.asicGlblColErr[laneSel]) |
-            np.array(self.laneDecoder.colErr))
+            np.array(self.laneDecoder.colErr)).tolist()
 
         self.asicGlblPauseErr[laneSel] = (
             np.array(self.asicGlblPauseErr[laneSel]) |
-            np.array(self.laneDecoder.pauseErr))
+            np.array(self.laneDecoder.pauseErr)).tolist()
 
         self.asicGlblDummy[laneSel] = (
             np.array(self.asicGlblDummy[laneSel]) |
-            np.array(self.laneDecoder.dummy))
+            np.array(self.laneDecoder.dummy)).tolist()
 
         self.asicGlblColTimeout[laneSel] = (
             np.array(self.asicGlblColTimeout[laneSel]) |
-            np.array(self.laneDecoder.timeout))
+            np.array(self.laneDecoder.timeout)).tolist()
 
         # should not change within the same event
         self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
@@ -321,38 +321,38 @@ class AsicData(object):
         # Errors and status flags
         self.laneDecErr[laneSel] = (
             np.array(self.laneDecErr[laneSel]) |
-            np.array(self.laneDecoder.decErr))
+            np.array(self.laneDecoder.decErr)).tolist()
 
         self.laneHasData[laneSel] = (
             np.array(self.laneHasData[laneSel]) |
-            np.array(self.laneDecoder.hasData))
+            np.array(self.laneDecoder.hasData)).tolist()
 
         offset = laneSel * self.numOfCols
 
         self.colHitmask[offset:offset + self.numOfCols] = (
             np.array(self.colHitmask[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colHitmask))
+            np.array(self.laneDecoder.colHitmask)).tolist()
 
         self.colTimeout[offset:offset + self.numOfCols] = (
             np.array(self.colTimeout[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colTimeout))
+            np.array(self.laneDecoder.colTimeout)).tolist()
 
         self.colOverOcc[offset:offset + self.numOfCols] = (
             np.array(self.colOverOcc[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colOverOcc))
+            np.array(self.laneDecoder.colOverOcc)).tolist()
 
         self.colPause[offset:offset + self.numOfCols] = (
             np.array(self.colPause[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colPause))
+            np.array(self.laneDecoder.colPause)).tolist()
 
         self.colDecColId[offset:offset + self.numOfCols] = (
             np.array(self.colDecColId[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colId))
+            np.array(self.laneDecoder.colId)).tolist()
 
         # each column-length accumulates on itself for each frame
         self.colLen[offset:offset + self.numOfCols] = (
             np.array(self.colLen[offset:offset + self.numOfCols]) +
-            np.array(self.laneDecoder.colLen))
+            np.array(self.laneDecoder.colLen)).tolist()
 
         # should not change within the same event
         self.colTrgCnt[offset:offset + self.numOfCols] = self.laneDecoder.colTrgCnt
