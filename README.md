@@ -53,5 +53,8 @@ In order to simulate via GHDL, go to the relevant directory and run e.g. `$ bash
 ## Hot to add a new ASIC
 A complete How-To is included in the `README.md` file located under `firmware/vault`.
 
+## Hot to perform total throughput/bandwitdh data efficiency measurements
+A complete How-To is included in the `README.md` file located under `software/scripts/benchmarking`.
+
 ### Contact
 Christos Bakalis: cbakalis@slac.stanford.edu

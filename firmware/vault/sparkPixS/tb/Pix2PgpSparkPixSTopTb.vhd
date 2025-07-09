@@ -47,7 +47,7 @@ end entity Pix2PgpSparkPixSTopTb;
 
 architecture test of Pix2PgpSparkPixSTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matric clock sent to ASIC
+   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matrix clock of ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
    constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
@@ -123,6 +123,11 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal cfgColStatusEmpty : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
    signal cfgSuperBusy      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
    signal cfgArbBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+
+   signal cfgColBusyDel     : sl := '0';
+   signal cfgSuperBusyDel   : sl := '0';
+   signal colBusyCnt        : slv(31 downto 0) := (others => '0');
+   signal superBusyCnt      : slv(31 downto 0) := (others => '0');
 
 begin
 
@@ -1986,8 +1991,9 @@ end loop;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ----------------------------------------
-  ----------------------------------------
+  ----------------------------------------------
+  ----------------------------------------------
+  -- regular stimuli end
 
     -- do not touch begin
     wait;
@@ -2016,5 +2022,37 @@ end loop;
       end if;
     end if;
   end process;
+
+  --MeasureColBusyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+  --    cfgColBusyDel <= cfgColBusy(0);
+
+  --    if cfgColBusyDel = '1' then
+  --       colBusyCnt <= colBusyCnt + 1;
+  --    end if;
+
+  --    if cfgColBusyDel = '1' and cfgColBusy(0) = '0' then
+  --       report "[INFO]: ColumnBusy: colBusyCnt = " & integer'image(conv_integer(unsigned(colBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
+
+  --MeasureSuperBusyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+  --    cfgSuperBusyDel <= cfgSuperBusy(0);
+
+  --    if cfgSuperBusyDel = '1' then
+  --       superBusyCnt <= superBusyCnt + 1;
+  --    end if;
+
+  --    if cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0' then
+  --       report "[INFO]: SuperBusy: superBusyCnt = " & integer'image(conv_integer(unsigned(superBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
 
 end architecture;
