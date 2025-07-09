@@ -26,8 +26,7 @@ entity Pix2PgpThriglavTop is
       COLMANAGER_DATA_DEPTH_G   : integer   := 8;     -- colManager data FIFO depth (holds *2 hits)
       COLMANAGER_STATUS_DEPTH_G : integer   := 8;     -- colManager status FIFO depth (1 per event)
       DATAFIFO_PIPE_G           : natural   := 1;     -- colManager data FIFO I/O pipeline stages
-      STATUSFIFO_PIPE_G         : natural   := 1;     -- colManager status FIFO I/O pipeline stages
-      SER_GBOX_PIPE_G           : natural   := 0);    -- *only* set when synthesizing (*not* in sim)
+      STATUSFIFO_PIPE_G         : natural   := 1);    -- colManager status FIFO I/O pipeline stages
    port(
       -- General Interface
       sparseClk         : in  std_logic;
@@ -123,10 +122,6 @@ architecture rtl of Pix2PgpThriglavTop is
    signal phyTxValid            : std_logic;
    signal phyTxReady            : std_logic;
    signal phyTxData             : std_logic_vector(65 downto 0);
-
-   signal serGboxReady          : std_logic;
-   signal serGboxValid          : std_logic;
-   signal serGboxData           : std_logic_vector(31 downto 0);
 
    signal cfgColumnEnablePgp    : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal cfgTimeoutLimitSparse : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
@@ -246,41 +241,9 @@ begin
          slaveBitOrder  => '0',
          -- Master Interface
          masterBitOrder => '0',
-         masterReady    => serGboxReady,
-         masterValid    => serGboxValid,
-         masterData     => serGboxData);
-
-   -- pipeline the gearbox interface with the serializer
-   U_PipelineGboxValid : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => SER_GBOX_PIPE_G)
-      port map (
-         clk     => pgpClk,
-         din(0)  => serGboxValid,
-         dout(0) => pgpDoutValid);
-
-   U_PipelineGboxReady : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => SER_GBOX_PIPE_G)
-      port map (
-         clk     => pgpClk,
-         din(0)  => pgpDoutReady,
-         dout(0) => serGboxReady);
-
-   U_PipelineGboxDout : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => SER_DWIDTH_C,
-         DELAY_G        => SER_GBOX_PIPE_G)
-      port map (
-         clk  => pgpClk,
-         din  => serGboxData,
-         dout => pgpDout);
+         masterReady    => pgpDoutReady,
+         masterValid    => pgpDoutValid,
+         masterData     => pgpDout);
 
       -- dumb; but should always work with a .v/.sv wrapper above this level
       din(0)  <= din0;
