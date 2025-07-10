@@ -371,7 +371,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => 8,
+         FIFO_ADDR_WIDTH_G   => 11,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => AXIS_CONFIG_C)
