@@ -36,7 +36,6 @@ entity Pix2PgpAsicStreamRx is
       ASIC_ID_G              : natural  := 0;
       TIMEOUT_LIMIT_WIDTH_G  : positive := 16;
       LANE_PIPE_STAGES_G     : natural  := 1;
-      STREAM_PIPE_STAGES_G   : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 6;
@@ -100,9 +99,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal dropBadColTrg : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal lanePostError : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
-   signal obAxisMaster  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxisSlave   : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
-
    signal laneMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -157,7 +153,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFullCnt     : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
-      obAxisMaster    : AxiStreamMasterType;
+      asicRxMaster    : AxiStreamMasterType;
       laneRxSlaves    : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Lite
       readSlave       : AxiLiteReadSlaveType;
@@ -202,7 +198,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       lanePauseErrCnt => (others => (others => '0')),
       laneFullCnt     => (others => (others => '0')),
       -- AXI-Stream
-      obAxisMaster    => AXI_STREAM_MASTER_INIT_C,
+      asicRxMaster    => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves    => (others => AXI_STREAM_SLAVE_INIT_C),
       -- AXI-Lite
       readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
@@ -272,7 +268,7 @@ begin
          mAxiWriteMaster => writeMaster,
          mAxiWriteSlave  => writeSlave);
 
-   comb : process (readMaster, glblRst, writeMaster, asicSroSync, obAxisSlave,
+   comb : process (readMaster, glblRst, writeMaster, asicSroSync, asicRxSlave,
                    asicSroEnSync, trgBuffValid, laneStatus, asicRstSync,
                    trgBuffDout, timeout, laneRxMasters, linkUpSync, r) is
 
@@ -306,12 +302,12 @@ begin
       v.laneStable := (others => '0');
 
       -- flow control check
-      if obAxisSlave.tReady = '1' then
-         v.obAxisMaster.tValid := '0';
-         v.obAxisMaster.tLast  := '0';
-         v.obAxisMaster.tUser  := (others => '0');
-         v.obAxisMaster.tData  := (others => '0');
-         v.obAxisMaster.tKeep  := (others => '0');
+      if asicRxSlave.tReady = '1' then
+         v.asicRxMaster.tValid := '0';
+         v.asicRxMaster.tLast  := '0';
+         v.asicRxMaster.tUser  := (others => '0');
+         v.asicRxMaster.tData  := (others => '0');
+         v.asicRxMaster.tKeep  := (others => '0');
       end if;
 
       -- default flags
@@ -501,12 +497,12 @@ begin
          ----------------------------------------------------------------------
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
-            if v.obAxisMaster.tValid = '0' then
-               v.obAxisMaster.tValid := '1';
+            if v.asicRxMaster.tValid = '0' then
+               v.asicRxMaster.tValid := '1';
 
-               v.obAxisMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxisMaster, '1');
-               v.obAxisMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
+               v.asicRxMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
+               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.asicRxMaster, '1');
+               v.asicRxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
                v.state := EVAL_LANES_S;
             end if;
 
@@ -563,12 +559,12 @@ begin
          when TX_HEADER_S =>
 
             -- essentially waits for all lanes to have something; either valid data or some error
-            if v.obAxisMaster.tValid = '0' then
+            if v.asicRxMaster.tValid = '0' then
 
-               v.obAxisMaster.tValid := '1';
+               v.asicRxMaster.tValid := '1';
 
-               v.obAxisMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
-               v.obAxisMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.asicRxMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
+               v.asicRxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
                v.state := TX_FRAME_SIZE_S;
 
@@ -578,15 +574,15 @@ begin
          -- transmit all (valid) lane frame size data
          -- also grab the trigger counter values; will evaluate alignment later
          when TX_FRAME_SIZE_S =>
-            if v.obAxisMaster.tValid = '0' then
+            if v.asicRxMaster.tValid = '0' then
 
-               v.obAxisMaster.tValid := '1';
-               v.obAxisMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
-               v.obAxisMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
+               v.asicRxMaster.tValid := '1';
+               v.asicRxMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
+               v.asicRxMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
                v.laneTrgCnt(laneIdx) := laneStatus(laneIdx).trgCnt;
 
                if r.laneValid(laneIdx) = '0' then
-                  v.obAxisMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
+                  v.asicRxMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
                end if;
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
@@ -620,15 +616,15 @@ begin
          -- switch mux to the lane with the valid data until done
          -- reverse endianness on a per-ASIC-word basis
          when WAIT_TLAST_S =>
-            if v.obAxisMaster.tValid = '0' then
-               v.obAxisMaster.tKeep := laneAxiStream.tKeep;
-               v.obAxisMaster.tData := laneAxiStream.tData;
+            if v.asicRxMaster.tValid = '0' then
+               v.asicRxMaster.tKeep := laneAxiStream.tKeep;
+               v.asicRxMaster.tData := laneAxiStream.tData;
 
-               v.obAxisMaster.tValid          := laneRxMasters(laneIdx).tValid;
-               v.laneRxSlaves(laneIdx).tReady := obAxisSlave.tReady;
+               v.asicRxMaster.tValid          := laneRxMasters(laneIdx).tValid;
+               v.laneRxSlaves(laneIdx).tReady := asicRxSlave.tReady;
 
                if laneRxMasters(laneIdx).tLast = '1' and
-                  obAxisSlave.tReady           = '1' then
+                  asicRxSlave.tReady           = '1' then
 
                   v.state := SWITCH_MUX_S;
 
@@ -648,12 +644,12 @@ begin
 
             if uOr(r.lanePause) = '0' and allBits(r.waitCnt, '0') then
 
-               if v.obAxisMaster.tValid = '0' then
-                  v.obAxisMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
-                  v.obAxisMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
+               if v.asicRxMaster.tValid = '0' then
+                  v.asicRxMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
+                  v.asicRxMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
                      resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-                  v.obAxisMaster.tValid := '1';
-                  v.obAxisMaster.tLast  := '1';
+                  v.asicRxMaster.tValid := '1';
+                  v.asicRxMaster.tLast  := '1';
                   v.trgBuffRd           := '1';
                   v.laneMetaRd          := '1';
                   v.state               := DONE_S;
@@ -743,7 +739,7 @@ begin
 
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
-      obAxisMaster <= r.obAxisMaster;
+      asicRxMaster <= r.asicRxMaster;
 
       -- AXI-Lite Outputs
       writeSlave <= r.writeSlave;
@@ -851,36 +847,5 @@ begin
          -- Control Interface
          set     => r.armTimeout,
          timeout => timeout);
-
-   --------------------------
-   -- Pipeline Stage (or not)
-   --------------------------
-   GEN_PIPE: if STREAM_PIPE_STAGES_G > 0 generate
-
-      U_Pipe : entity surf.AxiStreamPipeline
-         generic map (
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            PIPE_STAGES_G  => STREAM_PIPE_STAGES_G)
-         port map (
-            -- Clock and Reset
-            axisClk     => pgpRxClk,
-            axisRst     => pgpRxRst,
-            -- Slave Port
-            sAxisMaster => obAxisMaster,
-            sAxisSlave  => obAxisSlave,
-            -- Master Port
-            mAxisMaster => asicRxMaster,
-            mAxisSlave  => asicRxSlave);
-
-   end generate GEN_PIPE;
-
-   GEN_NO_PIPE: if STREAM_PIPE_STAGES_G <= 0 generate
-
-      asicRxMaster <= obAxisMaster;
-      obAxisSlave  <= asicRxSlave;
-
-   end generate GEN_NO_PIPE;
 
 end rtl;
