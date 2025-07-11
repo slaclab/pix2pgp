@@ -3,6 +3,7 @@ import argparse
 import sys
 import click
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 import numpy as np
 
 # ---------------------------------------------------------
@@ -139,18 +140,28 @@ if __name__ == "__main__":
 
     ################################################################################################
 
+    ################################################################################################
+
     if _plotMaxRate:
         # Create the plot
         plt.figure(figsize=(10, 6))
+        plt.subplots_adjust(bottom=0.2)  # Keep this to manage overall layout
+
+        # Set y-axis to logarithmic scale
+        plt.yscale('log')
+
+        # Plot superBusy as a smooth line
+        plt.plot(occArray, [toFreq(x * _clkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2Pgp Max Rate')  # Changed color and linestyle
 
         # Plot data with a larger marker size
-        plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=10)
+        plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=10, label='True Max Rate')
+
+        plt.legend(loc='upper right', fontsize=12, frameon=True, fancybox=True, shadow=True, borderpad=1) # add a legend
 
         # Set grid
-        plt.grid(True, which='both', linestyle='--', linewidth=0.7)
+        plt.grid(True, which='both', linestyle='--', linewidth=1)
 
-        # Customize x and y labels (Increased labelpad for more space)
-        plt.xlabel("Occupancy (%)", fontsize=14, weight='bold', color='darkslategray', labelpad=80)
+        # Customize x and y labels
         plt.ylabel("Max Triggering Rate (kHz)", fontsize=14, weight='bold', color='darkslategray')
 
         # Set title
@@ -160,27 +171,28 @@ if __name__ == "__main__":
         xticks = np.concatenate([np.arange(0.5, 1.0, 0.5), np.arange(5.0, 101, 5)])
 
         # Apply the custom xticks to the plot
-        plt.xticks(xticks, rotation=45, fontsize=12, weight='bold', color='darkred')
+        plt.xticks(xticks, rotation=45, fontsize=10, weight='bold', color='darkred')  # Font size kept at 10
 
         # Set y-ticks
         plt.yticks(fontsize=12, weight='bold', color='darkred')
 
-        # Add markers to each data point with adjusted annotation positions
+        # Add markers to each data point
         for x, y in zip(occArray, _maxRateKHzArray):
-            # Display the text label only if the x value is in the selected range
             if x in xticks:
-                plt.text(x+1, y+15, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
+                plt.text(x + 1, y * 1.1, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
 
-        # Add extra labels for the Total Hits below the x-axis ticks
-        # Adjusting the vertical placement to avoid overlap
+        # Adjust Total Hits labels
         for x, total_hits in zip(occArray, _totalHitArray):
-            # Place total hits labels below the x-axis with some spacing, but only for selected x-values
             if x in xticks:
-                plt.text(x, -100, f"Total Hits = {total_hits}", rotation=45, ha='center', va='top', fontsize=9, color='darkgreen', weight='bold')
+                plt.text(x-2, 2, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
-        # Set axis limits (ranges)
-        plt.xlim(-1, 105)  # Set the x-axis range from 0 to 100
-        plt.ylim(-20, 1200)  # Set the y-axis range (example: from 0 to 1200)
+        # Set axis limits
+        plt.xlim(-1, 105)
+        plt.ylim(6, max(_maxRateKHzArray) * 1.5)  # Adjust upper limit
+
+        ax = plt.gca()
+        trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
+        ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
 
         # Show the plot
         plt.tight_layout()
