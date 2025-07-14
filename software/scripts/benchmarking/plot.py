@@ -20,11 +20,19 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--clkPeriod",
+    "--pgpClkPeriod",
     type     = float,
     required = False,
     default  = 5.384,
-    help     = "Reference clock frequency (in ns)",
+    help     = "Pix2Pgp Reference clock frequency (in ns)",
+)
+
+parser.add_argument(
+    "--matrixClkPeriod",
+    type     = float,
+    required = False,
+    default  = 10.768,
+    help     = "Matrix Reference clock frequency (in ns)",
 )
 
 parser.add_argument(
@@ -47,12 +55,6 @@ parser.add_argument(
     "--verbose",
     action = 'store_true',
     default = False)
-
-parser.add_argument(
-    "--plotMaxRate",
-    action = 'store_true',
-    default = False)
-
 # ---------------------------------------------------------
 
 # Get the arguments
@@ -87,19 +89,19 @@ def hitsToTotalHits(hits, cols):
 # ---------------------------------------------------------
 if __name__ == "__main__":
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    _clkPeriod   = args.clkPeriod
-    _cols        = args.cols
-    _maxHits     = args.maxHits
-    _plotMaxRate = args.plotMaxRate
-    _asicType    = args.asicType
+    _pgpClkPeriod    = args.pgpClkPeriod
+    _matrixClkPeriod = args.matrixClkPeriod
+    _cols            = args.cols
+    _maxHits         = args.maxHits
+    _asicType        = args.asicType
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    occArray     = measurements.occArray
-    hitArray     = measurements.hitArray
-    colBusy      = measurements.colBusy
-    superBusy    = measurements.superBusy
-
+    occArray  = measurements.occArray
+    hitArray  = measurements.hitArray
+    colBusy   = measurements.colBusy
+    superBusy = measurements.superBusy
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    _clkFreq   = toFreq(_clkPeriod)
+    _pgpClkFreq    = toFreq(_pgpClkPeriod)
+    _matrixClkFreq = toFreq(_matrixClkPeriod)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if len(occArray) == len(hitArray)     and \
@@ -119,11 +121,11 @@ if __name__ == "__main__":
         _totalHitArray.append(hitsToTotalHits(hitArray[i], _cols))
 
         if hitArray[i] < _maxHits:
-            _maxRateKHzArray.append(toFreq(superBusy[i]*_clkPeriod, False))
-            _maxRateMHzArray.append(toFreq(superBusy[i]*_clkPeriod, True))
+            _maxRateKHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, False))
+            _maxRateMHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, True))
         else:
-            _maxRateKHzArray.append(toFreq(colBusy[i]*_clkPeriod, False))
-            _maxRateMHzArray.append(toFreq(colBusy[i]*_clkPeriod, True))
+            _maxRateKHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, False))
+            _maxRateMHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, True))
 
     if args.verbose:
         print(f"---------- Verbose Mode -----------------")
@@ -134,66 +136,67 @@ if __name__ == "__main__":
         print(f"_maxRateMHzArray (MHz) = {_maxRateMHzArray} ")
 
     print(f"---------- INFO -----------------")
-    print(f"Clock Period    = {_clkPeriod} ns")
-    print(f"Clock Frequency = {_clkFreq} MHz")
+    print(f"Pix2Pgp Clock Period    = {_pgpClkPeriod} ns")
+    print(f"Pix2Pgp Clock Frequency = {_pgpClkFreq} MHz")
+    print(f"Matrix Clock Period     = {_matrixClkPeriod} ns")
+    print(f"Matrix Clock Frequency  = {_matrixClkFreq} MHz")
     print(f"---------------------------------")
 
     ################################################################################################
 
     ################################################################################################
 
-    if _plotMaxRate:
-        # Create the plot
-        plt.figure(figsize=(10, 6))
-        plt.subplots_adjust(bottom=0.2)  # Keep this to manage overall layout
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    plt.subplots_adjust(bottom=0.2)  # Keep this to manage overall layout
 
-        # Set y-axis to logarithmic scale
-        plt.yscale('log')
+    # Set y-axis to logarithmic scale
+    plt.yscale('log')
 
-        # Plot superBusy as a smooth line
-        plt.plot(occArray, [toFreq(x * _clkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2Pgp Max Rate')  # Changed color and linestyle
+    # Plot superBusy as a smooth line
+    plt.plot(occArray, [toFreq(x * _pgpClkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2Pgp Max Rate')  # Changed color and linestyle
 
-        # Plot data with a larger marker size
-        plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=10, label='True Max Rate')
+    # Plot data with a larger marker size
+    plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=10, label='True Max Rate')
 
-        plt.legend(loc='upper right', fontsize=12, frameon=True, fancybox=True, shadow=True, borderpad=1) # add a legend
+    plt.legend(loc='upper right', fontsize=12, frameon=True, fancybox=True, shadow=True, borderpad=1) # add a legend
 
-        # Set grid
-        plt.grid(True, which='both', linestyle='--', linewidth=1)
+    # Set grid
+    plt.grid(True, which='both', linestyle='--', linewidth=1)
 
-        # Customize x and y labels
-        plt.ylabel("Max Triggering Rate (kHz)", fontsize=14, weight='bold', color='darkslategray')
+    # Customize x and y labels
+    plt.ylabel("Max Triggering Rate (kHz)", fontsize=14, weight='bold', color='darkslategray')
 
-        # Set title
-        plt.title(f"Occupancy vs Max Triggering Rate - {_asicType}", fontsize=16, weight='bold', color='navy')
+    # Set title
+    plt.title(f"{_asicType} Occupancy vs Max Triggering Rate - Matrix Clock Freq = {_matrixClkFreq} MHz; Pix2Pgp/PGP Clock Freq = {_pgpClkFreq} MHz", fontsize=14, weight='bold', color='navy')
 
-        # Select custom x-ticks, skipping the range from 2.0 to 10.0
-        xticks = np.concatenate([np.arange(0.5, 1.0, 0.5), np.arange(5.0, 101, 5)])
+    # Select custom x-ticks, skipping the range from 2.0 to 10.0
+    xticks = np.concatenate([np.arange(0.5, 1.0, 0.5), np.arange(5.0, 101, 5)])
 
-        # Apply the custom xticks to the plot
-        plt.xticks(xticks, rotation=45, fontsize=10, weight='bold', color='darkred')  # Font size kept at 10
+    # Apply the custom xticks to the plot
+    plt.xticks(xticks, rotation=45, fontsize=10, weight='bold', color='darkred')  # Font size kept at 10
 
-        # Set y-ticks
-        plt.yticks(fontsize=12, weight='bold', color='darkred')
+    # Set y-ticks
+    plt.yticks(fontsize=12, weight='bold', color='darkred')
 
-        # Add markers to each data point
-        for x, y in zip(occArray, _maxRateKHzArray):
-            if x in xticks:
-                plt.text(x + 1, y * 1.1, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
+    # Add markers to each data point
+    for x, y in zip(occArray, _maxRateKHzArray):
+        if x in xticks:
+            plt.text(x + 1, y * 1.1, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
 
-        # Adjust Total Hits labels
-        for x, total_hits in zip(occArray, _totalHitArray):
-            if x in xticks:
-                plt.text(x-2, 2, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+    # Adjust Total Hits labels
+    for x, total_hits in zip(occArray, _totalHitArray):
+        if x in xticks:
+            plt.text(x-2, 1.2, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
-        # Set axis limits
-        plt.xlim(-1, 105)
-        plt.ylim(6, max(_maxRateKHzArray) * 1.5)  # Adjust upper limit
+    # Set axis limits
+    plt.xlim(-1, 105)
+    plt.ylim(4, max(_maxRateKHzArray) * 1.5)  # Adjust upper limit
 
-        ax = plt.gca()
-        trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
-        ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
+    ax = plt.gca()
+    trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
+    ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
 
-        # Show the plot
-        plt.tight_layout()
-        plt.show()
+    # Show the plot
+    plt.tight_layout()
+    plt.show()

@@ -9,11 +9,10 @@ This is the file that is being used by `plot.py` to generate the plots and the t
     * Depending on the amount of *rows* each column of your ASIC has, the amount of hits changes. For example, if an ASIC has `224` rows, an occupancy of `1%` corresponds to: `224*0.01 = 2.24` hits; therefore, that `hitArray` position will have a value of `2`.
     * One can run the `getHitArray.py` script to get the `hitArray` list and paste it back to `measurements.py`. Adjust the `--rows` number accordingly
 
-Note that `wordCntArray` was used to produce the `Data Transfer Efficiency` column of the table located under [this link](https://confluence.slac.stanford.edu/x/nIkaGg). It should not change from ASIC to ASIC and can be left as-is.
+Each ASIC should have an associated file under `asics/` (e.g. `asics/sparkPixS.py`) that has the same structure as `measurements.py`. Use that file to keep a record of the measurements, and copy-paste the `hitArray, colBusy, superBusy` of that file into `measurements.py` so that `plot.py` can produce the plots.
 
-
-## VHDL Testbench file; Updating the colBusy/superBusy lists in measurements.py
-After populating `hitArray` given the amount of rows of the ASIC-under-evaluation, one has to go-to the stimuli section of the top-level VHDL testbench, and find the following snippet:
+## VHDL Testbench file; Updating the colBusy/superBusy lists in the associated file under `asics/`
+After populating `hitArray` given the amount of rows of the ASIC-under-evaluation, one has to go to the stimuli section of the top-level VHDL testbench, and find the following snippet:
 
 ```VHDL
     -- Wait for the rst to be released before doing anything else
@@ -41,6 +40,6 @@ After populating `hitArray` given the amount of rows of the ASIC-under-evaluatio
 ## plot.py
 Run `plot.py` under `software/scripts/benchmarking`:
 
-`$ python plot.py --plotMaxRate --verbose  --clkPeriod=5.384 --cols=24 --asicType=SparkPixS`
+`$ python plot.py --verbose --pgpClkPeriod=5.384 --matrixClkPeriod=10.768 --cols=24 --asicType=SparkPixS`
 
-Change `--clkPeriod` accordingly, if the `CLK_PERIOD_PGP_C` value is different than the default value of `5.384 ns` used in the script. Change `--cols` to the amount of columns each pix2pgp instance serves, and the `--asicType` accordingly (the latter only effects the plot title)
+Change `--pgpClkPeriod` accordingly, if the `CLK_PERIOD_PGP_C` value is different than the default value of `5.384 ns` used in the script. Change `--cols` to the amount of columns each pix2pgp instance serves. The `--asicType`, `--matrixClkPeriod` values only affect the plot title.
