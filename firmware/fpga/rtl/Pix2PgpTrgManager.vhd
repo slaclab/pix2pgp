@@ -28,13 +28,19 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTrgManager is
    generic(
-      TPD_G          : time    := 1 ns;
-      RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      DELAY_G        : natural := 1);
+      TPD_G                 : time    := 1 ns;
+      RST_ASYNC_G           : boolean := false;
+      RST_POLARITY_G        : sl      := '1';  -- '1' for active high rst, '0' for active low
+      TRG_FIFO_ADDR_WIDTH_G : positive := 6);
    port(
-      clk   : in  sl;
-      rst   : in  sl := not(RST_POLARITY_G);
+      -- General Interface
+      pgpRxClk        : in  sl;
+      pgpRxRst        : in  sl := not(RST_POLARITY_G);
+      -- ASIC Domain Interface
+      asicClk         : in  sl;
+      asicRst         : in  sl; -- active-low always
+      asicSro         : in  sl;
+      asicSroEn       : in  sl;
       start : in  sl;
       done  : out sl;
       dout  : out slv(7 downto 0));
@@ -121,15 +127,30 @@ begin
 
    end process comb;
 
-   U_delayDone : entity surf.SlvDelay
+   ----------------------------------------
+   -- Trigger/SRO Buffer
+   ----------------------------------------
+   U_TriggerBuffer : entity surf.Fifo
       generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => DELAY_G)
+         TPD_G           => TPD_G,
+         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_ASYNC_G     => RST_ASYNC_G,
+         GEN_SYNC_FIFO_G => false,
+         MEMORY_TYPE_G   => "block",
+         FWFT_EN_G       => true,
+         DATA_WIDTH_G    => TRGCNT_WIDTH_C,
+         ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
-         clk     => clk,
-         din(0)  => r.done,
-         dout(0) => done);
+         rst      => glblRst,
+         -- Write Ports
+         wr_clk   => asicClk,
+         wr_en    => r.trgBuffWr,
+         din      => r.fpgaTrgCnt,
+         -- Read Ports
+         rd_clk   => pgpRxClk,
+         rd_en    => r.trgBuffRd,
+         dout     => trgBuffDout,
+         valid    => trgBuffValid);
 
    seq : process (clk, rst) is
    begin

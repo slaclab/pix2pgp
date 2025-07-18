@@ -457,6 +457,7 @@ begin
          TPD_G           => TPD_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
+         GEN_SYNC_FIFO_G => true,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
