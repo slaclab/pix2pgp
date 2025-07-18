@@ -58,8 +58,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
    signal dropBadTrg     : sl := '0';
-   signal laneRxOk       : sl := '0';
-   signal laneRxInError  : sl := '0';
+   signal laneRxError    : sl := '0';
    signal obAxiMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal obAxiSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
@@ -86,8 +85,7 @@ begin
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
          laneRxFull     => laneRxFull,
-         laneRxOk       => laneRxOk,
-         laneRxInError  => laneRxInError,
+         laneRxError    => laneRxError,
          -- AXI-Stream to StreamRx
          obAxisMaster   => obAxiMaster,
          obAxisSlave    => obAxiSlave);
@@ -132,15 +130,15 @@ begin
          din(0)  => laneMetaRd,
          dout(0) => frameMetaRd);
 
-   U_PipelinelaneRxInError : entity surf.SlvDelay
+   U_PipelineLaneRxError : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => laneRxInError,
-         dout(0) => laneStatus.inError);
+         din(0)  => laneRxError,
+         dout(0) => laneStatus.decError);
 
    U_PipelineLaneMetaValid : entity surf.SlvDelay
       generic map (
@@ -213,16 +211,6 @@ begin
          clk  => laneClk,
          din  => frameMetaDout(LANE_SIZE_POS_C),
          dout => laneStatus.frameSize);
-
-   U_PipelineDecError : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => frameMetaDout(LANE_DEC_ERROR_POS_C),
-         dout(0) => laneStatus.decError);
 
    GEN_PIPE: if PIPE_STAGES_G > 0 generate
 

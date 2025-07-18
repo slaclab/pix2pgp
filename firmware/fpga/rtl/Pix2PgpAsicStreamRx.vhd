@@ -282,7 +282,6 @@ begin
       variable laneIdx       : natural := 0;
       variable frameSize     : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
-      variable laneInError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
       variable laneDown      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
       variable laneTrgCntRef : slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
@@ -338,7 +337,7 @@ begin
       axiSlaveRegister (axilEp, x"610", 0, v.dropBadColTrg);
       axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
       --
-      axiSlaveRegisterR(axilEp, x"618", 0, laneInError);
+      axiSlaveRegisterR(axilEp, x"618", 0, r.laneDecError);
       axiSlaveRegisterR(axilEp, x"61C", 0, r.laneFull);
       axiSlaveRegisterR(axilEp, x"620", 0, laneDown);
       --
@@ -400,8 +399,7 @@ begin
          v.laneEnable(lane) := r.laneEnableSet(lane) and not(laneDown(lane)) and asicRstSync;
 
          -- not from metadata FIFO
-         v.laneFull(lane)  := laneStatus(lane).overflow;
-         laneInError(lane) := laneStatus(lane).inError;
+         v.laneFull(lane) := laneStatus(lane).overflow;
 
          -- from metadata FIFO
          v.lanePauseError(lane) := laneStatus(lane).pauseError and laneStatus(lane).valid;

@@ -123,8 +123,8 @@ package Pix2PgpPkg is
    -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
    constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   -- trigger counter, plus frame size, plus decError, overOcc, pause, pauseError
-   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+4;
+   -- trigger counter, plus frame size, plus overOcc, pause, pauseError
+   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+3;
 
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
@@ -247,7 +247,7 @@ package Pix2PgpPkg is
    function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
                             lanePauseError: slv; laneFull: slv; laneTimeout: slv;
                             laneDown: slv; laneValid: slv) return slv;
-   function laneMetaMap    (decError: sl; overOcc: sl; pause: sl;
+   function laneMetaMap    (overOcc: sl; pause: sl;
                             pauseError: sl; frameSize: slv; trgCnt: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
@@ -329,7 +329,6 @@ package Pix2PgpPkg is
 
    type Pix2PgpLaneStatusType is record
       -- flags begin
-      inError     : sl;
       decError    : sl;
       overOcc     : sl;
       pause       : sl;
@@ -343,7 +342,6 @@ package Pix2PgpPkg is
 
    constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
       -- flags begin
-      inError     => '0',
       decError    => '0',
       overOcc     => '0',
       pause       => '0',
@@ -556,12 +554,11 @@ package body Pix2PgpPkg is
 
    end fpgaHeaderMap;
 
-   function laneMetaMap (decError: sl; overOcc: sl; pause: sl; pauseError: sl;
+   function laneMetaMap (overOcc: sl; pause: sl; pauseError: sl;
                          frameSize: slv; trgCnt: slv) return slv is
       variable retLaneMeta: slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
-      retLaneMeta(LANE_DEC_ERROR_POS_C)   := decError;
       retLaneMeta(LANE_OVEROCC_POS_C)     := overOcc;
       retLaneMeta(LANE_PAUSE_POS_C)       := pause;
       retLaneMeta(LANE_PAUSE_ERROR_POS_C) := pauseError;
