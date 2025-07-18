@@ -40,11 +40,12 @@ entity Pix2PgpLaneRxWrapper is
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
-      -- ASIC Rx Interface
+      -- Supervisor Interface
       dropBadColTrg  : in  sl;
       lanePostError  : in  sl;
       laneStatus     : out Pix2PgpLaneStatusType;
       laneMetaRd     : in  sl;
+      -- Merger Interface
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;

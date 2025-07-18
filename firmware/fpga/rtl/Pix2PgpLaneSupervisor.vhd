@@ -33,11 +33,21 @@ entity Pix2PgpLaneSupervisor is
       RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
       DELAY_G        : natural := 1);
    port(
-      clk   : in  sl;
-      rst   : in  sl := not(RST_POLARITY_G);
-      start : in  sl;
-      done  : out sl;
-      dout  : out slv(7 downto 0));
+      -- General Interface
+      pgpRxClk      : in  sl;
+      pgpRxRst      : in  sl := not(RST_POLARITY_G);
+      -- Lane Interface
+      laneStatus    : in  Pix2PgpLaneStatusArray;
+      laneMetaRd    : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      dropBadColTrg : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePostError : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      -- Trigger Buffer Interface
+      trgBuffTrgCnt : in  slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffSroEn  : in  sl;
+      trgBuffValid  : in  sl;
+      trgBuffRd     : out sl;
+      -- Lane Merger Interface
+      dout          : out slv(7 downto 0)); -- placeholder
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
@@ -67,7 +77,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
 
 begin
 
-   comb : process (start, r, rst) is
+   comb : process (r, pgpRxRst) is
       variable v : RegType;
    begin
 
@@ -75,7 +85,7 @@ begin
       v := r;
 
       -- Register input
-      v.start := start;
+      v.start := '0';
 
       -- Default values
       v.go   := '0';
@@ -112,7 +122,7 @@ begin
       dout <= r.cnt;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -121,21 +131,11 @@ begin
 
    end process comb;
 
-   U_delayDone : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => DELAY_G)
-      port map (
-         clk     => clk,
-         din(0)  => r.done,
-         dout(0) => done);
-
-   seq : process (clk, rst) is
+   seq : process (pgpRxClk, pgpRxRst) is
    begin
-      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(clk) then
+      elsif rising_edge(pgpRxClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;

@@ -40,7 +40,7 @@ entity Pix2PgpLaneRx is
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
-      -- StreamRx Interface
+      -- Supervisor Interface
       postError      : in  sl;
       dropBadTrg     : in  sl;
       frameMetaRd    : in  sl;

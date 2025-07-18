@@ -41,13 +41,19 @@ entity Pix2PgpTrgManager is
       -- ASIC Control Interface
       asicSro      : in  sl;
       asicSroEn    : in  sl;
-      -- Trigger Buffer Output
-      trgBuffRd    : in  sl;
-      trgBuffDout  : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffValid : out sl);
+      -- Lane Supervisor Interface
+      trgBuffRd     : in  sl;
+      trgBuffTrgCnt : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffSroEn  : out sl;
+      trgBuffValid  : out sl);
 end Pix2PgpTrgManager;
 
 architecture rtl of Pix2PgpTrgManager is
+
+   constant TRGBUFF_WIDTH_C : natural := TRGCNT_WIDTH_C + 1; -- trigger-counter plus SroEn
+
+   signal trgBuffDin  : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffDout : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
 
    type RegType is record
       asicSro    : sl;
@@ -76,14 +82,16 @@ begin
       v.asicSro := asicSro;
 
       -- posedge detection
-      if v.asicSro = '1' and r.asicSro = '0' and asicSroEn = '1' then
+      if v.asicSro = '1' and r.asicSro = '0' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
       -- negedge detection
-      if v.asicSro = '0' and r.asicSro = '1' and asicSroEn = '1' then
+      if v.asicSro = '0' and r.asicSro = '1' then
          v.trgBuffWr := '1';
       end if;
+
+      trgBuffDin <= r.fpgaTrgCnt & asicSroEn;
 
       -- Reset
       if (RST_ASYNC_G = false and asicRst = RST_POLARITY_G) then
@@ -106,14 +114,14 @@ begin
          GEN_SYNC_FIFO_G => false,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
-         DATA_WIDTH_G    => TRGCNT_WIDTH_C,
+         DATA_WIDTH_G    => TRGBUFF_WIDTH_C,
          ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
          rst      => asicRst,
          -- Write Ports
          wr_clk   => asicClk,
          wr_en    => r.trgBuffWr,
-         din      => r.fpgaTrgCnt,
+         din      => trgBuffDin,
          -- Read Ports
          rd_clk   => pgpRxClk,
          rd_en    => trgBuffRd,
@@ -128,5 +136,8 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+
+   trgBuffTrgCnt <= trgBuffDout(TRGBUFF_WIDTH_C-1 downto 1);
+   trgBuffSroEn  <= trgBuffDout(0);
 
 end rtl;

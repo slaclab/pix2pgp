@@ -33,6 +33,9 @@ entity Pix2PgpLaneMerger is
       RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
       DELAY_G        : natural := 1);
    port(
+      -- General Interface
+      pgpRxClk     : in  sl;
+      pgpRxRst     : in  sl := not(RST_POLARITY_G);
       clk   : in  sl;
       rst   : in  sl := not(RST_POLARITY_G);
       start : in  sl;
