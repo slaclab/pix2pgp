@@ -34,46 +34,38 @@ entity Pix2PgpTrgManager is
       TRG_FIFO_ADDR_WIDTH_G : positive := 6);
    port(
       -- General Interface
-      pgpRxClk        : in  sl;
-      pgpRxRst        : in  sl := not(RST_POLARITY_G);
-      -- ASIC Domain Interface
-      asicClk         : in  sl;
-      asicRst         : in  sl; -- active-low always
-      asicSro         : in  sl;
-      asicSroEn       : in  sl;
-      start : in  sl;
-      done  : out sl;
-      dout  : out slv(7 downto 0));
+      asicClk      : in  sl;
+      asicRst      : in  sl := not(RST_POLARITY_G);
+      pgpRxClk     : in  sl;
+      pgpRxRst     : in  sl;
+      -- ASIC Control Interface
+      asicSro      : in  sl;
+      asicSroEn    : in  sl;
+      -- Trigger Buffer Output
+      trgBuffRd    : in  sl;
+      trgBuffDout  : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffValid : out sl);
 end Pix2PgpTrgManager;
 
 architecture rtl of Pix2PgpTrgManager is
 
-   type StateType is (
-      IDLE_S,
-      COUNT_S);
-
    type RegType is record
-      cnt   : slv(7 downto 0);
-      go    : sl;
-      start : sl;
-      done  : sl;
-      state : stateType;
+      asicSro    : sl;
+      trgBuffWr  : sl;
+      fpgaTrgCnt : slv(TRGCNT_WIDTH_C-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      cnt   => (others => '0'),
-      go    => '0',
-      start => '0',
-      done  => '0',
-      state => IDLE_S
-   );
+      asicSro    => '0',
+      trgBuffWr  => '0',
+      fpgaTrgCnt => (others => '1'));
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
 begin
 
-   comb : process (start, r, rst) is
+   comb : process (asicSro, asicRst, asicSroEn, r) is
       variable v : RegType;
    begin
 
@@ -81,44 +73,20 @@ begin
       v := r;
 
       -- Register input
-      v.start := start;
+      v.asicSro := asicSro;
 
-      -- Default values
-      v.go   := '0';
-      v.done := '0';
-
-      -- rising-edge detection of start
-      if v.start = '1' and r.start = '0' then
-         v.go := '1';
+      -- posedge detection
+      if v.asicSro = '1' and r.asicSro = '0' and asicSroEn = '1' then
+         v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
       end if;
 
-      -------------------------------------------------------------------------
-      case r.state is
-      -------------------------------------------------------------------------
-         -- wait for 'go' signal
-         when IDLE_S =>
-            if r.go = '1' then
-               v.state := COUNT_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- start counting until all bits are high
-         when COUNT_S =>
-            v.cnt := r.cnt + 1;
-
-            -- using StdRtlPkg function
-            if uAnd(r.cnt) = '1' then
-               v.done  := '1';
-               v.state := IDLE_S;
-            end if;
-
-      end case;
-      -----------------------------------------------------------------------
-
-      dout <= r.cnt;
+      -- negedge detection
+      if v.asicSro = '0' and r.asicSro = '1' and asicSroEn = '1' then
+         v.trgBuffWr := '1';
+      end if;
 
       -- Reset
-      if (RST_ASYNC_G = false and rst = '1') then
+      if (RST_ASYNC_G = false and asicRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -141,22 +109,22 @@ begin
          DATA_WIDTH_G    => TRGCNT_WIDTH_C,
          ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
-         rst      => glblRst,
+         rst      => asicRst,
          -- Write Ports
          wr_clk   => asicClk,
          wr_en    => r.trgBuffWr,
          din      => r.fpgaTrgCnt,
          -- Read Ports
          rd_clk   => pgpRxClk,
-         rd_en    => r.trgBuffRd,
+         rd_en    => trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
 
-   seq : process (clk, rst) is
+   seq : process (asicClk, asicRst) is
    begin
-      if (RST_ASYNC_G and rst = '1') then
+      if (RST_ASYNC_G and asicRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(clk) then
+      elsif rising_edge(asicClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
