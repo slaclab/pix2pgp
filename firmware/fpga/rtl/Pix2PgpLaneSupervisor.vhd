@@ -49,9 +49,7 @@ entity Pix2PgpLaneSupervisor is
       trgBuffValid  : in  sl;
       trgBuffRd     : out sl;
       -- Lane Merger Interface
-      asicStatus    : out Pix2PgpLaneStatusArray;
-      laneTimeout   : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneDown      : out slv(NUM_OF_SERIALIZERS_C-1 downto 0));
+      asicStatus    : out Pix2PgpLaneStatusArray);
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
@@ -73,6 +71,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       armTimeout : sl;
       laneValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneUpCnt  : LaneUpCntArray;
+      asicStatus : Pix2PgpLaneStatusArray;
       state      : stateType;
    end record RegType;
 
@@ -84,6 +83,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       armTimeout => '0',
       laneValid  => (others => '0');
       laneUpCnt  => (others => (others => '0')),
+      asicStatus => (others => DEFAULT_PIX2PGP_LANESTATUS_C);
       state      => IDLE_S);
    );
 
@@ -107,13 +107,14 @@ begin
                    linkUpSync, laneStatus) is
       variable v            : RegType;
       variable inPause      : sl := '0';
+      variable evalLanes    : sl := '0';
+      variable rstEvalLanes : sl := '0';
       variable laneUp       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable laneReady    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable laneError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable laneTimeout  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
       variable laneEnable   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-      variable evalLanes    : sl := '0';
-      variable rstEvalLanes : sl := '0';
+      variable refTrgCnt    : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    begin
 
       -- Latch the current value
@@ -166,9 +167,10 @@ begin
                                not(laneUp(lane));
 
             -- determine if a lane is actually valid by masking out any errors
-            v.laneValid(lane) := laneStatus(lane).valid and
-                                 not(laneTimeout(lane)) and
-                                 not(laneError(lane))   and
+            v.laneValid(lane) := laneStatus(lane).valid  and
+                                 not(laneTimeout(lane))  and
+                                 not(laneError(lane))    and
+                                 config.laneEnable(lane) and
                                  laneUp(lane);
          end if;
 
@@ -183,7 +185,7 @@ begin
 
             if trgBuffValid = '1' then
 
-               v.state := WAIT_LANES_S;
+               v.state := EVAL_LANES_S;
 
                -- if this trigger never reached the ASIC, send a 'drop' frame
                -- same if no receiver lane is enabled/stable
@@ -198,7 +200,7 @@ begin
          -- wait for all activated lanes to go to a ready state
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
-         when WAIT_LANES_S =>
+         when EVAL_LANES_S =>
             v.armTimeout := '1';
             evalLanes    := '1';
 
@@ -206,35 +208,74 @@ begin
                v.state := EVAL_TRG_CNT_S;
             end if;
 
-
          -------------------------------------------------------------------------
          -- scan all trigger counter values of valid lanes;
-         -- if all of equal value -> proceed with read-out;
-         -- it not, force an error
+         -- if all of equal value -> proceed normally
+         -- it not, force an error to all lanes
          when EVAL_TRG_CNT_S =>
-            -- cycle through all valids...
 
-            -- if all trgCnts the same -> make the second check, which is the postReset check.
-            -- if postReset = '1', make sure that the current TrgCnt is DIFFERENT wrt the old one.
-            -- if it is, drop the postReset flag and continue.
+            -- first grab the first valid trigger counter...
+            for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
+
+               if r.laneValid(lane) = '1' then
+                  refTrgCnt := laneStatus(lane).trgCnt;
+                  exit;
+               end if;
+
+            end loop;
+
+            -- then check against the rest...
+            for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
+
+               if r.laneValid(lane) = '1' and laneStatus(lane).trgCnt /= refTrgCnt then
+                  trgMisalign := '1';
+                  exit;
+               end if;
+
+            end loop;
+
+            if (trgMisalign = '1') or
+               (trgMisalign = '0' and postReset = '1' and refTrgCnt = prvTrgCnt) then
+               laneError   := (others => '1');
+               v.laneValid := (others => '0');
+            end if;
+
+            v.state := START_MERGER_S;
+
+         -------------------------------------------------------------------------
+         -- start the merger FSM; update the status bits sent to the merger
+         when START_MERGER_S =>
 
             -- also grab the pause status and set the inPause reg,
             -- make the associated request depending if we are in pause or not
 
             -- then wait for merger...
 
-            -- before making the request, make sure that you pipe the statuses downstream to merger
-            -- the Pix2PgpLaneStatusType.trgCnt is the fpga trigger counter value
-
             -- TO-DO: add the hitmask count into the status (r.activeColCnt in lanerx);
-            -- add it in Pix2PgpLaneStatusType.
-            -- then add a relevant field in the fpga-generated header;
+            -- add it in Pix2PgpLaneStatusType. add it in laneMetaMap.
+            -- status fifo width has to change accordingly.
+
+            -- then add a relevant field in the fpga-generated header in the merger;
             -- it should be transmitted after the frameSize.
 
-            -- if not all trgCnts same... -> set the laneError and decError to all ones;
-            -- also set laneValid to all zeros.
+            -- request nominal or pause, and then go-to WAIT_MERGER_S
 
-            -- request nominal, and then go-to WAIT_MERGER_S
+            -- pipeline the statuses
+            for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
+               v.asicStatus(lane).decError   := laneError(lane); -- decError plus overflow
+               v.asicStatus(lane).overOcc    := laneStatus(lane).overOcc;
+               v.asicStatus(lane).pause      := laneStatus(lane).pause;
+               v.asicStatus(lane).pauseError := laneStatus(lane).pauseError;
+               v.asicStatus(lane).overflow   := laneStatus(lane).overflow;
+               v.asicStatus(lane).valid      := laneValid(lane);
+               v.asicStatus(lane).down       := not(laneUp(lane));
+               v.asicStatus(lane).timeout    := laneTimeout(lane);
+               v.asicStatus(lane).activeColCnt -- to-do
+               v.asicStatus(lane).trgCnt       -- to-do
+               v.asicStatus(lane).frameSize    -- to-do
+            end loop;
+
+            v.state := WAIT_MERGER_S;
 
 
          ----------------------------------------------------------------------
@@ -283,7 +324,7 @@ begin
             if inPause = '1' then
                v.trgBuffRd  := '0';
                rstEvalLanes := '1';
-               v.state      := WAIT_LANES_S;
+               v.state      := EVAL_LANES_S;
             end if;
 
          -------------------------------------------------------------------------

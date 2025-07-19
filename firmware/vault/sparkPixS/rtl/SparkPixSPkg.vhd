@@ -303,28 +303,34 @@ package Pix2PgpPkg is
 
    type Pix2PgpLaneStatusType is record
       -- flags begin
-      decError   : sl;
-      overOcc    : sl;
-      pause      : sl;
-      pauseError : sl;
-      overflow   : sl;
-      valid      : sl;
+      decError     : sl;
+      overOcc      : sl;
+      pause        : sl;
+      pauseError   : sl;
+      overflow     : sl;
+      valid        : sl;
+      down         : sl;
+      timeout      : sl;
       -- flags end
-      trgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      frameSize  : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+      activeColCnt : slv(BITMAX_COL_MANAGERS_C downto 0);
+      trgCnt       : slv(TRGCNT_WIDTH_C-1 downto 0);
+      frameSize    : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
       -- flags begin
-      decError   => '0',
-      overOcc    => '0',
-      pause      => '0',
-      pauseError => '0',
-      overflow   => '0',
-      valid      => '0',
+      decError     => '0',
+      overOcc      => '0',
+      pause        => '0',
+      pauseError   => '0',
+      overflow     => '0',
+      valid        => '0',
+      down         => '0',
+      timeout      => '0',
       -- flags end
-      trgCnt     => (others => '0'),
-      frameSize  => (others => '0'));
+      activeColCnt => (others => '0'),
+      trgCnt       => (others => '0'),
+      frameSize    => (others => '0'));
 
    constant FPGA_TIMEOUT_LIMIT_WIDTH_C : positive := 16;
 
