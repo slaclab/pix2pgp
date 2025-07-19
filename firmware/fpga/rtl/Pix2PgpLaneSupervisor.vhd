@@ -214,12 +214,17 @@ begin
          when EVAL_TRG_CNT_S =>
             -- cycle through all valids...
 
-            -- if all trgCnts the same -> also grab the pause status and set the inPause reg,
+            -- if all trgCnts the same -> make the second check, which is the postReset check.
+            -- if postReset = '1', make sure that the current TrgCnt is DIFFERENT wrt the old one.
+            -- if it is, drop the postReset flag and continue.
+
+            -- also grab the pause status and set the inPause reg,
             -- make the associated request depending if we are in pause or not
 
             -- then wait for merger...
 
             -- before making the request, make sure that you pipe the statuses downstream to merger
+            -- the Pix2PgpLaneStatusType.trgCnt is the fpga trigger counter value
 
             -- TO-DO: add the hitmask count into the status (r.activeColCnt in lanerx);
             -- add it in Pix2PgpLaneStatusType.
@@ -229,7 +234,7 @@ begin
             -- if not all trgCnts same... -> set the laneError and decError to all ones;
             -- also set laneValid to all zeros.
 
-            -- request nominal, and then go-to the special state that raises the reset and waits
+            -- request nominal, and then go-to WAIT_MERGER_S
 
 
          ----------------------------------------------------------------------
@@ -240,15 +245,16 @@ begin
                v.state := DONE_S;
 
                if uOr(laneError) = '1' then
-                  v.state := RESET_S;
+                  postReset := '1';
+                  v.state   := RESET_S;
                end if;
 
             end if;
 
          -------------------------------------------------------------------------
+         -- grab the trigger counter. reset the inPause flag
          -- perform the reset; do the postError and all that...
-         -- also reset the inPause flag...
-         -- then go-to done_s when done resetting
+         -- then go-to DONE_S when done resetting
          when RESET_S =>
 
          ----------------------------------------------------------------------
@@ -262,7 +268,14 @@ begin
             end if;
 
             if uAnd(r.waitCnt) = '1' then
+
                v.state := IDLE_S;
+
+               -- override if after a reset
+               if postReset = '1' then
+                  v.state := POST_RESET_S;
+               end if;
+
             end if;
 
             -- still more data to come for this event; don't pop the word;
@@ -272,6 +285,13 @@ begin
                rstEvalLanes := '1';
                v.state      := WAIT_LANES_S;
             end if;
+
+         -------------------------------------------------------------------------
+         -- in post-reset, raise the evalLanes flag.
+         -- if ANY lane is in error, reset again
+         -- if there is no error and laneReady = laneEnable, go-to idle_s.
+         -- the postReset flag needs to be retained to make the extra trgCnt check.
+         when POST_RESET_S =>
 
       end case;
       -----------------------------------------------------------------------
