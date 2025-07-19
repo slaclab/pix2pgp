@@ -36,6 +36,8 @@ entity Pix2PgpLaneSupervisor is
       -- General Interface
       pgpRxClk      : in  sl;
       pgpRxRst      : in  sl := not(RST_POLARITY_G);
+      config        : in  Pix2PgpStreamRxConfigType;
+      pgp4RxLinkUp  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Lane Interface
       laneStatus    : in  Pix2PgpLaneStatusArray;
       laneMetaRd    : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -47,29 +49,42 @@ entity Pix2PgpLaneSupervisor is
       trgBuffValid  : in  sl;
       trgBuffRd     : out sl;
       -- Lane Merger Interface
-      dout          : out slv(7 downto 0)); -- placeholder
+      asicStatus    : out Pix2PgpLaneStatusArray;
+      laneTimeout   : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDown      : out slv(NUM_OF_SERIALIZERS_C-1 downto 0));
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
+
+   signal timeout    : sl := '0';
+   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
    type StateType is (
       IDLE_S,
       COUNT_S);
 
    type RegType is record
-      cnt   : slv(7 downto 0);
-      go    : sl;
-      start : sl;
-      done  : sl;
-      state : stateType;
+      reqDrop    : sl;
+      reqNominal : sl;
+      reqPause   : sl;
+      mergerBusy : sl;
+      armTimeout : sl;
+      laneValid  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneUpCnt  : LaneUpCntArray;
+      state      : stateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      cnt   => (others => '0'),
-      go    => '0',
-      start => '0',
-      done  => '0',
-      state => IDLE_S
+      reqDrop    => '0',
+      reqNominal => '0',
+      reqPause   => '0',
+      mergerBusy => '0',
+      armTimeout => '0',
+      laneValid  => (others => '0');
+      laneUpCnt  => (others => (others => '0')),
+      state      => IDLE_S);
    );
 
    signal r   : RegType := REG_INIT_C;
@@ -77,48 +92,199 @@ architecture rtl of Pix2PgpLaneSupervisor is
 
 begin
 
-   comb : process (r, pgpRxRst) is
-      variable v : RegType;
+   U_SyncLinkUp : entity surf.SynchronizerVector
+      generic map (
+         TPD_G   => TPD_G,
+         WIDTH_G => NUM_OF_SERIALIZERS_C)
+      port map (
+         clk     => pgpRxClk,
+         dataIn  => pgp4RxLinkUp,
+         dataOut => linkUpSync);
+
+   -----------------------------------------------------------------------
+   -----------------------------------------------------------------------
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, timeout, config,
+                   linkUpSync, laneStatus) is
+      variable v            : RegType;
+      variable inPause      : sl := '0';
+      variable laneUp       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable laneReady    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable laneError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable laneTimeout  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable laneEnable   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+      variable evalLanes    : sl := '0';
+      variable rstEvalLanes : sl := '0';
    begin
 
       -- Latch the current value
       v := r;
 
-      -- Register input
-      v.start := '0';
+      -- Register Inputs
+      v.mergerBusy := mergerBusy;
 
       -- Default values
-      v.go   := '0';
-      v.done := '0';
+      v.reqDrop    := '0';
+      v.reqNominal := '0';
+      v.reqPause   := '0';
+      v.armTimeout := '0';
+      v.trgBuffRd  := '0';
+      evalLanes    := '0';
+      rstEvalLanes := '0';
 
-      -- rising-edge detection of start
-      if v.start = '1' and r.start = '0' then
-         v.go := '1';
-      end if;
+      for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+
+         laneEnable := config(lane).laneEnable;
+
+         -- link stability counters
+         if linkUpSync(lane) = '1' and uAnd(r.laneUpCnt(lane)) /= '1' then
+            v.laneUpCnt(lane) := r.laneUpCnt(lane) + 1;
+         end if;
+
+         if linkUpSync(lane) = '0' then
+            v.laneUpCnt(lane) := (others => '0');
+         end if;
+
+         laneUp(lane) := uAnd(r.laneUpCnt(lane));
+
+         -- activate lane evaluation only in specific parts of the FSM
+         if evalLanes = '1' then
+
+            if timeout = '1' then
+               laneTimeout(lane) := not(laneStatus(lane).valid);
+            end if;
+
+            -- determine if a lane is in error or not
+            -- a lane is not in error if the link is down
+            laneError(lane) := (laneStatus(lane).overflow or laneStatus(lane).decError) and
+                                not(laneUp(lane));
+
+            -- determine if a lane is ready to be read-out or not;
+            -- a lane is 'ready' if its link is down
+            laneReady(lane) := laneStatus(lane).valid or
+                               laneTimeout(lane)      or
+                               laneError(lane)        or
+                               not(laneUp(lane));
+
+            -- determine if a lane is actually valid by masking out any errors
+            v.laneValid(lane) := laneStatus(lane).valid and
+                                 not(laneTimeout(lane)) and
+                                 not(laneError(lane))   and
+                                 laneUp(lane);
+         end if;
+
+      end loop;
 
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
-         -- wait for 'go' signal
+         -- wait for the trigger buffer to have a word
          when IDLE_S =>
-            if r.go = '1' then
-               v.state := COUNT_S;
+            rstEvalLanes := '1';
+
+            if trgBuffValid = '1' then
+
+               v.state := WAIT_LANES_S;
+
+               -- if this trigger never reached the ASIC, send a 'drop' frame
+               -- same if no receiver lane is enabled/stable
+               if trgBuffSroEn = '0' or uOr(laneUp) = '0' then
+                  v.reqDrop := '1';
+                  v.state   := WAIT_MERGER_S;
+               end if;
+
             end if;
 
-         ----------------------------------------------------------------------
-         -- start counting until all bits are high
-         when COUNT_S =>
-            v.cnt := r.cnt + 1;
+         -------------------------------------------------------------------------
+         -- wait for all activated lanes to go to a ready state
+         -- 'ready' might mean that the lane has a valid frame;
+         -- or, that the lane is in some error state
+         when WAIT_LANES_S =>
+            v.armTimeout := '1';
+            evalLanes    := '1';
 
-            -- using StdRtlPkg function
-            if uAnd(r.cnt) = '1' then
-               v.done  := '1';
+            if laneReady = laneEnable then
+               v.state := EVAL_TRG_CNT_S;
+            end if;
+
+
+         -------------------------------------------------------------------------
+         -- scan all trigger counter values of valid lanes;
+         -- if all of equal value -> proceed with read-out;
+         -- it not, force an error
+         when EVAL_TRG_CNT_S =>
+            -- cycle through all valids...
+
+            -- if all trgCnts the same -> also grab the pause status and set the inPause reg,
+            -- make the associated request depending if we are in pause or not
+
+            -- then wait for merger...
+
+            -- before making the request, make sure that you pipe the statuses downstream to merger
+
+            -- TO-DO: add the hitmask count into the status (r.activeColCnt in lanerx);
+            -- add it in Pix2PgpLaneStatusType.
+            -- then add a relevant field in the fpga-generated header;
+            -- it should be transmitted after the frameSize.
+
+            -- if not all trgCnts same... -> set the laneError and decError to all ones;
+            -- also set laneValid to all zeros.
+
+            -- request nominal, and then go-to the special state that raises the reset and waits
+
+
+         ----------------------------------------------------------------------
+         -- wait for merger to finish sending out the frame;
+         -- also figure out if we need a reset or not...
+         when WAIT_MERGER_S =>
+            if v.mergerBusy = '0' and r.mergerBusy = '1' then
+               v.state := DONE_S;
+
+               if uOr(laneError) = '1' then
+                  v.state := RESET_S;
+               end if;
+
+            end if;
+
+         -------------------------------------------------------------------------
+         -- perform the reset; do the postError and all that...
+         -- also reset the inPause flag...
+         -- then go-to done_s when done resetting
+         when RESET_S =>
+
+         ----------------------------------------------------------------------
+         -- pop the trigger buffer word and wait
+         when DONE_S =>
+
+            v.waitCnt := r.waitCnt + 1;
+
+            if uOr(r.waitCnt) = '0' then
+               v.trgBuffRd := '1';
+            end if;
+
+            if uAnd(r.waitCnt) = '1' then
                v.state := IDLE_S;
+            end if;
+
+            -- still more data to come for this event; don't pop the word;
+            -- re-evaluate lane statuses instead
+            if inPause = '1' then
+               v.trgBuffRd  := '0';
+               rstEvalLanes := '1';
+               v.state      := WAIT_LANES_S;
             end if;
 
       end case;
       -----------------------------------------------------------------------
 
+      if rstEvalLanes = '1' then
+         laneTimeout := (others => '0');
+         laneReady   := (others => '0');
+         laneError   := (others => '0');
+         v.laneValid := (others => '0');
+         v.waitCnt   := (others => '0');
+      end if;
+
+      -- Outputs
       dout <= r.cnt;
 
       -- Reset
@@ -139,5 +305,23 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+   -----------------------------------------------------------------------
+   -----------------------------------------------------------------------
+
+   -- Watchdog
+   U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
+      port map(
+         -- General Interface
+         clk     => pgpRxClk,
+         rst     => pgpRxRst,
+         limit   => config.timeoutLimit,
+         -- Control Interface
+         set     => r.armTimeout,
+         timeout => timeout);
 
 end rtl;

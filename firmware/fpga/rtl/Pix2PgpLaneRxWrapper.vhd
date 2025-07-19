@@ -60,8 +60,9 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal postError      : sl := '0';
    signal dropBadTrg     : sl := '0';
    signal laneRxError    : sl := '0';
-   signal obAxiMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxiSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
+   signal obAxiMaster    : AxiStreamMasterType       := AXI_STREAM_MASTER_INIT_C;
+   signal obAxiSlave     : AxiStreamSlaveType        := AXI_STREAM_SLAVE_INIT_C;
 
 begin
 
@@ -76,6 +77,7 @@ begin
          -- General Interface
          laneClk        => laneClk,
          laneRst        => laneRxRst,
+         config         => config,
          -- RX FIFO Interface
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
@@ -119,7 +121,7 @@ begin
       port map (
          clk     => laneClk,
          din(0)  => dropBadColTrg,
-         dout(0) => dropBadTrg);
+         dout(0) => config.dropBadColTrg);
 
    U_PipelineLaneMetaRd : entity surf.SlvDelay
       generic map (

@@ -235,6 +235,143 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpDataBusType;
 
+   ------------------------------------------------------------------------------
+   -- FPGA Preamble Mapping
+   ------------------------------------------------------------------------------
+   constant FPGA_PREAMBLE_LEN_C : natural := 128;
+   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 64;
+   subtype ASIC_TYPE_POS_C     is natural range  63 downto 48;
+   subtype ASIC_ID_POS_C       is natural range  47 downto 32;
+   subtype FPGA_ID_POS_C       is natural range  31 downto 16;
+   subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
+   subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
+
+   constant ASIC_ID_LEN_C       : natural := 32;
+   constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
+   constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
+                                                     & x"70"  -- p
+                                                     & x"69"  -- i
+                                                     & x"78"  -- x
+                                                     & x"32"  -- 2
+                                                     & x"70"  -- p
+                                                     & x"67"  -- g
+                                                     & x"70"; -- p
+
+   ------------------------------------------------------------------------------
+   -- FPGA Header Mapping
+   ------------------------------------------------------------------------------
+   -- 8 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
+   --           laneFull,     laneTimeout, laneDown,  laneValid
+   ------------------------------------------------------------------------------
+   constant FPGA_HEADER_FIELDS_C   : natural := 8;
+   constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
+   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
+                                                                   NUM_OF_SERIALIZERS_C);
+   ------------------------------------------------------------------------------
+   subtype FPGA_LANERX_DEC_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
+                                             FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
+
+   subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*7-1 downto
+                                             FPGA_HEADER_STRADDLE_C*6;
+
+   subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*6-1 downto
+                                             FPGA_HEADER_STRADDLE_C*5;
+
+   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*5-1 downto
+                                             FPGA_HEADER_STRADDLE_C*4;
+
+   subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
+                                             FPGA_HEADER_STRADDLE_C*3;
+
+   subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
+                                             FPGA_HEADER_STRADDLE_C*2;
+
+   subtype FPGA_LANERX_DOWN_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
+                                             FPGA_HEADER_STRADDLE_C;
+
+   subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*1-1 downto 0;
+   ------------------------------------------------------------------------------
+
+   -- trailer is fixed; contains the pix2pgp identifier string
+   ------------------------------------------------------------------------------
+   constant FPGA_TRAILER_LEN_C : natural := 64;
+   ------------------------------------------------------------------------------
+
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+
+   type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+
+   type Pix2PgpLaneStatusType is record
+      -- flags begin
+      decError   : sl;
+      overOcc    : sl;
+      pause      : sl;
+      pauseError : sl;
+      overflow   : sl;
+      valid      : sl;
+      -- flags end
+      trgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
+      frameSize  : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
+      -- flags begin
+      decError   => '0',
+      overOcc    => '0',
+      pause      => '0',
+      pauseError => '0',
+      overflow   => '0',
+      valid      => '0',
+      -- flags end
+      trgCnt     => (others => '0'),
+      frameSize  => (others => '0'));
+
+   constant FPGA_TIMEOUT_LIMIT_WIDTH_C : positive := 16;
+
+   type Pix2PgpStreamRxConfigType is record
+      dropBadColTrg : sl;
+      laneEnable    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      timeoutLimit  : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
+      -- flags begin
+      dropBadColTrg => '0',
+      laneEnable    => (others => '0'),
+      timeoutLimit  => (others => '0'));
+
+   type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
+
+   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
+   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+
+   -- AXI-Stream configuration
+   constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
+
+   constant ASIC_TX_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => PGP_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
+
+   constant PIX2PGP_FPGA_AXI_CONFIG_C : AxiStreamConfigType := (
+      TSTRB_EN_C    => false,
+      TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
+      TDEST_BITS_C  => 4,
+      TID_BITS_C    => 0,
+      TKEEP_MODE_C  => TKEEP_NORMAL_C,
+      TUSER_BITS_C  => 4,
+      TUSER_MODE_C  => TUSER_NORMAL_C);
 
    -- functions
    function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
@@ -271,128 +408,6 @@ package Pix2PgpPkg is
    -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
    --
-
-   ------------------------------------------------------------------------------
-   -- FPGA Preamble Mapping
-   constant FPGA_PREAMBLE_LEN_C : natural := 128;
-   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 64;
-   subtype ASIC_TYPE_POS_C     is natural range  63 downto 48;
-   subtype ASIC_ID_POS_C       is natural range  47 downto 32;
-   subtype FPGA_ID_POS_C       is natural range  31 downto 16;
-   subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
-   subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
-
-   constant ASIC_ID_LEN_C       : natural := 32;
-   constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
-   constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
-                                                     & x"70"  -- p
-                                                     & x"69"  -- i
-                                                     & x"78"  -- x
-                                                     & x"32"  -- 2
-                                                     & x"70"  -- p
-                                                     & x"67"  -- g
-                                                     & x"70"; -- p
-
-   -- FPGA Header Mapping
-   ------------------------------------------------------------------------------
-   -- 8 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
-   --           laneFull,     laneTimeout, laneDown,  laneValid
-   ------------------------------------------------------------------------------
-   constant FPGA_HEADER_FIELDS_C   : natural := 8;
-   constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
-   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
-                                                                   NUM_OF_SERIALIZERS_C);
-   ------------------------------------------------------------------------------
-   subtype FPGA_LANERX_DEC_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
-                                             FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
-
-   subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*7-1 downto
-                                             FPGA_HEADER_STRADDLE_C*6;
-
-   subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*6-1 downto
-                                             FPGA_HEADER_STRADDLE_C*5;
-
-   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*5-1 downto
-                                             FPGA_HEADER_STRADDLE_C*4;
-
-   subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
-                                             FPGA_HEADER_STRADDLE_C*3;
-
-   subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
-                                             FPGA_HEADER_STRADDLE_C*2;
-
-   subtype FPGA_LANERX_DOWN_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
-                                             FPGA_HEADER_STRADDLE_C;
-
-   subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*1-1 downto 0;
-   ------------------------------------------------------------------------------
-
-   type Pix2PgpLaneStatusType is record
-      -- flags begin
-      decError    : sl;
-      overOcc     : sl;
-      pause       : sl;
-      pauseError  : sl;
-      overflow    : sl;
-      valid       : sl;
-      -- flags end
-      trgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
-      frameSize   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-   end record;
-
-   constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
-      -- flags begin
-      decError    => '0',
-      overOcc     => '0',
-      pause       => '0',
-      pauseError  => '0',
-      overflow    => '0',
-      valid       => '0',
-      -- flags end
-      trgCnt      => (others => '0'),
-      frameSize   => (others => '0'));
-
-   -- trailer is fixed; contains the pix2pgp identifier string
-   ------------------------------------------------------------------------------
-   constant FPGA_TRAILER_LEN_C : natural := 64;
-   ------------------------------------------------------------------------------
-
-   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
-
-   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-
-   type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-
-   type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
-
-   -- AXI-Stream configuration
-   constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
-
-   constant ASIC_TX_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => PGP_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
-
-   constant PIX2PGP_FPGA_AXI_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => FPGA_DATABUS_DWIDTH_C/8,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 0,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_NORMAL_C);
 
 end Pix2PgpPkg;
 

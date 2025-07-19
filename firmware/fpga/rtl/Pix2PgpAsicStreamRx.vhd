@@ -34,7 +34,6 @@ entity Pix2PgpAsicStreamRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G              : natural  := 0;
-      TIMEOUT_LIMIT_WIDTH_G  : positive := 16;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
@@ -140,7 +139,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       cntRst          : sl;
       usrRst          : sl;
       fpgaId          : slv(15 downto 0);
-      timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_G-1 downto 0);
+      timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
       laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneEnableSet   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -836,7 +835,7 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_G)
+         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
       port map(
          -- General Interface
          clk     => pgpRxClk,
