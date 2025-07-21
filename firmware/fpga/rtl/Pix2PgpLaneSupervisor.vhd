@@ -30,8 +30,7 @@ entity Pix2PgpLaneSupervisor is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      DELAY_G        : natural := 1);
+      RST_POLARITY_G : sl      := '1');  -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
       pgpRxClk      : in  sl;

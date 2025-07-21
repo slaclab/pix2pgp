@@ -251,7 +251,6 @@ package Pix2PgpPkg is
    subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
    subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
 
-   constant ASIC_ID_LEN_C       : natural := 32;
    constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
    constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
                                                      & x"70"  -- p
@@ -341,7 +340,8 @@ package Pix2PgpPkg is
 
    type Pix2PgpStreamRxConfigType is record
       dropBadColTrg : sl;
-      realignOnSof  : al;
+      realignOnSof  : sl;
+      fpgaId        : slv(15 downto 0);
       laneEnable    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       timeoutLimit  : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
    end record;
@@ -350,6 +350,7 @@ package Pix2PgpPkg is
       -- flags begin
       dropBadColTrg => '0',
       realignOnSof  => '1',
+      fpgaId        => toSlv(FPGA_ID_DEFAULT_C, 16),
       laneEnable    => (others => '0'),
       timeoutLimit  => (others => '0'));
 
