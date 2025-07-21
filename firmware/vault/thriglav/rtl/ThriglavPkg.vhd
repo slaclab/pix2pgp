@@ -341,6 +341,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpStreamRxConfigType is record
       dropBadColTrg : sl;
+      realignOnSof  : al;
       laneEnable    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       timeoutLimit  : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
    end record;
@@ -348,6 +349,7 @@ package Pix2PgpPkg is
    constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
       -- flags begin
       dropBadColTrg => '0',
+      realignOnSof  => '1',
       laneEnable    => (others => '0'),
       timeoutLimit  => (others => '0'));
 

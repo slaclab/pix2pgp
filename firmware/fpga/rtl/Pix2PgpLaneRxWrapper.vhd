@@ -43,6 +43,7 @@ entity Pix2PgpLaneRxWrapper is
       -- Supervisor Interface
       dropBadColTrg  : in  sl;
       lanePostError  : in  sl;
+      realignOnSof   : in  sl;
       laneStatus     : out Pix2PgpLaneStatusType;
       laneMetaRd     : in  sl;
       -- Merger Interface
@@ -120,6 +121,16 @@ begin
          clk     => laneClk,
          din(0)  => dropBadColTrg,
          dout(0) => config.dropBadColTrg);
+
+   U_PipelineRealign : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => realignOnSof,
+         dout(0) => config.realignOnSof);
 
    U_PipelineLaneMetaRd : entity surf.SlvDelay
       generic map (

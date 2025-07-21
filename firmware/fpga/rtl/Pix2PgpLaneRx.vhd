@@ -265,7 +265,9 @@ begin
          when WAIT_HEADER_S =>
 
             -- post-error state takes precedence; go look for dummy headers
-            if postError = '1' then
+            -- if realignOnSof is high though, just wait for an SoF;
+            -- the option exists because SparkPix-S does not feature conventional frame delimiters
+            if postError = '1' and config.realignOnSof = '0' then
                v.state := WAIT_DUMMY_S;
 
             -- lane full or decoding error detected
