@@ -198,7 +198,7 @@ begin
       axiSlaveRegister (axilEp, x"618", 0, v.realignOnSof);
       --
       axiSlaveRegisterR(axilEp, x"620", 0, laneDown);
-      axiSlaveRegisterR(axilEp, x"620", 0, mergerBusy);
+      axiSlaveRegisterR(axilEp, x"624", 0, mergerBusy);
       --
       axiSlaveRegister (axilEp, x"700", 0, v.usrRst);
 

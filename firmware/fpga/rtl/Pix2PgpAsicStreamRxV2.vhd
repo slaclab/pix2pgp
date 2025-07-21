@@ -123,9 +123,9 @@ begin
 
    end generate GEN_LANE;
 
-   -----------------
+   ------------------
    -- Lane Supervisor
-   -----------------
+   ------------------
    U_LaneSupervisor: entity pix2pgp.Pix2PgpLaneSupervisor
       generic map(
          TPD_G          => TPD_G,
@@ -156,6 +156,34 @@ begin
          reqNominal     => reqNominal,
          reqPause       => reqPause);
 
+   --------------
+   -- Lane Merger
+   --------------
+   U_LaneMerger: entity pix2pgp.Pix2PgpLaneMerger
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         ASIC_ID_G      => ASIC_ID_G)
+      port map(
+         -- General Interface
+         pgpRxClk      => pgpRxClk,
+         pgpRxRst      => pgpRxRst,
+         config        => config,
+         -- Supervisor Interface
+         mergerBusy    => mergerBusy,
+         asicStatus    => asicStatus,
+         fpgaTrgCnt    => fpgaTrgCnt,
+         reqDrop       => reqDrop,
+         reqNominal    => reqNominal,
+         reqPause      => reqPause,
+         -- Lane AXI-Stream Input Interface
+         laneRxMasters => laneRxMasters,
+         laneRxSlaves  => laneRxSlaves,
+         -- AXI-Stream Output Interface (on pgpRxClk domain)
+         asicRxMaster  => asicRxMaster,
+         asicRxSlave   => asicRxSlave);
+
    ------------------
    -- Trigger Manager
    ------------------
@@ -180,9 +208,9 @@ begin
          trgBuffSroEn  => trgBuffSroEn,
          trgBuffValid  => trgBuffValid);
 
-   ------------------
-   -- Trigger Manager
-   ------------------
+   -------------------
+   -- Axi-Lite Manager
+   -------------------
    U_AxiLiteManager: entity pix2pgp.Pix2PgpAxiLiteManager
       generic map(
          TPD_G              => TPD_G,

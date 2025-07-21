@@ -163,21 +163,11 @@ class Pix2PgpAsicStreamRx(pr.Device):
             hidden       = False,
         ))
 
-        self.add(pr.RemoteVariable(
-            name         = 'LaneInError',
-            description  = 'Lane is stuck in an ERROR state',
+        addBool(
+            name        = 'RealignOnSof',
+            description  = 'Realign on Start-Of-Frame after recovering from Error',
             offset       = 0x618,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'LaneFull',
-            description  = 'One of the Lane FIFOs got full and have not being reset',
-            offset       = 0x61C,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
-        ))
+        )
 
         self.add(pr.RemoteVariable(
             name         = 'Pgp4RxLinkDown',
@@ -186,6 +176,15 @@ class Pix2PgpAsicStreamRx(pr.Device):
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'MergerBusy',
+            description  = 'Merger FSM is Busy',
+            offset       = 0x624,
+            bitSize      = 1,
+            mode         = 'RO',
+        ))
+
 
         self.add(pr.RemoteCommand(
             name         = 'UsrRst',
