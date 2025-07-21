@@ -350,7 +350,7 @@ package Pix2PgpPkg is
       -- flags begin
       dropBadColTrg => '0',
       realignOnSof  => '1',
-      fpgaId        => toSlv(FPGA_ID_DEFAULT_C, 16),
+      fpgaId        => FPGA_ID_DEFAULT_C,
       laneEnable    => (others => '0'),
       timeoutLimit  => (others => '0'));
 

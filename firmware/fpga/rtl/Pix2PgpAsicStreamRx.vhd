@@ -128,6 +128,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneAlignSof    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTrgCnt      : TrgCntArray;
       laneUpCnt       : LaneUpCntArray;
       waitLaneSel     : sl;
@@ -173,6 +174,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       => (others => '0'),
       laneValid       => (others => '0'),
       laneTimeout     => (others => '0'),
+      laneAlignSof    => (others => '0'),
       laneTrgCnt      => (others => (others => '0')),
       laneUpCnt       => (others => (others => '0')),
       waitLaneSel     => '0',
@@ -311,6 +313,7 @@ begin
       -- default flags
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          v.laneRxSlaves(lane).tReady := '0'; -- disable by default
+         v.laneAlignSof(lane)        := toSl(EVAL_SOF_C);
       end loop;
 
       ----------------------------------------------------------------------------------------------
@@ -808,6 +811,7 @@ begin
             -- ASIC Rx Interface
             dropBadColTrg  => dropBadColTrg(lane),
             lanePostError  => lanePostError(lane),
+            realignOnSof   => r.laneAlignSof(lane),
             laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),
             laneRxMaster   => laneRxMasters(lane),
