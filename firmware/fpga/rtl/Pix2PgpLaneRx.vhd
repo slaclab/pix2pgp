@@ -80,7 +80,8 @@ architecture rtl of Pix2PgpLaneRx is
       laneFull       : sl;
       waitCnt        : slv(2 downto 0);
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      activeColCnt   : slv(BITMAX_COL_MANAGERS_C downto 0);
+      activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      colCntHeader   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
       dummyCnt       : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
       frameSizeCnt   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       dataLenCnt     : slv(7 downto 0);
@@ -104,6 +105,7 @@ architecture rtl of Pix2PgpLaneRx is
       waitCnt        => (others => '0'),
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
+      colCntHeader   => (others => '0'),
       dummyCnt       => (others => '0'),
       frameSizeCnt   => (others => '0'),
       dataLenCnt     => (others => '0'),
@@ -282,11 +284,12 @@ begin
                   v.inPause      := pause and not(pauseErr); -- mask if in pause-error
                   v.inPauseError := pauseErr;
                   v.trgCntHeader := trgCnt;
+                  v.colCntHeader := onesCount(colHitmask);
 
                   if uOr(colHitmask) = '0' then
                      v.state := CLOSE_FRAME_S;
                   else
-                     v.activeColCnt := onesCount(colHitmask);
+                     v.activeColCnt := v.colCntHeader;
                      v.state        := PARSE_COL_METADATA_S;
                   end if;
                end if;
@@ -422,6 +425,7 @@ begin
                                     r.inPause,
                                     r.inPauseError,
                                     r.frameSizeCnt,
+                                    r.colCntHeader,
                                     r.trgCntHeader);
 
       rxFifoSlave   <= v.rxFifoSlave;

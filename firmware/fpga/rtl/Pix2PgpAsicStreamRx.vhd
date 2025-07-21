@@ -124,7 +124,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       armTimeout      : sl;
       laneRst         : sl;
       lanePostError   : sl;
-      laneSel         : slv(BITMAX_SERIALIZERS_C downto 0);
+      laneSel         : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);

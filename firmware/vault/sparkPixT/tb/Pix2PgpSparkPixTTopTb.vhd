@@ -336,7 +336,6 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          ASIC_ID_G              => 0,
-         TIMEOUT_LIMIT_WIDTH_G  => TIMEOUT_LIMIT_WIDTH_G,
          LANE_PIPE_STAGES_G     => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
