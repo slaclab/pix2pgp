@@ -37,13 +37,12 @@ entity Pix2PgpLaneRxWrapper is
       -- General Interface
       laneClk        : in  sl;
       laneRst        : in  sl := not(RST_POLARITY_G);
+      config         : in  Pix2PgpStreamRxConfigType;
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- Supervisor Interface
-      dropBadColTrg  : in  sl;
       lanePostError  : in  sl;
-      realignOnSof   : in  sl;
       laneStatus     : out Pix2PgpLaneStatusType;
       laneMetaRd     : in  sl;
       -- Merger Interface
@@ -60,7 +59,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
    signal laneRxError    : sl := '0';
-   signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
+   signal configLane     : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
    signal obAxiMaster    : AxiStreamMasterType       := AXI_STREAM_MASTER_INIT_C;
    signal obAxiSlave     : AxiStreamSlaveType        := AXI_STREAM_SLAVE_INIT_C;
 
@@ -77,7 +76,7 @@ begin
          -- General Interface
          laneClk        => laneClk,
          laneRst        => laneRxRst,
-         config         => config,
+         config         => configLane,
          -- RX FIFO Interface
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
@@ -119,8 +118,8 @@ begin
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => dropBadColTrg,
-         dout(0) => config.dropBadColTrg);
+         din(0)  => config.dropBadColTrg,
+         dout(0) => configLane.dropBadColTrg);
 
    U_PipelineRealign : entity surf.SlvDelay
       generic map (
@@ -129,8 +128,8 @@ begin
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => realignOnSof,
-         dout(0) => config.realignOnSof);
+         din(0)  => config.realignOnSof,
+         dout(0) => configLane.realignOnSof);
 
    U_PipelineLaneMetaRd : entity surf.SlvDelay
       generic map (

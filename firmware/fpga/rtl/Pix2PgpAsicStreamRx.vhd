@@ -101,6 +101,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneMetaValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal laneMetaRd    : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
+   signal config        : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
+
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
    type StateType is (
@@ -128,7 +130,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneValid       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneAlignSof    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTrgCnt      : TrgCntArray;
       laneUpCnt       : LaneUpCntArray;
       waitLaneSel     : sl;
@@ -140,7 +141,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
       cntRst          : sl;
       usrRst          : sl;
       fpgaId          : slv(15 downto 0);
-      timeoutLimit    : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      timeoutLimit    : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
       laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneEnableSet   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -174,7 +175,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
       laneReady       => (others => '0'),
       laneValid       => (others => '0'),
       laneTimeout     => (others => '0'),
-      laneAlignSof    => (others => '0'),
       laneTrgCnt      => (others => (others => '0')),
       laneUpCnt       => (others => (others => '0')),
       waitLaneSel     => '0',
@@ -313,7 +313,6 @@ begin
       -- default flags
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          v.laneRxSlaves(lane).tReady := '0'; -- disable by default
-         v.laneAlignSof(lane)        := toSl(EVAL_SOF_C);
       end loop;
 
       ----------------------------------------------------------------------------------------------
@@ -719,6 +718,10 @@ begin
       ----------------------------------------------------------------------------------------------
       -- Outputs
       ----------------------------------------------------------------------------------------------
+      config.dropBadColTrg <= r.dropBadColTrg;
+      config.realignOnSof  <= toSl(EVAL_SOF_C);
+      config.timeoutLimit  <= r.timeoutLimit;
+
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
          -- fan-out
@@ -805,13 +808,12 @@ begin
             -- General Interface
             laneClk        => pgpRxClk,
             laneRst        => laneRst(lane),
+            config         => config,
             -- RX FIFO Interface
             pgp4RxMaster   => pgp4RxMaster(lane),
             pgp4RxSlave    => pgp4RxSlave(lane),
             -- ASIC Rx Interface
-            dropBadColTrg  => dropBadColTrg(lane),
             lanePostError  => lanePostError(lane),
-            realignOnSof   => r.laneAlignSof(lane),
             laneStatus     => laneStatus(lane),
             laneMetaRd     => laneMetaRd(lane),
             laneRxMaster   => laneRxMasters(lane),
@@ -839,12 +841,12 @@ begin
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => TIMEOUT_LIMIT_WIDTH_C)
+         CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
       port map(
          -- General Interface
          clk     => pgpRxClk,
          rst     => pgpRxRst,
-         limit   => r.timeoutLimit,
+         limit   => config.timeoutLimit,
          -- Control Interface
          set     => r.armTimeout,
          timeout => timeout);

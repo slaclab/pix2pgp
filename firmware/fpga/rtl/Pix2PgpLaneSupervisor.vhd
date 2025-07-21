@@ -33,28 +33,28 @@ entity Pix2PgpLaneSupervisor is
       RST_POLARITY_G : sl      := '1');  -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
-      pgpRxClk      : in  sl;
-      pgpRxRst      : in  sl := not(RST_POLARITY_G);
-      config        : in  Pix2PgpStreamRxConfigType;
-      pgp4RxLinkUp  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpRxClk       : in  sl;
+      pgpRxRst       : in  sl := not(RST_POLARITY_G);
+      config         : in  Pix2PgpStreamRxConfigType;
+      pgp4RxLinkUp   : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgp4RxLinkDown : out  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Lane Interface
-      laneRst       : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneStatus    : in  Pix2PgpLaneStatusArray;
-      laneMetaRd    : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      dropBadColTrg : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePostError : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneStatus     : in  Pix2PgpLaneStatusArray;
+      laneMetaRd     : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePostError  : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Trigger Buffer Interface
-      trgBuffTrgCnt : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffSroEn  : in  sl;
-      trgBuffValid  : in  sl;
-      trgBuffRd     : out sl;
+      trgBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgBuffSroEn   : in  sl;
+      trgBuffValid   : in  sl;
+      trgBuffRd      : out sl;
       -- Lane Merger Interface
-      mergerBusy    : in  sl;
-      asicStatus    : out Pix2PgpLaneStatusArray;
-      fpgaTrgCnt    : out slv(TRGCNT_WIDTH_C-1 downto 0);
-      reqDrop       : out sl;
-      reqNominal    : out sl;
-      reqPause      : out sl);
+      mergerBusy     : in  sl;
+      asicStatus     : out Pix2PgpLaneStatusArray;
+      fpgaTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
+      reqDrop        : out sl;
+      reqNominal     : out sl;
+      reqPause       : out sl);
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
@@ -410,12 +410,13 @@ begin
       -----------------------------------------------------------------------
 
       -- Outputs
-      asicStatus <= r.asicStatus;
-      reqDrop    <= r.reqDrop;
-      reqNominal <= r.reqNominal;
-      reqPause   <= r.reqPause;
-      fpgaTrgCnt <= r.fpgaTrgCnt;
-      trgBuffRd  <= r.trgBuffRd;
+      asicStatus     <= r.asicStatus;
+      reqDrop        <= r.reqDrop;
+      reqNominal     <= r.reqNominal;
+      reqPause       <= r.reqPause;
+      fpgaTrgCnt     <= r.fpgaTrgCnt;
+      trgBuffRd      <= r.trgBuffRd;
+      pgp4RxLinkDown <= not(r.laneUp);
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          if RST_POLARITY_G = '1' then

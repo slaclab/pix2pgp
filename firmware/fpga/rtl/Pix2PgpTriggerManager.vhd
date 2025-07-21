@@ -34,13 +34,13 @@ entity Pix2PgpTriggerManager is
       TRG_FIFO_ADDR_WIDTH_G : positive := 6);
    port(
       -- General Interface
-      asicClk      : in  sl;
-      asicRst      : in  sl := not(RST_POLARITY_G);
-      pgpRxClk     : in  sl;
-      pgpRxRst     : in  sl;
+      asicClk       : in  sl;
+      asicRst       : in  sl := not(RST_POLARITY_G);
+      pgpRxClk      : in  sl;
+      pgpRxRst      : in  sl;
       -- ASIC Control Interface
-      asicSro      : in  sl;
-      asicSroEn    : in  sl;
+      asicSro       : in  sl;
+      asicSroEn     : in  sl;
       -- Lane Supervisor Interface
       trgBuffRd     : in  sl;
       trgBuffTrgCnt : out slv(TRGCNT_WIDTH_C-1 downto 0);
