@@ -216,7 +216,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => TRGCNT_WIDTH_C,
+         WIDTH_G        => BITMAX_COL_MANAGERS_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk  => laneClk,

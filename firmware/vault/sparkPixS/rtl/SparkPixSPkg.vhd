@@ -228,15 +228,14 @@ package Pix2PgpPkg is
    -- trigger counter; plus frame size; plus number of active cols; plus overOcc, pause, pauseError
    constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C +
                                               LANERX_FRAME_SIZE_WIDTH_C +
-                                              COLCNT_WIDTH_C+3;
+                                              COLCNT_WIDTH_C + 3;
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
-   constant LANE_DEC_ERROR_POS_C   : natural := LANERX_META_DWIDTH_C-1;
-   constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-2;
-   constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-3;
-   constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-4;
-   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-5 downto COLCNT_WIDTH_C+TRGCNT_WIDTH_C;
+   constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-1;
+   constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-2;
+   constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-3;
+   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-4 downto COLCNT_WIDTH_C+TRGCNT_WIDTH_C;
    subtype  LANE_COLCNT_POS_C   is   natural range COLCNT_WIDTH_C+TRGCNT_WIDTH_C-1 downto TRGCNT_WIDTH_C;
    subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
 
