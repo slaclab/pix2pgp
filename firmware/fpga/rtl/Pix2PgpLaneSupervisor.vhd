@@ -145,10 +145,10 @@ begin
          dataIn  => pgp4RxLinkUp,
          dataOut => linkUpSync);
 
-   -----------------------------------------------------------------------
-   -----------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, timeout, config,
-                   linkUpSync, laneStatus, trgBuffTrgCnt) is
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
+                   timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
 
@@ -448,8 +448,8 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
-   -----------------------------------------------------------------------
-   -----------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
 
    -- Watchdog
    U_Watchdog : entity pix2pgp.Pix2PgpWatchdog

@@ -26,7 +26,7 @@ use surf.SsiPkg.all;
 library pix2pgp;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpTrgManager is
+entity Pix2PgpTriggerManager is
    generic(
       TPD_G                 : time    := 1 ns;
       RST_ASYNC_G           : boolean := false;
@@ -46,9 +46,9 @@ entity Pix2PgpTrgManager is
       trgBuffTrgCnt : out slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffSroEn  : out sl;
       trgBuffValid  : out sl);
-end Pix2PgpTrgManager;
+end Pix2PgpTriggerManager;
 
-architecture rtl of Pix2PgpTrgManager is
+architecture rtl of Pix2PgpTriggerManager is
 
    constant TRGBUFF_WIDTH_C : natural := TRGCNT_WIDTH_C + 1; -- trigger-counter plus SroEn
 
@@ -71,6 +71,8 @@ architecture rtl of Pix2PgpTrgManager is
 
 begin
 
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
    comb : process (asicSro, asicRst, asicSroEn, r) is
       variable v : RegType;
    begin
@@ -103,6 +105,17 @@ begin
 
    end process comb;
 
+   seq : process (asicClk, asicRst) is
+   begin
+      if (RST_ASYNC_G and asicRst = RST_POLARITY_G) then
+         r <= REG_INIT_C after TPD_G;
+      elsif rising_edge(asicClk) then
+         r <= rin after TPD_G;
+      end if;
+   end process seq;
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
+
    ----------------------------------------
    -- Trigger/SRO Buffer
    ----------------------------------------
@@ -127,15 +140,6 @@ begin
          rd_en    => trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
-
-   seq : process (asicClk, asicRst) is
-   begin
-      if (RST_ASYNC_G and asicRst = RST_POLARITY_G) then
-         r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(asicClk) then
-         r <= rin after TPD_G;
-      end if;
-   end process seq;
 
    trgBuffTrgCnt <= trgBuffDout(TRGBUFF_WIDTH_C-1 downto 1);
    trgBuffSroEn  <= trgBuffDout(0);
