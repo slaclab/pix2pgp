@@ -131,7 +131,7 @@ begin
       -- Register inputs (trigger on rising edges)
       v.reqDrop    := reqDrop;
       v.reqNominal := reqNominal;
-      v.reqPause   := reqDrop;
+      v.reqPause   := reqPause;
 
       if r.reqDrop = '1' then
          v.reqDrop := '1';

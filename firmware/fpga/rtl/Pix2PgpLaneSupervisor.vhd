@@ -167,6 +167,7 @@ begin
       v.reqPause   := '0';
       v.armTimeout := '0';
       v.trgBuffRd  := '0';
+      v.laneMetaRd := '0';
       v.evalLanes  := '0';
 
       -- global status loop
@@ -362,15 +363,13 @@ begin
          ----------------------------------------------------------------------
          -- pop the trigger buffer word and wait
          when DONE_S =>
-            v.waitCnt     := r.waitCnt + 1;
-            v.laneTimeout := (others => '0');
-            v.laneReady   := (others => '0');
-            v.laneError   := (others => '0');
-            v.laneValid   := (others => '0');
+            v.waitCnt := r.waitCnt + 1;
 
+            -- don't pop the trigger buffer word if in pause;
+            -- if in pause, will go back to idle and straight to lane evaluation
             if uOr(r.waitCnt) = '0' then
                v.laneRst   := '0';
-               v.trgBuffRd := '1';
+               v.trgBuffRd := not(r.inPause);
             end if;
 
             if r.waitCnt = toSlv(4, r.waitCnt'length) then
@@ -383,14 +382,6 @@ begin
                   v.state := POST_RESET_S;
                end if;
 
-            end if;
-
-            -- still more data to come for this event; don't pop the word;
-            -- re-evaluate lane statuses instead
-            if r.inPause = '1' and r.lanePostError = '0' then
-               v.trgBuffRd := '0';
-               v.waitCnt   := (others => '0');
-               v.state     := EVAL_LANES_S;
             end if;
 
          -------------------------------------------------------------------------
