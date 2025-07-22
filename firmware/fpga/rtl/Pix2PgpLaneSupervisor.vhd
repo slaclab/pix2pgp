@@ -232,7 +232,7 @@ begin
 
                -- if this trigger never reached the ASIC, send a 'drop' frame
                -- same if no receiver lane is enabled/stable
-               if trgBuffSroEn = '0' or uOr(r.laneUp) = '0' then
+               if trgBuffSroEn = '0' or uOr(r.laneUp) = '0' or uOr(r.laneEnable) = '0' then
                   v.reqDrop := '1';
                   v.state   := WAIT_MERGER_S;
                end if;

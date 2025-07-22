@@ -88,7 +88,7 @@ architecture rtl of Pix2PgpAxiLiteManager is
       realignOnSof    => toSl(EVAL_SOF_C),
       fpgaId          => FPGA_ID_DEFAULT_C,
       timeoutLimit    => (others => '1'),
-      laneEnable      => (others => '0'),
+      laneEnable      => (others => '1'),
       laneDecError    => (others => '0'),
       laneFull        => (others => '0'),
       lanePauseError  => (others => '0'),
