@@ -87,6 +87,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       postReset     : sl;
       laneRst       : sl;
       lanePostError : sl;
+      laneMetaRd    : sl;
       laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneUpCnt     : LaneUpCntArray;
       asicStatus    : Pix2PgpLaneStatusArray;
@@ -116,6 +117,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       postReset     => '0',
       laneRst       => '0',
       lanePostError => '0',
+      laneMetaRd    => '0',
       laneValid     => (others => '0'),
       laneUpCnt     => (others => (others => '0')),
       asicStatus    => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
@@ -336,6 +338,8 @@ begin
          -- also figure out if we need a reset or not...
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
+               v.laneMetaRd := '1';
+
                v.state := DONE_S;
 
                if uOr(r.laneError) = '1' then
@@ -428,6 +432,9 @@ begin
          end if;
 
          lanePostError(lane) <= r.lanePostError;
+
+         -- only read the valid lanes
+         laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane));
 
       end loop;
 

@@ -83,6 +83,9 @@ begin
       -- Register input
       v.asicSro := asicSro;
 
+      -- Defaults
+      v.trgBuffWr := '0';
+
       -- posedge detection
       if v.asicSro = '1' and r.asicSro = '0' then
          v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
