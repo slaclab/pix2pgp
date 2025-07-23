@@ -58,6 +58,7 @@ class AsicData(object):
         # preamble
         self.preambleErr     = False
         self.typeMismatchErr = False
+        self.dropFrame       = False
         self.asicType        = 0
         self.asicId          = 0
         self.fpgaId          = 0
@@ -206,6 +207,8 @@ class AsicData(object):
         # error-checking
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.preambleErr = True
+        elif self.asicType == 0:
+            self.dropFrame = True
         elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
 
@@ -219,11 +222,15 @@ class AsicData(object):
                   self.fpgaId,
                   self.fpgaTrgCnt))
             print(f"")
+
             if self.preambleErr:
                 pix2pgp.Tools.printError('Preamble')
 
             if self.typeMismatchErr:
                 pix2pgp.Tools.printError('ASIC Type Mismatch')
+
+            if self.dropFrame:
+                pix2pgp.Tools.printWarning('Dropped Frame')
     #################################################################
 
     #################################################################
@@ -259,8 +266,10 @@ class AsicData(object):
                 _dict['laneValid']
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
+
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
+
             if any(self.laneTimeout) and self._verbose > 2:
                 pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
     #################################################################
@@ -279,6 +288,7 @@ class AsicData(object):
             print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
+
             if self.trailerErr:
                 pix2pgp.Tools.printError('FPGA Trailer')
     #################################################################
@@ -394,9 +404,14 @@ class AsicData(object):
 
                 self.preambleEval(wordHex)
 
-
                 index += self.preambleLen
-                state = "header_s"
+
+                # usually this is not a drop-frame; so go-to header
+                if not(self.dropFrame):
+                    state = "header_s"
+                else:
+                    # in the special case of a drop-frame, a trailer follows the preamble
+                    state = "trailer_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "header_s":
