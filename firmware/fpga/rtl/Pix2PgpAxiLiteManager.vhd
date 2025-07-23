@@ -29,10 +29,9 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpAxiLiteManager is
    generic(
-      TPD_G              : time    := 1 ns;
-      RST_ASYNC_G        : boolean := false;
-      RST_POLARITY_G     : sl      := '1';   -- '1' for active high rst, '0' for active low
-      DROP_BAD_COL_TRG_G : boolean  := true);
+      TPD_G          : time    := 1 ns;
+      RST_ASYNC_G    : boolean := false;
+      RST_POLARITY_G : sl      := '1');   -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -62,13 +61,9 @@ architecture rtl of Pix2PgpAxiLiteManager is
    signal writeSlave  : AxiLiteWriteSlaveType;
 
    type RegType is record
-      dropBadColTrg   : sl;
+      config          : Pix2PgpStreamRxConfigType;
       cntRst          : sl;
       usrRst          : sl;
-      realignOnSof    : sl;
-      fpgaId          : slv(15 downto 0);
-      timeoutLimit    : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
-      laneEnable      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -82,13 +77,9 @@ architecture rtl of Pix2PgpAxiLiteManager is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      dropBadColTrg   => toSl(DROP_BAD_COL_TRG_G),
+      config          => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
       cntRst          => '1',
       usrRst          => not(RST_POLARITY_G),
-      realignOnSof    => toSl(EVAL_SOF_C),
-      fpgaId          => FPGA_ID_DEFAULT_C,
-      timeoutLimit    => (others => '1'),
-      laneEnable      => (others => '1'),
       laneDecError    => (others => '0'),
       laneFull        => (others => '0'),
       lanePauseError  => (others => '0'),
@@ -150,17 +141,20 @@ begin
 
          -- status counters
          -- increment counters on rising edge
-         if  (v.laneDecError(i) = '1' and r.laneDecError(i) = '0') and (r.laneEnable(i) = '1')
+         if  (v.laneDecError(i) = '1' and r.laneDecError(i) = '0') and
+             (r.config.laneEnable(i) = '1')
          and uAnd(r.laneDecErrCnt(i)) /= '1' then
             v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
          end if;
 
-         if  (v.lanePauseError(i) = '1' and r.lanePauseError(i) = '0') and (r.laneEnable(i) = '1')
+         if  (v.lanePauseError(i) = '1' and r.lanePauseError(i) = '0') and
+             (r.config.laneEnable(i) = '1')
          and  uAnd(r.lanePauseErrCnt(i)) /= '1' then
             v.lanePauseErrCnt(i) := r.lanePauseErrCnt(i) + 1;
          end if;
 
-         if  (v.laneFull(i) = '1' and r.laneFull(i) = '0') and (r.laneEnable(i) = '1')
+         if  (v.laneFull(i) = '1' and r.laneFull(i) = '0') and
+             (r.config.laneEnable(i) = '1')
          and  uAnd(r.laneFullCnt(i)) /= '1' then
             v.laneFullCnt(i) := r.laneFullCnt(i) + 1;
          end if;
@@ -188,19 +182,22 @@ begin
          axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, r.laneTrgCnt(i));      -- StartAddr=0x500
       end loop;
 
-      axiSlaveRegisterR(axilEp, x"600", 0, fpgaTrgCnt);
 
-      axiSlaveRegister (axilEp, x"604", 0, v.fpgaId);
-      axiSlaveRegister (axilEp, x"608", 0, v.timeoutLimit);
-      axiSlaveRegister (axilEp, x"60C", 0, v.laneEnable);
-      axiSlaveRegister (axilEp, x"610", 0, v.dropBadColTrg);
-      axiSlaveRegister (axilEp, x"614", 0, v.cntRst);
-      axiSlaveRegister (axilEp, x"618", 0, v.realignOnSof);
+      axiSlaveRegister (axilEp, x"600", 0, v.config.fpgaId);
+      axiSlaveRegister (axilEp, x"604", 0, v.config.laneTimeout);
+      axiSlaveRegister (axilEp, x"608", 0, v.config.lanePauseTimeout);
+      axiSlaveRegister (axilEp, x"60C", 0, v.config.laneEnable);
+      axiSlaveRegister (axilEp, x"610", 0, v.config.dropColMisalign);
+      axiSlaveRegister (axilEp, x"614", 0, v.config.dropLaneMisalign);
+      axiSlaveRegister (axilEp, x"618", 0, v.config.realignOnSof);
       --
-      axiSlaveRegisterR(axilEp, x"620", 0, laneDown);
-      axiSlaveRegisterR(axilEp, x"624", 0, mergerBusy);
+      axiSlaveRegister (axilEp, x"700", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"704", 0, v.usrRst);
       --
-      axiSlaveRegister (axilEp, x"700", 0, v.usrRst);
+      axiSlaveRegisterR(axilEp, x"708", 0, laneDown);
+      axiSlaveRegisterR(axilEp, x"70C", 0, mergerBusy);
+      axiSlaveRegisterR(axilEp, x"710", 0, fpgaTrgCnt);
+      --
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
@@ -211,11 +208,14 @@ begin
       readSlave  <= r.readSlave;
 
       -- Outputs
-      config.dropBadColTrg <= r.dropBadColTrg;
-      config.realignOnSof  <= r.realignOnSof;
-      config.fpgaId        <= r.fpgaId;
-      config.laneEnable    <= r.laneEnable;
-      config.timeoutLimit  <= r.timeoutLimit;
+      config.fpgaId           <= r.config.fpgaId;
+      config.laneTimeout      <= r.config.laneTimeout;
+      config.lanePauseTimeout <= r.config.lanePauseTimeout;
+      config.laneEnable       <= r.config.laneEnable;
+      config.dropColMisalign  <= r.config.dropColMisalign;
+      config.dropLaneMisalign <= r.config.dropLaneMisalign;
+      config.realignOnSof     <= r.config.realignOnSof;
+      config.dropColMisalign  <= r.config.dropColMisalign;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

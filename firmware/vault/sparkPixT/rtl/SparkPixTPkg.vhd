@@ -338,20 +338,24 @@ package Pix2PgpPkg is
    constant FPGA_TIMEOUT_LIMIT_WIDTH_C : positive := 16;
 
    type Pix2PgpStreamRxConfigType is record
-      dropBadColTrg : sl;
-      realignOnSof  : sl;
-      fpgaId        : slv(15 downto 0);
-      laneEnable    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      timeoutLimit  : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      dropColMisalign  : sl;
+      dropLaneMisalign : sl;
+      realignOnSof     : sl;
+      fpgaId           : slv(15 downto 0);
+      laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      lanePauseTimeout : slv(7 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
       -- flags begin
-      dropBadColTrg => '0',
-      realignOnSof  => '1',
-      fpgaId        => FPGA_ID_DEFAULT_C,
-      laneEnable    => (others => '0'),
-      timeoutLimit  => (others => '0'));
+      dropColMisalign  => '1',
+      dropLaneMisalign => '1',
+      realignOnSof     => toSl(EVAL_SOF_C),
+      fpgaId           => FPGA_ID_DEFAULT_C,
+      laneEnable       => (others => '1'),
+      laneTimeout      => (others => '1'),
+      lanePauseTimeout => toSlv(16, 8));
 
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
 

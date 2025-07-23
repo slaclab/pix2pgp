@@ -330,7 +330,7 @@ begin
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
                -- 2. check if the data length of this column is within the limits
-               if (metaTrgCnt /= r.trgCntHeader and config.dropBadColTrg = '1') or
+               if (metaTrgCnt /= r.trgCntHeader and config.dropColMisalign = '1') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
                   v.state    := ERROR_S;

@@ -37,8 +37,7 @@ entity Pix2PgpAsicStreamRx is
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 6;
-      DROP_BAD_COL_TRG_G     : boolean  := true);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 6);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -213,10 +212,9 @@ begin
    -------------------
    U_AxiLiteManager: entity pix2pgp.Pix2PgpAxiLiteManager
       generic map(
-         TPD_G              => TPD_G,
-         RST_ASYNC_G        => RST_ASYNC_G,
-         RST_POLARITY_G     => RST_POLARITY_G,
-         DROP_BAD_COL_TRG_G => DROP_BAD_COL_TRG_G)
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         RST_POLARITY_G      => RST_POLARITY_G)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,

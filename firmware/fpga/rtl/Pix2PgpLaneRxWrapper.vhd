@@ -118,8 +118,8 @@ begin
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => config.dropBadColTrg,
-         dout(0) => configLane.dropBadColTrg);
+         din(0)  => config.dropColMisalign,
+         dout(0) => configLane.dropColMisalign);
 
    U_PipelineRealign : entity surf.SlvDelay
       generic map (

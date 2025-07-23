@@ -37,10 +37,10 @@ entity Pix2PgpLaneSupervisor is
       pgpRxRst       : in  sl := not(RST_POLARITY_G);
       config         : in  Pix2PgpStreamRxConfigType;
       pgp4RxLinkUp   : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgp4RxLinkDown : out  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgp4RxLinkDown : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Lane Interface
-      laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneStatus     : in  Pix2PgpLaneStatusArray;
+      laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneMetaRd     : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePostError  : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Trigger Buffer Interface
@@ -100,7 +100,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       refTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
       fpgaTrgCnt    : slv(TRGCNT_WIDTH_C-1 downto 0);
       prvTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
-      waitCnt       : slv(3 downto 0);
+      waitCnt       : slv(7 downto 0);
       state         : stateType;
    end record RegType;
 
@@ -197,8 +197,7 @@ begin
 
             -- determine if a lane is in error or not
             -- a lane is not in error if the link is down
-            v.laneError(lane) := (laneStatus(lane).overflow or laneStatus(lane).decError) and
-                              not(r.laneUp(lane));
+            v.laneError(lane) := (laneStatus(lane).overflow or laneStatus(lane).decError);
 
             -- determine if a lane is ready to be read-out or not;
             -- a lane is 'ready' if its link is down
@@ -207,12 +206,22 @@ begin
                                  r.laneError(lane)      or
                                  not(r.laneUp(lane));
 
-            -- determine if a lane is actually valid by masking out any errors
-            v.laneValid(lane) := laneStatus(lane).valid   and
-                                 not(r.laneTimeout(lane)) and
-                                 not(r.laneError(lane))   and
-                                 r.laneEnable(lane)       and
-                                 r.laneUp(lane);
+            -- determine if a lane is actually valid by masking out any errors;
+            -- if a lane is in pause, give it precedence in terms of readout
+            if uOr(r.lanePause) = '0' then
+               v.laneValid(lane) := laneStatus(lane).valid   and
+                                    not(r.laneTimeout(lane)) and
+                                    not(r.laneError(lane))   and
+                                    r.laneEnable(lane)       and
+                                    r.laneUp(lane);
+            else
+               v.laneValid(lane) := laneStatus(lane).valid   and
+                                    not(r.laneTimeout(lane)) and
+                                    not(r.laneError(lane))   and
+                                    r.laneEnable(lane)       and
+                                    r.lanePause(lane)        and
+                                    r.laneUp(lane);
+            end if;
          end if;
 
       end loop;
@@ -245,12 +254,20 @@ begin
          -------------------------------------------------------------------------
          -- wait for all activated lanes to go to a ready state
          -- 'ready' might mean that the lane has a valid frame;
-         -- or, that the lane is in some error state
+         -- or, that the lane is in some error state;
+         -- trigger a short timeout if pause is detected:
+         -- this allows other paused lanes to be grouped together
          when EVAL_LANES_S =>
             v.armTimeout := '1';
             v.evalLanes  := '1';
 
-            if r.laneReady = r.laneEnable then
+            if uOr(r.lanePause) = '1' then
+               v.waitCnt := r.waitCnt + 1;
+            end if;
+
+            if r.laneReady = r.laneEnable and uOr(r.lanePause) = '0' then
+               v.state := EVAL_TRG_CNT_S;
+            elsif r.laneReady = r.laneEnable and r.waitCnt = config.lanePauseTimeout then
                v.state := EVAL_TRG_CNT_S;
             end if;
 
@@ -261,6 +278,7 @@ begin
          -- note that all this is done in one cycle (hence the use of v.)
          when EVAL_TRG_CNT_S =>
             v.refTrgCnt   := (others => '0');
+            v.waitCnt     := (others => '0');
             v.trgMisalign := '0';
 
             -- first grab the first valid trigger counter...
@@ -314,7 +332,7 @@ begin
                v.asicStatus(lane).frameSize    := laneStatus(lane).frameSize;
 
                -- override if triggers are misaligned
-               if r.trgMisalign = '1' then
+               if r.trgMisalign = '1' and config.dropLaneMisalign = '1' then
                   v.asicStatus(lane).decError := '1';
                   v.laneError(lane)           := '1';
                   v.asicStatus(lane).valid    := '0';
@@ -343,7 +361,7 @@ begin
 
                v.state := DONE_S;
 
-               if uOr(r.laneError) = '1' then
+               if uOr(r.laneError) = '1' or r.trgMisalign = '1' then
                   v.state := RESET_S;
                end if;
 
@@ -352,12 +370,17 @@ begin
          -------------------------------------------------------------------------
          -- grab the trigger counter. reset the inPause flag
          -- perform the reset; do the postError and all that...
-         -- then go-to DONE_S when done resetting
+         -- then go-to DONE_S when done resetting; reset all status bits
          when RESET_S =>
             v.prvTrgCnt     := r.refTrgCnt;
             v.inPause       := '0';
             v.laneRst       := '1';
             v.lanePostError := '1';
+            v.laneTimeout   := (others => '0');
+            v.laneReady     := (others => '0');
+            v.laneError     := (others => '0');
+            v.laneValid     := (others => '0');
+            v.waitCnt       := (others => '0');
             v.state         := DONE_S;
 
          ----------------------------------------------------------------------
@@ -372,7 +395,7 @@ begin
                v.trgBuffRd := not(r.inPause);
             end if;
 
-            if r.waitCnt = toSlv(4, r.waitCnt'length) then
+            if r.waitCnt = toSlv(5, r.waitCnt'length) then
                v.waitCnt       := (others => '0');
                v.lanePostError := '0';
                v.state         := IDLE_S;
@@ -461,7 +484,7 @@ begin
          -- General Interface
          clk     => pgpRxClk,
          rst     => pgpRxRst,
-         limit   => config.timeoutLimit,
+         limit   => config.laneTimeout,
          -- Control Interface
          set     => r.armTimeout,
          timeout => timeout);

@@ -202,7 +202,8 @@ begin
 
                v.state := TX_PREAMBLE_S;
 
-               -- override designated asicType with the drop-trigger type identifier
+               -- override designated asicType with the drop-trigger type identifier;
+               -- will transmit preamble and then trailer (in next state)
                if r.reqDrop = '1' and r.inPause = '0' then
                   v.asicType := toSlv(0, 16);
                end if;
@@ -233,7 +234,8 @@ begin
                v.state := TX_HEADER_S;
 
                if r.reqDrop = '1' then
-                  v.state := TX_TRAILER_S;
+                  v.reqDrop := '0';
+                  v.state   := TX_TRAILER_S;
                end if;
             end if;
 
