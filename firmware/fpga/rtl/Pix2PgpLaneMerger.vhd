@@ -59,7 +59,7 @@ architecture rtl of Pix2PgpLaneMerger is
       TX_PREAMBLE_S,
       TX_HEADER_S,
       TX_FRAME_SIZE_S,
-      --TX_COLCNT_S,
+      TX_COLCNT_S,
       SWITCH_MUX_S,
       WAIT_TLAST_S,
       DONE_S,
@@ -257,7 +257,6 @@ begin
 
          ----------------------------------------------------------------------
          -- transmit all (valid) lane frame size data
-         -- To-Do: new state: TX_COLCNT_S
          when TX_FRAME_SIZE_S =>
             if v.asicRxMaster.tValid = '0' then
 
@@ -271,7 +270,7 @@ begin
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.laneSel := (others => '0');
-                  v.state   := SWITCH_MUX_S; -- To-Do: new state: TX_COLCNT_S
+                  v.state   := TX_COLCNT_S;
                else
                   v.laneSel := r.laneSel + 1;
                end if;
@@ -279,8 +278,26 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- To-Do: new state: TX_COLCNT_S
-         -- when TX_COLCNT_S =>
+         -- transmit all (valid) lane active column count data
+         when TX_COLCNT_S =>
+            if v.asicRxMaster.tValid = '0' then
+
+               v.asicRxMaster.tValid := '1';
+               v.asicRxMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
+               v.asicRxMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := activeColCnt;
+
+               if laneValid(laneIdx) = '0' then
+                  v.asicRxMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
+               end if;
+
+               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                  v.laneSel := (others => '0');
+                  v.state   := SWITCH_MUX_S;
+               else
+                  v.laneSel := r.laneSel + 1;
+               end if;
+
+            end if;
 
          ----------------------------------------------------------------------
          -- check if the current lane has any valid data
