@@ -90,6 +90,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneMetaRd    : sl;
       laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneUpCnt     : LaneUpCntArray;
+      laneStatus    : Pix2PgpLaneStatusArray;
       asicStatus    : Pix2PgpLaneStatusArray;
       laneUp        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneReady     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -120,6 +121,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneMetaRd    => '0',
       laneValid     => (others => '0'),
       laneUpCnt     => (others => (others => '0')),
+      laneStatus    => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
       asicStatus    => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
       laneUp        => (others => '0'),
       laneReady     => (others => '0'),
@@ -173,6 +175,7 @@ begin
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
+         -- lane-enable registering
          v.laneEnable(lane) := config.laneEnable(lane);
 
          -- link stability counters
@@ -186,40 +189,62 @@ begin
 
          v.laneUp(lane) := uAnd(r.laneUpCnt(lane));
 
+         --
+         -- lane status
+         v.laneStatus(lane).decError     := laneStatus(lane).decError   and r.laneEnable(lane);
+         v.laneStatus(lane).overOcc      := laneStatus(lane).overOcc    and r.laneEnable(lane);
+         v.laneStatus(lane).pause        := laneStatus(lane).pause      and r.laneEnable(lane);
+         v.laneStatus(lane).pauseError   := laneStatus(lane).pauseError and r.laneEnable(lane);
+         v.laneStatus(lane).overflow     := laneStatus(lane).overflow   and r.laneEnable(lane);
+         v.laneStatus(lane).valid        := laneStatus(lane).valid      and r.laneEnable(lane);
+         v.laneStatus(lane).timeout      := r.laneTimeout(lane)         and r.laneEnable(lane);
+         v.laneStatus(lane).down         := not(r.laneUp(lane));
+         v.laneStatus(lane).activeColCnt := (others => '0');
+         v.laneStatus(lane).trgCnt       := (others => '0');
+         v.laneStatus(lane).frameSize    := (others => '0');
+         --
+         if r.laneEnable(lane) = '1' then
+            v.laneStatus(lane).activeColCnt := laneStatus(lane).activeColCnt;
+            v.laneStatus(lane).trgCnt       := laneStatus(lane).trgCnt;
+            v.laneStatus(lane).frameSize    := laneStatus(lane).frameSize;
+         end if;
+         --
+
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
 
             if timeout = '1' then
-               v.laneTimeout(lane) := not(laneStatus(lane).valid);
+               v.laneTimeout(lane) := not(r.laneStatus(lane).valid);
             end if;
 
-            v.lanePause(lane) := laneStatus(lane).pause;
+            v.lanePause(lane) := r.laneStatus(lane).pause;
 
             -- determine if a lane is in error or not
             -- a lane is not in error if the link is down
-            v.laneError(lane) := (laneStatus(lane).overflow or laneStatus(lane).decError);
+            v.laneError(lane) := (r.laneStatus(lane).overflow or r.laneStatus(lane).decError);
 
             -- determine if a lane is ready to be read-out or not;
             -- a lane is 'ready' if its link is down
-            v.laneReady(lane) := laneStatus(lane).valid or
-                                 r.laneTimeout(lane)    or
-                                 r.laneError(lane)      or
+            -- laneReady is checked against laneEnable in the FSM logic
+            v.laneReady(lane) := r.laneStatus(lane).valid or
+                                 r.laneTimeout(lane)      or
+                                 r.laneError(lane)        or
                                  not(r.laneUp(lane));
 
             -- determine if a lane is actually valid by masking out any errors;
             -- if a lane is in pause, give it precedence in terms of readout
             if uOr(r.lanePause) = '0' then
-               v.laneValid(lane) := laneStatus(lane).valid   and
-                                    not(r.laneTimeout(lane)) and
-                                    not(r.laneError(lane))   and
-                                    r.laneEnable(lane)       and
+
+               v.laneValid(lane) := r.laneStatus(lane).valid   and
+                                    not(r.laneTimeout(lane))   and
+                                    not(r.laneError(lane))     and
                                     r.laneUp(lane);
             else
-               v.laneValid(lane) := laneStatus(lane).valid   and
-                                    not(r.laneTimeout(lane)) and
-                                    not(r.laneError(lane))   and
-                                    r.laneEnable(lane)       and
-                                    r.lanePause(lane)        and
+
+               v.laneValid(lane) := r.laneStatus(lane).valid   and
+                                    not(r.laneTimeout(lane))   and
+                                    not(r.laneError(lane))     and
+                                    r.lanePause(lane)          and
                                     r.laneUp(lane);
             end if;
          end if;
@@ -285,7 +310,7 @@ begin
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
 
                if r.laneValid(lane) = '1' then
-                  v.refTrgCnt := laneStatus(lane).trgCnt;
+                  v.refTrgCnt := r.laneStatus(lane).trgCnt;
                   exit;
                end if;
 
@@ -294,7 +319,7 @@ begin
             -- then check against the rest...
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
 
-               if r.laneValid(lane) = '1' and laneStatus(lane).trgCnt /= v.refTrgCnt then
+               if r.laneValid(lane) = '1' and r.laneStatus(lane).trgCnt /= v.refTrgCnt then
                   v.trgMisalign := '1';
                   exit;
                end if;
@@ -317,19 +342,20 @@ begin
          -- start the merger FSM; update the status bits sent to the merger
          when START_MERGER_S =>
 
-            -- pipeline the statuses
+            -- pipeline the statuses;
+            -- v.laneStatus is determined earlier in this proc
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-               v.asicStatus(lane).decError     := laneStatus(lane).decError;
-               v.asicStatus(lane).overOcc      := laneStatus(lane).overOcc;
-               v.asicStatus(lane).pause        := laneStatus(lane).pause;
-               v.asicStatus(lane).pauseError   := laneStatus(lane).pauseError;
-               v.asicStatus(lane).overflow     := laneStatus(lane).overflow;
+               v.asicStatus(lane).decError     := r.laneStatus(lane).decError;
+               v.asicStatus(lane).overOcc      := r.laneStatus(lane).overOcc;
+               v.asicStatus(lane).pause        := r.laneStatus(lane).pause;
+               v.asicStatus(lane).pauseError   := r.laneStatus(lane).pauseError;
+               v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
                v.asicStatus(lane).valid        := r.laneValid(lane);
                v.asicStatus(lane).down         := not(r.laneUp(lane));
                v.asicStatus(lane).timeout      := r.laneTimeout(lane);
-               v.asicStatus(lane).activeColCnt := laneStatus(lane).activeColCnt;
-               v.asicStatus(lane).trgCnt       := r.refTrgCnt;
-               v.asicStatus(lane).frameSize    := laneStatus(lane).frameSize;
+               v.asicStatus(lane).activeColCnt := r.laneStatus(lane).activeColCnt;
+               v.asicStatus(lane).trgCnt       := r.asicStatus(lane).trgCnt;
+               v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
 
                -- override if triggers are misaligned
                if r.trgMisalign = '1' and config.dropLaneMisalign = '1' then
