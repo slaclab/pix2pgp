@@ -10,6 +10,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 
 library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
 library surf;

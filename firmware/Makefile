@@ -46,7 +46,9 @@ SURF_FPGA_PKG_DIR := $(SURF_FPGA_DIR)/pkg
 
 SURF_SUBMODULE_DIR := $(ROOT_DIR)/submodules/surf
 
-PIX2PGP_PKG := $(PIX2PGP_PKG_DIR)/Pix2PgpPkg.vhd
+PIX2PGP_ASIC_PKG   := $(PIX2PGP_PKG_DIR)/Pix2PgpAsicPkg.vhd
+ASIC_LINK_GLBL_PKG := $(ROOT_DIR)/vault/shared/rtl/Pix2PgpPkg.vhd
+PIX2PGP_GLBL_PKG   := $(PIX2PGP_PKG_DIR)/Pix2PgpPkg.vhd
 
 PIX2PGP_PKG_FILES      := $(wildcard $(PIX2PGP_PKG_DIR)/*.vhd)
 PIX2PGP_ASIC_TOP_FILES := $(wildcard $(PIX2PGP_ASIC_TOP_DIR)/*.vhd)
@@ -141,7 +143,8 @@ prepareSurf:
 prepare: clean prepareSurf
 	@if [ "$(ASIC_SOURCED)" = 1 ]; then \
 		echo "[INFO]: Preparing $(ASIC) Specific Files..." ;\
-		ln -sf $(shell readlink -f $(ASIC_LINK_PKG)) $(PIX2PGP_PKG) ;\
+		ln -sf $(shell readlink -f $(ASIC_LINK_PKG)) $(PIX2PGP_ASIC_PKG) ;\
+		ln -sf $(shell readlink -f $(ASIC_LINK_GLBL_PKG)) $(PIX2PGP_GLBL_PKG) ;\
 		ln -sf $(shell readlink -f $(ASIC_LINK_TOP)) $(PIX2PGP_ASIC_TOP_DIR)/ ;\
 		for file in $(ASIC_LINK_TB_FILES); do \
 			$(MAKE) create-link FILE=$$file DIR=$(ASIC_TB_DIR); \

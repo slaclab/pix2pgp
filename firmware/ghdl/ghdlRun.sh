@@ -40,6 +40,7 @@ PIX2PGP_ASIC_TOP=${PIX2PGP_ASIC_TOP_DIR}/*Top.vhd
 
 # note that the package has to be declared separately in order to be imported first
 PIX2PGP_PKG_DIR=${ASIC_RTL_DIR}/pkg
+PIX2PGP_ASIC_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpAsicPkg.vhd
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 
 # these are only used by GHDL
@@ -137,6 +138,7 @@ ghdlAnalyze()
   echo "$(ls ${ASIC_TB})"
   echo "$(ls ${FPGA_RTL})"
   echo "$(ls ${FPGA_TB})"
+  echo "$(ls ${PIX2PGP_ASIC_PKG})"
   echo "$(ls ${PIX2PGP_PKG})"
   echo "$(ls ${PIX2PGP_ASIC_TOP})"
   echo "$(ls ${FPGA_RTL})"
@@ -163,6 +165,7 @@ ghdlAnalyze()
   fi
 
   echo "[INFO]: Importing RTL Files..."
+  ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${ASIC_RTL}
   ${GHDL_IMPORT_PIX2PGP} ${ASIC_TB}
@@ -173,6 +176,7 @@ ghdlAnalyze()
   ${GHDL_IMPORT_PIX2PGP} ${GHDL_FIFO}
 
   echo "[INFO]: Analyzing RTL Files..."
+  ${GHDL_ANALYZE} ${PIX2PGP_ASIC_PKG}
   ${GHDL_ANALYZE} ${PIX2PGP_PKG}
   ${GHDL_ANALYZE} ${ASIC_RTL}
   ${GHDL_ANALYZE} ${ASIC_TB}

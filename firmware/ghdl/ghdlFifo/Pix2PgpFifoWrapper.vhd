@@ -22,6 +22,7 @@ library surf;
 use surf.StdRtlPkg.all;
 
 library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpFifoWrapper is
