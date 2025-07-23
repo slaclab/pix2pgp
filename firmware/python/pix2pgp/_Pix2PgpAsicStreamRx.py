@@ -119,26 +119,26 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         self.add(pr.RemoteVariable(
-            name        = 'FpgaTrgCnt',
-            description = 'Value of last FPGA Trigger counter',
-            offset      = 0x600,
-            bitSize     = self.trgCntWidth,
-            mode        = 'RO',
-            disp        = '{:d}',
-        ))
-
-        self.add(pr.RemoteVariable(
             name         = 'FpgaId',
             description  = 'FPGA Identifier; is sent with the FPGA-generated header',
-            offset       = 0x604,
-            bitSize      = 32,
+            offset       = 0x600,
+            bitSize      = 16,
             mode         = 'RW',
         ))
 
         addTimePair(
-            name        = 'TimeoutLimit',
-            offset      = 0x608,
+            name        = 'LaneTimeout',
+            description = 'Upon reception of a trigger, an internal watchdog starts counting. if the LaneTimeout is reached, the lanes that do not have data will be masked as timed-out and the rest will be read (if any)',
+            offset      = 0x604,
         )
+
+        self.add(pr.RemoteVariable(
+            name         = 'LanePauseTimeout',
+            description  = 'FPGA Identifier; is sent with the FPGA-generated header',
+            offset       = 0x608,
+            bitSize      = 16,
+            mode         = 'RW',
+        ))
 
         self.add(pr.RemoteVariable(
             name         = 'LaneEnable',
@@ -149,51 +149,64 @@ class Pix2PgpAsicStreamRx(pr.Device):
         ))
 
         addBool(
-            name        = 'DropBadColumnTrigger',
+            name        = 'DropColumnMisalign',
             description = 'If True: Lane receiver will drop a frame with uneven trigger counter values from columns within the frame, and will raise a decoding error. Default (and recommended) is True',
             offset      = 0x610,
+        )
+
+        addBool(
+            name        = 'DropLaneMisalign',
+            description = 'If True: Lane Supervisor will drop a frame with uneven trigger counter values from lanes within the frame, and will raise a decoding error. Default (and recommended) is True',
+            offset      = 0x614,
+        )
+
+        addBool(
+            name        = 'RealignOnSof',
+            description  = 'Realign on Start-Of-Frame after recovering from Error',
+            offset       = 0x618,
         )
 
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',
-            offset       = 0x614,
+            offset       = 0x700,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'LaneInError',
-            description  = 'Lane is stuck in an ERROR state',
-            offset       = 0x618,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'LaneFull',
-            description  = 'One of the Lane FIFOs got full and have not being reset',
-            offset       = 0x61C,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
-        ))
-
-        self.add(pr.RemoteVariable(
-            name         = 'Pgp4RxLinkDown',
-            description  = 'PGP4 Link is Down',
-            offset       = 0x620,
-            bitSize      = self.numLanes,
-            mode         = 'RO',
         ))
 
         self.add(pr.RemoteCommand(
             name         = 'UsrRst',
             description  = 'Reset Pix2PgpAsicStreamRx',
-            offset       = 0x700,
+            offset       = 0x704,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'Pgp4RxLinkDown',
+            description  = 'PGP4 Link is Down',
+            offset       = 0x708,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'MergerBusy',
+            description  = 'Merger FSM is Busy',
+            offset       = 0x70C,
+            bitSize      = 1,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'FpgaTrgCnt',
+            description = 'Value of last FPGA Trigger counter',
+            offset      = 0x710,
+            bitSize     = self.trgCntWidth,
+            mode        = 'RO',
+            disp        = '{:d}',
         ))
 
     def countReset(self):

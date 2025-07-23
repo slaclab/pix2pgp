@@ -37,18 +37,17 @@ entity Pix2PgpLaneRx is
       -- General Interface
       laneClk        : in  sl;
       laneRst        : in  sl;
+      config         : in  Pix2PgpStreamRxConfigType;
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
-      -- StreamRx Interface
+      -- Supervisor Interface
       postError      : in  sl;
-      dropBadTrg     : in  sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
       laneRxFull     : out sl;
-      laneRxOk       : out sl;
-      laneRxInError  : out sl;
+      laneRxError    : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -77,15 +76,12 @@ architecture rtl of Pix2PgpLaneRx is
       inPause        : sl;
       inPauseError   : sl;
       rxError        : sl;
-      laneRxOk       : sl;
-      postPauseErr   : sl;
       inFull         : sl;
-      inError        : sl;
       laneFull       : sl;
       waitCnt        : slv(2 downto 0);
-      pauseErrTrgCnt : slv(TRGCNT_WIDTH_C-1 downto 0);
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      activeColCnt   : slv(BITMAX_COL_MANAGERS_C downto 0);
+      activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      colCntHeader   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
       dummyCnt       : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
       frameSizeCnt   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       dataLenCnt     : slv(7 downto 0);
@@ -104,15 +100,12 @@ architecture rtl of Pix2PgpLaneRx is
       inPause        => '0',
       inPauseError   => '0',
       rxError        => '0',
-      laneRxOk       => '0',
-      postPauseErr   => '0',
       inFull         => '0',
-      inError        => '0',
       laneFull       => '0',
       waitCnt        => (others => '0'),
-      pauseErrTrgCnt => (others => '0'),
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
+      colCntHeader   => (others => '0'),
       dummyCnt       => (others => '0'),
       frameSizeCnt   => (others => '0'),
       dataLenCnt     => (others => '0'),
@@ -171,7 +164,9 @@ begin
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, dropBadTrg, laneFull, postError) is
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, config, laneFull, postError) is
 
       -- omnipresent
       variable v : RegType;
@@ -206,8 +201,6 @@ begin
 
       -- Defaults
       v.frameMetaWr := '0';
-      v.laneRxOk    := '1';
-      v.inError     := '0';
       tValid        := '0';
       tLast         := '0';
       tReady        := '0';
@@ -244,21 +237,26 @@ begin
       end if;
 
       -- PGP error check
-      v.decError := (v.rxError and not(r.rxError));
+      if r.decError = '1' then
+         v.decError := '1';
+      else
+         v.decError := (v.rxError and not(r.rxError));
+      end if;
 
       -- full-FIFO rising-edge detector; only works some cycles after reset
-      if allBits(r.waitCnt, '1') then
+      if r.inFull = '1' then
+         v.inFull := '1';
+      elsif allBits(r.waitCnt, '1') and r.inFull = '0' then
          v.inFull := (v.laneFull and not(r.laneFull));
       else
          v.waitCnt := r.waitCnt + 1;
       end if;
 
       if r.frameMetaWr = '1' then
-         v.decError      := '0';
-         v.inOverOcc     := '0';
-         v.inPause       := '0';
-         v.inPauseError  := '0';
-         v.frameSizeCnt  := (others => '0');
+         v.inOverOcc    := '0';
+         v.inPause      := '0';
+         v.inPauseError := '0';
+         v.frameSizeCnt := (others => '0');
       end if;
 
       ---------------------------------------------------------------------------
@@ -269,33 +267,20 @@ begin
          when WAIT_HEADER_S =>
 
             -- post-error state takes precedence; go look for dummy headers
-            if postError = '1' then
+            -- if realignOnSof is high though, just wait for an SoF;
+            -- the option exists because SparkPix-S does not feature conventional frame delimiters
+            if postError = '1' and config.realignOnSof = '0' then
                v.state := WAIT_DUMMY_S;
 
-            -- lane full
-            elsif r.inFull = '1' then
+            -- lane full or decoding error detected
+            elsif r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
-
-            -- decoding error detected
-            elsif r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
 
             -- nominal
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
 
-               -- if just recovering from pause-error, check if this is a subsequent event;
-               -- if it is, resume normal operation, if not, wait for next packet
-               if dummy = '0' and sof = '1' and r.postPauseErr = '1' then
-                  if trgCnt > r.pauseErrTrgCnt then
-                     v.postPauseErr   := '0'; -- drop the flag to go to the next if-clause
-                     v.pauseErrTrgCnt := (others => '0');
-                  else
-                     v.state := WAIT_DUMMY_S;
-                  end if;
-               end if;
-
-               if dummy = '0' and sof = '1' and v.postPauseErr = '0' then
+               if dummy = '0' and sof = '1' then
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   tValid         := '1';                -- write to axiFifo
                   v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
@@ -303,11 +288,12 @@ begin
                   v.inPause      := pause and not(pauseErr); -- mask if in pause-error
                   v.inPauseError := pauseErr;
                   v.trgCntHeader := trgCnt;
+                  v.colCntHeader := onesCount(colHitmask);
 
                   if uOr(colHitmask) = '0' then
                      v.state := CLOSE_FRAME_S;
                   else
-                     v.activeColCnt := onesCount(colHitmask);
+                     v.activeColCnt := v.colCntHeader;
                      v.state        := PARSE_COL_METADATA_S;
                   end if;
                end if;
@@ -318,13 +304,9 @@ begin
          -- parse column metadata
          when PARSE_COL_METADATA_S =>
 
-            -- lane full
-            if r.inFull = '1' then
+            -- lane full or decoding error detected
+            if r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
-
-            -- decoding error detected
-            elsif r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
 
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
@@ -348,10 +330,10 @@ begin
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
                -- 2. check if the data length of this column is within the limits
-               if (metaTrgCnt /= r.trgCntHeader and dropBadTrg = '1') or
+               if (metaTrgCnt /= r.trgCntHeader and config.dropColMisalign = '1') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
-                  v.state    := CLOSE_FRAME_S;
+                  v.state    := ERROR_S;
                end if;
             end if;
 
@@ -359,13 +341,9 @@ begin
          -- parse column data
          when PARSE_DATA_S =>
 
-            -- lane full
-            if r.inFull = '1' then
+            -- lane full or decoding error detected
+            if r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
-
-            -- decoding error detected
-            elsif r.decError = '1' then
-               v.state := CLOSE_FRAME_S;
 
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
@@ -394,12 +372,11 @@ begin
          -- also determine whether to write into the metadata FIFO or not
          when CLOSE_FRAME_S =>
 
-            if r.inPauseError = '1' then
-               v.postPauseErr   := '1';
-               v.pauseErrTrgCnt := r.trgCntHeader;
-            end if;
+            -- lane full or decoding error detected
+            if r.inFull = '1' or r.decError = '1' then
+               v.state := ERROR_S;
 
-            if axiFifoSlave.tReady = '1' then
+            elsif axiFifoSlave.tReady = '1' then
                -- close frame (no valid data is sent on this cycle; tKeep is low)
                v.axiFifoMaster.tKeep := (others => '0');
                tLast         := '1';
@@ -409,11 +386,6 @@ begin
                -- go-to dummy wait state by default
                v.state := WAIT_HEADER_S;
 
-               -- override; go-to error state and stay there
-               if r.decError = '1' then
-                  v.state := ERROR_S;
-               end if;
-
             end if;
 
          ----------------------------------------------------------------------
@@ -421,10 +393,9 @@ begin
          -- don't write dummies to axiFifo;
          -- reset status FIFO fields if closed the frame
          when WAIT_DUMMY_S =>
-            v.laneRxOk := '0';
 
-            -- lane full
-            if r.inFull = '1' then
+            -- lane full or decoding error detected
+            if r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
 
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' and postError = '0' then
@@ -442,10 +413,9 @@ begin
             end if;
 
          ------------------------------------------------------------------------
-         -- stay here until reset;
+         -- stay here until reset; error flags that got us here will still be up
          when ERROR_S =>
-            v.laneRxOk := '0';
-            v.inError  := '1';
+            v.state := ERROR_S;
 
       end case;
       ---------------------------------------------------------------------------
@@ -455,17 +425,18 @@ begin
       v.axiFifoMaster.tLast  := tLast;
       v.rxFifoSlave.tReady   := tReady;
 
-      v.frameMetaDin := laneMetaMap(r.decError,
-                                    r.inOverOcc,
+      v.frameMetaDin := laneMetaMap(r.inOverOcc,
                                     r.inPause,
                                     r.inPauseError,
                                     r.frameSizeCnt,
+                                    r.colCntHeader,
                                     r.trgCntHeader);
 
       rxFifoSlave   <= v.rxFifoSlave;
       axiFifoMaster <= r.axiFifoMaster;
-      laneRxOk      <= r.laneRxOk;
-      laneRxInError <= r.inError;
+
+      laneRxFull  <= r.inFull;
+      laneRxError <= r.decError;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
@@ -477,7 +448,6 @@ begin
 
    end process comb;
 
-
    seq : process (laneClk, laneRst) is
    begin
       if (RST_ASYNC_G and laneRst = RST_POLARITY_G) then
@@ -486,6 +456,8 @@ begin
          r <= rin after TPD_G;
       end if;
    end process seq;
+   -------------------------------------------------------------------------------------------------
+   -------------------------------------------------------------------------------------------------
 
    ----------------------------------------
    -- Metadata Buffer
@@ -495,6 +467,7 @@ begin
          TPD_G           => TPD_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
+         GEN_SYNC_FIFO_G => true,
          MEMORY_TYPE_G   => "block",
          FWFT_EN_G       => true,
          DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
@@ -545,12 +518,10 @@ begin
    laneFifoAlmFull <= not(laneFifoSlave.tReady);
    axiFifoAlmFull  <= not(axiFifoSlave.tReady);
 
-   -- all full and almost-full flags; also monitor frame size counter overflow
+   -- all full and almost-full flags
    laneFull <= laneFifoFull  or laneFifoAlmFull or axiFifoFull or
-               frameMetaFull or axiFifoAlmFull  or uAnd(r.frameSizeCnt);
+               frameMetaFull or axiFifoAlmFull;
 
    pgp4RxSlave <= laneFifoSlave;
-
-   laneRxFull <= r.inFull;
 
 end rtl;

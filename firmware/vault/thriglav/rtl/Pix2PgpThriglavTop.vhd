@@ -1,4 +1,4 @@
--- SparkPix-S Wrapper
+-- Thriglav Wrapper
 
 -- keeping it simple
 -- maybe can create a dinArray equivalent in systemVerilog?
@@ -16,7 +16,7 @@ library surf;
 use surf.AxiStreamPkg.all;
 use surf.StdRtlPkg.all;
 
-entity Pix2PgpSparkPixSTop is
+entity Pix2PgpThriglavTop is
    generic(
       TPD_G                     : time      := 1 ns;
       RST_ASYNC_G               : boolean   := true;
@@ -37,7 +37,8 @@ entity Pix2PgpSparkPixSTop is
       -- Configuration Registers
       cfgSel            : in  std_logic;
       cfgTimeoutLimit   : in  std_logic_vector(11 downto 0);
-      cfgColumnEnable   : in  std_logic_vector(23 downto 0);
+      cfgPauseLimit     : in  std_logic_vector(11 downto 0);
+      cfgColumnEnable   : in  std_logic_vector(49 downto 0);
       cfgColBusy        : out std_logic;
       cfgColDataEmpty   : out std_logic;
       cfgColStatusEmpty : out std_logic;
@@ -45,45 +46,71 @@ entity Pix2PgpSparkPixSTop is
       cfgArbBusy        : out std_logic;
       -- Column Manager Interface
       -- dataIn
-      din0              : in  std_logic_vector(19 downto 0);
-      din1              : in  std_logic_vector(19 downto 0);
-      din2              : in  std_logic_vector(19 downto 0);
-      din3              : in  std_logic_vector(19 downto 0);
-      din4              : in  std_logic_vector(19 downto 0);
-      din5              : in  std_logic_vector(19 downto 0);
-      din6              : in  std_logic_vector(19 downto 0);
-      din7              : in  std_logic_vector(19 downto 0);
-      din8              : in  std_logic_vector(19 downto 0);
-      din9              : in  std_logic_vector(19 downto 0);
-      din10             : in  std_logic_vector(19 downto 0);
-      din11             : in  std_logic_vector(19 downto 0);
-      din12             : in  std_logic_vector(19 downto 0);
-      din13             : in  std_logic_vector(19 downto 0);
-      din14             : in  std_logic_vector(19 downto 0);
-      din15             : in  std_logic_vector(19 downto 0);
-      din16             : in  std_logic_vector(19 downto 0);
-      din17             : in  std_logic_vector(19 downto 0);
-      din18             : in  std_logic_vector(19 downto 0);
-      din19             : in  std_logic_vector(19 downto 0);
-      din20             : in  std_logic_vector(19 downto 0);
-      din21             : in  std_logic_vector(19 downto 0);
-      din22             : in  std_logic_vector(19 downto 0);
-      din23             : in  std_logic_vector(19 downto 0);
+      din0              : in  std_logic_vector(31 downto 0);
+      din1              : in  std_logic_vector(31 downto 0);
+      din2              : in  std_logic_vector(31 downto 0);
+      din3              : in  std_logic_vector(31 downto 0);
+      din4              : in  std_logic_vector(31 downto 0);
+      din5              : in  std_logic_vector(31 downto 0);
+      din6              : in  std_logic_vector(31 downto 0);
+      din7              : in  std_logic_vector(31 downto 0);
+      din8              : in  std_logic_vector(31 downto 0);
+      din9              : in  std_logic_vector(31 downto 0);
+      din10             : in  std_logic_vector(31 downto 0);
+      din11             : in  std_logic_vector(31 downto 0);
+      din12             : in  std_logic_vector(31 downto 0);
+      din13             : in  std_logic_vector(31 downto 0);
+      din14             : in  std_logic_vector(31 downto 0);
+      din15             : in  std_logic_vector(31 downto 0);
+      din16             : in  std_logic_vector(31 downto 0);
+      din17             : in  std_logic_vector(31 downto 0);
+      din18             : in  std_logic_vector(31 downto 0);
+      din19             : in  std_logic_vector(31 downto 0);
+      din20             : in  std_logic_vector(31 downto 0);
+      din21             : in  std_logic_vector(31 downto 0);
+      din22             : in  std_logic_vector(31 downto 0);
+      din23             : in  std_logic_vector(31 downto 0);
+      din24             : in  std_logic_vector(31 downto 0);
+      din25             : in  std_logic_vector(31 downto 0);
+      din26             : in  std_logic_vector(31 downto 0);
+      din27             : in  std_logic_vector(31 downto 0);
+      din28             : in  std_logic_vector(31 downto 0);
+      din29             : in  std_logic_vector(31 downto 0);
+      din30             : in  std_logic_vector(31 downto 0);
+      din31             : in  std_logic_vector(31 downto 0);
+      din32             : in  std_logic_vector(31 downto 0);
+      din33             : in  std_logic_vector(31 downto 0);
+      din34             : in  std_logic_vector(31 downto 0);
+      din35             : in  std_logic_vector(31 downto 0);
+      din36             : in  std_logic_vector(31 downto 0);
+      din37             : in  std_logic_vector(31 downto 0);
+      din38             : in  std_logic_vector(31 downto 0);
+      din39             : in  std_logic_vector(31 downto 0);
+      din40             : in  std_logic_vector(31 downto 0);
+      din41             : in  std_logic_vector(31 downto 0);
+      din42             : in  std_logic_vector(31 downto 0);
+      din43             : in  std_logic_vector(31 downto 0);
+      din44             : in  std_logic_vector(31 downto 0);
+      din45             : in  std_logic_vector(31 downto 0);
+      din46             : in  std_logic_vector(31 downto 0);
+      din47             : in  std_logic_vector(31 downto 0);
+      din48             : in  std_logic_vector(31 downto 0);
+      din49             : in  std_logic_vector(31 downto 0);
       -- flags
-      sof               : in  std_logic_vector(23 downto 0);
-      eof               : in  std_logic_vector(23 downto 0);
-      overOcc           : in  std_logic_vector(23 downto 0);
-      pauseAck          : in  std_logic_vector(23 downto 0);
-      wrEn              : in  std_logic_vector(23 downto 0);
-      busy              : out std_logic_vector(23 downto 0);
-      pause             : out std_logic_vector(23 downto 0);
+      sof               : in  std_logic_vector(49 downto 0);
+      eof               : in  std_logic_vector(49 downto 0);
+      overOcc           : in  std_logic_vector(49 downto 0);
+      pauseAck          : in  std_logic_vector(49 downto 0);
+      wrEn              : in  std_logic_vector(49 downto 0);
+      busy              : out std_logic_vector(49 downto 0);
+      pause             : out std_logic_vector(49 downto 0);
       -- Serializer Interface
       pgpDout           : out std_logic_vector(31 downto 0);
       pgpDoutValid      : out std_logic;
       pgpDoutReady      : in  std_logic);
-end entity Pix2PgpSparkPixSTop;
+end entity Pix2PgpThriglavTop;
 
-architecture rtl of Pix2PgpSparkPixSTop is
+architecture rtl of Pix2PgpThriglavTop is
 
    signal din                   : Pix2PgpSparseDinArray;
    signal readback              : Pix2PgpCfgReadbackType;
@@ -99,48 +126,49 @@ architecture rtl of Pix2PgpSparkPixSTop is
    signal cfgColumnEnablePgp    : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
    signal cfgTimeoutLimitSparse : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
    signal cfgColumnEnableSparse : std_logic_vector(NUM_OF_COL_MANAGERS_C-1 downto 0);
+   signal cfgPauseLimitSparse   : std_logic_vector(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
 
 begin
 
    -- check that we have sourced the correct Pkg file
-   assert (NUM_OF_COL_MANAGERS_C = 24)
-      report "[ERROR]: Pix2PgpSparkPixSTop; NUM_OF_COL_MANAGERS_C is *NOT* equal to 24! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixTPkg.vhd" severity failure;
+   assert (NUM_OF_COL_MANAGERS_C = 50)
+      report "[ERROR]: Pix2PgpThriglavTop; NUM_OF_COL_MANAGERS_C is *NOT* equal to 50! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixSPkg.vhd" severity failure;
 
-   assert (SPARSE_DWIDTH_C = 20)
-      report "[ERROR]: Pix2PgpSparkPixSTop; SPARSE_DWIDTH_C is *NOT* equal to 20! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixTPkg.vhd" severity failure;
+   assert (SPARSE_DWIDTH_C = 32)
+      report "[ERROR]: Pix2PgpThriglavTop; SPARSE_DWIDTH_C is *NOT* equal to 32! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixSPkg.vhd" severity failure;
 
    -- check the length equivalence with asserts
    -- avoid tying input port widths to generics; hardcode them instead
    -- ...ASIC flow tools can be annoying...
    assert (cfgTimeoutLimit'length = TIMEOUT_LIMIT_WIDTH_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match cfgTimeoutLimit port width with TIMEOUT_LIMIT_WIDTH_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match cfgTimeoutLimit port width with TIMEOUT_LIMIT_WIDTH_C generic" severity failure;
 
    assert (cfgColumnEnable'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match cfgColumnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match cfgColumnEnable port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (sof'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match sof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match sof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (eof'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match eof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match eof port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (overOcc'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match overOcc port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match overOcc port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (pauseAck'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match pauseAck port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match pauseAck port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (wrEn'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match wrEn port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match wrEn port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (busy'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match busy port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match busy port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (pause'length = NUM_OF_COL_MANAGERS_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; Please match pause port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; Please match pause port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
    assert (FPGA_DATABUS_DWIDTH_C >= FPGA_PREAMBLE_LEN_C)
-      report "[ERROR]: Pix2PgpSparkPixSTop; FPGA RX Preamble Length is larger than the width of the FPGA databus. Please check your Pkg file!" severity failure;
+      report "[ERROR]: Pix2PgpThriglavTop; FPGA RX Preamble Length is larger than the width of the FPGA databus. Please check your Pkg file!" severity failure;
 
    --------------------------------------------------------------------------
 
@@ -242,6 +270,32 @@ begin
       din(21) <= din21;
       din(22) <= din22;
       din(23) <= din23;
+      din(24) <= din24;
+      din(25) <= din25;
+      din(26) <= din26;
+      din(27) <= din27;
+      din(28) <= din28;
+      din(29) <= din29;
+      din(30) <= din30;
+      din(31) <= din31;
+      din(32) <= din32;
+      din(33) <= din33;
+      din(34) <= din34;
+      din(35) <= din35;
+      din(36) <= din36;
+      din(37) <= din37;
+      din(38) <= din38;
+      din(39) <= din39;
+      din(40) <= din40;
+      din(41) <= din41;
+      din(42) <= din42;
+      din(43) <= din43;
+      din(44) <= din44;
+      din(45) <= din45;
+      din(46) <= din46;
+      din(47) <= din47;
+      din(48) <= din48;
+      din(49) <= din49;
 
    U_SyncColEnaPgp : entity surf.SynchronizerVector
       generic map (
@@ -275,6 +329,17 @@ begin
          clk     => sparseClk,
          dataIn  => cfgTimeoutLimit,
          dataOut => cfgTimeoutLimitSparse);
+
+   U_SyncTimeoutPause : entity surf.SynchronizerVector
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         WIDTH_G        => TIMEOUT_LIMIT_WIDTH_C)
+      port map (
+         clk     => sparseClk,
+         dataIn  => cfgPauseLimit,
+         dataOut => cfgPauseLimitSparse);
 
    -- status readback
    cfgSuperBusy      <= readback.cfgSuperBusy;
@@ -310,7 +375,7 @@ begin
             config.colEnaSparse <= (others => '0');
          elsif cfgSel = '1' then
             config.timeoutLimit <= cfgTimeoutLimitSparse;
-            config.pauseLimit   <= (others => '0'); -- no such feature in sparkpix-s
+            config.pauseLimit   <= cfgPauseLimitSparse;
             config.colEnaSparse <= cfgColumnEnableSparse;
          end if;
       end if;

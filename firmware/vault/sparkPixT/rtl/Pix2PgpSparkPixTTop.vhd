@@ -141,6 +141,9 @@ begin
    assert (pause'length = NUM_OF_COL_MANAGERS_C)
       report "[ERROR]: Pix2PgpSparkPixTTop; Please match pause port width with NUM_OF_COL_MANAGERS_C generic" severity failure;
 
+   assert (FPGA_DATABUS_DWIDTH_C >= FPGA_PREAMBLE_LEN_C)
+      report "[ERROR]: Pix2PgpSparkPixTTop; FPGA RX Preamble Length is larger than the width of the FPGA databus. Please check your Pkg file!" severity failure;
+
    --------------------------------------------------------------------------
 
    -- Top Level

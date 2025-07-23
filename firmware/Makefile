@@ -13,6 +13,11 @@ else ifeq ($(ASIC), SparkPixT)
     ASIC_LINK_DIR := $(ROOT_DIR)/vault/sparkPixT
     ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/SparkPixTPkg.vhd
     ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpSparkPixTTop.vhd
+else ifeq ($(ASIC), Thriglav)
+    ASIC_SOURCED  := 1
+    ASIC_LINK_DIR := $(ROOT_DIR)/vault/thriglav
+    ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/ThriglavPkg.vhd
+    ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpThriglavTop.vhd
 # else ifeq ($(ASIC), Template)
 #     ASIC_SOURCED  := 1
 #     ASIC_LINK_DIR := $(ROOT_DIR)/vault/Template

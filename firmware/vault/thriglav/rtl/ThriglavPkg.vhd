@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Pix2Pgp Package for SparkPix-S
+-- Description: Pix2Pgp Package for Thriglav
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -25,7 +25,7 @@ use surf.AxiStreamPkg.all;
 package Pix2PgpPkg is
 
    -----------------------------------------------------------------------------
-   ------------------------------ SparkPix-S -----------------------------------
+   ------------------------------- Thriglav ------------------------------------
    -----------------------------------------------------------------------------
    -- ASIC-specific parameters
    -- Most of these constants and data-fields should match the decoder
@@ -36,20 +36,20 @@ package Pix2PgpPkg is
 
    -- Primary parameters to tune
    --
-   constant NUM_OF_COL_MANAGERS_C : natural := 24; -- number of columns per serializer
-   constant NUM_OF_SERIALIZERS_C  : natural :=  8; -- number of serializers per-ASIC
-   constant SPARSE_DWIDTH_C       : natural := 20; -- data width
+   constant NUM_OF_COL_MANAGERS_C : natural := 50; -- number of columns per serializer
+   constant NUM_OF_SERIALIZERS_C  : natural :=  2; -- number of serializers per-ASIC
+   constant SPARSE_DWIDTH_C       : natural := 32; -- data width
 
    -- every ASIC implementation has a specific decimal identifier; no ASIC should be = 0
-   constant ASIC_TYPE_C : natural := 1; -- SparkPix-S = 1
+   constant ASIC_TYPE_C : natural := 3; -- Thriglav = 3
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment
-   constant INCR_TRGCNT_OVEROCC_C : boolean := True;
+   constant INCR_TRGCNT_OVEROCC_C : boolean := False;
 
    -- if set to True:
    -- a paused column forces pix2pgp to close the event after a configurable timeout
-   constant ENA_PAUSE_TIMEOUT_C   : boolean := False;
+   constant ENA_PAUSE_TIMEOUT_C   : boolean := True;
 
    -- **************************************************************************
    --
@@ -67,11 +67,11 @@ package Pix2PgpPkg is
    -- data bus width is twice the pixel data width to maximize bandwidth
    constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
    --
-   constant EVAL_SOF_C  : boolean := False;
-   constant EVAL_EOFE_C : boolean := False;
+   constant EVAL_SOF_C  : boolean := True;
+   constant EVAL_EOFE_C : boolean := True;
 
-   constant TX_DUMMY_MAX_C   : natural := 7;
-   constant EVAL_DUMMY_MAX_C : natural := 4;
+   constant TX_DUMMY_MAX_C   : natural := 5;
+   constant EVAL_DUMMY_MAX_C : natural := 3;
    --
    -- **************************************************************************
 
@@ -84,23 +84,23 @@ package Pix2PgpPkg is
    constant HEADER_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C;
 
    -- bitfields
-   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 39
-   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 38
-   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 37
-   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 36
-   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 35
-   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 34
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 63
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 62
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 61
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 60
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 59
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 58
    --------------------------
-   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7  -- [33:32]
-                                              downto HEADER_DWIDTH_C-8;
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7  -- [57:57]
+                                              downto HEADER_DWIDTH_C-7;
    --------------------------
    -- col-hitmask
-   subtype  COL_HITMASK_POS_C      is natural range  HEADER_DWIDTH_C-9  -- [31:8]
-                                              downto HEADER_DWIDTH_C-32;
+   subtype  COL_HITMASK_POS_C      is natural range  HEADER_DWIDTH_C-8   -- [56:7]
+                                              downto HEADER_DWIDTH_C-57;
    --------------------------
    -- trigger counter
-   subtype  TRGCNT_POS_C           is natural range  HEADER_DWIDTH_C-33 -- [7:0]
-                                              downto HEADER_DWIDTH_C-40;
+   subtype  TRGCNT_POS_C           is natural range  HEADER_DWIDTH_C-58 -- [6:0]
+                                              downto HEADER_DWIDTH_C-64;
    ------------------------------------------------------------------------------
    -- ~~~~~~~~~~~~~~~
    -- Column Metadata

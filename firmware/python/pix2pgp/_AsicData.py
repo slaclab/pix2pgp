@@ -45,7 +45,7 @@ class AsicData(object):
         Reset Class variables
         """
 
-        # populated by fpgaParameterSet() (parameters have _ prefix)
+        # populated by asicParamSet() (parameters have _ prefix)
         self.numOfLanes   = None
         self.numOfCols    = None
         self.wordLen      = None
@@ -58,6 +58,7 @@ class AsicData(object):
         # preamble
         self.preambleErr     = False
         self.typeMismatchErr = False
+        self.dropFrame       = False
         self.asicType        = 0
         self.asicId          = 0
         self.fpgaId          = 0
@@ -68,9 +69,9 @@ class AsicData(object):
         self.fpgaDataFormat = None
 
         # initialize the values
-        self.fpgaParameterSet()
+        self.asicParamSet()
 
-        # call after self.fpgaParameterSet
+        # call after self.asicParamSet
         # fpga header
         self.headerErr      = False
         self.laneValid      = [None] * self.numOfLanes
@@ -166,25 +167,24 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def fpgaParameterSet(self):
+    def asicParamSet(self):
         """
         Sets the parameters of the frame length depending on the ASIC type
         """
         self.fpgaDataFormat = pix2pgp.FpgaRxDataFormat()
 
-        if self._asicType == 'SparkPixS':
-            self.asicParams = pix2pgp.SparkPixSParameters()
-
-        elif self._asicType == 'SparkPixT':
-            self.asicParams = pix2pgp.SparkPixTParameters()
-
-        else:
-            click.secho(f"[ERROR]: asicType parameter not set properly! options: SparkPixS, SparkPixT", bg='red')
+        try:
+            self.asicParams = pix2pgp.AsicParameterBase.asicParams[self._asicType]()
+        except KeyError:
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(_asicParams.keys())}", bg='red')
             sys.exit()
 
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
         self.numOfCols    = self.asicParams.asicParamExtract()['numOfCols']
         self.wordLen      = self.asicParams.asicParamExtract()['wordLen']
+
+        self.fpgaDataFormat.asicNumOfLanesSet(numOfLanes=self.numOfLanes)
+
         self.preambleLen  = self.fpgaDataFormat.fpgaParamExtract()['preambleLen']
         self.headerLen    = self.fpgaDataFormat.fpgaParamExtract()['headerLen']
         self.frameSizeLen = self.fpgaDataFormat.fpgaParamExtract()['frameSizeLen']
@@ -207,6 +207,8 @@ class AsicData(object):
         # error-checking
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.preambleErr = True
+        elif self.asicType == 0:
+            self.dropFrame = True
         elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
 
@@ -220,11 +222,15 @@ class AsicData(object):
                   self.fpgaId,
                   self.fpgaTrgCnt))
             print(f"")
+
             if self.preambleErr:
                 pix2pgp.Tools.printError('Preamble')
 
             if self.typeMismatchErr:
                 pix2pgp.Tools.printError('ASIC Type Mismatch')
+
+            if self.dropFrame:
+                pix2pgp.Tools.printWarning('Dropped Frame')
     #################################################################
 
     #################################################################
@@ -252,7 +258,7 @@ class AsicData(object):
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
-            _format = 'Lane: DecError, Full, Timeout, Down, Valid    =    0x{0:<02X}, 0x{1:<02X}, 0x{2:<02X}, 0x{3:<02X} 0x{4:<02X}'
+            _format = 'Lane: DecError, Full, Timeout, Down, Valid       =     0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X} 0x{4:<01X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
                 _dict['laneDecError'], _dict['laneFull'],
@@ -260,8 +266,10 @@ class AsicData(object):
                 _dict['laneValid']
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
+
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
+
             if any(self.laneTimeout) and self._verbose > 2:
                 pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
     #################################################################
@@ -280,6 +288,7 @@ class AsicData(object):
             print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
+
             if self.trailerErr:
                 pix2pgp.Tools.printError('FPGA Trailer')
     #################################################################
@@ -294,27 +303,27 @@ class AsicData(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~
         self.asicGlblOverOcc[laneSel] = (
             np.array(self.asicGlblOverOcc[laneSel]) |
-            np.array(self.laneDecoder.overOcc))
+            np.array(self.laneDecoder.overOcc)).tolist()
 
         self.asicGlblPause[laneSel] = (
             np.array(self.asicGlblOverOcc[laneSel]) |
-            np.array(self.laneDecoder.pause))
+            np.array(self.laneDecoder.pause)).tolist()
 
         self.asicGlblColErr[laneSel] = (
             np.array(self.asicGlblColErr[laneSel]) |
-            np.array(self.laneDecoder.colErr))
+            np.array(self.laneDecoder.colErr)).tolist()
 
         self.asicGlblPauseErr[laneSel] = (
             np.array(self.asicGlblPauseErr[laneSel]) |
-            np.array(self.laneDecoder.pauseErr))
+            np.array(self.laneDecoder.pauseErr)).tolist()
 
         self.asicGlblDummy[laneSel] = (
             np.array(self.asicGlblDummy[laneSel]) |
-            np.array(self.laneDecoder.dummy))
+            np.array(self.laneDecoder.dummy)).tolist()
 
         self.asicGlblColTimeout[laneSel] = (
             np.array(self.asicGlblColTimeout[laneSel]) |
-            np.array(self.laneDecoder.timeout))
+            np.array(self.laneDecoder.timeout)).tolist()
 
         # should not change within the same event
         self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
@@ -322,38 +331,38 @@ class AsicData(object):
         # Errors and status flags
         self.laneDecErr[laneSel] = (
             np.array(self.laneDecErr[laneSel]) |
-            np.array(self.laneDecoder.decErr))
+            np.array(self.laneDecoder.decErr)).tolist()
 
         self.laneHasData[laneSel] = (
             np.array(self.laneHasData[laneSel]) |
-            np.array(self.laneDecoder.hasData))
+            np.array(self.laneDecoder.hasData)).tolist()
 
         offset = laneSel * self.numOfCols
 
         self.colHitmask[offset:offset + self.numOfCols] = (
             np.array(self.colHitmask[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colHitmask))
+            np.array(self.laneDecoder.colHitmask)).tolist()
 
         self.colTimeout[offset:offset + self.numOfCols] = (
             np.array(self.colTimeout[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colTimeout))
+            np.array(self.laneDecoder.colTimeout)).tolist()
 
         self.colOverOcc[offset:offset + self.numOfCols] = (
             np.array(self.colOverOcc[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colOverOcc))
+            np.array(self.laneDecoder.colOverOcc)).tolist()
 
         self.colPause[offset:offset + self.numOfCols] = (
             np.array(self.colPause[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colPause))
+            np.array(self.laneDecoder.colPause)).tolist()
 
         self.colDecColId[offset:offset + self.numOfCols] = (
             np.array(self.colDecColId[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colId))
+            np.array(self.laneDecoder.colId)).tolist()
 
         # each column-length accumulates on itself for each frame
         self.colLen[offset:offset + self.numOfCols] = (
             np.array(self.colLen[offset:offset + self.numOfCols]) +
-            np.array(self.laneDecoder.colLen))
+            np.array(self.laneDecoder.colLen)).tolist()
 
         # should not change within the same event
         self.colTrgCnt[offset:offset + self.numOfCols] = self.laneDecoder.colTrgCnt
@@ -395,9 +404,14 @@ class AsicData(object):
 
                 self.preambleEval(wordHex)
 
-
                 index += self.preambleLen
-                state = "header_s"
+
+                # usually this is not a drop-frame; so go-to header
+                if not(self.dropFrame):
+                    state = "header_s"
+                else:
+                    # in the special case of a drop-frame, a trailer follows the preamble
+                    state = "trailer_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "header_s":

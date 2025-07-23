@@ -181,7 +181,7 @@ ghdlAnalyze()
   ${GHDL_ANALYZE} ${TB_SHARED}
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_TOP}
   ${GHDL_ANALYZE} ${GHDL_FIFO}
-  echo "[INFO]: Success!"
+  echo "[INFO]: Done!"
 }
 ##########################################################################
 

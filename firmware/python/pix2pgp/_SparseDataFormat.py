@@ -15,6 +15,13 @@ class SparseDataFormatBase:
     every ASIC class should have:
     * a dataDecoder() method, same as this base class
     '''
+    @classmethod
+    def setData(self):
+        self.asicData = {
+            'SparkPixS': SparkPixSDataFormat,
+            'SparkPixT': SparkPixTDataFormat,
+            'Thriglav' : ThriglavDataFormat}
+
     def dataDecoder(self, colId=0, hitData=None, rawData=False):
         raise NotImplementedError("This method should be overridden by subclasses")
     def dataPrinter(self, asicHits=None, rawData=False):
@@ -158,3 +165,80 @@ class SparkPixTDataFormat(SparseDataFormatBase):
 
             for hit in asicHits:
                 click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))
+
+class ThriglavDataFormat(SparseDataFormatBase):
+    '''
+    Thriglav Data Format
+    '''
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
+        _hitData = int(hitData, 16)
+
+        _hit = []
+        ret  = []
+
+        _hit.append((_hitData >> 32) & 0xFFFFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFFFFF)
+
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
+
+        else:
+            _row  = []
+            _toaF = []
+            _toaC = []
+            _toa  = []
+            _tot  = []
+
+            _row.append ((_hit[0] >>  0) & 0xFF)
+            _toaF.append((_hit[0] >> 29) & 0x07)
+            _toaC.append((_hit[0] >> 16) & 0xFF)
+            _tot.append( (_hit[0] >>  8) & 0xFF)
+
+            _row.append ((_hit[1] >>  0) & 0xFF)
+            _toaF.append((_hit[1] >> 29) & 0x07)
+            _toaC.append((_hit[1] >> 16) & 0xFF)
+            _tot.append( (_hit[1] >>  8) & 0xFF)
+
+            _toa.append((_toaC[0] << 8) | _toaF[0])
+            _toa.append((_toaC[1] << 8) | _toaF[1])
+
+            ret.append({'col': colId,
+                        'row': _row[0],
+                        'toa': _toa[0],
+                        'tot': _tot[0]})
+
+            ret.append({'col': colId,
+                        'row': _row[1],
+                        'toa': _toa[1],
+                        'tot': _tot[1]})
+
+        return ret
+
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<5} TOT = {3:<8}'
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))
+
+
+SparseDataFormatBase.setData()

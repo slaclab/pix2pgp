@@ -14,6 +14,14 @@ class Pix2PgpHeaderFormatBase:
     every ASIC class should have:
     * a headerDecoder() method, same as this base class
     '''
+
+    @classmethod
+    def setHeader(self):
+        self.asicHeader = {
+            'SparkPixS': SparkPixSHeaderFormat,
+            'SparkPixT': SparkPixTHeaderFormat,
+            'Thriglav' : ThriglavHeaderFormat}
+
     def headerDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")
 
@@ -58,3 +66,26 @@ class SparkPixTHeaderFormat(Pix2PgpHeaderFormatBase):
                        'trgCnt'     :      (_header >>  0) & 0xFF}
 
         return header_dict
+
+class ThriglavHeaderFormat(Pix2PgpHeaderFormatBase):
+    '''
+    Thriglav Header Format
+    '''
+    def headerDecoder(self, header):
+        '''
+        Header mapping and decoding
+        '''
+        _header = int(header, 16)
+
+        header_dict = {'overOcc'    : bool((_header >> 63) & 0x1),
+                       'pause'      : bool((_header >> 62) & 0x1),
+                       'colErr'     : bool((_header >> 61) & 0x1),
+                       'pauseErr'   : bool((_header >> 60) & 0x1),
+                       'dummy'      : bool((_header >> 59) & 0x1),
+                       'timeout'    : bool((_header >> 58) & 0x1),
+                       'colHitmask' :      (_header >>  7) & 0x3FFFFFFFFFFFF,
+                       'trgCnt'     :      (_header >>  0) & 0x7F}
+
+        return header_dict
+
+Pix2PgpHeaderFormatBase.setHeader()

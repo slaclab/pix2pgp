@@ -47,7 +47,7 @@ end entity Pix2PgpSparkPixTTopTb;
 
 architecture test of Pix2PgpSparkPixTTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matric clock sent to ASIC
+   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matrix clock of ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
    constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
@@ -61,7 +61,6 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal pgpRxClk  : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
-   signal sroDly    : sl := '0';
    signal sroFinal  : sl := '0';
    signal ero       : sl := '0';
    signal eroFinal  : sl := '0';
@@ -122,12 +121,17 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
    signal cfgPauseLimit     : slv(11 downto 0) := toSlv(12, 12);
-   signal cfgColumnEnable   : slv(23 downto 0) := (others => '1');
-   signal cfgColBusy        : sl := '0';
-   signal cfgColDataEmpty   : sl := '1';
-   signal cfgColStatusEmpty : sl := '1';
-   signal cfgSuperBusy      : sl := '0';
-   signal cfgArbBusy        : sl := '0';
+   signal cfgColumnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
+   signal cfgColBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgColDataEmpty   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgColStatusEmpty : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgSuperBusy      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgArbBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+
+   signal cfgColBusyDel     : sl := '0';
+   signal cfgSuperBusyDel   : sl := '0';
+   signal colBusyCnt        : slv(31 downto 0) := (others => '0');
+   signal superBusyCnt      : slv(31 downto 0) := (others => '0');
 
 begin
 
@@ -179,8 +183,7 @@ begin
   issueSroProcess: process(sparseClk)
   begin
     if (rising_edge(sparseClk)) then
-      sroDly <= sro;
-      if sro = '1' and sroDly = '0' then
+      if sro = '1' and sroFinal = '0' then
         sroFinal <= sro;
       else
         sroFinal <= '0';
@@ -254,11 +257,11 @@ begin
                cfgTimeoutLimit   => cfgTimeoutLimit,
                cfgPauseLimit     => cfgPauseLimit,
                cfgColumnEnable   => cfgColumnEnable,
-               cfgColBusy        => cfgColBusy,
-               cfgColDataEmpty   => cfgColDataEmpty,
-               cfgColStatusEmpty => cfgColStatusEmpty,
-               cfgSuperBusy      => cfgSuperBusy,
-               cfgArbBusy        => cfgArbBusy,
+               cfgColBusy        => cfgColBusy(ser),
+               cfgColDataEmpty   => cfgColDataEmpty(ser),
+               cfgColStatusEmpty => cfgColStatusEmpty(ser),
+               cfgSuperBusy      => cfgSuperBusy(ser),
+               cfgArbBusy        => cfgArbBusy(ser),
                pause             => pause(ser),
                sof               => sof(ser),
                eof               => eof(ser),
@@ -333,7 +336,6 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          ASIC_ID_G              => 0,
-         TIMEOUT_LIMIT_WIDTH_G  => TIMEOUT_LIMIT_WIDTH_G,
          LANE_PIPE_STAGES_G     => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
@@ -2023,10 +2025,11 @@ wait for CLK_PERIOD_SPARSE_C*2;
    wait for CLK_PERIOD_SPARSE_C*93;
 end loop;
 
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ----------------------------------------------
-    ----------------------------------------------
-    -- regular stimuli end
+  ----------------------------------------------
+  ----------------------------------------------
+  -- regular stimuli end
 
     -- do not touch begin
     wait;
@@ -2055,5 +2058,37 @@ end loop;
       end if;
     end if;
   end process;
+
+  --MeasureColBusyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+  --    cfgColBusyDel <= cfgColBusy(0);
+
+  --    if cfgColBusyDel = '1' then
+  --       colBusyCnt <= colBusyCnt + 1;
+  --    end if;
+
+  --    if cfgColBusyDel = '1' and cfgColBusy(0) = '0' then
+  --       report "[INFO]: ColumnBusy: colBusyCnt = " & integer'image(conv_integer(unsigned(colBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
+
+  --MeasureSuperBusyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+  --    cfgSuperBusyDel <= cfgSuperBusy(0);
+
+  --    if cfgSuperBusyDel = '1' then
+  --       superBusyCnt <= superBusyCnt + 1;
+  --    end if;
+
+  --    if cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0' then
+  --       report "[INFO]: SuperBusy: superBusyCnt = " & integer'image(conv_integer(unsigned(superBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
 
 end architecture;

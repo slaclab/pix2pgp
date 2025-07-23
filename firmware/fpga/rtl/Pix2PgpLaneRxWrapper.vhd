@@ -37,14 +37,15 @@ entity Pix2PgpLaneRxWrapper is
       -- General Interface
       laneClk        : in  sl;
       laneRst        : in  sl := not(RST_POLARITY_G);
+      config         : in  Pix2PgpStreamRxConfigType;
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
-      -- ASIC Rx Interface
-      dropBadColTrg  : in  sl;
+      -- Supervisor Interface
       lanePostError  : in  sl;
       laneStatus     : out Pix2PgpLaneStatusType;
       laneMetaRd     : in  sl;
+      -- Merger Interface
       laneRxMaster   : out AxiStreamMasterType;
       laneRxSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneRxWrapper;
@@ -57,11 +58,10 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal laneRxFull     : sl := '0';
    signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
-   signal dropBadTrg     : sl := '0';
-   signal laneRxOk       : sl := '0';
-   signal laneRxInError  : sl := '0';
-   signal obAxiMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal obAxiSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal laneRxError    : sl := '0';
+   signal configLane     : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
+   signal obAxiMaster    : AxiStreamMasterType       := AXI_STREAM_MASTER_INIT_C;
+   signal obAxiSlave     : AxiStreamSlaveType        := AXI_STREAM_SLAVE_INIT_C;
 
 begin
 
@@ -76,18 +76,17 @@ begin
          -- General Interface
          laneClk        => laneClk,
          laneRst        => laneRxRst,
+         config         => configLane,
          -- RX FIFO Interface
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
          -- StreamRx Interface
          postError      => postError,
-         dropBadTrg     => dropBadTrg,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
          laneRxFull     => laneRxFull,
-         laneRxOk       => laneRxOk,
-         laneRxInError  => laneRxInError,
+         laneRxError    => laneRxError,
          -- AXI-Stream to StreamRx
          obAxisMaster   => obAxiMaster,
          obAxisSlave    => obAxiSlave);
@@ -119,8 +118,18 @@ begin
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => dropBadColTrg,
-         dout(0) => dropBadTrg);
+         din(0)  => config.dropColMisalign,
+         dout(0) => configLane.dropColMisalign);
+
+   U_PipelineRealign : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => config.realignOnSof,
+         dout(0) => configLane.realignOnSof);
 
    U_PipelineLaneMetaRd : entity surf.SlvDelay
       generic map (
@@ -132,15 +141,15 @@ begin
          din(0)  => laneMetaRd,
          dout(0) => frameMetaRd);
 
-   U_PipelinelaneRxInError : entity surf.SlvDelay
+   U_PipelineLaneRxError : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => laneRxInError,
-         dout(0) => laneStatus.inError);
+         din(0)  => laneRxError,
+         dout(0) => laneStatus.decError);
 
    U_PipelineLaneMetaValid : entity surf.SlvDelay
       generic map (
@@ -203,6 +212,17 @@ begin
          din  => frameMetaDout(LANE_TRGCNT_POS_C),
          dout => laneStatus.trgCnt);
 
+   U_PipelineColCnt : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => BITMAX_COL_MANAGERS_C,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk  => laneClk,
+         din  => frameMetaDout(LANE_COLCNT_POS_C),
+         dout => laneStatus.activeColCnt);
+
    U_PipelineFrameSize : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
@@ -213,16 +233,6 @@ begin
          clk  => laneClk,
          din  => frameMetaDout(LANE_SIZE_POS_C),
          dout => laneStatus.frameSize);
-
-   U_PipelineDecError : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => frameMetaDout(LANE_DEC_ERROR_POS_C),
-         dout(0) => laneStatus.decError);
 
    GEN_PIPE: if PIPE_STAGES_G > 0 generate
 

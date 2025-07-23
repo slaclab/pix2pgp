@@ -41,7 +41,7 @@ package Pix2PgpPkg is
    constant SPARSE_DWIDTH_C       : natural := 32; -- data width
 
    -- every ASIC implementation has a specific decimal identifier; no ASIC should be = 0
-   constant ASIC_TYPE_C : natural := 2; -- SparPix-T = 2
+   constant ASIC_TYPE_C : natural := 2; -- SparkPix-T = 2
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment
@@ -116,26 +116,6 @@ package Pix2PgpPkg is
    subtype  META_DATALEN_POS_C is natural range   7 downto 0;
    ------------------------------------------------------------------------------
 
-   ------------------------------------------------------------------------------
-   -- FPGA-RX related parameters
-   constant LANERX_FRAME_SIZE_WIDTH_C : integer := 16;
-
-   -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
-   constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
-
-   -- trigger counter, plus frame size, plus decError, overOcc, pause, pauseError
-   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C+LANERX_FRAME_SIZE_WIDTH_C+4;
-
-   -- ~~~~~~~~~~~~~~~~~~
-   -- FPGA Lane Metadata
-   -- ~~~~~~~~~~~~~~~~~~
-   constant LANE_DEC_ERROR_POS_C   : natural := LANERX_META_DWIDTH_C-1;
-   constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-2;
-   constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-3;
-   constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-4;
-   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-5 downto TRGCNT_WIDTH_C;
-   subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
-
    -- ***************************************************************************
    -- ************************ Tunable parameters end ***************************
    -- ***************************************************************************
@@ -144,13 +124,13 @@ package Pix2PgpPkg is
 
    type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(SPARSE_DWIDTH_C-1 downto 0);
 
-   constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C)-1;
-   constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C)-1;
+   constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C);
+   constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C);
 
    constant PGP_DWIDTH_C : natural := 64;
    constant SER_DWIDTH_C : natural := 32;
 
-   -- *** ColumnManager-related ***
+   -- *** ColumnManager-related (for SparkPix-S) ***
    -- even though we have 672 pixels max, DATALEN_WIDTH_C should be less than 10 (10 bits fit 672);
    -- this is because the dataLength for a single event can never reach 672;
    -- the data FIFO cannot accommodate for that amount of hits.
@@ -235,54 +215,41 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of Pix2PgpDataBusType;
 
+   -- FPGA-related
+   ------------------------------------------------------------------------------
+   -- FPGA-RX related parameters
+   constant LANERX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   -- functions
-   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
-   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
-                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                          colHitmask: slv; trgCntGlbl: slv) return slv;
-   function isDummy        (din : slv) return boolean;
-   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
-                            asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
-   function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
-                            lanePauseError: slv; laneFull: slv; laneTimeout: slv;
-                            laneDown: slv; laneValid: slv) return slv;
-   function laneMetaMap    (decError: sl; overOcc: sl; pause: sl;
-                            pauseError: sl; frameSize: slv; trgCnt: slv) return slv;
-   function tKeepSet       (dataLen : natural) return slv;
-   function rangeToLen     (high : integer; low : integer) return integer;
+   -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
+   constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   -- the receiver can deduce which columns have data from the hitmask
-   -- it can also deduce how many data each columns has; how?
-   -- by reading the dataLen in the column metadata before each seq of hits
+   constant COLCNT_WIDTH_C : natural := BITMAX_COL_MANAGERS_C;
 
-   -- examples of the final pix2pgp frame format:
-   -- e.g. 1: this event has 1 hit from two different cols (cols 0 and 5)
-   -- pgp data frame header | col5 metadata -> col5_dataLen=1 | col0_hit0 |
-   --                       | col2 metadata -> col2_dataLen=1 | col5_hit0 |
-   -- e.g. 2: this event has 3 hits from one column (col 2)
-   -- pgp data frame header | col2 metadata -> col2_dataLen=3 | col2_hit0 | col2_hit1 | col2_hit2 |
-
-   -- if a column yielded odd number of events, the last hit will have an extra 20-bit padding
-   -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
-   --
-   --
-   function powerOfTwo(N: natural) return slv;
-   -- function stolen from numeric_std
-   function rightShift (inSlv: slv; count: natural) return slv;
-   --
+   -- trigger counter; plus frame size; plus number of active cols; plus overOcc, pause, pauseError
+   constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C +
+                                              LANERX_FRAME_SIZE_WIDTH_C +
+                                              COLCNT_WIDTH_C + 3;
+   -- ~~~~~~~~~~~~~~~~~~
+   -- FPGA Lane Metadata
+   -- ~~~~~~~~~~~~~~~~~~
+   constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-1;
+   constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-2;
+   constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-3;
+   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-4 downto COLCNT_WIDTH_C+TRGCNT_WIDTH_C;
+   subtype  LANE_COLCNT_POS_C   is   natural range COLCNT_WIDTH_C+TRGCNT_WIDTH_C-1 downto TRGCNT_WIDTH_C;
+   subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
 
    ------------------------------------------------------------------------------
    -- FPGA Preamble Mapping
-   constant FPGA_PREAMBLE_LEN_C : natural := 160;
-   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 96;
-   subtype ASIC_TYPE_POS_C     is natural range  95 downto 64;
-   subtype ASIC_ID_POS_C       is natural range  63 downto 32;
+   ------------------------------------------------------------------------------
+   constant FPGA_PREAMBLE_LEN_C : natural := 128;
+   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 64;
+   subtype ASIC_TYPE_POS_C     is natural range  63 downto 48;
+   subtype ASIC_ID_POS_C       is natural range  47 downto 32;
    subtype FPGA_ID_POS_C       is natural range  31 downto 16;
    subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
    subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
 
-   constant ASIC_ID_LEN_C       : natural := 32;
    constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
    constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
                                                      & x"70"  -- p
@@ -293,6 +260,7 @@ package Pix2PgpPkg is
                                                      & x"67"  -- g
                                                      & x"70"; -- p
 
+   ------------------------------------------------------------------------------
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
    -- 8 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
@@ -327,46 +295,72 @@ package Pix2PgpPkg is
    subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*1-1 downto 0;
    ------------------------------------------------------------------------------
 
-   type Pix2PgpLaneStatusType is record
-      -- flags begin
-      inError     : sl;
-      decError    : sl;
-      overOcc     : sl;
-      pause       : sl;
-      pauseError  : sl;
-      overflow    : sl;
-      valid       : sl;
-      -- flags end
-      trgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
-      frameSize   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-   end record;
-
-   constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
-      -- flags begin
-      inError     => '0',
-      decError    => '0',
-      overOcc     => '0',
-      pause       => '0',
-      pauseError  => '0',
-      overflow    => '0',
-      valid       => '0',
-      -- flags end
-      trgCnt      => (others => '0'),
-      frameSize   => (others => '0'));
-
    -- trailer is fixed; contains the pix2pgp identifier string
    ------------------------------------------------------------------------------
    constant FPGA_TRAILER_LEN_C : natural := 64;
    ------------------------------------------------------------------------------
 
-   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
-
    type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
 
+   type Pix2PgpLaneStatusType is record
+      -- flags begin
+      decError     : sl;
+      overOcc      : sl;
+      pause        : sl;
+      pauseError   : sl;
+      overflow     : sl;
+      valid        : sl;
+      down         : sl;
+      timeout      : sl;
+      -- flags end
+      activeColCnt : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      trgCnt       : slv(TRGCNT_WIDTH_C-1 downto 0);
+      frameSize    : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
+      -- flags begin
+      decError     => '0',
+      overOcc      => '0',
+      pause        => '0',
+      pauseError   => '0',
+      overflow     => '0',
+      valid        => '0',
+      down         => '0',
+      timeout      => '0',
+      -- flags end
+      activeColCnt => (others => '0'),
+      trgCnt       => (others => '0'),
+      frameSize    => (others => '0'));
+
+   constant FPGA_TIMEOUT_LIMIT_WIDTH_C : positive := 16;
+
+   type Pix2PgpStreamRxConfigType is record
+      dropColMisalign  : sl;
+      dropLaneMisalign : sl;
+      realignOnSof     : sl;
+      fpgaId           : slv(15 downto 0);
+      laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      lanePauseTimeout : slv(7 downto 0);
+   end record;
+
+   constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
+      -- flags begin
+      dropColMisalign  => '1',
+      dropLaneMisalign => '1',
+      realignOnSof     => toSl(EVAL_SOF_C),
+      fpgaId           => FPGA_ID_DEFAULT_C,
+      laneEnable       => (others => '1'),
+      laneTimeout      => (others => '1'),
+      lanePauseTimeout => toSlv(16, 8));
+
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
+
+   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
+   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
@@ -395,6 +389,42 @@ package Pix2PgpPkg is
       TKEEP_MODE_C  => TKEEP_NORMAL_C,
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_NORMAL_C);
+
+   -- functions
+   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
+                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                          colHitmask: slv; trgCntGlbl: slv) return slv;
+   function isDummy        (din : slv) return boolean;
+   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
+                            asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
+   function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
+                            lanePauseError: slv; laneFull: slv; laneTimeout: slv;
+                            laneDown: slv; laneValid: slv) return slv;
+   function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl;
+                            frameSize: slv; colCnt: slv; trgCnt: slv) return slv;
+   function tKeepSet       (dataLen : natural) return slv;
+   function rangeToLen     (high : integer; low : integer) return integer;
+
+   -- the receiver can deduce which columns have data from the hitmask
+   -- it can also deduce how many data each columns has; how?
+   -- by reading the dataLen in the column metadata before each seq of hits
+
+   -- examples of the final pix2pgp frame format:
+   -- e.g. 1: this event has 1 hit from two different cols (cols 0 and 5)
+   -- pgp data frame header | col5 metadata -> col5_dataLen=1 | col0_hit0 |
+   --                       | col2 metadata -> col2_dataLen=1 | col5_hit0 |
+   -- e.g. 2: this event has 3 hits from one column (col 2)
+   -- pgp data frame header | col2 metadata -> col2_dataLen=3 | col2_hit0 | col2_hit1 | col2_hit2 |
+
+   -- if a column yielded odd number of events, the last hit will have an extra 20-bit padding
+   -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
+   --
+   --
+   function powerOfTwo(N: natural) return slv;
+   -- function stolen from numeric_std
+   function rightShift (inSlv: slv; count: natural) return slv;
+   --
 
 end Pix2PgpPkg;
 
@@ -462,7 +492,8 @@ package body Pix2PgpPkg is
       retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       retHeader(COL_HITMASK_POS_C)       := colHitmask;
-      retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, 8);
+      retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, rangeToLen(TRGCNT_POS_C'high,
+                                                                TRGCNT_POS_C'low));
 
       return retHeader;
    end asicHeaderMap;
@@ -555,17 +586,19 @@ package body Pix2PgpPkg is
 
    end fpgaHeaderMap;
 
-   function laneMetaMap (decError: sl; overOcc: sl; pause: sl; pauseError: sl;
-                         frameSize: slv; trgCnt: slv) return slv is
+   function laneMetaMap (overOcc: sl; pause: sl; pauseError: sl;
+                         frameSize: slv; colCnt: slv; trgCnt: slv) return slv is
       variable retLaneMeta: slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
-      retLaneMeta(LANE_DEC_ERROR_POS_C)   := decError;
       retLaneMeta(LANE_OVEROCC_POS_C)     := overOcc;
       retLaneMeta(LANE_PAUSE_POS_C)       := pause;
       retLaneMeta(LANE_PAUSE_ERROR_POS_C) := pauseError;
       retLaneMeta(LANE_SIZE_POS_C)        := resize(frameSize, rangeToLen(LANE_SIZE_POS_C'high,
                                                                           LANE_SIZE_POS_C'low));
+
+      retLaneMeta(LANE_COLCNT_POS_C)      := resize(frameSize, rangeToLen(LANE_COLCNT_POS_C'high,
+                                                                          LANE_COLCNT_POS_C'low));
 
       retLaneMeta(LANE_TRGCNT_POS_C)      := resize(trgCnt, rangeToLen(LANE_TRGCNT_POS_C'high,
                                                                        LANE_TRGCNT_POS_C'low));

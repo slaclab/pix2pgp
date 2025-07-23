@@ -79,7 +79,7 @@ architecture rtl of Pix2PgpArbiter is
       statusBus    : Pix2PgpStatusBusArray;
       -- outputs
       dataRd       : sl;
-      colSel       : slv(BITMAX_COL_MANAGERS_C downto 0);
+      colSel       : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
       arbBusy      : sl;
       -- internal
       eventEmpty   : sl;

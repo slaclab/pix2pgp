@@ -31,7 +31,7 @@ parser.add_argument(
     type     = str,
     required = False,
     default  = 'SparkPixS',
-    help     = "options: SparkPixS, SparkPixT",
+    help     = "options: SparkPixS, SparkPixT, Thriglav",
 )
 
 parser.add_argument(
@@ -51,10 +51,6 @@ if __name__ == "__main__":
 
     if not(os.path.isfile(_file)):
         click.secho(f"[ERROR]: {_file} not found!", bg='red')
-        sys.exit()
-
-    if args.asicType != "SparkPixS" and args.asicType != "SparkPixT":
-        click.secho(f"[ERROR]: asicType flag not set properly! options: SparkPixS, SparkPixT", bg='red')
         sys.exit()
 
     with open(_file) as f:

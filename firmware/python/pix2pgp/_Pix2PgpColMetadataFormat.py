@@ -14,6 +14,14 @@ class Pix2PgpColMetadataFormatBase:
     every ASIC class should have:
     * a colMetadataDecoder() method, same as this base class
     '''
+
+    @classmethod
+    def setMetadata(self):
+        self.asicMetadata = {
+            'SparkPixS': SparkPixSColMetadataFormat,
+            'SparkPixT': SparkPixTColMetadataFormat,
+            'Thriglav' : ThriglavColMetadataFormat}
+
     def colMetadataDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")
 
@@ -54,3 +62,24 @@ class SparkPixTColMetadataFormat(Pix2PgpColMetadataFormatBase):
                         'colLen'     :      (_colMeta >>  0) & 0xFF}
 
         return colMeta_dict
+
+class ThriglavColMetadataFormat(Pix2PgpColMetadataFormatBase):
+    '''
+    Thriglav colMetaData Format
+    '''
+    def colMetadataDecoder(self, colMeta):
+        '''
+        Column Metadata mapping and decoding
+        '''
+        _colMeta = int(colMeta, 16)
+
+        colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
+                        'colOverOcc' : bool((_colMeta >> 25) & 0x1),
+                        'colPause'   : bool((_colMeta >> 24) & 0x1),
+                        'colId'      :      (_colMeta >> 16) & 0xFF,
+                        'colTrgCnt'  :      (_colMeta >>  8) & 0xFF,
+                        'colLen'     :      (_colMeta >>  0) & 0xFF}
+
+        return colMeta_dict
+
+Pix2PgpColMetadataFormatBase.setMetadata()
