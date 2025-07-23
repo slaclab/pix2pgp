@@ -11,7 +11,7 @@ As of `v2.3.0`, Pix2PGP supports the following two ASIC variants:
 
 * [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
-* Thriglav
+* [Thriglav](https://confluence.slac.stanford.edu/spaces/ppareg/pages/401976050/Thriglav+-+Accelerate+3D-LGAD+SLAC+FNAL)
 
 ## Cloning
 
