@@ -269,17 +269,17 @@ class NewAsicDataFormat(SparseDataFormatBase):
 
 
 ## Limitations
-The width of the data coming into Pix2Pgp from the ASIC dictates how wide the data frame is. Pix2Pgp *doubles* the size of that bus, as can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
+The width of the data coming into Pix2Pgp from the ASIC dictates how wide the data frame will be. Pix2Pgp *doubles* the size of that bus. This means that each data word coming in from each ASIC Lane/Pix2Pgp instance is double the width of the internal data bus width (the data bus delivering the data into Pix2Pgp). This can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
 
 ```VHDL
    -- data bus width is twice the pixel data width to maximize bandwidth
    constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
 ```
 
-This sets a limitation on how many columns can be served by each Pix2Pgp instance. This is because of the structure of the Pix2Pgp header, which has to fit the following:
+This sets a limitation on how many columns can be served by each Pix2Pgp instance of a specified data bus width. This is because of the structure of the Pix2Pgp header, which has to fit the following:
 
 * Header *Flags* (usually *six*)
 * The *Column Hitmask*, which has the same width as the amount of columns served
 * The *Trigger Counter*, that has a configurable width (usually *6-bit*)
 
-For example, If each Pix2Pgp instance of `NewAsic` serves `40` columns, then `SPARSE_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served.
+For example, If each Pix2Pgp instance of an ASIC serves `40` columns, then `SPARSE_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served.

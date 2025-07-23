@@ -7,7 +7,7 @@ For more info:
 
 * [Confluence Page](https://confluence.slac.stanford.edu/x/nIkaGg)
 
-As of `v2.2.0`, Pix2PGP supports the following two ASIC variants:
+As of `v2.3.0`, Pix2PGP supports the following two ASIC variants:
 
 * [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
@@ -53,7 +53,7 @@ In order to simulate via GHDL, go to the relevant directory and run e.g. `$ bash
 ## Hot to add a new ASIC
 A complete How-To is included in the `README.md` file located under `firmware/vault`.
 
-## Hot to perform total throughput/bandwitdh data efficiency measurements
+## Hot to perform total throughput/bandwidth data efficiency measurements
 A complete How-To is included in the `README.md` file located under `software/scripts/benchmarking`.
 
 ### Contact
