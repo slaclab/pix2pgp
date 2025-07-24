@@ -129,6 +129,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal cfgSuperBusyDel   : sl := '0';
    signal colBusyCnt        : slv(31 downto 0) := (others => '0');
    signal superBusyCnt      : slv(31 downto 0) := (others => '0');
+   signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
 
 begin
 
@@ -2031,7 +2032,8 @@ end loop;
   --       colBusyCnt <= colBusyCnt + 1;
   --    end if;
 
-  --    if cfgColBusyDel = '1' and cfgColBusy(0) = '0' then
+  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
   --       report "[INFO]: ColumnBusy: colBusyCnt = " & integer'image(conv_integer(unsigned(colBusyCnt))) severity note;
   --    end if;
 
@@ -2047,8 +2049,28 @@ end loop;
   --       superBusyCnt <= superBusyCnt + 1;
   --    end if;
 
-  --    if cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0' then
+  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
   --       report "[INFO]: SuperBusy: superBusyCnt = " & integer'image(conv_integer(unsigned(superBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
+
+  --MeasureTotalLatencyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+
+  --    if sro = '1' and sroFinal = '0' then
+  --       totalLatencyCnt <= totalLatencyCnt + 1;
+  --    end if;
+
+  --    if totalLatencyCnt > 0 then
+  --       totalLatencyCnt <= totalLatencyCnt + 1;
+  --    end if;
+
+  --    if asicRxMaster.tLast = '1' then
+  --       report "[INFO]: : totalLatencyCnt = " & integer'image(conv_integer(unsigned(totalLatencyCnt))) severity note;
   --    end if;
 
   --  end if;

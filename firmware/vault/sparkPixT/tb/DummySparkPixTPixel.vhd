@@ -18,6 +18,7 @@ entity DummySparkPixTPixel is
         RST_ASYNC_G     : boolean  := true;
         RST_POLARITY_G  : sl       := '1';
         WAIT_WREN_G     : positive := 4;
+        IGNORE_ERO      : boolean  := false;
         SER_ID_G        : natural  := 0;
         COL_ID_G        : natural  := 0);
     port (
@@ -177,7 +178,10 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
          ----------------------------------------------------------------------
          when WAIT_TRG_S =>
             v.pauseAck := r.pause;
-            if (v.ero = '1' and r.ero = '0' and v.pause = '0') then
+            if (v.ero = '1' and r.ero = '0' and r.pause = '0' and IGNORE_ERO = false) then
+               v.eof   := '1';
+               v.state := IDLE_S;
+            elsif (r.pause = '0' and IGNORE_ERO = true) then
                v.eof   := '1';
                v.state := IDLE_S;
             end if;

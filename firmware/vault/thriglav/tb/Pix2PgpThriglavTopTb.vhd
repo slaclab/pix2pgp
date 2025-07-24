@@ -48,7 +48,7 @@ end entity Pix2PgpThriglavTopTb;
 
 architecture test of Pix2PgpThriglavTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matrix clock of ASIC
+   constant CLK_PERIOD_SPARSE_C : time := 50.0   ns; -- matrix clock of ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
    constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
@@ -133,6 +133,7 @@ architecture test of Pix2PgpThriglavTopTb is
    signal cfgSuperBusyDel   : sl := '0';
    signal colBusyCnt        : slv(31 downto 0) := (others => '0');
    signal superBusyCnt      : slv(31 downto 0) := (others => '0');
+   signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
 
 begin
 
@@ -216,6 +217,7 @@ begin
               TPD_G           => TPD_G,
               RST_ASYNC_G     => RST_ASYNC_G,
               RST_POLARITY_G  => RST_POLARITY_G,
+              IGNORE_ERO      => false,
               WAIT_WREN_G     => 3,
               SER_ID_G        => ser,
               COL_ID_G        => col)
@@ -1382,7 +1384,8 @@ end loop;
   --       colBusyCnt <= colBusyCnt + 1;
   --    end if;
 
-  --    if cfgColBusyDel = '1' and cfgColBusy(0) = '0' then
+  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
   --       report "[INFO]: ColumnBusy: colBusyCnt = " & integer'image(conv_integer(unsigned(colBusyCnt))) severity note;
   --    end if;
 
@@ -1398,8 +1401,28 @@ end loop;
   --       superBusyCnt <= superBusyCnt + 1;
   --    end if;
 
-  --    if cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0' then
+  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
   --       report "[INFO]: SuperBusy: superBusyCnt = " & integer'image(conv_integer(unsigned(superBusyCnt))) severity note;
+  --    end if;
+
+  --  end if;
+  --end process;
+
+  --MeasureTotalLatencyProc : process(pgpClk)
+  --begin
+  --  if rising_edge(pgpClk) then
+
+  --    if sro = '1' and sroFinal = '0' then
+  --       totalLatencyCnt <= totalLatencyCnt + 1;
+  --    end if;
+
+  --    if totalLatencyCnt > 0 then
+  --       totalLatencyCnt <= totalLatencyCnt + 1;
+  --    end if;
+
+  --    if asicRxMaster.tLast = '1' then
+  --       report "[INFO]: : totalLatencyCnt = " & integer'image(conv_integer(unsigned(totalLatencyCnt))) severity note;
   --    end if;
 
   --  end if;

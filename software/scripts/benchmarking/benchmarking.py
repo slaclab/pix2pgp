@@ -1,10 +1,11 @@
-import measurements
+import json
 import argparse
 import sys
 import click
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
 import numpy as np
+import json
 
 # ---------------------------------------------------------
 
@@ -40,7 +41,15 @@ parser.add_argument(
     type     = int,
     required = False,
     default  = 24,
-    help     = "Number of Columns",
+    help     = "Number of Columns per Lane",
+)
+
+parser.add_argument(
+    "--rows",
+    type     = int,
+    required = False,
+    default  = 640,
+    help     = "Number of Rows",
 )
 
 parser.add_argument(
@@ -53,6 +62,16 @@ parser.add_argument(
 
 parser.add_argument(
     "--verbose",
+    action = 'store_true',
+    default = False)
+
+parser.add_argument(
+    "--getHitArray",
+    action = 'store_true',
+    default = False)
+
+parser.add_argument(
+    "--updateJson",
     action = 'store_true',
     default = False)
 # ---------------------------------------------------------
@@ -89,51 +108,97 @@ def hitsToTotalHits(hits, cols):
 # ---------------------------------------------------------
 if __name__ == "__main__":
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     _pgpClkPeriod    = args.pgpClkPeriod
     _matrixClkPeriod = args.matrixClkPeriod
     _cols            = args.cols
+    _rows            = args.rows
     _maxHits         = args.maxHits
     _asicType        = args.asicType
+    _getHitArray     = args.getHitArray
+    _updateJson      = args.updateJson
+    _verbose         = args.verbose
+    _pgpClkFreq      = toFreq(_pgpClkPeriod)
+    _matrixClkFreq   = toFreq(_matrixClkPeriod)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    occArray  = measurements.occArray
-    hitArray  = measurements.hitArray
-    colBusy   = measurements.colBusy
-    superBusy = measurements.superBusy
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    _pgpClkFreq    = toFreq(_pgpClkPeriod)
-    _matrixClkFreq = toFreq(_matrixClkPeriod)
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    jsonPath = f"asics/{_asicType}.json"
+    try:
+        with open(jsonPath, 'r') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        errorOut("Json file not found!")
+        exit()
 
-    if len(occArray) == len(hitArray)     and \
-       len(occArray) == len(colBusy)      and \
-       len(occArray) == len(superBusy):
-       print("Lengths Good.")
-    else:
-        errorOut("Array Length")
+    occArray     = []
+    colHitArray  = []
+    allHitArray  = []
+    colBusy      = []
+    superBusy    = []
+    totalLatency = []
+
+    for item in data:
+        occArray.append(item.get("occ"))
+        colHitArray.append(item.get("colHits"))
+        allHitArray.append(item.get("allHits"))
+        colBusy.append(item.get("colBusy"))
+        superBusy.append(item.get("superBusy"))
+        totalLatency.append(item.get("totalLatency"))
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    if _getHitArray:
+
+        _colHitArray = []
+        _allHitArray = []
+
+        for i in range(len(occArray)):
+
+            _colHit = int(_rows*occArray[i]*0.01)
+            _colHitArray.append(_colHit)
+            _allHitArray.append(hitsToTotalHits(_colHit, _cols))
+
+        print(f"_colHitArray = {_colHitArray}")
+        print(f"_allHitArray = {_allHitArray}")
+
+        if _updateJson:
+            for i in range(len(data)):
+                data[i]['colHits'] = _colHitArray[i]
+                data[i]['allHits'] = _allHitArray[i]
+
+            # Write the updated data back to the JSON file
+            with open(jsonPath, 'w') as f:
+                json.dump(data, f, indent=2)  # Use indent for pretty formatting
+
+            print(f"[INFO]: Successfully updated {jsonPath} with colHits and allHits!")
+
+        sys.exit()
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     _len             = len(occArray)
-    _totalHitArray   = []
     _maxRateKHzArray = []
     _maxRateMHzArray = []
 
-
     for i in range(_len):
-        _totalHitArray.append(hitsToTotalHits(hitArray[i], _cols))
+        totalLatency[i] = int(totalLatency[i]*_pgpClkPeriod)
 
-        if hitArray[i] < _maxHits:
+
+        if colHitArray[i] < _maxHits:
             _maxRateKHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, False))
             _maxRateMHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, True))
         else:
             _maxRateKHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, False))
             _maxRateMHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, True))
 
-    if args.verbose:
+    if _verbose:
         print(f"---------- Verbose Mode -----------------")
-        print(f"occArray               = {occArray} ")
-        print(f"hitArray               = {hitArray} ")
-        print(f"_totalHitArray         = {_totalHitArray} ")
-        print(f"_maxRateKHzArray (kHz) = {_maxRateKHzArray} ")
-        print(f"_maxRateMHzArray (MHz) = {_maxRateMHzArray} ")
+        print(f"occArray (%)                = {occArray} ")
+        print(f"colHitArray (hits-per-col)  = {colHitArray} ")
+        print(f"allHitArray (hits-per-lane) = {allHitArray} ")
+        print(f"totalLatency (ns)           = {totalLatency} ")
+        print(f"_maxRateKHzArray (kHz)      = {_maxRateKHzArray} ")
+        print(f"_maxRateMHzArray (MHz)      = {_maxRateMHzArray} ")
 
     print(f"---------- INFO -----------------")
     print(f"Pix2Pgp Clock Period    = {_pgpClkPeriod} ns")
@@ -185,7 +250,7 @@ if __name__ == "__main__":
             plt.text(x + 1, y * 1.1, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
 
     # Adjust Total Hits labels
-    for x, total_hits in zip(occArray, _totalHitArray):
+    for x, total_hits in zip(occArray, allHitArray):
         if x in xticks:
             plt.text(x-2, 1.2, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
