@@ -26,7 +26,7 @@ use surf.StdRtlPkg.all;
 use surf.AxiStreamPkg.all;
 
 library pix2pgp;
-use pixp2gp.Pix2PgpAsicPkg.all;
+use pix2pgp.Pix2PgpAsicPkg.all;
 
 package Pix2PgpPkg is
 

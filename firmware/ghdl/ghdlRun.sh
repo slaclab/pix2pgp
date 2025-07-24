@@ -78,7 +78,7 @@ SURF_FPGA=${SURF_FPGA_DIR}/*.vhd
 SURF_SUBMODULE_DIR=${ROOT_DIR}/firmware/submodules/surf
 
 # note that the packages hav to be declared separately in order to be imported first
-# the order of the packages *matter*.
+# the order of the packages *matters*.
 SURF_PKG_DIR=${SURF_DIR}/pkg
 SURF_FPGA_PKG_DIR=${SURF_FPGA_DIR}/pkg
 
@@ -165,6 +165,7 @@ ghdlAnalyze()
   fi
 
   echo "[INFO]: Importing RTL Files..."
+  # import and analyze the asicPkg first
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${ASIC_RTL}
