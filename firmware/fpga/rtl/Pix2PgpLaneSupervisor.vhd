@@ -24,6 +24,7 @@ use surf.AxiStreamPkg.all;
 use surf.SsiPkg.all;
 
 library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpLaneSupervisor is

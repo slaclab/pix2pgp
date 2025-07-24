@@ -24,6 +24,7 @@ use surf.StdRtlPkg.all;
 use surf.AxiStreamPkg.all;
 
 library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTop is

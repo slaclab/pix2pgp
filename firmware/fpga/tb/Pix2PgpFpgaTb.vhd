@@ -15,6 +15,7 @@ use surf.Pgp4Pkg.all;
 use surf.AxiStreamPacketizer2Pkg.all;
 
 library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpFpgaTb is
