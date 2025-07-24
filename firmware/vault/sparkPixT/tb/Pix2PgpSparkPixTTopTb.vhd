@@ -129,11 +129,42 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal cfgSuperBusy      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
    signal cfgArbBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
 
+   -- benchmarking
+   signal rstCnt            : sl := '0';
    signal cfgColBusyDel     : sl := '0';
    signal cfgSuperBusyDel   : sl := '0';
    signal colBusyCnt        : slv(31 downto 0) := (others => '0');
    signal superBusyCnt      : slv(31 downto 0) := (others => '0');
    signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
+
+   constant OCC_BENCHMARK_COUNT : positive := 38;
+
+   type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
+   type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
+
+   signal colBusyArray      : IntArrayType := (others => 0);
+   signal superBusyArray    : IntArrayType := (others => 0);
+   signal totalLatencyArray : IntArrayType := (others => 0);
+
+   signal occArray : RealArrayType := (
+      0  => 0.5,  1  => 1.0,  2  => 1.5,  3  => 2.0,  4  => 2.5,  5  => 3.0,
+      6  => 3.5,  7  => 4.0,  8  => 4.5,  9  => 5.0,  10 => 5.5,  11 => 6.0,
+      12 => 6.5,  13 => 7.0,  14 => 7.5,  15 => 8.0,  16 => 8.5,  17 => 9.0,
+      18 => 9.5,  19 => 10.0, 20 => 15.0, 21 => 20.0, 22 => 25.0, 23 => 30.0,
+      24 => 35.0, 25 => 40.0, 26 => 45.0, 27 => 50.0, 28 => 55.0, 29 => 60.0,
+      30 => 65.0, 31 => 70.0, 32 => 75.0, 33 => 80.0, 34 => 85.0, 35 => 90.0,
+      36 => 95.0, 37 => 100.0
+   );
+
+   signal colHitsArray : IntArrayType := (
+      0  => 3,   1  => 6,   2  => 9,   3  => 12,  4  => 16,  5  => 19,
+      6  => 22,  7  => 25,  8  => 28,  9  => 32,  10 => 35,  11 => 38,
+      12 => 41,  13 => 44,  14 => 48,  15 => 51,  16 => 54,  17 => 57,
+      18 => 60,  19 => 64,  20 => 96,  21 => 128, 22 => 160, 23 => 192,
+      24 => 224, 25 => 256, 26 => 288, 27 => 320, 28 => 352, 29 => 384,
+      30 => 416, 31 => 448, 32 => 480, 33 => 512, 34 => 544, 35 => 576,
+      36 => 608, 37 => 640
+   );
 
 begin
 
@@ -305,6 +336,7 @@ begin
    -------
    -- FPGA
    -------
+   revRst <= not(rst);
 
    GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
@@ -420,14 +452,15 @@ begin
          axisSlave      => ipIntegratorSlave);
 
   -- Generate the test stimulus
-  stimulus: process begin
+  regularStimulus: process begin
 
     -- do not touch begin
     ----------------------------------------------
     ----------------------------------------------
     -- issue reset here
     wait for CLK_PERIOD_SPARSE_C;
-      rst <= RST_POLARITY_G;
+      rstCnt <= '1'; -- keep the benchmarking counters in reset
+      rst    <= RST_POLARITY_G;
     wait for CLK_PERIOD_SPARSE_C*100;
       rst  <= not(RST_POLARITY_G);
 
@@ -2038,9 +2071,77 @@ end loop;
     wait;
     -- do not touch end
 
-  end process stimulus;
+  end process regularStimulus;
 
-  revRst <= not(rst);
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+
+ --benchmarkStimulus: process begin
+
+ --  wait for CLK_PERIOD_SPARSE_C;
+ --     rst <= RST_POLARITY_G;
+ --  wait for CLK_PERIOD_SPARSE_C*100;
+ --     rst  <= not(RST_POLARITY_G);
+
+ --  -- Wait for the rst to be released before doing anything else
+ --  wait until (rst = not(RST_POLARITY_G));
+
+ --  wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+
+ --  for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+
+ --     wait for CLK_PERIOD_SPARSE_C*200;
+ --        rstCnt <= '1';
+
+ --     wait for CLK_PERIOD_SPARSE_C*1;
+ --        rstCnt <= '0';
+
+ --        for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+ --           for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+ --              hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
+ --           end loop;
+ --        end loop;
+
+ --        sro <= '1';
+
+ --     wait for CLK_PERIOD_SPARSE_C*2;
+ --        sro  <= '0';
+
+ --     wait until (asicRxMaster.tLast = '1');
+ --        report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
+
+
+ --     wait for CLK_PERIOD_SPARSE_C*20;
+ --        colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
+ --        superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
+ --        totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
+
+ --     wait for CLK_PERIOD_SPARSE_C*20;
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+
+ --  end loop;
+
+ --  wait for CLK_PERIOD_SPARSE_C*100;
+ --     report "[INFO]: Done benchmarking! Final results below..." severity note;
+
+ --     for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+ --        report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+ --     end loop;
+
+ --  -- do not touch begin
+ --  wait;
+ --  -- do not touch end
+
+ --end process benchmarkStimulus;
+
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcessAsic : process(sysClk)
@@ -2062,57 +2163,84 @@ end loop;
     end if;
   end process;
 
-  --MeasureColBusyProc : process(pgpClk)
-  --begin
-  --  if rising_edge(pgpClk) then
-  --    cfgColBusyDel <= cfgColBusy(0);
+  MeasureColBusyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+      cfgColBusyDel <= cfgColBusy(0);
 
-  --    if cfgColBusyDel = '1' then
-  --       colBusyCnt <= colBusyCnt + 1;
-  --    end if;
+      if rstCnt = '1' then
 
-  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
-  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
-  --       report "[INFO]: ColumnBusy: colBusyCnt = " & integer'image(conv_integer(unsigned(colBusyCnt))) severity note;
-  --    end if;
+         cnt        := (others => '0');
+         colBusyCnt <= (others => '0');
 
-  --  end if;
-  --end process;
+      else
 
-  --MeasureSuperBusyProc : process(pgpClk)
-  --begin
-  --  if rising_edge(pgpClk) then
-  --    cfgSuperBusyDel <= cfgSuperBusy(0);
+         if cfgColBusyDel = '1' then
+            cnt := cnt + 1;
+         end if;
 
-  --    if cfgSuperBusyDel = '1' then
-  --       superBusyCnt <= superBusyCnt + 1;
-  --    end if;
+         if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+            (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
+            colBusyCnt <= cnt;
+         end if;
 
-  --    if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
-  --       (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
-  --       report "[INFO]: SuperBusy: superBusyCnt = " & integer'image(conv_integer(unsigned(superBusyCnt))) severity note;
-  --    end if;
+      end if;
 
-  --  end if;
-  --end process;
+    end if;
+  end process;
 
-  --MeasureTotalLatencyProc : process(pgpClk)
-  --begin
-  --  if rising_edge(pgpClk) then
+  MeasureSuperBusyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
 
-  --    if sro = '1' and sroFinal = '0' then
-  --       totalLatencyCnt <= totalLatencyCnt + 1;
-  --    end if;
+      if rstCnt = '1' then
 
-  --    if totalLatencyCnt > 0 then
-  --       totalLatencyCnt <= totalLatencyCnt + 1;
-  --    end if;
+         cnt          := (others => '0');
+         superBusyCnt <= (others => '0');
 
-  --    if asicRxMaster.tLast = '1' then
-  --       report "[INFO]: : totalLatencyCnt = " & integer'image(conv_integer(unsigned(totalLatencyCnt))) severity note;
-  --    end if;
+      else
+         cfgSuperBusyDel <= cfgSuperBusy(0);
 
-  --  end if;
-  --end process;
+         if cfgSuperBusyDel = '1' then
+            cnt := cnt + 1;
+         end if;
+
+         if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+            (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
+            superBusyCnt <= cnt;
+         end if;
+      end if;
+
+    end if;
+  end process;
+
+  MeasureTotalLatencyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+
+      if rstCnt = '1' then
+
+         cnt             := (others => '0');
+         totalLatencyCnt <= (others => '0');
+
+      else
+
+         if cnt > 0 then
+            cnt := cnt + 1;
+         elsif sro = '1' and sroFinal = '0' then
+            cnt := cnt + 1;
+         end if;
+
+         if asicRxMaster.tLast = '1' then
+            totalLatencyCnt <= cnt;
+         end if;
+
+      end if;
+
+    end if;
+  end process;
 
 end architecture;
