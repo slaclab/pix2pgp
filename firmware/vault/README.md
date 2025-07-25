@@ -267,9 +267,15 @@ class NewAsicDataFormat(SparseDataFormatBase):
                 click.secho(_formatAsic.format(hit['col'], hit['row'], hit['adc']))
 ```
 
+## Miscellaneous
+1. Update the repo's `README.md` with the new ASIC entry
+2. Perform benchmark measurements for the new ASIC (see `software/scripts/benchmarking/README.md` for more information)
+3. Update Pix2Pgp Confluence page accordingly
 
 ## Limitations
-The width of the data coming into Pix2Pgp from the ASIC dictates how wide the data frame will be. Pix2Pgp *doubles* the size of that bus. This means that each data word coming in from each ASIC Lane/Pix2Pgp instance is double the width of the internal data bus width (the data bus delivering the data into Pix2Pgp). This can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
+The width of the data coming into Pix2Pgp from the data source dictates how wide the data frame will be. Pix2Pgp *doubles* the size of that bus. This means that each data bus that is connected to Pix2Pgp is half the width of the data word that Pix2Pgp transmits to the FPGA Receiver.
+
+This can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
 
 ```VHDL
    -- data bus width is twice the pixel data width to maximize bandwidth

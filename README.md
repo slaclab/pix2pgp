@@ -7,7 +7,7 @@ For more info:
 
 * [Confluence Page](https://confluence.slac.stanford.edu/x/nIkaGg)
 
-As of `v2.3.0`, Pix2PGP supports the following ASIC variants:
+As of `v2.4.0`, Pix2PGP supports the following ASIC variants:
 
 * [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
@@ -50,10 +50,10 @@ The script `software/scripts/axiDataParser.py` is used to parse-in data dumps ge
 ## How to simulate using GHDL
 In order to simulate via GHDL, go to the relevant directory and run e.g. `$ bash ghdlRun.sh Pix2PgpSparkPixSTopTb 50` to run the testbench for 50us.
 
-## Hot to add a new ASIC
+## How to add a new ASIC
 A complete How-To is included in the `README.md` file located under `firmware/vault`.
 
-## Hot to perform total throughput/bandwidth data efficiency measurements
+## How to benchmark total throughput and data transmission latency
 A complete How-To is included in the `README.md` file located under `software/scripts/benchmarking`.
 
 ### Contact

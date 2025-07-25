@@ -1,3 +1,4 @@
+import math
 import json
 import argparse
 import sys
@@ -145,7 +146,7 @@ if __name__ == "__main__":
 
         for i in range(len(occArray)):
 
-            _colHit = int(_rows*occArray[i]*0.01)
+            _colHit = math.ceil(_rows * occArray[i] * 0.01)
             _colHitArray.append(_colHit)
             _allHitArray.append(hitsToTotalHits(_colHit, _cols))
 
@@ -238,9 +239,11 @@ if __name__ == "__main__":
             plt.text(x + 1, y * 1.1, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
 
     # Adjust Total Hits labels
+    # increase offset to move the totalHit labels UP
+    _offset=1.2
     for x, total_hits in zip(occArray, allHitArray):
         if x in xticks:
-            plt.text(x-2, 1.2, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+            plt.text(x-2, _offset, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
     # Set axis limits
     plt.xlim(-1, 105)
@@ -274,9 +277,11 @@ if __name__ == "__main__":
         if x in xticks:
             plt.text(x*1.01-0.8, y*1.05, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
 
+    # increase offset to move the totalHit labels UP
+    _offset=0.75
     for x, total_hits in zip(occArray, allHitArray):
         if x in xticks:
-            plt.text(x-2, 0.65, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+            plt.text(x-2, _offset, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
     plt.grid(True, which='both', linestyle='--', linewidth=1)
     ax = plt.gca()

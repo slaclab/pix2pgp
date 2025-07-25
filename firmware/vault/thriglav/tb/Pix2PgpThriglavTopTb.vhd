@@ -159,13 +159,13 @@ architecture test of Pix2PgpThriglavTopTb is
    );
 
    signal colHitsArray : IntArrayType := (
-      0  => 3,   1  => 6,   2  => 9,   3  => 12,  4  => 16,  5  => 19,
-      6  => 22,  7  => 25,  8  => 28,  9  => 32,  10 => 35,  11 => 38,
-      12 => 41,  13 => 44,  14 => 48,  15 => 51,  16 => 54,  17 => 57,
-      18 => 60,  19 => 64,  20 => 96,  21 => 128, 22 => 160, 23 => 192,
-      24 => 224, 25 => 256, 26 => 288, 27 => 320, 28 => 352, 29 => 384,
-      30 => 416, 31 => 448, 32 => 480, 33 => 512, 34 => 544, 35 => 576,
-      36 => 608, 37 => 640
+      0  => 0,   1  => 1,   2  => 1,   3  => 2,   4  => 2,   5  => 3,
+      6  => 3,   7  => 4,   8  => 4,   9  => 5,   10 => 5,   11 => 6,
+      12 => 6,   13 => 7,   14 => 7,   15 => 8,   16 => 8,   17 => 9,
+      18 => 9,   19 => 10,  20 => 15,  21 => 20,  22 => 25,  23 => 30,
+      24 => 35,  25 => 40,  26 => 45,  27 => 50,  28 => 55,  29 => 60,
+      30 => 65,  31 => 70,  32 => 75,  33 => 80,  34 => 85,  35 => 90,
+      36 => 95,  37 => 100
    );
 
 begin
@@ -402,7 +402,7 @@ begin
          LANE_PIPE_STAGES_G     => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
-         AXIS_FIFO_ADDR_WIDTH_G => 6)
+         AXIS_FIFO_ADDR_WIDTH_G => 11)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
@@ -1422,11 +1422,114 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
          rstCnt <= '0';
 
          for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
-            for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
-               hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
-            end loop;
+
+            if i = 0 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(1, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(0, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 2 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(1, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 4 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(3, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(2, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 6 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(4, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(3, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 8 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(5, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(4, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 10 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(6, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(5, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 12 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(7, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(6, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 14 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(8, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(7, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 16 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(9, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(8, hitLen(ser)(col)'length);
+               end loop;
+               --
+            elsif i = 18 then
+               --
+               for col in 0 to 24 loop
+                  hitLen(ser)(col) <= toSlv(10, hitLen(ser)(col)'length);
+               end loop;
+               --
+               for col in 25 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(9, hitLen(ser)(col)'length);
+               end loop;
+            else
+               for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+                  hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
+               end loop;
+            end if;
          end loop;
 
+      wait for CLK_PERIOD_SPARSE_C*2;
          sro <= '1';
 
       wait for CLK_PERIOD_SPARSE_C*2;
