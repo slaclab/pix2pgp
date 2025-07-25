@@ -53,14 +53,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--maxHits",
-    type     = int,
-    required = False,
-    default  = 13,
-    help     = "Max Hits Per Frame",
-)
-
-parser.add_argument(
     "--verbose",
     action = 'store_true',
     default = False)
@@ -113,7 +105,6 @@ if __name__ == "__main__":
     _matrixClkPeriod = args.matrixClkPeriod
     _cols            = args.cols
     _rows            = args.rows
-    _maxHits         = args.maxHits
     _asicType        = args.asicType
     _getHitArray     = args.getHitArray
     _updateJson      = args.updateJson
@@ -183,13 +174,9 @@ if __name__ == "__main__":
     for i in range(_len):
         totalLatency[i] = int(totalLatency[i]*_pgpClkPeriod)
 
-
-        if colHitArray[i] < _maxHits:
-            _maxRateKHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, False))
-            _maxRateMHzArray.append(toFreq(superBusy[i]*_pgpClkPeriod, True))
-        else:
-            _maxRateKHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, False))
-            _maxRateMHzArray.append(toFreq(colBusy[i]*_pgpClkPeriod, True))
+        _largerBusy = max(superBusy[i], colBusy[i])
+        _maxRateKHzArray.append(toFreq(_largerBusy*_pgpClkPeriod, False))
+        _maxRateMHzArray.append(toFreq(_largerBusy*_pgpClkPeriod, True))
 
     if _verbose:
         print(f"---------- Verbose Mode -----------------")
@@ -200,12 +187,12 @@ if __name__ == "__main__":
         print(f"_maxRateKHzArray (kHz)      = {_maxRateKHzArray} ")
         print(f"_maxRateMHzArray (MHz)      = {_maxRateMHzArray} ")
 
-    print(f"---------- INFO -----------------")
-    print(f"Pix2Pgp Clock Period    = {_pgpClkPeriod} ns")
-    print(f"Pix2Pgp Clock Frequency = {_pgpClkFreq} MHz")
-    print(f"Matrix Clock Period     = {_matrixClkPeriod} ns")
-    print(f"Matrix Clock Frequency  = {_matrixClkFreq} MHz")
-    print(f"---------------------------------")
+        print(f"---------- INFO -----------------")
+        print(f"Pix2Pgp Clock Period    = {_pgpClkPeriod} ns")
+        print(f"Pix2Pgp Clock Frequency = {_pgpClkFreq} MHz")
+        print(f"Matrix Clock Period     = {_matrixClkPeriod} ns")
+        print(f"Matrix Clock Frequency  = {_matrixClkFreq} MHz")
+        print(f"---------------------------------")
 
     ################################################################################################
 
