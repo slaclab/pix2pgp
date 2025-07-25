@@ -27,6 +27,7 @@ entity Pix2PgpSparkPixTTopTb is
       FPGA_SYNTH_G              : boolean  := false;
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
+      BENCHMARKING_G            : boolean  := false;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 16;
       COLMANAGER_DATA_DEPTH_G   : integer  := 8;
       COLMANAGER_STATUS_DEPTH_G : integer  := 8;
@@ -450,6 +451,11 @@ begin
          axisRst        => open,
          axisMaster     => ipIntegratorMaster,
          axisSlave      => ipIntegratorSlave);
+
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
   -- Generate the test stimulus
   regularStimulus: process begin
@@ -2073,72 +2079,77 @@ end loop;
 
   end process regularStimulus;
 
+end generate GEN_REGULAR_PROC;
+
  -------------------------------------------------------------
  -------------------------------------------------------------
  -------------------------------------------------------------
 
- --benchmarkStimulus: process begin
+GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
 
- --  wait for CLK_PERIOD_SPARSE_C;
- --     rst <= RST_POLARITY_G;
- --  wait for CLK_PERIOD_SPARSE_C*100;
- --     rst  <= not(RST_POLARITY_G);
+ benchmarkStimulus: process begin
 
- --  -- Wait for the rst to be released before doing anything else
- --  wait until (rst = not(RST_POLARITY_G));
+   wait for CLK_PERIOD_SPARSE_C;
+      rst <= RST_POLARITY_G;
+   wait for CLK_PERIOD_SPARSE_C*100;
+      rst  <= not(RST_POLARITY_G);
 
- --  wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+   -- Wait for the rst to be released before doing anything else
+   wait until (rst = not(RST_POLARITY_G));
 
- --  for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+   wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
 
- --     wait for CLK_PERIOD_SPARSE_C*200;
- --        rstCnt <= '1';
+   for i in 0 to OCC_BENCHMARK_COUNT-1 loop
 
- --     wait for CLK_PERIOD_SPARSE_C*1;
- --        rstCnt <= '0';
+      wait for CLK_PERIOD_SPARSE_C*200;
+         rstCnt <= '1';
 
- --        for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
- --           for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
- --              hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
- --           end loop;
- --        end loop;
+      wait for CLK_PERIOD_SPARSE_C*1;
+         rstCnt <= '0';
 
- --        sro <= '1';
+         for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+            for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+               hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
+            end loop;
+         end loop;
 
- --     wait for CLK_PERIOD_SPARSE_C*2;
- --        sro  <= '0';
+         sro <= '1';
 
- --     wait until (asicRxMaster.tLast = '1');
- --        report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
+      wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+
+      wait until (asicRxMaster.tLast = '1');
+         report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
 
- --     wait for CLK_PERIOD_SPARSE_C*20;
- --        colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
- --        superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
- --        totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
+      wait for CLK_PERIOD_SPARSE_C*20;
+         colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
+         superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
+         totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
 
- --     wait for CLK_PERIOD_SPARSE_C*20;
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+      wait for CLK_PERIOD_SPARSE_C*20;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
 
- --  end loop;
+   end loop;
 
- --  wait for CLK_PERIOD_SPARSE_C*100;
- --     report "[INFO]: Done benchmarking! Final results below..." severity note;
+   wait for CLK_PERIOD_SPARSE_C*100;
+      report "[INFO]: Done benchmarking! Final results below..." severity note;
 
- --     for i in 0 to OCC_BENCHMARK_COUNT-1 loop
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
- --        report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
- --     end loop;
+      for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+      end loop;
 
- --  -- do not touch begin
- --  wait;
- --  -- do not touch end
+   -- do not touch begin
+   wait;
+   -- do not touch end
 
- --end process benchmarkStimulus;
+ end process benchmarkStimulus;
 
+end generate GEN_BENCHMARK_PROC;
  -------------------------------------------------------------
  -------------------------------------------------------------
  -------------------------------------------------------------
