@@ -170,20 +170,21 @@ if __name__ == "__main__":
     _len             = len(occArray)
     _maxRateKHzArray = []
     _maxRateMHzArray = []
+    _bottleneckBusy  = []
 
     for i in range(_len):
-        totalLatency[i] = int(totalLatency[i]*_pgpClkPeriod)
+        totalLatency[i] = round((totalLatency[i]*_pgpClkPeriod/1e3), 2)
 
-        _largerBusy = max(superBusy[i], colBusy[i])
-        _maxRateKHzArray.append(toFreq(_largerBusy*_pgpClkPeriod, False))
-        _maxRateMHzArray.append(toFreq(_largerBusy*_pgpClkPeriod, True))
+        _bottleneckBusy.append(max(superBusy[i], colBusy[i]))
+        _maxRateKHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, False))
+        _maxRateMHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, True))
 
     if _verbose:
         print(f"---------- Verbose Mode -----------------")
         print(f"occArray (%)                = {occArray} ")
         print(f"colHitArray (hits-per-col)  = {colHitArray} ")
         print(f"allHitArray (hits-per-lane) = {allHitArray} ")
-        print(f"totalLatency (ns)           = {totalLatency} ")
+        print(f"totalLatency (us)           = {totalLatency} ")
         print(f"_maxRateKHzArray (kHz)      = {_maxRateKHzArray} ")
         print(f"_maxRateMHzArray (MHz)      = {_maxRateMHzArray} ")
 
@@ -209,7 +210,7 @@ if __name__ == "__main__":
     plt.plot(occArray, [toFreq(x * _pgpClkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2Pgp Max Rate')  # Changed color and linestyle
 
     # Plot data with a larger marker size
-    plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=10, label='True Max Rate')
+    plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=8, label='True Max Rate')
 
     plt.legend(loc='upper right', fontsize=12, frameon=True, fancybox=True, shadow=True, borderpad=1) # add a legend
 
@@ -251,4 +252,37 @@ if __name__ == "__main__":
 
     # Show the plot
     plt.tight_layout()
+    plt.show()
+
+    # ---------------------------------------
+
+    plt.figure(figsize=(8, 6))
+
+    plt.yscale('log')
+
+    plt.plot(occArray, totalLatency, marker='x', linestyle='--', linewidth=2, color='red', label='System Latency', markersize=8)
+
+    xticks = np.concatenate([np.arange(0.5, 1.0, 0.5), np.arange(5.0, 101, 5)])
+    plt.xticks(xticks, rotation=45, fontsize=10, weight='bold', color='darkred')
+
+    plt.title(f"{_asicType} Occupancy vs ASIC-FPGA Frame Output Latency - Pix2Pgp/PGP Clock Freq = {_pgpClkFreq} MHz", fontsize=14, weight='bold', color='navy')
+
+    plt.ylabel("System Latency (us)", fontsize=14, weight='bold', color='darkslategray')
+
+    # Add markers to each data point
+    for x, y in zip(occArray, totalLatency):
+        if x in xticks:
+            plt.text(x*1.01-0.8, y*1.05, f"{y:.1f}", fontsize=10, color='black', ha='center', weight='bold', va='bottom')
+
+    for x, total_hits in zip(occArray, allHitArray):
+        if x in xticks:
+            plt.text(x-2, 0.65, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+
+    plt.grid(True, which='both', linestyle='--', linewidth=1)
+    ax = plt.gca()
+    trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
+    ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
+
+
+    plt.tight_layout() # Adjusts the plot to make sure everything fits
     plt.show()

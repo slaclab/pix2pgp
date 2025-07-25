@@ -139,6 +139,7 @@ architecture test of Pix2PgpThriglavTopTb is
    signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
+   constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G;
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
    type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
@@ -249,7 +250,7 @@ begin
               TPD_G           => TPD_G,
               RST_ASYNC_G     => RST_ASYNC_G,
               RST_POLARITY_G  => RST_POLARITY_G,
-              IGNORE_ERO      => false,
+              IGNORE_ERO_G    => IGNORE_ERO_C,
               WAIT_WREN_G     => 3,
               SER_ID_G        => ser,
               COL_ID_G        => col)
