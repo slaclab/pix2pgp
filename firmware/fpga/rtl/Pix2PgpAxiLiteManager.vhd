@@ -37,6 +37,7 @@ entity Pix2PgpAxiLiteManager is
       -- General Interface
       pgpRxClk        : in  sl;
       pgpRxRst        : in  sl;
+      usrRst          : out sl;
       config          : out Pix2PgpStreamRxConfigType;
       -- Internal Module Interface
       mergerBusy      : in  sl;
@@ -80,7 +81,7 @@ architecture rtl of Pix2PgpAxiLiteManager is
    constant REG_INIT_C : RegType := (
       config          => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
       cntRst          => '1',
-      usrRst          => not(RST_POLARITY_G),
+      usrRst          => '0',
       laneDecError    => (others => '0'),
       laneFull        => (others => '0'),
       lanePauseError  => (others => '0'),
@@ -217,6 +218,9 @@ begin
       config.dropLaneMisalign <= r.config.dropLaneMisalign;
       config.realignOnSof     <= r.config.realignOnSof;
       config.dropColMisalign  <= r.config.dropColMisalign;
+
+      -- user-generated reset
+      usrRst <= r.usrRst;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

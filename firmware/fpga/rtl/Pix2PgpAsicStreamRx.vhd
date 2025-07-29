@@ -34,6 +34,7 @@ entity Pix2PgpAsicStreamRx is
       TPD_G                  : time     := 1 ns;
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
+      ASIC_RST_POLARITY_G    : sl       := '0';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G              : natural  := 0;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
@@ -91,6 +92,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal reqNominal     : sl := '0';
    signal reqPause       : sl := '0';
 
+   signal glblRst        : sl := not(RST_POLARITY_G);
+   signal usrRst         : sl := not(RST_POLARITY_G);
+
 begin
 
    -----------------
@@ -134,7 +138,7 @@ begin
       port map(
          -- General Interface
          pgpRxClk       => pgpRxClk,
-         pgpRxRst       => pgpRxRst,
+         pgpRxRst       => glblRst,
          config         => config,
          pgp4RxLinkUp   => pgp4RxLinkUp,
          pgp4RxLinkDown => pgp4RxLinkDown,
@@ -168,7 +172,7 @@ begin
       port map(
          -- General Interface
          pgpRxClk      => pgpRxClk,
-         pgpRxRst      => pgpRxRst,
+         pgpRxRst      => glblRst,
          config        => config,
          -- Supervisor Interface
          mergerBusy    => mergerBusy,
@@ -191,14 +195,14 @@ begin
       generic map(
          TPD_G                 => TPD_G,
          RST_ASYNC_G           => RST_ASYNC_G,
-         RST_POLARITY_G        => '0', -- active-low!
+         RST_POLARITY_G        => ASIC_RST_POLARITY_G,
          TRG_FIFO_ADDR_WIDTH_G => TRG_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
          asicClk       => asicClk,
          asicRst       => asicRst,
          pgpRxClk      => pgpRxClk,
-         pgpRxRst      => pgpRxRst,
+         pgpRxRst      => glblRst,
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,
@@ -213,13 +217,14 @@ begin
    -------------------
    U_AxiLiteManager: entity pix2pgp.Pix2PgpAxiLiteManager
       generic map(
-         TPD_G               => TPD_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         RST_POLARITY_G      => RST_POLARITY_G)
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
          pgpRxRst        => pgpRxRst,
+         usrRst          => usrRst,
          config          => config,
          -- Internal Module Interface
          mergerBusy      => mergerBusy,
@@ -233,5 +238,16 @@ begin
          axilReadSlave   => axilReadSlave,
          axilWriteMaster => axilWriteMaster,
          axilWriteSlave  => axilWriteSlave);
+
+   -------------------
+   -- Reset Management
+   -------------------
+   GEN_RST_POL_HIGH: if RST_POLARITY_G = '1' generate
+      glblRst <= pgpRxRst or usrRst;
+   end generate GEN_RST_POL_HIGH;
+
+   GEN_RST_POL_LOW: if RST_POLARITY_G = '0' generate
+      glblRst <= pgpRxRst and not(usrRst);
+   end generate GEN_RST_POL_LOW;
 
 end rtl;

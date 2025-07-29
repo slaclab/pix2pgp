@@ -117,7 +117,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       trgBuffRd     => '0',
       trgMisalign   => '0',
       postReset     => '0',
-      laneRst       => '0',
+      laneRst       => '1',
       lanePostError => '0',
       laneMetaRd    => '0',
       laneValid     => (others => '0'),
@@ -263,6 +263,7 @@ begin
             v.laneError   := (others => '0');
             v.laneValid   := (others => '0');
             v.waitCnt     := (others => '0');
+            v.laneRst     := '0';
 
             if trgBuffValid = '1' then
 
