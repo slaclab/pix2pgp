@@ -192,23 +192,16 @@ class ThriglavDataFormat(SparseDataFormatBase):
 
         else:
             _row  = []
-            _toaF = []
-            _toaC = []
             _toa  = []
             _tot  = []
 
             _row.append ((_hit[0] >>  8) & 0xFF)
-            _toaF.append((_hit[0] >> 16) & 0x07)
-            _toaC.append((_hit[0] >> 24) & 0xFF)
-            _tot.append( (_hit[0] >>  0) & 0xFF)
+            _toa.append ((_hit[0] >> 16) & 0x7FF)
+            _tot.append ((_hit[0] >>  0) & 0xFF)
 
             _row.append ((_hit[1] >>  8) & 0xFF)
-            _toaF.append((_hit[1] >> 16) & 0x07)
-            _toaC.append((_hit[1] >> 24) & 0xFF)
-            _tot.append( (_hit[1] >>  0) & 0xFF)
-
-            _toa.append((_toaC[0] << 8) | _toaF[0])
-            _toa.append((_toaC[1] << 8) | _toaF[1])
+            _toa.append ((_hit[1] >> 16) & 0x7FF)
+            _tot.append ((_hit[1] >>  0) & 0xFF)
 
             ret.append({'col': colId,
                         'row': _row[0],
