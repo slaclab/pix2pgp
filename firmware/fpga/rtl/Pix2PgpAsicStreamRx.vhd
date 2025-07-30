@@ -92,8 +92,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal reqNominal     : sl := '0';
    signal reqPause       : sl := '0';
 
-   signal glblRst        : sl := not(RST_POLARITY_G);
-   signal usrRst         : sl := not(RST_POLARITY_G);
+   signal usrRst         : sl := '0';
+   signal mergerRst      : sl := not(RST_POLARITY_G);
+   signal trgBuffRst     : sl := not(RST_POLARITY_G);
 
 begin
 
@@ -138,7 +139,8 @@ begin
       port map(
          -- General Interface
          pgpRxClk       => pgpRxClk,
-         pgpRxRst       => glblRst,
+         pgpRxRst       => pgpRxRst,
+         usrRst         => usrRst,
          config         => config,
          pgp4RxLinkUp   => pgp4RxLinkUp,
          pgp4RxLinkDown => pgp4RxLinkDown,
@@ -152,8 +154,10 @@ begin
          trgBuffSroEn   => trgBuffSroEn,
          trgBuffValid   => trgBuffValid,
          trgBuffRd      => trgBuffRd,
+         trgBuffRst     => trgBuffRst,
          -- Lane Merger Interface
          mergerBusy     => mergerBusy,
+         mergerRst      => mergerRst,
          asicStatus     => asicStatus,
          fpgaTrgCnt     => fpgaTrgCnt,
          reqDrop        => reqDrop,
@@ -172,7 +176,7 @@ begin
       port map(
          -- General Interface
          pgpRxClk      => pgpRxClk,
-         pgpRxRst      => glblRst,
+         pgpRxRst      => mergerRst,
          config        => config,
          -- Supervisor Interface
          mergerBusy    => mergerBusy,
@@ -202,7 +206,7 @@ begin
          asicClk       => asicClk,
          asicRst       => asicRst,
          pgpRxClk      => pgpRxClk,
-         pgpRxRst      => glblRst,
+         pgpRxRst      => trgBuffRst,
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,
@@ -238,16 +242,5 @@ begin
          axilReadSlave   => axilReadSlave,
          axilWriteMaster => axilWriteMaster,
          axilWriteSlave  => axilWriteSlave);
-
-   -------------------
-   -- Reset Management
-   -------------------
-   GEN_RST_POL_HIGH: if RST_POLARITY_G = '1' generate
-      glblRst <= pgpRxRst or usrRst;
-   end generate GEN_RST_POL_HIGH;
-
-   GEN_RST_POL_LOW: if RST_POLARITY_G = '0' generate
-      glblRst <= pgpRxRst and not(usrRst);
-   end generate GEN_RST_POL_LOW;
 
 end rtl;

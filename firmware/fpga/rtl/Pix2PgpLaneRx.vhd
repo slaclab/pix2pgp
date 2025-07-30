@@ -400,7 +400,7 @@ begin
             if r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
 
-            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' and postError = '0' then
+            elsif rxFifoMaster.tValid = '1' and postError = '0' then
                tReady := '1';  -- read rxFifo
 
                if v.dummy = '1' then

@@ -128,7 +128,7 @@ begin
          -- Master Port
          mAxisMaster => pgp4RxMaster,
          mSideBand   => open,
-         mAxisSlave  => pgp4RxSlave);
+         mAxisSlave  => AXI_STREAM_SLAVE_FORCE_C);
 
    linkReady <= remRxLinkReady and locRxLinkReady;
 
