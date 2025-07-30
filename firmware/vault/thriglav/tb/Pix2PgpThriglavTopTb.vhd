@@ -93,7 +93,7 @@ architecture test of Pix2PgpThriglavTopTb is
 
    signal hitLen  : metaHitLenArray := (others => (others => (others => '0')));
 
-   type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(31 downto 0);
+   type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(SER_DWIDTH_C-1 downto 0);
 
    signal pgpDataAsic      : pgpDataAsicType := (others => (others => '0'));
    signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
