@@ -108,9 +108,6 @@ architecture test of Pix2PgpThriglavTopTb is
    signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
 
-   signal ipIntegratorMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal ipIntegratorSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
-
    signal m_axis_tvalid  : sl := '0';
    signal m_axis_tdata   : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
    signal m_axis_tstrb   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
@@ -366,118 +363,43 @@ begin
    -------
    revRst <= not(rst);
 
-   GEN_LANE: for lane in 0 to NUM_OF_SERIALIZERS_C-1 generate
-
-      -- pgp4 wrapper
-      U_FPGA : entity pix2pgp.Pix2PgpFpgaTb
-       generic map(
-          TPD_G          => TPD_G,
-          RST_ASYNC_G    => false,
-          RST_POLARITY_G => REV_RST_POLARITY_C,
-          FPGA_SYNTH_G   => FPGA_SYNTH_G,
-          NUM_VC_G       => NUM_VC_G)
-       port map(
-          -- General Interface
-          pgpRxClk     => pgpRxClk,
-          phyRxClk     => pgpClk,
-          rst          => revRst,
-          linkReady    => pgp4RxLinkUp(lane),
-          -- Pix2Pgp Interface
-          pgpDin       => pgpDataAsic(lane),
-          pgpDinValid  => pgpDataAsicValid(lane),
-          pgpDinReady  => pgpDataAsicReady(lane),
-          -- FPGA RX Interface
-          pgp4RxMaster => pgp4RxMaster(lane),
-          pgp4RxSlave  => pgp4RxSlave(lane));
-
-   end generate GEN_LANE;
-
-   -- asic stream receiver and merger
-   U_ASIC_STREAM_RX : entity pix2pgp.Pix2PgpAsicStreamRx
+   -- Using the same wrapper that is used in sysVerilog verification;
+   -- hence the ugly association of the data ports
+   U_FpgaRx: entity pix2pgp.Pix2PgpThriglavTbRxWrapper
       generic map(
          TPD_G                  => TPD_G,
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
-         ASIC_ID_G              => 0,
-         LANE_PIPE_STAGES_G     => 1,
-         TRG_FIFO_ADDR_WIDTH_G  => 6,
-         META_FIFO_ADDR_WIDTH_G => 6,
-         AXIS_FIFO_ADDR_WIDTH_G => 11)
+         NUM_VC_G               => NUM_VC_G,
+         AXIS_FIFO_ADDR_WIDTH_G => 11,
+         -- IP Integrator AXI Stream Configuration
+         AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
-         pgpRxClk        => pgpRxClk,
-         pgpRxRst        => revRst,
-         -- ASIC Domain Interface
-         asicClk         => sparseClk,
-         asicRst         => rst,
-         asicSro         => sroFinal,
-         asicSroEn       => '1',
-         -- PGP4Rx Interface (on pgpRxClk domain)
-         pgp4RxMaster    => pgp4RxMaster,
-         pgp4RxSlave     => pgp4RxSlave,
-         pgp4RxLinkUp    => pgp4RxLinkUp,
-         -- AXI-Stream Rx Interface (on pgpRxClk domain)
-         asicRxMaster    => asicRxMaster,
-         asicRxSlave     => asicRxSlave,
-         -- AXI-Lite Interface
-         axilClk         => pgpRxClk,
-         axilRst         => revRst,
-         axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
-         axilReadSlave   => open,
-         axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
-         axilWriteSlave  => open);
-
-   U_Fifo : entity surf.AxiStreamFifoV2
-      generic map (
-         -- General Configurations
-         TPD_G               => TPD_G,
-         RST_ASYNC_G         => RST_ASYNC_G,
-         -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => 11,
-         -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
-         MASTER_AXI_CONFIG_G => AXIS_CONFIG_C)
-      port map (
-         -- Slave Port
-         sAxisClk    => pgpRxClk,
-         sAxisRst    => axiFifoRst,
-         sAxisMaster => asicRxMaster,
-         sAxisSlave  => asicRxSlave,
-         -- Status Port
-         -- Master Port
-         mAxisClk    => sysClk,
-         mAxisRst    => axiFifoRst,
-         mAxisMaster => ipIntegratorMaster,
-         mAxisSlave  => ipIntegratorSlave);
-
-   axiFifoRst <= ite(toBoolean(REV_RST_POLARITY_C), revRst, not(revRst));
-
-   -- Map PgpRxMasters to AXI
-   axiMaster : entity surf.MasterAxiStreamIpIntegrator
-      generic map (
-         INTERFACENAME   => "M_AXIS",
-         TUSER_WIDTH     => 8,
-         TID_WIDTH       => 8,
-         TDEST_WIDTH     => 8,
-         TDATA_NUM_BYTES => AXIS_CONFIG_C.TDATA_BYTES_C)
-      port map (
-         -- IP Integrator AXI Stream Interface
-         M_AXIS_ACLK    => sysClk,
-         M_AXIS_ARESETN => '1',
-         M_AXIS_TVALID  => m_axis_tvalid,
-         M_AXIS_TDATA   => m_axis_tdata,
-         M_AXIS_TSTRB   => m_axis_tstrb,
-         M_AXIS_TKEEP   => m_axis_tkeep,
-         M_AXIS_TLAST   => m_axis_tlast,
-         M_AXIS_TDEST   => m_axis_tdest,
-         M_AXIS_TID     => m_axis_tid,
-         M_AXIS_TUSER   => m_axis_tuser,
-         M_AXIS_TREADY  => '1',
-         -- SURF AXI Stream Interface
+         pgpRxClk       => pgpRxClk,
+         sro            => sroFinal,
+         rst            => revRst,
+         asicRstL       => rst,
+         -- Pix2Pgp Interface
+         pgpDin0        => pgpDataAsic(0),
+         pgpDin1        => pgpDataAsic(1),
+         pgpDinValid    => pgpDataAsicValid,
+         pgpDinReady    => pgpDataAsicReady,
+         linkReady      => pgp4RxLinkUp,
+         -- AXI interface
          axisClk        => open,
          axisRst        => open,
-         axisMaster     => ipIntegratorMaster,
-         axisSlave      => ipIntegratorSlave);
+         m_axis_aresetn => '1',
+         m_axis_aclk    => sysClk,
+         m_axis_tvalid  => m_axis_tvalid,
+         m_axis_tdata   => m_axis_tdata,
+         m_axis_tstrb   => m_axis_tstrb,
+         m_axis_tkeep   => m_axis_tkeep,
+         m_axis_tlast   => m_axis_tlast,
+         m_axis_tdest   => m_axis_tdest,
+         m_axis_tid     => m_axis_tid,
+         m_axis_tuser   => m_axis_tuser,
+         m_axis_tready  => '1');
 
 ------------------------------------------------------
 ------------------------------------------------------

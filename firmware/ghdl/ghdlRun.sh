@@ -1,20 +1,5 @@
 #!/bin/sh
 # simple GHDL wrapper script
-##########################################################################
-# it is assumed that there are three directories: rtl/ tb/ ghdl/ ; all on the same level
-# rtl/ is where the source files are located; tb/ are all sim-related files; ghdl/ is where the ghdl script is
-# this script will *not* work if this structure is not followed
-# also, the surf library files should be added in a dir named surf/ directly under rtl/
-##########################################################################
-# two uses: 1) $ bash ghdlRun.sh
-#           2) $ bash ghdlRun.sh <name of top-level tb name> <stop time (e.g. 100us)>
-# if no arguments are given (option 1), then a simple analysis of the .vhd files in the rtl/ dir is performed.
-# if arguments are given (option 2), then a testbench is compiled and run
-# e.g.: bash ghdlRun.sh ModuleTb 5
-# the command above will run the ModuleTb.vhd testbench for 5us.
-# it is assumed that ModuleTb.vhd is under tb/
-##########################################################################
-##########################################################################
 
 ROOT_DIR=${PWD}/../../
 
@@ -46,27 +31,6 @@ PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 # these are only used by GHDL
 GHDL_FIFO_DIR=${GHDL_DIR}/ghdlFifo
 GHDL_FIFO=${GHDL_FIFO_DIR}/*.vhd
-
-# Vault stuff
-VAULT_DIR=${ROOT_DIR}/firmware/vault
-
-# ASIC-specific
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SPARKPIX_S_DIR=${VAULT_DIR}/sparkPixS
-SPARKPIX_T_DIR=${VAULT_DIR}/sparkPixT
-
-SPARKPIX_S_RTL_DIR=${SPARKPIX_S_DIR}/rtl
-SPARKPIX_T_RTL_DIR=${SPARKPIX_T_DIR}/rtl
-
-SPARKPIX_S_TB_DIR=${SPARKPIX_S_DIR}/tb
-SPARKPIX_T_TB_DIR=${SPARKPIX_T_DIR}/tb
-
-SPARKPIX_S_PKG=${SPARKPIX_S_RTL_DIR}/SparkPixSPkg.vhd
-SPARKPIX_T_PKG=${SPARKPIX_T_RTL_DIR}/SparkPixTPkg.vhd
-
-SPARKPIX_S_TOP=${SPARKPIX_S_RTL_DIR}/Pix2PgpSparkPixSTop.vhd
-SPARKPIX_T_TOP=${SPARKPIX_T_RTL_DIR}/Pix2PgpSparkPixTTop.vhd
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Surf stuff
 SURF_DIR=${ASIC_RTL_DIR}/surf
@@ -142,7 +106,6 @@ ghdlAnalyze()
   echo "$(ls ${PIX2PGP_PKG})"
   echo "$(ls ${PIX2PGP_ASIC_TOP})"
   echo "$(ls ${FPGA_RTL})"
-  echo "$(ls ${FPGA_TB})"
   echo "$(ls ${GHDL_FIFO})"
 
   echo "List of ASIC SURF stuff..."
@@ -267,4 +230,3 @@ main()
 }
 
 main "$@"
-
