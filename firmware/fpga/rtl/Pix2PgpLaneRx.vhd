@@ -71,7 +71,7 @@ architecture rtl of Pix2PgpLaneRx is
       decError       : sl;
       fifoRst        : sl;
       frameMetaWr    : sl;
-      din            : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      din            : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       frameMetaDin   : slv(LANERX_META_DWIDTH_C-1 downto 0);
       inOverOcc      : sl;
       inPause        : sl;
@@ -79,6 +79,7 @@ architecture rtl of Pix2PgpLaneRx is
       rxError        : sl;
       inFull         : sl;
       laneFull       : sl;
+      dummy          : sl;
       waitCnt        : slv(2 downto 0);
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
@@ -103,6 +104,7 @@ architecture rtl of Pix2PgpLaneRx is
       rxError        => '0',
       inFull         => '0',
       laneFull       => '0',
+      dummy          => '0',
       waitCnt        => (others => '0'),
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
@@ -180,7 +182,6 @@ begin
       variable colErr     : sl := '0';
       variable pauseErr   : sl := '0';
       variable timeout    : sl := '0';
-      variable dummy      : sl := '0';
       variable sof        : sl := '0';
       variable eof        : sl := '0';
       variable colHitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
@@ -206,8 +207,8 @@ begin
       tLast         := '0';
       tReady        := '0';
 
-      v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      v.axiFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.din;
+      v.din := rxFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
+      v.axiFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := v.din;
 
       -- full monitor
       v.laneFull := laneFull;
@@ -218,7 +219,7 @@ begin
       colErr      := v.din(COLUMN_ERROR_FLAG_POS_C);
       pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
       timeout     := v.din(TIMEOUT_FLAG_POS_C);
-      dummy       := toSl(isDummy(v.din));
+      v.dummy     := toSl(isDummy(v.din));
       colHitmask  := v.din(COL_HITMASK_POS_C);
       trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
       -- column metadata variables
@@ -234,7 +235,7 @@ begin
          v.axiFifoMaster.tValid := '0';
          v.axiFifoMaster.tLast  := '0';
          v.axiFifoMaster.tUser  := (others => '0');
-         v.axiFifoMaster.tKeep  := tKeepSet(ASIC_DATABUS_DWIDTH_C);
+         v.axiFifoMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
       end if;
 
       -- PGP error check
@@ -281,7 +282,7 @@ begin
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
 
-               if dummy = '0' and sof = '1' then
+               if v.dummy = '0' and sof = '1' then
                   ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   tValid         := '1';                -- write to axiFifo
                   v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
@@ -384,7 +385,7 @@ begin
                tValid        := '1';
                v.frameMetaWr := '1';
 
-               -- go-to dummy wait state by default
+               -- go-to header waiting state by default
                v.state := WAIT_HEADER_S;
 
             end if;
@@ -399,10 +400,10 @@ begin
             if r.inFull = '1' or r.decError = '1' then
                v.state := ERROR_S;
 
-            elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' and postError = '0' then
+            elsif rxFifoMaster.tValid = '1' and postError = '0' then
                tReady := '1';  -- read rxFifo
 
-               if dummy = '1' then
+               if v.dummy = '1' then
                   v.dummyCnt := r.dummyCnt + 1;
                   if r.dummyCnt = EVAL_DUMMY_MAX_C then
                      v.dummyCnt := (others => '0');

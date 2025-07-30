@@ -34,7 +34,8 @@ package Pix2PgpPkg is
    ------------------------------ Pix2PgpPkg -----------------------------------
    -----------------------------------------------------------------------------
 
-   type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(SPARSE_DWIDTH_C-1 downto 0);
+   type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of
+      slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C);
    constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C);
@@ -119,7 +120,7 @@ package Pix2PgpPkg is
 
    type Pix2PgpDataBusType is record
       -- flags begin
-      data : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      data : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_DATABUS_C : Pix2PgpDataBusType := (
@@ -212,9 +213,11 @@ package Pix2PgpPkg is
    constant FPGA_TRAILER_LEN_C : natural := 64;
    ------------------------------------------------------------------------------
 
-   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+   type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of
+      slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
 
-   type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+   type Pix2PgpLaneFrameSizeArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of
+      slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
 
    type Pix2PgpLaneStatusType is record
       -- flags begin
@@ -272,12 +275,12 @@ package Pix2PgpPkg is
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
 
    -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   constant FPGA_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
 
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C    => false,
-      TDATA_BYTES_C => ASIC_DATABUS_DWIDTH_C/8,
+      TDATA_BYTES_C => PIX2PGP_DATABUS_DWIDTH_C/8,
       TDEST_BITS_C  => 4,
       TID_BITS_C    => 0,
       TKEEP_MODE_C  => TKEEP_NORMAL_C,
@@ -372,7 +375,7 @@ package body Pix2PgpPkg is
    end function;
 
    function colMetaMap (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv is
-      variable retMeta: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+      variable retMeta: slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
       retMeta(META_FLAGS_POS_C) := resize(flags, rangeToLen(META_FLAGS_POS_C'high,
@@ -393,7 +396,7 @@ package body Pix2PgpPkg is
    function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
                            colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                            colHitmask: slv; trgCntGlbl: slv) return slv is
-      variable retHeader: slv(ASIC_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+      variable retHeader: slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
       retHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(dummyHeader);

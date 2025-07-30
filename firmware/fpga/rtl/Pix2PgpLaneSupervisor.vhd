@@ -36,6 +36,7 @@ entity Pix2PgpLaneSupervisor is
       -- General Interface
       pgpRxClk       : in  sl;
       pgpRxRst       : in  sl := not(RST_POLARITY_G);
+      usrRst         : in  sl;
       config         : in  Pix2PgpStreamRxConfigType;
       pgp4RxLinkUp   : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgp4RxLinkDown : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -49,8 +50,10 @@ entity Pix2PgpLaneSupervisor is
       trgBuffSroEn   : in  sl;
       trgBuffValid   : in  sl;
       trgBuffRd      : out sl;
+      trgBuffRst     : out sl;
       -- Lane Merger Interface
       mergerBusy     : in  sl;
+      mergerRst      : out sl;
       asicStatus     : out Pix2PgpLaneStatusArray;
       fpgaTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       reqDrop        : out sl;
@@ -76,6 +79,8 @@ architecture rtl of Pix2PgpLaneSupervisor is
       POST_RESET_S);
 
    type RegType is record
+      usrRst        : sl;
+      inUsrRst      : sl;
       reqDrop       : sl;
       reqNominal    : sl;
       reqPause      : sl;
@@ -86,7 +91,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       trgBuffRd     : sl;
       trgMisalign   : sl;
       postReset     : sl;
-      laneRst       : sl;
+      glblRst       : sl;
       lanePostError : sl;
       laneMetaRd    : sl;
       laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -107,6 +112,8 @@ architecture rtl of Pix2PgpLaneSupervisor is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
+      usrRst        => '0',
+      inUsrRst      => '0',
       reqDrop       => '0',
       reqNominal    => '0',
       reqPause      => '0',
@@ -117,7 +124,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       trgBuffRd     => '0',
       trgMisalign   => '0',
       postReset     => '0',
-      laneRst       => '0',
+      glblRst       => '0',
       lanePostError => '0',
       laneMetaRd    => '0',
       laneValid     => (others => '0'),
@@ -152,7 +159,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, usrRst,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -163,6 +170,7 @@ begin
       -- Register Inputs
       v.mergerBusy := mergerBusy;
       v.fpgaTrgCnt := trgBuffTrgCnt;
+      v.usrRst     := usrRst;
 
       -- Default values
       v.reqDrop    := '0';
@@ -263,6 +271,7 @@ begin
             v.laneError   := (others => '0');
             v.laneValid   := (others => '0');
             v.waitCnt     := (others => '0');
+            v.inUsrRst    := '0';
 
             if trgBuffValid = '1' then
 
@@ -401,7 +410,7 @@ begin
          when RESET_S =>
             v.prvTrgCnt     := r.refTrgCnt;
             v.inPause       := '0';
-            v.laneRst       := '1';
+            v.glblRst       := '1'; -- resets lanes for sure; maybe trgBuff and merger as well
             v.lanePostError := '1';
             v.laneTimeout   := (others => '0');
             v.laneReady     := (others => '0');
@@ -418,7 +427,8 @@ begin
             -- don't pop the trigger buffer word if in pause;
             -- if in pause, will go back to idle and straight to lane evaluation
             if uOr(r.waitCnt) = '0' then
-               v.laneRst   := '0';
+               v.glblRst   := '0';
+               v.inUsrRst  := '0';
                v.trgBuffRd := not(r.inPause);
             end if;
 
@@ -465,10 +475,10 @@ begin
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          if RST_POLARITY_G = '1' then
-            laneRst(lane) <= pgpRxRst or r.laneRst
+            laneRst(lane) <= pgpRxRst or r.glblRst
                           or not(r.laneEnable(lane)) or not(r.laneUp(lane));
          else
-            laneRst(lane) <= pgpRxRst and not(r.laneRst)
+            laneRst(lane) <= pgpRxRst and not(r.glblRst)
                           and(r.laneEnable(lane)) and(r.laneUp(lane));
          end if;
 
@@ -478,6 +488,20 @@ begin
          laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane));
 
       end loop;
+
+      if RST_POLARITY_G = '1' then
+         trgBuffRst <= pgpRxRst or (r.glblRst and r.inUsrRst);
+         mergerRst  <= pgpRxRst or (r.glblRst and r.inUsrRst);
+      else
+         trgBuffRst <= pgpRxRst and not(r.glblRst and r.inUsrRst);
+         mergerRst  <= pgpRxRst and not(r.glblRst and r.inUsrRst);
+      end if;
+
+      -- User-Reset
+      if r.usrRst = '1' then
+         v.state    := RESET_S;
+         v.inUsrRst := '1'; -- differentiate between lane-error-induced reset and user-reset
+      end if;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

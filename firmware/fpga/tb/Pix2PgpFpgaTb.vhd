@@ -33,7 +33,7 @@ entity Pix2PgpFpgaTb is
       rst          : in  sl := not RST_POLARITY_G;
       linkReady    : out sl;
       -- Pix2Pgp Interface
-      pgpDin       : in  slv(31 downto 0);
+      pgpDin       : in  slv(SER_DWIDTH_C-1 downto 0);
       pgpDinValid  : in  sl;
       pgpDinReady  : out sl;
       -- FPGA RX Interface
@@ -128,7 +128,7 @@ begin
          -- Master Port
          mAxisMaster => pgp4RxMaster,
          mSideBand   => open,
-         mAxisSlave  => pgp4RxSlave);
+         mAxisSlave  => AXI_STREAM_SLAVE_FORCE_C);
 
    linkReady <= remRxLinkReady and locRxLinkReady;
 
