@@ -44,7 +44,7 @@ entity Pix2PgpColumnManager is
       dataEmpty   : out sl;
       statusEmpty : out sl;
       -- Sparse Logic Interface
-      din         : in  slv(SPARSE_DWIDTH_C-1 downto 0);
+      din         : in  slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       wrEn        : in  sl;
       sof         : in  sl;
       eof         : in  sl;
@@ -75,7 +75,7 @@ architecture rtl of Pix2PgpColumnManager is
    signal statusWrEn        : sl;
    signal statusDin         : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
    signal dataWrEn          : sl;
-   signal dataDin           : slv(SPARSE_DWIDTH_C-1 downto 0);
+   signal dataDin           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
    type RegType is record
       -- i/o
@@ -86,7 +86,7 @@ architecture rtl of Pix2PgpColumnManager is
       busy           : sl;
       pause          : sl;
       pauseAck       : sl;
-      din            : slv(SPARSE_DWIDTH_C-1 downto 0);
+      din            : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
       -- internal
       overOccStatus  : sl;
       pauseAckStatus : sl;
@@ -370,7 +370,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => SPARSE_DWIDTH_C,
+         WIDTH_G        => ASIC_DATABUS_DWIDTH_C,
          DELAY_G        => DATAFIFO_PIPE_G)
       port map (
          clk  => sparseClk,
@@ -394,8 +394,8 @@ begin
          RST_POLARITY_G  => RST_POLARITY_G,
          FWFT_EN_G       => true,
          DWARE_AF_LVL_G  => 1,
-         WR_DATA_WIDTH_G => SPARSE_DWIDTH_C,
-         RD_DATA_WIDTH_G => ASIC_DATABUS_DWIDTH_C,
+         WR_DATA_WIDTH_G => ASIC_DATABUS_DWIDTH_C,
+         RD_DATA_WIDTH_G => PIX2PGP_DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DATA_DEPTH_G,
          FULL_THRES_G    => 6, -- only for ghdl sim
          ADDR_WIDTH_G    => 4) -- only for ghdl sim

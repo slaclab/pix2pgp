@@ -71,7 +71,7 @@ architecture rtl of Pix2PgpLaneRx is
       decError       : sl;
       fifoRst        : sl;
       frameMetaWr    : sl;
-      din            : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      din            : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       frameMetaDin   : slv(LANERX_META_DWIDTH_C-1 downto 0);
       inOverOcc      : sl;
       inPause        : sl;
@@ -207,8 +207,8 @@ begin
       tLast         := '0';
       tReady        := '0';
 
-      v.din := rxFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-      v.axiFifoMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.din;
+      v.din := rxFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
+      v.axiFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := v.din;
 
       -- full monitor
       v.laneFull := laneFull;
@@ -235,7 +235,7 @@ begin
          v.axiFifoMaster.tValid := '0';
          v.axiFifoMaster.tLast  := '0';
          v.axiFifoMaster.tUser  := (others => '0');
-         v.axiFifoMaster.tKeep  := tKeepSet(ASIC_DATABUS_DWIDTH_C);
+         v.axiFifoMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
       end if;
 
       -- PGP error check

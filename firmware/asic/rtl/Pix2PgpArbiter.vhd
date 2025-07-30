@@ -86,7 +86,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   : sl;
       dummyHeader  : sl;
       waitColSel   : sl;
-      txData       : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      txData       : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       dummyCnt     : slv(2 downto 0);
       dataHeader   : slv(HEADER_DWIDTH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -147,7 +147,7 @@ begin
       variable dataLenSel  : slv(DATALEN_WIDTH_C-1 downto 0);
       variable trgCntSel   : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- temp variables for data bus
-      variable dataBusSel  : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+      variable dataBusSel  : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
 
    begin
 
@@ -353,7 +353,7 @@ begin
       v.dataHeader := asicHeaderMap(overOccError, colPause, colFifoError, colPauseError,
                                     timeoutError, v.dummyHeader, v.colHitmask, v.trgCntGlbl);
       --
-      v.sAxisMaster.tData(ASIC_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
+      v.sAxisMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
       --
 
       -- Outputs
@@ -391,7 +391,7 @@ begin
    -----------------------------------------
    -- Axi-Stream Gearbox (if needed)
    -----------------------------------------
-   GEN_GBOX: if ASIC_DATABUS_DWIDTH_C /= PGP_DWIDTH_C generate
+   GEN_GBOX: if PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C generate
 
       U_Gearbox : entity surf.AxiStreamGearbox
          generic map(
@@ -417,7 +417,7 @@ begin
 
    end generate GEN_GBOX;
 
-   GEN_NO_GBOX: if ASIC_DATABUS_DWIDTH_C = PGP_DWIDTH_C generate
+   GEN_NO_GBOX: if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C generate
 
       pgpTxMaster <= sAxisMaster;
       sAxisSlave  <= pgpTxSlave;

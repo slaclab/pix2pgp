@@ -33,7 +33,7 @@ package Pix2PgpAsicPkg is
    --
    constant NUM_OF_COL_MANAGERS_C : natural := 24; -- number of columns per serializer
    constant NUM_OF_SERIALIZERS_C  : natural :=  8; -- number of serializers per-ASIC
-   constant SPARSE_DWIDTH_C       : natural := 32; -- data width
+   constant ASIC_DATABUS_DWIDTH_C : natural := 32; -- data width
 
    -- every ASIC implementation has a specific decimal identifier; no ASIC should be = 0
    constant ASIC_TYPE_C : natural := 2; -- SparkPix-T = 2
@@ -59,8 +59,8 @@ package Pix2PgpAsicPkg is
    -- timeout counter
    constant TIMEOUT_LIMIT_WIDTH_C : natural := 12;
 
-   -- data bus width is twice the pixel data width to maximize bandwidth
-   constant ASIC_DATABUS_DWIDTH_C : natural := SPARSE_DWIDTH_C*2;
+   -- internal data bus width is twice the inbound data width to maximize bandwidth
+   constant PIX2PGP_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*2;
    --
    constant EVAL_SOF_C  : boolean := True;
    constant EVAL_EOFE_C : boolean := True;
@@ -76,7 +76,7 @@ package Pix2PgpAsicPkg is
    -- Header
    -- ~~~~~~
    -- Pix2Pgp data frame header *has* to be an equal to the databus width
-   constant HEADER_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C;
+   constant HEADER_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C;
 
    -- bitfields
    constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 63
@@ -105,7 +105,7 @@ package Pix2PgpAsicPkg is
    -- colMeta[26] -> timeout
    -- colMeta[25] -> overOcc
    -- colMeta[24] -> pause
-   subtype  META_FLAGS_POS_C   is natural range  ASIC_DATABUS_DWIDTH_C-1 downto 24;
+   subtype  META_FLAGS_POS_C   is natural range  PIX2PGP_DATABUS_DWIDTH_C-1 downto 24;
    subtype  META_COL_POS_C     is natural range  23 downto 16;
    subtype  META_TRGCNT_POS_C  is natural range  15 downto 8;
    subtype  META_DATALEN_POS_C is natural range   7 downto 0;

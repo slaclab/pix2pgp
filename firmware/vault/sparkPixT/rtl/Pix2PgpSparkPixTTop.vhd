@@ -109,8 +109,8 @@ begin
    assert (NUM_OF_COL_MANAGERS_C = 24)
       report "[ERROR]: Pix2PgpSparkPixTTop; NUM_OF_COL_MANAGERS_C is *NOT* equal to 24! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixSPkg.vhd" severity failure;
 
-   assert (SPARSE_DWIDTH_C = 32)
-      report "[ERROR]: Pix2PgpSparkPixTTop; SPARSE_DWIDTH_C is *NOT* equal to 32! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixSPkg.vhd" severity failure;
+   assert (ASIC_DATABUS_DWIDTH_C = 32)
+      report "[ERROR]: Pix2PgpSparkPixTTop; ASIC_DATABUS_DWIDTH_C is *NOT* equal to 32! Please check that Pix2PgpPkg.vhd matches Pix2PgpSparkPixSPkg.vhd" severity failure;
 
    -- check the length equivalence with asserts
    -- avoid tying input port widths to generics; hardcode them instead
