@@ -416,7 +416,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
     wait for CLK_PERIOD_SPARSE_C;
       rstCnt <= '1'; -- keep the benchmarking counters in reset
       rst    <= RST_POLARITY_G;
-    wait for CLK_PERIOD_SPARSE_C*100;
+    wait for CLK_PERIOD_SPARSE_C*25;
       rst  <= not(RST_POLARITY_G);
 
     -- Wait for the rst to be released before doing anything else
@@ -427,13 +427,13 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
        end loop;
     end loop;
 
-    wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+    wait for CLK_PERIOD_SPARSE_C*400; -- extend wait to align pgp protocol
       sro <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
+    wait for CLK_PERIOD_SPARSE_C;
       sro <= '0';
-    wait for CLK_PERIOD_SPARSE_C*300;
+    wait for CLK_PERIOD_SPARSE_C*50;
       ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
+    wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
     ----------------------------------------------
     ----------------------------------------------
@@ -442,20 +442,20 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
     -- regular stimuli begin
     ----------------------------------------------
     ----------------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*50;
+     wait for CLK_PERIOD_SPARSE_C*2;
          sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
+     wait for CLK_PERIOD_SPARSE_C;
          sro <= '0';
-     wait for CLK_PERIOD_SPARSE_C*300;
+     wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
-     wait for CLK_PERIOD_SPARSE_C*2;
+     wait for CLK_PERIOD_SPARSE_C;
          ero <= '0';
 
-   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*50;
-   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ---------------------------------------
-   for i in 0 to 12 loop
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+wait for CLK_PERIOD_SPARSE_C*2;
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
+for i in 0 to 12 loop
    ---------------------------------------
    hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
    hitLen(0)(1) <= toSlv(4, hitLen(0)(0)'length);
@@ -562,16 +562,17 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-  wait for CLK_PERIOD_SPARSE_C*50;
-      sro <= '1';
-  wait for CLK_PERIOD_SPARSE_C*2;
-      sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
+         sro <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -683,17 +684,17 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     wait for CLK_PERIOD_SPARSE_C*50;
-         sro <= '1';
+   ---------------------------------------
      wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
          sro <= '0';
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 wait for CLK_PERIOD_SPARSE_C*50;
@@ -804,16 +805,16 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*50;
-         sro <= '1';
      wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
          sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -925,16 +926,16 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*50;
-         sro <= '1';
      wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
          sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1047,16 +1048,16 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-wait for CLK_PERIOD_SPARSE_C*50;
-   sro <= '1';
-wait for CLK_PERIOD_SPARSE_C*2;
-   sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
+         sro <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1168,16 +1169,16 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-  wait for CLK_PERIOD_SPARSE_C*50;
-      sro <= '1';
-  wait for CLK_PERIOD_SPARSE_C*2;
-      sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*300;
-      ero <= '1';
-    wait for CLK_PERIOD_SPARSE_C*2;
-      ero <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     wait for CLK_PERIOD_SPARSE_C*2;
+         sro <= '1';
+     wait for CLK_PERIOD_SPARSE_C;
+         sro <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       wait for CLK_PERIOD_SPARSE_C*50;
+         ero <= '1';
+       wait for CLK_PERIOD_SPARSE_C;
+         ero <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1289,15 +1290,15 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-wait for CLK_PERIOD_SPARSE_C*50;
-   sro <= '1';
-wait for CLK_PERIOD_SPARSE_C*2;
-   sro <= '0';
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*800;
-   ero <= '1';
-wait for CLK_PERIOD_SPARSE_C*2;
-   ero <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      sro <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*800;
+      ero <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      ero <= '0';
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    wait for CLK_PERIOD_SPARSE_C*93;
