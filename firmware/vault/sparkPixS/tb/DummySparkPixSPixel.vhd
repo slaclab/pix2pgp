@@ -177,6 +177,7 @@ comb : process (df_reset_n, r, hitLen, sro, pause) is
       wrEn     <= r.wrEn;
       dout     <= r.dout;
       sof      <= r.sof;
+      eof      <= r.eof;
       overOcc  <= r.overOcc;
 
       ----------------------------------------------------------------------
