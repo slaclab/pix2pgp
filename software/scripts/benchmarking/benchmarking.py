@@ -49,7 +49,7 @@ parser.add_argument(
     "--rows",
     type     = int,
     required = False,
-    default  = 640,
+    default  = 612,
     help     = "Number of Rows",
 )
 
