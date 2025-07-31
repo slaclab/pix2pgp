@@ -59,30 +59,31 @@ entity Pix2PgpThriglavFpgaRxTop is
       AXIS_CONFIG_G          : AxiStreamConfigType := ssiAxiStreamConfig(16));
    port (
       -- General Interface
-      pgpRxClk       : in  std_logic;
-      sro            : in  std_logic;
-      rst            : in  std_logic := not RST_POLARITY_G;
-      asicRstL       : in  std_logic;
+      pgpRxClk        : in  std_logic;
+      sro             : in  std_logic;
+      rst             : in  std_logic := not RST_POLARITY_G;
+      asicRstL        : in  std_logic;
       -- Pix2Pgp Interface
-      pgpDin0        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin1        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDinValid    : in  std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
-      pgpDinReady    : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
-      linkReady      : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpDin0         : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
+      pgpDin1         : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
+      pgpDinValid     : in  std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
+      pgpDinReady     : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
+      linkReady       : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI interface
-      axisClk        : out std_logic;
-      axisRst        : out std_logic;
-      m_axis_aresetn : in  std_logic;
-      m_axis_aclk    : in  std_logic;
-      m_axis_tvalid  : out std_logic;
-      m_axis_tdata   : out std_logic_vector((8*AXIS_CONFIG_G.TDATA_BYTES_C)-1 downto 0);
-      m_axis_tstrb   : out std_logic_vector(AXIS_CONFIG_G.TDATA_BYTES_C-1 downto 0);
-      m_axis_tkeep   : out std_logic_vector(AXIS_CONFIG_G.TDATA_BYTES_C-1 downto 0);
-      m_axis_tlast   : out std_logic;
-      m_axis_tdest   : out std_logic_vector(TDEST_WIDTH_G-1 downto 0);
-      m_axis_tid     : out std_logic_vector(TID_WIDTH_G-1 downto 0);
-      m_axis_tuser   : out std_logic_vector(TUSER_WIDTH_G-1 downto 0);
-      m_axis_tready  : in  std_logic);
+      axisClk         : out std_logic;
+      axisRst         : out std_logic;
+      m_axis_aresetn  : in  std_logic;
+      m_axis_aclk     : in  std_logic;
+      m_axis_tvalid   : out std_logic;
+      m_axis_tdata    : out std_logic_vector((8*AXIS_CONFIG_G.TDATA_BYTES_C)-1 downto 0);
+      m_axis_tstrb    : out std_logic_vector(AXIS_CONFIG_G.TDATA_BYTES_C-1 downto 0);
+      m_axis_tkeep    : out std_logic_vector(AXIS_CONFIG_G.TDATA_BYTES_C-1 downto 0);
+      m_axis_tlast    : out std_logic;
+      m_axis_tdest    : out std_logic_vector(TDEST_WIDTH_G-1 downto 0);
+      m_axis_tid      : out std_logic_vector(TID_WIDTH_G-1 downto 0);
+      m_axis_tuser    : out std_logic_vector(TUSER_WIDTH_G-1 downto 0);
+      m_axis_tready   : in  std_logic;
+      stream_rx_tlast : out std_logic);
 
 end entity Pix2PgpThriglavFpgaRxTop;
 
@@ -224,6 +225,8 @@ begin
    linkReady <= pgp4RxLinkUp;
 
    axiFifoRst <= ite(toBoolean(RST_POLARITY_G), rst, not(rst));
+
+   stream_rx_tlast <= asicRxMaster.tLast;
 
    -- expand as necessary
    pgpDin(0) <= pgpDin0;

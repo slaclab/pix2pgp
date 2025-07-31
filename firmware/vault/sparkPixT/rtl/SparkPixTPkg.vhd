@@ -42,10 +42,6 @@ package Pix2PgpAsicPkg is
    -- overOcc signal causes trigger counter to increment
    constant INCR_TRGCNT_OVEROCC_C : boolean := False;
 
-   -- if set to True:
-   -- a paused column forces pix2pgp to close the event after a configurable timeout
-   constant ENA_PAUSE_TIMEOUT_C   : boolean := True;
-
    -- **************************************************************************
    --
    -- Secondary parameters to tune

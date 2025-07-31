@@ -70,12 +70,10 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
-   signal tokFb     : asicArray := (others => (others => '1'));
    signal sof       : asicArray := (others => (others => '1'));
    signal eof       : asicArray := (others => (others => '0'));
    signal overOcc   : asicArray := (others => (others => '0'));
    signal busy      : asicArray := (others => (others => '0'));
-   signal ackN      : asicArray := (others => (others => '1'));
    signal wrEn      : asicArray := (others => (others => '0'));
    signal pause     : asicArray := (others => (others => '0'));
    signal pauseAck  : asicArray := (others => (others => '0'));
@@ -84,7 +82,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
 
-   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
+   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(15 downto 0);
 
    type metaHitLenArray is array (0 to NUM_OF_SERIALIZERS_C-1) of hitLenArray;
 
@@ -102,17 +100,15 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgp4RxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
    signal pgp4RxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
-
-   signal m_axis_tvalid  : sl := '0';
-   signal m_axis_tdata   : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
-   signal m_axis_tstrb   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tkeep   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tlast   : sl := '0';
-   signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
-   signal m_axis_tid     : slv(7 downto 0) := (others => '0');
-   signal m_axis_tuser   : slv(7 downto 0) := (others => '0');
+   signal m_axis_tvalid     : sl := '0';
+   signal m_axis_tdata      : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tlast      : sl := '0';
+   signal m_axis_tdest      : slv(7 downto 0) := (others => '0');
+   signal m_axis_tid        : slv(7 downto 0) := (others => '0');
+   signal m_axis_tuser      : slv(7 downto 0) := (others => '0');
+   signal stream_rx_tlast   : sl := '0';
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
@@ -151,13 +147,13 @@ architecture test of Pix2PgpSparkPixSTopTb is
    );
 
    signal colHitsArray : IntArrayType := (
-      0  => 3,   1  => 6,   2  => 9,   3  => 12,  4  => 16,  5  => 19,
-      6  => 22,  7  => 25,  8  => 28,  9  => 32,  10 => 35,  11 => 38,
-      12 => 41,  13 => 44,  14 => 48,  15 => 51,  16 => 54,  17 => 57,
-      18 => 60,  19 => 64,  20 => 96,  21 => 128, 22 => 160, 23 => 192,
-      24 => 224, 25 => 256, 26 => 288, 27 => 320, 28 => 352, 29 => 384,
-      30 => 416, 31 => 448, 32 => 480, 33 => 512, 34 => 544, 35 => 576,
-      36 => 608, 37 => 640
+      0  => 4,   1  => 7,   2  => 10,  3  => 13,  4  => 16,  5  => 19,
+      6  => 22,  7  => 25,  8  => 28,  9  => 31,  10 => 34,  11 => 37,
+      12 => 40,  13 => 43,  14 => 46,  15 => 49,  16 => 53,  17 => 56,
+      18 => 59,  19 => 62,  20 => 92,  21 => 123, 22 => 153, 23 => 184,
+      24 => 215, 25 => 245, 26 => 276, 27 => 306, 28 => 337, 29 => 368,
+      30 => 398, 31 => 429, 32 => 459, 33 => 490, 34 => 521, 35 => 551,
+      36 => 582, 37 => 612
    );
 
 begin
@@ -229,38 +225,21 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_FB_G      => 4,
-               WAIT_ACKN_G    => 7, -- 7 as per Hyunjoon (so 7+7=14)
-               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon
+               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon (7*2=14)
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
-               clk      => sparseClk,
-               rst      => rst,
-               sro      => sroFinal,
-               pause    => pause(ser)(col),
-               hitLen   => hitLen(ser)(col),
-               pauseAck => pauseAck(ser)(col),
-               tok      => open,
-               tokFb    => tokFb(ser)(col),
-               ackN     => ackN(ser)(col),
-               wrEn     => wrEn(ser)(col),
-               dout     => din(ser)(col));
-
-         U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
-           generic map(
-             RST_POLARITY_G => RST_POLARITY_G,
-             COL_ID_G       => col)
-           port map(
-               clk             => sparseClk,
-               df_reset_n      => rst,
-               sro             => sroFinal,
-               tok_fb          => tokFb(ser)(col),
-               sparse_itf_busy => sparseBusy(ser)(col),
-               pix2pgp_busy    => busy(ser)(col),
-               sof             => sof(ser)(col),
-               eof             => eof(ser)(col),
-               over_occ        => overOcc(ser)(col));
+               clk        => sparseClk,
+               df_reset_n => rst,
+               sro        => sroFinal,
+               pause      => pause(ser)(col),
+               hitLen     => hitLen(ser)(col),
+               pauseAck   => pauseAck(ser)(col),
+               sof        => sof(ser)(col),
+               eof        => eof(ser)(col),
+               overOcc    => overOcc(ser)(col),
+               wrEn       => wrEn(ser)(col),
+               dout       => din(ser)(col));
       end generate GEN_DUMMY_PIXEL;
 
       ------
@@ -346,36 +325,37 @@ begin
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
-         pgpRxClk       => pgpRxClk,
-         sro            => sroFinal,
-         rst            => revRst,
-         asicRstL       => rst,
+         pgpRxClk        => pgpRxClk,
+         sro             => sroFinal,
+         rst             => revRst,
+         asicRstL        => rst,
          -- Pix2Pgp Interface
-         pgpDin0        => pgpDataAsic(0),
-         pgpDin1        => pgpDataAsic(1),
-         pgpDin2        => pgpDataAsic(2),
-         pgpDin3        => pgpDataAsic(3),
-         pgpDin4        => pgpDataAsic(4),
-         pgpDin5        => pgpDataAsic(5),
-         pgpDin6        => pgpDataAsic(6),
-         pgpDin7        => pgpDataAsic(7),
-         pgpDinValid    => pgpDataAsicValid,
-         pgpDinReady    => pgpDataAsicReady,
-         linkReady      => pgp4RxLinkUp,
+         pgpDin0         => pgpDataAsic(0),
+         pgpDin1         => pgpDataAsic(1),
+         pgpDin2         => pgpDataAsic(2),
+         pgpDin3         => pgpDataAsic(3),
+         pgpDin4         => pgpDataAsic(4),
+         pgpDin5         => pgpDataAsic(5),
+         pgpDin6         => pgpDataAsic(6),
+         pgpDin7         => pgpDataAsic(7),
+         pgpDinValid     => pgpDataAsicValid,
+         pgpDinReady     => pgpDataAsicReady,
+         linkReady       => pgp4RxLinkUp,
          -- AXI interface
-         axisClk        => open,
-         axisRst        => open,
-         m_axis_aresetn => '1',
-         m_axis_aclk    => sysClk,
-         m_axis_tvalid  => m_axis_tvalid,
-         m_axis_tdata   => m_axis_tdata,
-         m_axis_tstrb   => m_axis_tstrb,
-         m_axis_tkeep   => m_axis_tkeep,
-         m_axis_tlast   => m_axis_tlast,
-         m_axis_tdest   => m_axis_tdest,
-         m_axis_tid     => m_axis_tid,
-         m_axis_tuser   => m_axis_tuser,
-         m_axis_tready  => '1');
+         axisClk         => open,
+         axisRst         => open,
+         m_axis_aresetn  => '1',
+         m_axis_aclk     => sysClk,
+         m_axis_tvalid   => m_axis_tvalid,
+         m_axis_tdata    => m_axis_tdata,
+         m_axis_tstrb    => m_axis_tstrb,
+         m_axis_tkeep    => m_axis_tkeep,
+         m_axis_tlast    => m_axis_tlast,
+         m_axis_tdest    => m_axis_tdest,
+         m_axis_tid      => m_axis_tid,
+         m_axis_tuser    => m_axis_tuser,
+         m_axis_tready   => '1',
+         stream_rx_tlast => stream_rx_tlast);
 
 ------------------------------------------------------
 ------------------------------------------------------
@@ -2008,9 +1988,8 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait until (asicRxMaster.tLast = '1');
+      wait until (stream_rx_tlast = '1');
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
-
 
       wait for CLK_PERIOD_SPARSE_C*20;
          colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
@@ -2135,7 +2114,7 @@ end generate GEN_BENCHMARK_PROC;
             cnt := cnt + 1;
          end if;
 
-         if asicRxMaster.tLast = '1' then
+         if stream_rx_tlast = '1' then
             totalLatencyCnt <= cnt;
          end if;
 

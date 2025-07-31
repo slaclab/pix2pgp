@@ -3,7 +3,11 @@ Follow this guide to add support for a new ASIC.
 
 Use a previous ASIC as a template. For this example, `SparkPix-T` will be used. Throughout this guide, `NewAsic` will refer to this new ASIC. The user should alter the name of `NewAsic` accordingly in all steps of this entire process, depending on the actual name of the ASIC they want to add.
 
-It is assumed that `NewAsic` uses an `ERO` trigger to signal event closure (see the documentation link in this repo's top-level `README.md` file). This is the reason why `SparkPix-T` has been picked as its template. If the new ASIC the user wishes to support does not feature an `ERO` trigger, then the user should use `SparkPix-S` instead, which generates its event closure internally.
+There are two approaches in terms of generating event closure (i.e. `eof` assertion) for the sparse ASICs that Pix2Pgp typically supports:
+* Self-Closure. If the user wishes to generate a Pix2Pgp variant for an ASIC that supports Self-Closure, they should pick `SparkPixS` as a template
+* External-Trigger-Closure (i.e. `ERO` signal support). If the user wishes to generate a Pix2Pgp variant for an ASIC that supports External-Trigger-Closure, they should pick `SparkPixT` as a template
+
+In this example, it is assumed that `NewAsic` uses an `ERO` trigger to signal event closure. This is the reason why `SparkPixT` has been picked as its template.
 
 ## How-To Add a New ASIC in the RTL Codebase
 

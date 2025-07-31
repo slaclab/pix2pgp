@@ -105,17 +105,15 @@ architecture test of Pix2PgpThriglavTopTb is
    signal pgp4RxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
    signal pgp4RxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
-
-   signal m_axis_tvalid  : sl := '0';
-   signal m_axis_tdata   : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
-   signal m_axis_tstrb   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tkeep   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tlast   : sl := '0';
-   signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
-   signal m_axis_tid     : slv(7 downto 0) := (others => '0');
-   signal m_axis_tuser   : slv(7 downto 0) := (others => '0');
+   signal m_axis_tvalid     : sl := '0';
+   signal m_axis_tdata      : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tlast      : sl := '0';
+   signal m_axis_tdest      : slv(7 downto 0) := (others => '0');
+   signal m_axis_tid        : slv(7 downto 0) := (others => '0');
+   signal m_axis_tuser      : slv(7 downto 0) := (others => '0');
+   signal stream_rx_tlast   : sl := '0';
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
@@ -376,30 +374,31 @@ begin
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
-         pgpRxClk       => pgpRxClk,
-         sro            => sroFinal,
-         rst            => revRst,
-         asicRstL       => rst,
+         pgpRxClk        => pgpRxClk,
+         sro             => sroFinal,
+         rst             => revRst,
+         asicRstL        => rst,
          -- Pix2Pgp Interface
-         pgpDin0        => pgpDataAsic(0),
-         pgpDin1        => pgpDataAsic(1),
-         pgpDinValid    => pgpDataAsicValid,
-         pgpDinReady    => pgpDataAsicReady,
-         linkReady      => pgp4RxLinkUp,
+         pgpDin0         => pgpDataAsic(0),
+         pgpDin1         => pgpDataAsic(1),
+         pgpDinValid     => pgpDataAsicValid,
+         pgpDinReady     => pgpDataAsicReady,
+         linkReady       => pgp4RxLinkUp,
          -- AXI interface
-         axisClk        => open,
-         axisRst        => open,
-         m_axis_aresetn => '1',
-         m_axis_aclk    => sysClk,
-         m_axis_tvalid  => m_axis_tvalid,
-         m_axis_tdata   => m_axis_tdata,
-         m_axis_tstrb   => m_axis_tstrb,
-         m_axis_tkeep   => m_axis_tkeep,
-         m_axis_tlast   => m_axis_tlast,
-         m_axis_tdest   => m_axis_tdest,
-         m_axis_tid     => m_axis_tid,
-         m_axis_tuser   => m_axis_tuser,
-         m_axis_tready  => '1');
+         axisClk         => open,
+         axisRst         => open,
+         m_axis_aresetn  => '1',
+         m_axis_aclk     => sysClk,
+         m_axis_tvalid   => m_axis_tvalid,
+         m_axis_tdata    => m_axis_tdata,
+         m_axis_tstrb    => m_axis_tstrb,
+         m_axis_tkeep    => m_axis_tkeep,
+         m_axis_tlast    => m_axis_tlast,
+         m_axis_tdest    => m_axis_tdest,
+         m_axis_tid      => m_axis_tid,
+         m_axis_tuser    => m_axis_tuser,
+         m_axis_tready   => '1',
+         stream_rx_tlast => stream_rx_tlast);
 
 ------------------------------------------------------
 ------------------------------------------------------
@@ -1458,7 +1457,7 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait until (asicRxMaster.tLast = '1');
+      wait until (stream_rx_tlast = '1');
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
 
@@ -1585,7 +1584,7 @@ end generate GEN_BENCHMARK_PROC;
             cnt := cnt + 1;
          end if;
 
-         if asicRxMaster.tLast = '1' then
+         if stream_rx_tlast = '1' then
             totalLatencyCnt <= cnt;
          end if;
 
