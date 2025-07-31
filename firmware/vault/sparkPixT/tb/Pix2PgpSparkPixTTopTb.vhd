@@ -339,7 +339,7 @@ begin
 
    -- Using the same wrapper that is used in sysVerilog verification;
    -- hence the ugly association of the data ports
-   U_FpgaRx: entity pix2pgp.Pix2PgpSparkPixTTbRxWrapper
+   U_FpgaRx: entity pix2pgp.Pix2PgpSparkPixTFpgaRxTop
       generic map(
          TPD_G                  => TPD_G,
          RST_ASYNC_G            => false,

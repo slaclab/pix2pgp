@@ -7,11 +7,8 @@ GHDL_DIR=${ROOT_DIR}/firmware/ghdl
 
 
 ASIC_RTL_DIR=${ROOT_DIR}/firmware/asic/rtl
-ASIC_TB_DIR=${ROOT_DIR}/firmware/asic/tb
 # --
 ASIC_RTL=${ASIC_RTL_DIR}/*.vhd
-ASIC_TB=${ASIC_TB_DIR}/*.vhd
-
 
 FPGA_RTL_DIR=${ROOT_DIR}/firmware/fpga/rtl
 FPGA_TB_DIR=${ROOT_DIR}/firmware/fpga/tb
@@ -99,7 +96,6 @@ ghdlAnalyze()
   # analyze the files to make sure their syntax is correct
   echo "List of Files:"
   echo "$(ls ${ASIC_RTL})"
-  echo "$(ls ${ASIC_TB})"
   echo "$(ls ${FPGA_RTL})"
   echo "$(ls ${FPGA_TB})"
   echo "$(ls ${PIX2PGP_ASIC_PKG})"
@@ -132,7 +128,6 @@ ghdlAnalyze()
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_PKG}
   ${GHDL_IMPORT_PIX2PGP} ${ASIC_RTL}
-  ${GHDL_IMPORT_PIX2PGP} ${ASIC_TB}
   ${GHDL_IMPORT_PIX2PGP} ${FPGA_RTL}
   ${GHDL_IMPORT_PIX2PGP} ${FPGA_TB}
   ${GHDL_IMPORT_PIX2PGP} ${TB_SHARED}
@@ -143,7 +138,6 @@ ghdlAnalyze()
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_PKG}
   ${GHDL_ANALYZE} ${PIX2PGP_PKG}
   ${GHDL_ANALYZE} ${ASIC_RTL}
-  ${GHDL_ANALYZE} ${ASIC_TB}
   ${GHDL_ANALYZE} ${FPGA_RTL}
   ${GHDL_ANALYZE} ${FPGA_TB}
   ${GHDL_ANALYZE} ${TB_SHARED}
@@ -156,7 +150,7 @@ ghdlAnalyze()
 ##########################################################################
 ghdlTestbench()
 {
-  tbFilePath="${ASIC_TB_DIR}/${1}.vhd"
+  tbFilePath="${FPGA_TB_DIR}/${1}.vhd"
   tbFileName="${1}.vhd"
   checkFileExists ${tbFilePath}
   tbExists=$?

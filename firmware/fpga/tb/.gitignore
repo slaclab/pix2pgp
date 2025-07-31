@@ -1,0 +1,4 @@
+# Ignore all .vhdl files in this directory
+*.vhd
+# Except this file
+!.gitignore
