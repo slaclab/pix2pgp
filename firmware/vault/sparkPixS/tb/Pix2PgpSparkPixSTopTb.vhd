@@ -225,7 +225,7 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_WREN_G    => 8,
+               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon (7*2=14)
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
