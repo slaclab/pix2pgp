@@ -45,7 +45,7 @@ library pix2pgp;
 use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpSparkPixSTbRxWrapper is
+entity Pix2PgpThriglavFpgaRxTop is
    generic(
       TPD_G                  : time      := 1 ns;
       RST_ASYNC_G            : boolean   := True;
@@ -66,12 +66,6 @@ entity Pix2PgpSparkPixSTbRxWrapper is
       -- Pix2Pgp Interface
       pgpDin0        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
       pgpDin1        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin2        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin3        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin4        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin5        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin6        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
-      pgpDin7        : in  std_logic_vector(SER_DWIDTH_C-1 downto 0);
       pgpDinValid    : in  std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgpDinReady    : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
       linkReady      : out std_logic_vector(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -90,9 +84,9 @@ entity Pix2PgpSparkPixSTbRxWrapper is
       m_axis_tuser   : out std_logic_vector(TUSER_WIDTH_G-1 downto 0);
       m_axis_tready  : in  std_logic);
 
-end entity Pix2PgpSparkPixSTbRxWrapper;
+end entity Pix2PgpThriglavFpgaRxTop;
 
-architecture behav of Pix2PgpSparkPixSTbRxWrapper is
+architecture behav of Pix2PgpThriglavFpgaRxTop is
 
    type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(SER_DWIDTH_C-1 downto 0);
 
@@ -234,11 +228,5 @@ begin
    -- expand as necessary
    pgpDin(0) <= pgpDin0;
    pgpDin(1) <= pgpDin1;
-   pgpDin(2) <= pgpDin2;
-   pgpDin(3) <= pgpDin3;
-   pgpDin(4) <= pgpDin4;
-   pgpDin(5) <= pgpDin5;
-   pgpDin(6) <= pgpDin6;
-   pgpDin(7) <= pgpDin7;
 
 end behav;

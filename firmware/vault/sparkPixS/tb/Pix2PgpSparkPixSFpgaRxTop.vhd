@@ -45,7 +45,7 @@ library pix2pgp;
 use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity Pix2PgpSparkPixTTbRxWrapper is
+entity Pix2PgpSparkPixSFpgaRxTop is
    generic(
       TPD_G                  : time      := 1 ns;
       RST_ASYNC_G            : boolean   := True;
@@ -90,9 +90,9 @@ entity Pix2PgpSparkPixTTbRxWrapper is
       m_axis_tuser   : out std_logic_vector(TUSER_WIDTH_G-1 downto 0);
       m_axis_tready  : in  std_logic);
 
-end entity Pix2PgpSparkPixTTbRxWrapper;
+end entity Pix2PgpSparkPixSFpgaRxTop;
 
-architecture behav of Pix2PgpSparkPixTTbRxWrapper is
+architecture behav of Pix2PgpSparkPixSFpgaRxTop is
 
    type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(SER_DWIDTH_C-1 downto 0);
 
