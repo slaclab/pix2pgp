@@ -100,17 +100,15 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal pgp4RxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
    signal pgp4RxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
 
-   signal asicRxMaster   : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-   signal asicRxSlave    : AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C; -- force to ready
-
-   signal m_axis_tvalid  : sl := '0';
-   signal m_axis_tdata   : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
-   signal m_axis_tstrb   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tkeep   : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
-   signal m_axis_tlast   : sl := '0';
-   signal m_axis_tdest   : slv(7 downto 0) := (others => '0');
-   signal m_axis_tid     : slv(7 downto 0) := (others => '0');
-   signal m_axis_tuser   : slv(7 downto 0) := (others => '0');
+   signal m_axis_tvalid     : sl := '0';
+   signal m_axis_tdata      : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep      : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tlast      : sl := '0';
+   signal m_axis_tdest      : slv(7 downto 0) := (others => '0');
+   signal m_axis_tid        : slv(7 downto 0) := (others => '0');
+   signal m_axis_tuser      : slv(7 downto 0) := (others => '0');
+   signal m_axis_tlast_long : sl := '0';
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
@@ -204,6 +202,18 @@ begin
       port map (
          clkP => sysClk,
          clkN => open);
+
+   -- signal is used in another domain -> has to be stretched;
+   -- no need to sync, this is just behavioral modeling
+   U_TlastStretch : entity surf.SynchronizerOneShot
+      generic map (
+         TPD_G         => TPD_G,
+         BYPASS_SYNC_G => true,
+         PULSE_WIDTH_G => 10)
+      port map (
+         clk     => sysClk,
+         dataIn  => m_axis_tlast,
+         dataOut => m_axis_tlast_long);
 
   issueSroProcess: process(sparseClk)
   begin
@@ -1989,9 +1999,8 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait until (asicRxMaster.tLast = '1');
+      wait until (m_axis_tlast_long = '1');
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
-
 
       wait for CLK_PERIOD_SPARSE_C*20;
          colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
@@ -2116,7 +2125,7 @@ end generate GEN_BENCHMARK_PROC;
             cnt := cnt + 1;
          end if;
 
-         if asicRxMaster.tLast = '1' then
+         if m_axis_tlast_long = '1' then
             totalLatencyCnt <= cnt;
          end if;
 
