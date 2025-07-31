@@ -70,12 +70,10 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
-   signal tokFb     : asicArray := (others => (others => '1'));
    signal sof       : asicArray := (others => (others => '1'));
    signal eof       : asicArray := (others => (others => '0'));
    signal overOcc   : asicArray := (others => (others => '0'));
    signal busy      : asicArray := (others => (others => '0'));
-   signal ackN      : asicArray := (others => (others => '1'));
    signal wrEn      : asicArray := (others => (others => '0'));
    signal pause     : asicArray := (others => (others => '0'));
    signal pauseAck  : asicArray := (others => (others => '0'));
@@ -84,7 +82,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
 
-   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(9 downto 0);
+   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(15 downto 0);
 
    type metaHitLenArray is array (0 to NUM_OF_SERIALIZERS_C-1) of hitLenArray;
 
@@ -229,38 +227,21 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_FB_G      => 4,
-               WAIT_ACKN_G    => 7, -- 7 as per Hyunjoon (so 7+7=14)
-               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon
+               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon (7*2=14)
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
-               clk      => sparseClk,
-               rst      => rst,
-               sro      => sroFinal,
-               pause    => pause(ser)(col),
-               hitLen   => hitLen(ser)(col),
-               pauseAck => pauseAck(ser)(col),
-               tok      => open,
-               tokFb    => tokFb(ser)(col),
-               ackN     => ackN(ser)(col),
-               wrEn     => wrEn(ser)(col),
-               dout     => din(ser)(col));
-
-         U_DummyFlowCtrl: entity pix2pgp.SparkPixSFlowCtrl
-           generic map(
-             RST_POLARITY_G => RST_POLARITY_G,
-             COL_ID_G       => col)
-           port map(
-               clk             => sparseClk,
-               df_reset_n      => rst,
-               sro             => sroFinal,
-               tok_fb          => tokFb(ser)(col),
-               sparse_itf_busy => sparseBusy(ser)(col),
-               pix2pgp_busy    => busy(ser)(col),
-               sof             => sof(ser)(col),
-               eof             => eof(ser)(col),
-               over_occ        => overOcc(ser)(col));
+               clk        => sparseClk,
+               df_reset_n => rst,
+               sro        => sroFinal,
+               pause      => pause(ser)(col),
+               hitLen     => hitLen(ser)(col),
+               pauseAck   => pauseAck(ser)(col),
+               sof        => sof(ser)(col),
+               eof        => eof(ser)(col),
+               overOcc    => overOcc(ser)(col),
+               wrEn       => wrEn(ser)(col),
+               dout       => din(ser)(col));
       end generate GEN_DUMMY_PIXEL;
 
       ------

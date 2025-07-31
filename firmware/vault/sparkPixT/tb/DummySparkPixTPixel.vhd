@@ -97,9 +97,10 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
       v := r;
 
       -- Get the inputs
-      v.sro     := sro;
-      v.ero     := ero;
-      v.pause   := pause;
+      v.sro      := sro;
+      v.ero      := ero;
+      v.pause    := pause;
+      v.pauseAck := r.pause;
 
       -- defaults
       v.sof     := '0';
@@ -127,10 +128,9 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
       ----------------------------------------------------------------------
       when IDLE_S =>
          -- only register the hitLen if idle
-         v.hitLen   := hitLen;
-         v.waitCnt  := 0;
-         v.hitCnt   := toSlv(1, 6);
-         v.pauseAck := r.pause;
+         v.hitLen    := hitLen;
+         v.waitCnt   := 0;
+         v.hitCnt    := toSlv(1, 6);
          v.hitLenCnt := toSlv(1, 16);
 
          if (r.sro = '1' and v.pause = '0') then
@@ -146,8 +146,6 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
          ----------------------------------------------------------------------
          when WAIT_WREN_S =>
-             v.pauseAck := r.pause;
-
              if (v.pause = '0') then
                 v.waitCnt := r.waitCnt + 1;
                if (v.waitCnt = WAIT_WREN_G) then
@@ -158,34 +156,36 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
          ----------------------------------------------------------------------
          when ISSUE_WREN_S =>
-            v.waitCnt := r.waitCnt + 1;
-         if (v.waitCnt = WAIT_WREN_G) then
-               --v.dout(19 downto 14) := r.trgCnt;
-               v.dout(13 downto  8) := r.hitCnt;
-               v.dout(7  downto  3) := toSlv(COL_ID_G, v.dout(7 downto 3)'length);
-               v.dout(2  downto  0) := toSlv(SER_ID_G, v.dout(2 downto 0)'length);
-               v.waitCnt := 0;
-               v.wrEn := '1';
-               if (r.hitLenCnt = r.hitLen) then
-                  v.state := WAIT_TRG_S;
-               else
-                  v.hitCnt    := r.hitCnt + 1;
-                  v.hitLenCnt := r.hitLenCnt + 1;
-                  v.state     := WAIT_WREN_S;
+            if (v.pause = '0') then
+               v.waitCnt := r.waitCnt + 1;
+               if (v.waitCnt = WAIT_WREN_G) then
+                  v.wrEn               := '1';
+                  v.waitCnt            := 0;
+                  v.dout(13 downto  8) := r.hitCnt;
+                  v.dout(7  downto  3) := toSlv(COL_ID_G, v.dout(7 downto 3)'length);
+                  v.dout(2  downto  0) := toSlv(SER_ID_G, v.dout(2 downto 0)'length);
+                  if (r.hitLenCnt = r.hitLen) then
+                     v.state := WAIT_TRG_S;
+                  else
+                     v.hitCnt    := r.hitCnt + 1;
+                     v.hitLenCnt := r.hitLenCnt + 1;
+                     v.state     := WAIT_WREN_S;
+                  end if;
                end if;
             end if;
 
          ----------------------------------------------------------------------
          when WAIT_TRG_S =>
-            v.pauseAck := r.pause;
-            if (v.ero = '1' and r.ero = '0' and r.pause = '0' and IGNORE_ERO_G = false) then
-               v.eof   := '1';
-               v.state := IDLE_S;
-            elsif (r.pause = '0' and IGNORE_ERO_G = true) then
-               v.eof   := '1';
-               v.state := IDLE_S;
+            if (v.pause = '0') then
+               if (v.ero = '1' and r.ero = '0' and IGNORE_ERO_G = false) then
+                  v.eof   := '1';
+                  v.state := IDLE_S;
+               elsif (IGNORE_ERO_G = true) then
+                  v.eof   := '1';
+                  v.state := IDLE_S;
+               end if;
             end if;
-      end case;
+         end case;
 
       -- General Outputs
       pauseAck <= r.pauseAck;
