@@ -108,7 +108,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal m_axis_tdest      : slv(7 downto 0) := (others => '0');
    signal m_axis_tid        : slv(7 downto 0) := (others => '0');
    signal m_axis_tuser      : slv(7 downto 0) := (others => '0');
-   signal m_axis_tlast_long : sl := '0';
+   signal stream_rx_tlast   : sl := '0';
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
@@ -203,18 +203,6 @@ begin
          clkP => sysClk,
          clkN => open);
 
-   -- signal is used in another domain -> has to be stretched;
-   -- no need to sync, this is just behavioral modeling
-   U_TlastStretch : entity surf.SynchronizerOneShot
-      generic map (
-         TPD_G         => TPD_G,
-         BYPASS_SYNC_G => true,
-         PULSE_WIDTH_G => 10)
-      port map (
-         clk     => sysClk,
-         dataIn  => m_axis_tlast,
-         dataOut => m_axis_tlast_long);
-
   issueSroProcess: process(sparseClk)
   begin
     if (rising_edge(sparseClk)) then
@@ -237,7 +225,7 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon (7*2=14)
+               WAIT_WREN_G    => 8,
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
@@ -337,36 +325,37 @@ begin
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
-         pgpRxClk       => pgpRxClk,
-         sro            => sroFinal,
-         rst            => revRst,
-         asicRstL       => rst,
+         pgpRxClk        => pgpRxClk,
+         sro             => sroFinal,
+         rst             => revRst,
+         asicRstL        => rst,
          -- Pix2Pgp Interface
-         pgpDin0        => pgpDataAsic(0),
-         pgpDin1        => pgpDataAsic(1),
-         pgpDin2        => pgpDataAsic(2),
-         pgpDin3        => pgpDataAsic(3),
-         pgpDin4        => pgpDataAsic(4),
-         pgpDin5        => pgpDataAsic(5),
-         pgpDin6        => pgpDataAsic(6),
-         pgpDin7        => pgpDataAsic(7),
-         pgpDinValid    => pgpDataAsicValid,
-         pgpDinReady    => pgpDataAsicReady,
-         linkReady      => pgp4RxLinkUp,
+         pgpDin0         => pgpDataAsic(0),
+         pgpDin1         => pgpDataAsic(1),
+         pgpDin2         => pgpDataAsic(2),
+         pgpDin3         => pgpDataAsic(3),
+         pgpDin4         => pgpDataAsic(4),
+         pgpDin5         => pgpDataAsic(5),
+         pgpDin6         => pgpDataAsic(6),
+         pgpDin7         => pgpDataAsic(7),
+         pgpDinValid     => pgpDataAsicValid,
+         pgpDinReady     => pgpDataAsicReady,
+         linkReady       => pgp4RxLinkUp,
          -- AXI interface
-         axisClk        => open,
-         axisRst        => open,
-         m_axis_aresetn => '1',
-         m_axis_aclk    => sysClk,
-         m_axis_tvalid  => m_axis_tvalid,
-         m_axis_tdata   => m_axis_tdata,
-         m_axis_tstrb   => m_axis_tstrb,
-         m_axis_tkeep   => m_axis_tkeep,
-         m_axis_tlast   => m_axis_tlast,
-         m_axis_tdest   => m_axis_tdest,
-         m_axis_tid     => m_axis_tid,
-         m_axis_tuser   => m_axis_tuser,
-         m_axis_tready  => '1');
+         axisClk         => open,
+         axisRst         => open,
+         m_axis_aresetn  => '1',
+         m_axis_aclk     => sysClk,
+         m_axis_tvalid   => m_axis_tvalid,
+         m_axis_tdata    => m_axis_tdata,
+         m_axis_tstrb    => m_axis_tstrb,
+         m_axis_tkeep    => m_axis_tkeep,
+         m_axis_tlast    => m_axis_tlast,
+         m_axis_tdest    => m_axis_tdest,
+         m_axis_tid      => m_axis_tid,
+         m_axis_tuser    => m_axis_tuser,
+         m_axis_tready   => '1',
+         stream_rx_tlast => stream_rx_tlast);
 
 ------------------------------------------------------
 ------------------------------------------------------
@@ -1999,7 +1988,7 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait until (m_axis_tlast_long = '1');
+      wait until (stream_rx_tlast = '1');
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
       wait for CLK_PERIOD_SPARSE_C*20;
@@ -2125,7 +2114,7 @@ end generate GEN_BENCHMARK_PROC;
             cnt := cnt + 1;
          end if;
 
-         if m_axis_tlast_long = '1' then
+         if stream_rx_tlast = '1' then
             totalLatencyCnt <= cnt;
          end if;
 
