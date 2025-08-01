@@ -54,6 +54,22 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--pauseHitLimit",
+    type     = int,
+    required = False,
+    default  = 14,
+    help     = "Number of hits (per-column) before pause kicks in",
+)
+
+parser.add_argument(
+    "--wordWidth",
+    type     = int,
+    required = False,
+    default  = 32,
+    help     = "Width of data word (in bits)",
+)
+
+parser.add_argument(
     "--verbose",
     action = 'store_true',
     default = False)
@@ -77,6 +93,19 @@ def errorOut(msg='errorOut(msg=default)'):
     click.secho(f"[ERROR:] Invalid {msg} format. Exiting...", bg='red')
     sys.exit()
 
+def roundUp(n, decimals=0):
+    """Rounds a number up to a specified number of decimal places.
+
+    Args:
+        n: The number to round up.
+        decimals: The number of decimal places (default is 0, which rounds to the nearest integer).
+
+    Returns:
+        The rounded-up number.
+    """
+    multiplier = 10 ** decimals
+    return math.ceil(n * multiplier) / multiplier
+
 def toFreq(periodIn, MHz=True):
     '''
     Input period in nanoseconds, output frequency in MHz
@@ -96,6 +125,35 @@ def hitsToTotalHits(hits, cols):
     '''
     return int(int(hits)*int(cols))
 
+def pix2pgpFramePayload(hits, cols, wordWidth, numOfChunks=1):
+    '''
+    Returns the number of bits that yield hit data,
+    and the number of bits of the entire frame (i.e. data + metadata/overhead)
+    The overhead is affected by over how many pix2pgp frames are the data transmitted;
+    i.e. if a pause-frame, the data will be mediated over many chunks/frames
+    it is assumed that all columns are active for each chunk;
+    this might not be the case for ASICs with very low occupancy
+    '''
+    _hitPayload      = hits*wordWidth
+    _metadataPayload = cols*(wordWidth)*2*numOfChunks
+
+    _totalPayload = _hitPayload + _metadataPayload + wordWidth*2*numOfChunks
+
+    return _hitPayload, _totalPayload
+
+def pgp4FrameEff(bitCount, numOfChunks=1):
+    '''
+    Assuming PGP4TxLite transmits data in 64-bit chunks
+    '''
+
+    _frameCnt = int(roundUp(bitCount/64))
+
+    _data     = 64*_frameCnt
+    _payload  = 66*_frameCnt
+    _overhead = 2*66*numOfChunks # sof/eof
+
+    return round(_data/(_payload+_overhead), 3)
+
 # ---------------------------------------------------------
 # ---------------------------------------------------------
 # ---------------------------------------------------------
@@ -110,6 +168,8 @@ if __name__ == "__main__":
     _getHitArray     = args.getHitArray
     _updateJson      = args.updateJson
     _verbose         = args.verbose
+    _wordWidth       = args.wordWidth
+    _pauseHitLimit   = args.pauseHitLimit
     _pgpClkFreq      = toFreq(_pgpClkPeriod)
     _matrixClkFreq   = toFreq(_matrixClkPeriod)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -168,12 +228,25 @@ if __name__ == "__main__":
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    _len             = len(occArray)
-    _maxRateKHzArray = []
-    _maxRateMHzArray = []
-    _bottleneckBusy  = []
+    _len               = len(occArray)
+    _maxRateKHzArray   = []
+    _maxRateMHzArray   = []
+    _bottleneckBusy    = []
+    _hitPayloadArray   = []
+    _totalPayloadArray = []
+    _overallEffArray   = []
 
     for i in range(_len):
+        _numOfChunks = int(roundUp(colHitArray[i]/_pauseHitLimit))
+        _hitP, _allP = pix2pgpFramePayload(allHitArray[i], _cols, _wordWidth, _numOfChunks)
+        _hitPayloadArray.append(_hitP)
+        _totalPayloadArray.append(_allP)
+
+        _pix2pgpEff = round(_hitP/_allP, 3)
+        _overallEff = _pix2pgpEff*pgp4FrameEff(_allP, _numOfChunks)
+
+        _overallEffArray.append(round(_overallEff*100, 3))
+
         totalLatency[i] = round((totalLatency[i]*_pgpClkPeriod/1e3), 2)
 
         _bottleneckBusy.append(max(superBusy[i], colBusy[i]))
@@ -182,13 +255,25 @@ if __name__ == "__main__":
 
     if _verbose:
         print(f"---------- Verbose Mode -----------------")
-        print(f"occArray (%)                = {occArray} ")
-        print(f"colHitArray (hits-per-col)  = {colHitArray} ")
-        print(f"allHitArray (hits-per-lane) = {allHitArray} ")
-        print(f"totalLatency (us)           = {totalLatency} ")
-        print(f"_maxRateKHzArray (kHz)      = {_maxRateKHzArray} ")
-        print(f"_maxRateMHzArray (MHz)      = {_maxRateMHzArray} ")
-
+        print("")
+        print(f"occArray (%)                 = {occArray} ")
+        print("")
+        print(f"colHitArray (hits-per-col)   = {colHitArray} ")
+        print("")
+        print(f"allHitArray (hits-per-lane)  = {allHitArray} ")
+        print("")
+        print(f"hitPayloadArray              = {_hitPayloadArray} ")
+        print("")
+        print(f"totalPayloadArray            = {_totalPayloadArray} ")
+        print("")
+        print(f"Data Transfer Efficiency (%) = {_overallEffArray} ")
+        print("")
+        print(f"totalLatency (us)            = {totalLatency} ")
+        print("")
+        print(f"_maxRateKHzArray (kHz)       = {_maxRateKHzArray} ")
+        print("")
+        print(f"_maxRateMHzArray (MHz)       = {_maxRateMHzArray} ")
+        print("")
         print(f"---------- INFO -----------------")
         print(f"Pix2Pgp Clock Period    = {_pgpClkPeriod} ns")
         print(f"Pix2Pgp Clock Frequency = {_pgpClkFreq} MHz")
