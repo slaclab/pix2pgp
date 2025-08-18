@@ -9,6 +9,7 @@
 #-----------------------------------------------------------------------------
 
 import pyrogue as pr
+import time
 
 import pix2pgp
 
@@ -175,14 +176,11 @@ class Pix2PgpAsicStreamRx(pr.Device):
             hidden       = False,
         ))
 
-        self.add(pr.RemoteCommand(
-            name         = 'UsrRst',
-            description  = 'Reset Pix2PgpAsicStreamRx',
-            offset       = 0x704,
-            bitSize      = 1,
-            function     = lambda cmd: cmd.post(1),
-            hidden       = False,
-        ))
+        addBool(
+            name        = 'UsrRst',
+            description = 'Reset Pix2PgpAsicStreamRx',
+            offset      = 0x704,
+        )
 
         self.add(pr.RemoteVariable(
             name         = 'Pgp4RxLinkDown',
@@ -213,4 +211,6 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.CntRst()
 
     def HardReset(self):
-        self.UsrRst()
+        self.UsrRst.set(True)
+        time.sleep(0.2)
+        self.UsrRst.set(False)

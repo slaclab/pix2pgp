@@ -38,7 +38,7 @@ entity Pix2PgpTriggerManager is
       asicClk       : in  sl;
       asicRst       : in  sl := not(RST_POLARITY_G);
       pgpRxClk      : in  sl;
-      pgpRxRst      : in  sl;
+      pgpRxRst      : in  sl := not(RST_POLARITY_G);
       -- ASIC Control Interface
       asicSro       : in  sl;
       asicSroEn     : in  sl;
@@ -55,6 +55,8 @@ architecture rtl of Pix2PgpTriggerManager is
 
    signal trgBuffDin  : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffDout : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
+
+   signal fifoRst : sl := not(RST_POLARITY_G);
 
    type RegType is record
       asicSro    : sl;
@@ -120,6 +122,14 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
 
+   U_SyncRst : entity surf.Synchronizer
+      generic map (
+         TPD_G   => TPD_G)
+      port map (
+         clk     => asicClk,
+         dataIn  => pgpRxRst,
+         dataOut => fifoRst);
+
    ----------------------------------------
    -- Trigger/SRO Buffer
    ----------------------------------------
@@ -134,7 +144,7 @@ begin
          DATA_WIDTH_G    => TRGBUFF_WIDTH_C,
          ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
-         rst      => asicRst,
+         rst      => fifoRst,
          -- Write Ports
          wr_clk   => asicClk,
          wr_en    => r.trgBuffWr,
