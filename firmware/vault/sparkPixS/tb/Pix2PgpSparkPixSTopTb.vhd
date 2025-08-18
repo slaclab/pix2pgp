@@ -49,7 +49,7 @@ end entity Pix2PgpSparkPixSTopTb;
 
 architecture test of Pix2PgpSparkPixSTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 10.768 ns; -- matrix clock of ASIC
+   constant CLK_PERIOD_SPARSE_C : time := 7.143  ns; -- matrix clock of ASIC (~140 MHz)
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
    constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
@@ -225,7 +225,7 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_WREN_G    => 7, -- 7 as per Hyunjoon (7*2=14)
+               WAIT_WREN_G    => 6,
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
