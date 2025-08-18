@@ -225,7 +225,7 @@ begin
                TPD_G          => TPD_G,
                RST_ASYNC_G    => RST_ASYNC_G,
                RST_POLARITY_G => RST_POLARITY_G,
-               WAIT_WREN_G    => 6,
+               WAIT_WREN_G    => 8,
                SER_ID_G       => ser,
                COL_ID_G       => col)
             port map(
@@ -372,7 +372,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
        wait for CLK_PERIOD_SPARSE_C;
          rstCnt <= '1'; -- keep the benchmarking counters in reset
          rst    <= RST_POLARITY_G;
-       wait for CLK_PERIOD_SPARSE_C*100;
+       wait for CLK_PERIOD_SPARSE_C*150;
          rst  <= not(RST_POLARITY_G);
 
        -- Wait for the rst to be released before doing anything else
@@ -383,7 +383,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
           end loop;
        end loop;
 
-       wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+       wait for CLK_PERIOD_SPARSE_C*3000; -- extend wait to align pgp protocol
          sro <= '1';
        wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
@@ -395,12 +395,12 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
        ----------------------------------------------
        ----------------------------------------------
 
-       wait for CLK_PERIOD_SPARSE_C*93;
+       wait for CLK_PERIOD_SPARSE_C*140;
          sro <= '1';
        wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait for CLK_PERIOD_SPARSE_C*93;
+      wait for CLK_PERIOD_SPARSE_C*140;
          sro <= '1';
        wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
@@ -408,7 +408,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
    for i in 0 to 12 loop
@@ -628,7 +628,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -846,7 +846,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -1064,7 +1064,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -1282,7 +1282,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -1500,7 +1500,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -1718,7 +1718,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
 
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ---------------------------------------
       hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -1934,7 +1934,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       sro  <= '0';
 
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      wait for CLK_PERIOD_SPARSE_C*93;
+      wait for CLK_PERIOD_SPARSE_C*140;
    end loop;
 
 
@@ -1961,17 +1961,17 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
 
    wait for CLK_PERIOD_SPARSE_C;
       rst <= RST_POLARITY_G;
-   wait for CLK_PERIOD_SPARSE_C*100;
+   wait for CLK_PERIOD_SPARSE_C*150;
       rst  <= not(RST_POLARITY_G);
 
    -- Wait for the rst to be released before doing anything else
    wait until (rst = not(RST_POLARITY_G));
 
-   wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+   wait for CLK_PERIOD_SPARSE_C*3000; -- extend wait to align pgp protocol
 
    for i in 0 to OCC_BENCHMARK_COUNT-1 loop
 
-      wait for CLK_PERIOD_SPARSE_C*200;
+      wait for CLK_PERIOD_SPARSE_C*250;
          rstCnt <= '1';
 
       wait for CLK_PERIOD_SPARSE_C*1;
@@ -1991,19 +1991,19 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait until (stream_rx_tlast = '1');
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
-      wait for CLK_PERIOD_SPARSE_C*20;
+      wait for CLK_PERIOD_SPARSE_C*30;
          colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
          superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
          totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
 
-      wait for CLK_PERIOD_SPARSE_C*20;
+      wait for CLK_PERIOD_SPARSE_C*30;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
 
    end loop;
 
-   wait for CLK_PERIOD_SPARSE_C*100;
+   wait for CLK_PERIOD_SPARSE_C*150;
       report "[INFO]: Done benchmarking! Final results below..." severity note;
 
       for i in 0 to OCC_BENCHMARK_COUNT-1 loop
