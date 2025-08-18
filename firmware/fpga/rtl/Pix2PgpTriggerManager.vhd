@@ -29,16 +29,17 @@ use pix2pgp.Pix2PgpPkg.all;
 
 entity Pix2PgpTriggerManager is
    generic(
-      TPD_G                 : time    := 1 ns;
-      RST_ASYNC_G           : boolean := false;
-      RST_POLARITY_G        : sl      := '1';  -- '1' for active high rst, '0' for active low
+      TPD_G                 : time     := 1 ns;
+      RST_ASYNC_G           : boolean  := false;
+      ASIC_RST_POLARITY_G   : sl       := '1';  -- '1' for active high rst, '0' for active low
+      FIFO_RST_POLARITY_G   : sl       := '1';  -- '1' for active high rst, '0' for active low
       TRG_FIFO_ADDR_WIDTH_G : positive := 6);
    port(
       -- General Interface
       asicClk       : in  sl;
-      asicRst       : in  sl := not(RST_POLARITY_G);
+      asicRst       : in  sl := not(ASIC_RST_POLARITY_G);
       pgpRxClk      : in  sl;
-      pgpRxRst      : in  sl;
+      pgpRxRst      : in  sl := not(FIFO_RST_POLARITY_G);
       -- ASIC Control Interface
       asicSro       : in  sl;
       asicSroEn     : in  sl;
@@ -55,6 +56,8 @@ architecture rtl of Pix2PgpTriggerManager is
 
    signal trgBuffDin  : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffDout : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
+
+   signal fifoRst : sl := not(FIFO_RST_POLARITY_G);
 
    type RegType is record
       asicSro    : sl;
@@ -100,7 +103,7 @@ begin
       trgBuffDin <= r.fpgaTrgCnt & asicSroEn;
 
       -- Reset
-      if (RST_ASYNC_G = false and asicRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and asicRst = ASIC_RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -111,7 +114,7 @@ begin
 
    seq : process (asicClk, asicRst) is
    begin
-      if (RST_ASYNC_G and asicRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and asicRst = ASIC_RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(asicClk) then
          r <= rin after TPD_G;
@@ -120,13 +123,21 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
 
+   U_SyncRst : entity surf.Synchronizer
+      generic map (
+         TPD_G   => TPD_G)
+      port map (
+         clk     => asicClk,
+         dataIn  => pgpRxRst,
+         dataOut => fifoRst);
+
    ----------------------------------------
    -- Trigger/SRO Buffer
    ----------------------------------------
    U_TriggerBuffer : entity surf.Fifo
       generic map (
          TPD_G           => TPD_G,
-         RST_POLARITY_G  => RST_POLARITY_G,
+         RST_POLARITY_G  => FIFO_RST_POLARITY_G,
          RST_ASYNC_G     => RST_ASYNC_G,
          GEN_SYNC_FIFO_G => false,
          MEMORY_TYPE_G   => "block",
@@ -134,7 +145,7 @@ begin
          DATA_WIDTH_G    => TRGBUFF_WIDTH_C,
          ADDR_WIDTH_G    => TRG_FIFO_ADDR_WIDTH_G)
       port map (
-         rst      => asicRst,
+         rst      => fifoRst,
          -- Write Ports
          wr_clk   => asicClk,
          wr_en    => r.trgBuffWr,
