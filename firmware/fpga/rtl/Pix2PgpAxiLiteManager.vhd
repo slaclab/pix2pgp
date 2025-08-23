@@ -209,15 +209,7 @@ begin
       readSlave  <= r.readSlave;
 
       -- Outputs
-      config.fpgaId           <= r.config.fpgaId;
-      config.laneTimeout      <= r.config.laneTimeout;
-      config.lanePauseTimeout <= r.config.lanePauseTimeout;
-      config.laneEnable       <= r.config.laneEnable;
-      config.dropColMisalign  <= r.config.dropColMisalign;
-      config.dropLaneMisalign <= r.config.dropLaneMisalign;
-      config.realignOnSof     <= r.config.realignOnSof;
-      config.dropColMisalign  <= r.config.dropColMisalign;
-
+      --
       -- user-generated reset
       usrRst <= r.usrRst;
 
@@ -241,5 +233,72 @@ begin
    end process seq;
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
+
+   U_PipelineFpgaId : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => rangeToLen(FPGA_ID_POS_C'high, FPGA_ID_POS_C'low))
+      port map (
+         clk  => pgpRxClk,
+         din  => r.config.fpgaId,
+         dout => config.fpgaId);
+
+   U_PipelineLaneTimeout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => FPGA_TIMEOUT_LIMIT_WIDTH_C)
+      port map (
+         clk  => pgpRxClk,
+         din  => r.config.laneTimeout,
+         dout => config.laneTimeout);
+
+   U_PipelineLanePauseTimeout : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => FPGA_TIMEOUT_LIMIT_WIDTH_C)
+      port map (
+         clk  => pgpRxClk,
+         din  => r.config.lanePauseTimeout,
+         dout => config.lanePauseTimeout);
+
+   U_PipelineLaneEnable : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => NUM_OF_SERIALIZERS_C)
+      port map (
+         clk  => pgpRxClk,
+         din  => r.config.laneEnable,
+         dout => config.laneEnable);
+
+   U_PipelineDropColMisalign : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.config.dropColMisalign,
+         dout(0) => config.dropColMisalign);
+
+   U_PipelineDropLaneMisalign : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.config.dropLaneMisalign,
+         dout(0) => config.dropLaneMisalign);
+
+   U_PipelineRealignOnSof : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.config.realignOnSof,
+         dout(0) => config.realignOnSof);
 
 end rtl;

@@ -206,6 +206,16 @@ begin
       tValid        := '0';
       tLast         := '0';
       tReady        := '0';
+      overOcc       := '0';
+      pause         := '0';
+      colErr        := '0';
+      pauseErr      := '0';
+      timeout       := '0';
+      v.dummy       := '0';
+      colHitmask    := (others => '0');
+      trgCnt        := (others => '0');
+      metaTrgCnt    := (others => '0');
+      metaDataLen   := (others => '0');
 
       v.din := rxFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       v.axiFifoMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := v.din;
@@ -214,17 +224,19 @@ begin
       v.laneFull := laneFull;
 
       -- header variables
-      overOcc     := v.din(OVEROCC_FLAG_POS_C);
-      pause       := v.din(PAUSE_FLAG_POS_C);
-      colErr      := v.din(COLUMN_ERROR_FLAG_POS_C);
-      pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
-      timeout     := v.din(TIMEOUT_FLAG_POS_C);
-      v.dummy     := toSl(isDummy(v.din));
-      colHitmask  := v.din(COL_HITMASK_POS_C);
-      trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-      -- column metadata variables
-      metaTrgCnt  := v.din(META_TRGCNT_POS_C);
-      metaDataLen := v.din(META_DATALEN_POS_C);
+      if rxFifoMaster.tValid = '1' then
+         overOcc     := v.din(OVEROCC_FLAG_POS_C);
+         pause       := v.din(PAUSE_FLAG_POS_C);
+         colErr      := v.din(COLUMN_ERROR_FLAG_POS_C);
+         pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
+         timeout     := v.din(TIMEOUT_FLAG_POS_C);
+         v.dummy     := toSl(isDummy(v.din));
+         colHitmask  := v.din(COL_HITMASK_POS_C);
+         trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
+         -- column metadata variables
+         metaTrgCnt  := v.din(META_TRGCNT_POS_C);
+         metaDataLen := v.din(META_DATALEN_POS_C);
+      end if;
 
       -- flow control
       sof       := ite(EVAL_SOF_C,  ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,  rxFifoMaster), '1');

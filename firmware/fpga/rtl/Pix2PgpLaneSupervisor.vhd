@@ -60,8 +60,9 @@ end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
 
-   signal timeout    : sl := '0';
-   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal timeout      : sl := '0';
+   signal pauseTimeout : sl := '0';
+   signal linkUpSync   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
@@ -81,6 +82,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqPause      : sl;
       mergerBusy    : sl;
       armTimeout    : sl;
+      armPseTimeout : sl;
       inPause       : sl;
       evalLanes     : sl;
       trgBuffRd     : sl;
@@ -112,12 +114,13 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqPause      => '0',
       mergerBusy    => '0',
       armTimeout    => '0',
+      armPseTimeout => '0',
       inPause       => '0',
       evalLanes     => '0',
       trgBuffRd     => '0',
       trgMisalign   => '0',
       postReset     => '0',
-      laneRst       => RST_POLARITY_G,
+      laneRst       => '1',
       lanePostError => '0',
       laneMetaRd    => '0',
       laneValid     => (others => '0'),
@@ -152,7 +155,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, pauseTimeout,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -165,13 +168,14 @@ begin
       v.fpgaTrgCnt := trgBuffTrgCnt;
 
       -- Default values
-      v.reqDrop    := '0';
-      v.reqNominal := '0';
-      v.reqPause   := '0';
-      v.armTimeout := '0';
-      v.trgBuffRd  := '0';
-      v.laneMetaRd := '0';
-      v.evalLanes  := '0';
+      v.reqDrop       := '0';
+      v.reqNominal    := '0';
+      v.reqPause      := '0';
+      v.armTimeout    := '0';
+      v.armPseTimeout := '0';
+      v.trgBuffRd     := '0';
+      v.laneMetaRd    := '0';
+      v.evalLanes     := '0';
 
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -189,22 +193,27 @@ begin
          end if;
 
          v.laneUp(lane) := uAnd(r.laneUpCnt(lane));
-
          --
-         -- lane status
-         v.laneStatus(lane).decError     := laneStatus(lane).decError   and r.laneEnable(lane);
-         v.laneStatus(lane).overOcc      := laneStatus(lane).overOcc    and r.laneEnable(lane);
-         v.laneStatus(lane).pause        := laneStatus(lane).pause      and r.laneEnable(lane);
-         v.laneStatus(lane).pauseError   := laneStatus(lane).pauseError and r.laneEnable(lane);
-         v.laneStatus(lane).overflow     := laneStatus(lane).overflow   and r.laneEnable(lane);
-         v.laneStatus(lane).valid        := laneStatus(lane).valid      and r.laneEnable(lane);
-         v.laneStatus(lane).timeout      := r.laneTimeout(lane)         and r.laneEnable(lane);
+
+         -- lane valid takes precedence and is masked against the enable signal
+         v.laneStatus(lane).valid := laneStatus(lane).valid and r.laneEnable(lane);
+         --
+
+         -- lane status signals are all masked against the valid
+         v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
+         v.laneStatus(lane).overOcc    := laneStatus(lane).overOcc    and r.laneStatus(lane).valid;
+         v.laneStatus(lane).pause      := laneStatus(lane).pause      and r.laneStatus(lane).valid;
+         v.laneStatus(lane).pauseError := laneStatus(lane).pauseError and r.laneStatus(lane).valid;
+         v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneStatus(lane).valid;
+         v.lanePause(lane)             := r.laneStatus(lane).pause;
+         --
+         v.laneStatus(lane).timeout      := r.laneTimeout(lane) and r.laneEnable(lane);
          v.laneStatus(lane).down         := not(r.laneUp(lane));
          v.laneStatus(lane).activeColCnt := (others => '0');
          v.laneStatus(lane).trgCnt       := (others => '0');
          v.laneStatus(lane).frameSize    := (others => '0');
          --
-         if r.laneEnable(lane) = '1' then
+         if r.laneStatus(lane).valid = '1' then
             v.laneStatus(lane).activeColCnt := laneStatus(lane).activeColCnt;
             v.laneStatus(lane).trgCnt       := laneStatus(lane).trgCnt;
             v.laneStatus(lane).frameSize    := laneStatus(lane).frameSize;
@@ -214,23 +223,23 @@ begin
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
 
-            if timeout = '1' then
-               v.laneTimeout(lane) := not(r.laneStatus(lane).valid);
-            end if;
-
-            v.lanePause(lane) := r.laneStatus(lane).pause;
-
             -- determine if a lane is in error or not
             -- a lane is not in error if the link is down
             v.laneError(lane) := (r.laneStatus(lane).overflow or r.laneStatus(lane).decError);
 
+            if timeout = '1' then
+               v.laneTimeout(lane) := not(r.laneStatus(lane).valid) and
+                                      not(r.laneError(lane))        and
+                                      not(r.laneStatus(lane).down);
+            end if;
+
             -- determine if a lane is ready to be read-out or not;
-            -- a lane is 'ready' if its link is down
+            -- a lane is 'ready' if its link is down, in error, or timed-out
             -- laneReady is checked against laneEnable in the FSM logic
             v.laneReady(lane) := r.laneStatus(lane).valid or
                                  r.laneTimeout(lane)      or
                                  r.laneError(lane)        or
-                                 not(r.laneUp(lane));
+                                 r.laneStatus(lane).down;
 
             -- determine if a lane is actually valid by masking out any errors;
             -- if a lane is in pause, give it precedence in terms of readout
@@ -239,14 +248,14 @@ begin
                v.laneValid(lane) := r.laneStatus(lane).valid   and
                                     not(r.laneTimeout(lane))   and
                                     not(r.laneError(lane))     and
-                                    r.laneUp(lane);
+                                    not(r.laneStatus(lane).down);
             else
 
                v.laneValid(lane) := r.laneStatus(lane).valid   and
+                                    r.lanePause(lane)          and
                                     not(r.laneTimeout(lane))   and
                                     not(r.laneError(lane))     and
-                                    r.lanePause(lane)          and
-                                    r.laneUp(lane);
+                                    not(r.laneStatus(lane).down);
             end if;
          end if;
 
@@ -283,19 +292,30 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state;
          -- trigger a short timeout if pause is detected:
-         -- this allows other paused lanes to be grouped together
+         -- this allows other paused lanes to be grouped together;
+         -- allow to bypass this feature by setting timeout to 0
          when EVAL_LANES_S =>
             v.armTimeout := '1';
             v.evalLanes  := '1';
 
-            if uOr(r.lanePause) = '1' then
-               v.waitCnt := r.waitCnt + 1;
-            end if;
+            if config.lanePauseTimeout > 0 then
 
-            if r.laneReady = r.laneEnable and uOr(r.lanePause) = '0' then
-               v.state := EVAL_TRG_CNT_S;
-            elsif r.laneReady = r.laneEnable and r.waitCnt = config.lanePauseTimeout then
-               v.state := EVAL_TRG_CNT_S;
+               v.armPseTimeout := uOr(r.lanePause);
+
+               if r.laneReady = r.laneEnable and r.armPseTimeout = '0' then
+                  v.state := EVAL_TRG_CNT_S;
+               elsif r.lanePause = r.laneEnable then
+                  v.state := EVAL_TRG_CNT_S;
+               elsif pauseTimeout = '1' then
+                  v.state := EVAL_TRG_CNT_S;
+               end if;
+
+            else
+
+               if r.laneReady = r.laneEnable then
+                  v.state := EVAL_TRG_CNT_S;
+               end if;
+
             end if;
 
          -------------------------------------------------------------------------
@@ -353,7 +373,7 @@ begin
                v.asicStatus(lane).pauseError   := r.laneStatus(lane).pauseError;
                v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
                v.asicStatus(lane).valid        := r.laneValid(lane);
-               v.asicStatus(lane).down         := not(r.laneUp(lane));
+               v.asicStatus(lane).down         := r.laneStatus(lane).down;
                v.asicStatus(lane).timeout      := r.laneTimeout(lane);
                v.asicStatus(lane).activeColCnt := r.laneStatus(lane).activeColCnt;
                v.asicStatus(lane).trgCnt       := r.asicStatus(lane).trgCnt;
@@ -466,11 +486,12 @@ begin
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          if RST_POLARITY_G = '1' then
-            laneRst(lane) <= pgpRxRst or r.laneRst
-                          or not(r.laneEnable(lane)) or not(r.laneUp(lane));
+            laneRst(lane) <= pgpRxRst or r.laneRst   or
+                             not(r.laneEnable(lane)) or
+                             r.laneStatus(lane).down;
          else
-            laneRst(lane) <= pgpRxRst and not(r.laneRst)
-                          and(r.laneEnable(lane)) and(r.laneUp(lane));
+            laneRst(lane) <= pgpRxRst and not(r.laneRst) and
+                            (r.laneEnable(lane) and not(r.laneStatus(lane).down));
          end if;
 
          lanePostError(lane) <= r.lanePostError;
@@ -502,7 +523,7 @@ begin
    -------------------------------------------------------------------------------------------------
 
    -- Watchdog
-   U_Watchdog : entity pix2pgp.Pix2PgpWatchdog
+   U_LaneWatchdog : entity pix2pgp.Pix2PgpWatchdog
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
@@ -516,5 +537,21 @@ begin
          -- Control Interface
          set     => r.armTimeout,
          timeout => timeout);
+
+   -- Watchdog
+   U_TimeoutWatchdog : entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
+      port map(
+         -- General Interface
+         clk     => pgpRxClk,
+         rst     => pgpRxRst,
+         limit   => config.lanePauseTimeout,
+         -- Control Interface
+         set     => r.armPseTimeout,
+         timeout => pauseTimeout);
 
 end rtl;
