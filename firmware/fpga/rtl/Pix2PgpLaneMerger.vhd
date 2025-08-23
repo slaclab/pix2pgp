@@ -61,8 +61,7 @@ architecture rtl of Pix2PgpLaneMerger is
       TX_HEADER_S,
       TX_FRAME_SIZE_S,
       TX_COLCNT_S,
-      SWITCH_MUX_S,
-      WAIT_TLAST_S,
+      TX_LANE_DATA_S,
       DONE_S,
       TX_TRAILER_S);
 
@@ -243,8 +242,6 @@ begin
          ----------------------------------------------------------------------
          -- transmit event header infromation
          when TX_HEADER_S =>
-
-            -- essentially waits for all lanes to have something; either valid data or some error
             if v.asicRxMaster.tValid = '0' then
 
                v.asicRxMaster.tValid := '1';
@@ -253,7 +250,6 @@ begin
                v.asicRxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
                v.state := TX_FRAME_SIZE_S;
-
             end if;
 
          ----------------------------------------------------------------------
@@ -293,7 +289,7 @@ begin
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                   v.laneSel := (others => '0');
-                  v.state   := SWITCH_MUX_S;
+                  v.state   := TX_LANE_DATA_S;
                else
                   v.laneSel := r.laneSel + 1;
                end if;
@@ -301,26 +297,13 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- check if the current lane has any valid data
-         when SWITCH_MUX_S =>
+         -- switch mux to the lanes that have valid data until done
+         when TX_LANE_DATA_S =>
+
             if laneValid(laneIdx) = '0' then
-               --
-               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
-                  v.state   := DONE_S;
-               else
-                  v.laneSel := r.laneSel + 1;
-               end if;
+               v.laneSel := r.laneSel + 1;
 
-            else
-
-               v.state := WAIT_TLAST_S;
-
-            end if;
-
-         ----------------------------------------------------------------------
-         -- switch mux to the lane with the valid data until done
-         when WAIT_TLAST_S =>
-            if v.asicRxMaster.tValid = '0' then
+            elsif v.asicRxMaster.tValid = '0' then
                v.asicRxMaster.tKeep := laneAxiStream.tKeep;
                v.asicRxMaster.tData := laneAxiStream.tData;
 
@@ -330,9 +313,6 @@ begin
                if laneRxMasters(laneIdx).tLast = '1' and
                   asicRxSlave.tReady           = '1' then
 
-                  v.state := SWITCH_MUX_S;
-
-                  -- that was it; go to 'done' state
                   if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                      v.state := DONE_S;
                   else
@@ -340,6 +320,7 @@ begin
                   end if;
 
                end if;
+
             end if;
 
          ----------------------------------------------------------------------
@@ -370,7 +351,7 @@ begin
                v.asicRxMaster.tValid := '1';
                v.asicRxMaster.tLast  := '1';
 
-               v.state               := IDLE_S;
+               v.state := IDLE_S;
             end if;
 
       end case;
