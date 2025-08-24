@@ -255,7 +255,6 @@ class AsicData(object):
                                                                                 self.numOfLanes)]
 
         self.headerErr = ( _dict['laneDecError'] > 0 or
-                           _dict['laneDown']  > 0 or
                            _dict['laneFull'] > 0)
 
         if (self.headerErr and self._verbose > 0) or self._verbose > 1:
@@ -515,7 +514,7 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                if not(inPause):
+                if not(inPause) or self.headerErr:
                     _slice = frame[index:index + self.trailerLen]
 
                     wordHex = ''.join(format(x, '02x') for x in _slice[::-1])

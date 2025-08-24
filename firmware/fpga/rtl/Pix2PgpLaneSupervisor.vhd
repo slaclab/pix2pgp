@@ -73,8 +73,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       START_MERGER_S,
       WAIT_MERGER_S,
       RESET_S,
-      DONE_S,
-      POST_RESET_S);
+      DONE_S);
 
    type RegType is record
       reqDrop       : sl;
@@ -85,6 +84,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       armPseTimeout : sl;
       inPause       : sl;
       evalLanes     : sl;
+      evalError     : sl;
       trgBuffRd     : sl;
       trgMisalign   : sl;
       postReset     : sl;
@@ -117,6 +117,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       armPseTimeout => '0',
       inPause       => '0',
       evalLanes     => '0',
+      evalError     => '0',
       trgBuffRd     => '0',
       trgMisalign   => '0',
       postReset     => '0',
@@ -176,6 +177,7 @@ begin
       v.trgBuffRd     := '0';
       v.laneMetaRd    := '0';
       v.evalLanes     := '0';
+      v.evalError     := '0';
 
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -192,26 +194,24 @@ begin
             v.laneUpCnt(lane) := (others => '0');
          end if;
 
+         --
          v.laneUp(lane) := uAnd(r.laneUpCnt(lane));
+         v.laneStatus(lane).down := not(r.laneUp(lane));
          --
 
-         -- lane valid takes precedence and is masked against the enable signal
-         v.laneStatus(lane).valid := laneStatus(lane).valid and r.laneEnable(lane);
+         -- lane valid takes precedence and is masked against the enable signal and the laneUp
+         v.laneStatus(lane).valid := laneStatus(lane).valid and
+                                     r.laneEnable(lane)     and
+                                     r.laneUp(lane);
          --
 
          -- lane status signals are all masked against the valid
-         v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
+         v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneEnable(lane);
+         v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneEnable(lane);
          v.laneStatus(lane).overOcc    := laneStatus(lane).overOcc    and r.laneStatus(lane).valid;
          v.laneStatus(lane).pause      := laneStatus(lane).pause      and r.laneStatus(lane).valid;
          v.laneStatus(lane).pauseError := laneStatus(lane).pauseError and r.laneStatus(lane).valid;
-         v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneStatus(lane).valid;
          v.lanePause(lane)             := r.laneStatus(lane).pause;
-         --
-         v.laneStatus(lane).timeout      := r.laneTimeout(lane) and r.laneEnable(lane);
-         v.laneStatus(lane).down         := not(r.laneUp(lane));
-         v.laneStatus(lane).activeColCnt := (others => '0');
-         v.laneStatus(lane).trgCnt       := (others => '0');
-         v.laneStatus(lane).frameSize    := (others => '0');
          --
          if r.laneStatus(lane).valid = '1' then
             v.laneStatus(lane).activeColCnt := laneStatus(lane).activeColCnt;
@@ -220,12 +220,13 @@ begin
          end if;
          --
 
+         if r.evalLanes = '1' or r.evalError = '1' then
+            -- determine if a lane is in error or not
+            v.laneError(lane) := (r.laneStatus(lane).overflow or r.laneStatus(lane).decError);
+         end if;
+
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
-
-            -- determine if a lane is in error or not
-            -- a lane is not in error if the link is down
-            v.laneError(lane) := (r.laneStatus(lane).overflow or r.laneStatus(lane).decError);
 
             if timeout = '1' then
                v.laneTimeout(lane) := not(r.laneStatus(lane).valid) and
@@ -269,9 +270,9 @@ begin
          when IDLE_S =>
             v.laneTimeout := (others => '0');
             v.laneReady   := (others => '0');
-            v.laneError   := (others => '0');
             v.laneValid   := (others => '0');
             v.waitCnt     := (others => '0');
+            v.evalError   := '1';
             v.laneRst     := '0';
 
             if trgBuffValid = '1' then
@@ -285,6 +286,10 @@ begin
                   v.state   := WAIT_MERGER_S;
                end if;
 
+            end if;
+
+            if uOr(r.laneError) = '1' then
+               v.state := RESET_S;
             end if;
 
          -------------------------------------------------------------------------
@@ -388,7 +393,8 @@ begin
 
             end loop;
 
-            if uOr(r.lanePause) = '1' then
+            -- request pause frame (i.e. don't close) only if not in error
+            if uOr(r.lanePause) = '1' and uOr(v.laneError) = '0' then
                v.inPause    := '1';
                v.reqPause   := '1';
                v.reqNominal := '0';
@@ -403,9 +409,11 @@ begin
          ----------------------------------------------------------------------
          -- wait for merger to finish sending out the frame;
          -- also figure out if we need a reset or not...
+         -- pop the trigger buffer word if not in pause and if not in error
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
                v.laneMetaRd := '1';
+               v.trgBuffRd  := not(r.inPause);
 
                v.state := DONE_S;
 
@@ -416,8 +424,8 @@ begin
             end if;
 
          -------------------------------------------------------------------------
-         -- grab the trigger counter. reset the inPause flag
-         -- perform the reset; do the postError and all that...
+         -- grab the trigger counter. reset the inPause flag,
+         -- perform the reset and the post-error flag raising for the lanes;
          -- then go-to DONE_S when done resetting; reset all status bits
          when RESET_S =>
             v.prvTrgCnt     := r.refTrgCnt;
@@ -432,15 +440,15 @@ begin
             v.state         := DONE_S;
 
          ----------------------------------------------------------------------
-         -- pop the trigger buffer word and wait
+         -- perform the reset sequence if needed;
+         -- mostly used to wait between buffer reading and buffer re-evaluation
          when DONE_S =>
             v.waitCnt := r.waitCnt + 1;
 
             -- don't pop the trigger buffer word if in pause;
             -- if in pause, will go back to idle and straight to lane evaluation
             if r.waitCnt = toSlv(1, r.waitCnt'length) then
-               v.laneRst   := '0';
-               v.trgBuffRd := not(r.inPause);
+               v.laneRst := '0';
             end if;
 
             if r.waitCnt = toSlv(5, r.waitCnt'length) then
@@ -448,28 +456,10 @@ begin
                v.lanePostError := '0';
                v.state         := IDLE_S;
 
-               -- override if after a reset
                if r.lanePostError = '1' then
-                  v.state := POST_RESET_S;
+                  v.postReset := '1';
                end if;
 
-            end if;
-
-         -------------------------------------------------------------------------
-         -- in post-reset, raise the evalLanes flag.
-         -- if ANY lane is in error, reset again
-         -- if there is no error and laneReady = laneEnable, go-to idle_s.
-         -- the postReset flag needs to be retained to make the extra trgCnt check.
-         when POST_RESET_S =>
-            v.postReset := '1';
-            v.evalLanes := '1';
-
-            if r.laneReady = r.laneEnable then
-               v.state := IDLE_S;
-            end if;
-
-            if uOr(r.laneError) = '1' then
-               v.state := RESET_S;
             end if;
 
       end case;
