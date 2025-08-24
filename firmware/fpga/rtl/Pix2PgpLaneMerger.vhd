@@ -300,11 +300,13 @@ begin
          -- switch mux to the lanes that have valid data until done
          when TX_LANE_DATA_S =>
 
-            if laneIdx = NUM_OF_SERIALIZERS_C-1 then
-               v.state := DONE_S;
+            if laneValid(laneIdx) = '0' then
 
-            elsif laneValid(laneIdx) = '0' then
-               v.laneSel := r.laneSel + 1;
+               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
+                  v.state := DONE_S;
+               else
+                  v.laneSel := r.laneSel + 1;
+               end if;
 
             elsif v.asicRxMaster.tValid = '0' then
                v.asicRxMaster.tKeep := laneAxiStream.tKeep;
