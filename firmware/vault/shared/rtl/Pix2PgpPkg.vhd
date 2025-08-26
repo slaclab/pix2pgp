@@ -34,6 +34,31 @@ package Pix2PgpPkg is
    ------------------------------ Pix2PgpPkg -----------------------------------
    -----------------------------------------------------------------------------
 
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -- Functions
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
+   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
+                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
+                          colHitmask: slv; trgCntGlbl: slv) return slv;
+   function isDummy        (din : slv) return boolean;
+   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
+                            asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
+   function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
+                            lanePauseError: slv; laneFull: slv; laneTimeout: slv;
+                            laneDown: slv; laneValid: slv) return slv;
+   function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl;
+                            frameSize: slv; colCnt: slv; trgCnt: slv) return slv;
+   function tKeepSet       (dataLen : natural) return slv;
+   function rangeToLen     (high : integer; low : integer) return integer;
+   --
+   function powerOfTwo(N: natural) return slv;
+   -- function stolen from numeric_std
+   function rightShift (inSlv: slv; count: natural) return slv;
+   --
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
    type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of
       slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
 
@@ -162,7 +187,7 @@ package Pix2PgpPkg is
    subtype FPGA_ID_POS_C       is natural range  31 downto 16;
    subtype RESERVED_POS_C      is natural range  15 downto TRGCNT_WIDTH_C;
    subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
-
+   --
    constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
    constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
                                                      & x"70"  -- p
@@ -172,7 +197,13 @@ package Pix2PgpPkg is
                                                      & x"70"  -- p
                                                      & x"67"  -- g
                                                      & x"70"; -- p
-
+   --
+   constant PIX2PGP_ID_LEN_C : natural := rangeToLen(PIX2PGP_ID_POS_C'high, PIX2PGP_ID_POS_C'low);
+   constant ASIC_TYPE_LEN_C  : natural := rangeToLen(ASIC_TYPE_POS_C'high, ASIC_TYPE_POS_C'low);
+   constant ASIC_ID_LEN_C    : natural := rangeToLen(ASIC_ID_POS_C'high, ASIC_ID_POS_C'low);
+   constant FPGA_ID_LEN_C    : natural := rangeToLen(FPGA_ID_POS_C'high, FPGA_ID_POS_C'low);
+   constant FPGA_TRGCNT_LEN_C: natural := rangeToLen(FPGA_TRGCNT_POS_C'high, FPGA_TRGCNT_POS_C'low);
+   --
    ------------------------------------------------------------------------------
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
@@ -309,42 +340,6 @@ package Pix2PgpPkg is
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_NORMAL_C);
 
-   -- functions
-   function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
-   function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
-                          colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                          colHitmask: slv; trgCntGlbl: slv) return slv;
-   function isDummy        (din : slv) return boolean;
-   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
-                            asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
-   function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
-                            lanePauseError: slv; laneFull: slv; laneTimeout: slv;
-                            laneDown: slv; laneValid: slv) return slv;
-   function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl;
-                            frameSize: slv; colCnt: slv; trgCnt: slv) return slv;
-   function tKeepSet       (dataLen : natural) return slv;
-   function rangeToLen     (high : integer; low : integer) return integer;
-
-   -- the receiver can deduce which columns have data from the hitmask
-   -- it can also deduce how many data each columns has; how?
-   -- by reading the dataLen in the column metadata before each seq of hits
-
-   -- examples of the final pix2pgp frame format:
-   -- e.g. 1: this event has 1 hit from two different cols (cols 0 and 5)
-   -- pgp data frame header | col5 metadata -> col5_dataLen=1 | col0_hit0 |
-   --                       | col2 metadata -> col2_dataLen=1 | col5_hit0 |
-   -- e.g. 2: this event has 3 hits from one column (col 2)
-   -- pgp data frame header | col2 metadata -> col2_dataLen=3 | col2_hit0 | col2_hit1 | col2_hit2 |
-
-   -- if a column yielded odd number of events, the last hit will have an extra 20-bit padding
-   -- at the end; the receiver will ignore it since it knows the true event dataLen from that col
-   --
-   --
-   function powerOfTwo(N: natural) return slv;
-   -- function stolen from numeric_std
-   function rightShift (inSlv: slv; count: natural) return slv;
-   --
-
 end Pix2PgpPkg;
 
 package body Pix2PgpPkg is
@@ -452,20 +447,15 @@ package body Pix2PgpPkg is
       variable retPreamble: slv(FPGA_PREAMBLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
-      retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, rangeToLen(PIX2PGP_ID_POS_C'high,
-                                                                     PIX2PGP_ID_POS_C'low));
+      retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, PIX2PGP_ID_LEN_C);
 
-      retPreamble(ASIC_TYPE_POS_C) := resize(asicType, rangeToLen(ASIC_TYPE_POS_C'high,
-                                                                  ASIC_TYPE_POS_C'low));
+      retPreamble(ASIC_TYPE_POS_C) := resize(asicType, ASIC_TYPE_LEN_C);
 
-      retPreamble(ASIC_ID_POS_C) := resize(asicId, rangeToLen(ASIC_ID_POS_C'high,
-                                                              ASIC_ID_POS_C'low));
+      retPreamble(ASIC_ID_POS_C) := resize(asicId, ASIC_ID_LEN_C);
 
-      retPreamble(FPGA_ID_POS_C) := resize(fpgaId, rangeToLen(FPGA_ID_POS_C'high,
-                                                              FPGA_ID_POS_C'low));
+      retPreamble(FPGA_ID_POS_C) := resize(fpgaId, FPGA_ID_LEN_C);
 
-      retPreamble(FPGA_TRGCNT_POS_C) := resize(fpgaTrgCnt, rangeToLen(FPGA_TRGCNT_POS_C'high,
-                                                                      FPGA_TRGCNT_POS_C'low));
+      retPreamble(FPGA_TRGCNT_POS_C) := resize(fpgaTrgCnt, FPGA_TRGCNT_LEN_C);
 
       return retPreamble;
 

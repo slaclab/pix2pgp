@@ -238,7 +238,7 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => rangeToLen(FPGA_ID_POS_C'high, FPGA_ID_POS_C'low))
+         WIDTH_G        => FPGA_ID_LEN_C)
       port map (
          clk  => pgpRxClk,
          din  => r.config.fpgaId,

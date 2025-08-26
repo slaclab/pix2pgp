@@ -72,7 +72,7 @@ architecture rtl of Pix2PgpLaneMerger is
       reqPause     : sl;
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
-      asicType     : slv(15 downto 0);
+      asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
       -- AXI-Stream
       asicRxMaster : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -87,7 +87,7 @@ architecture rtl of Pix2PgpLaneMerger is
       reqPause     => '0',
       inPause      => '0',
       laneSel      => (others => '0'),
-      asicType     => toSlv(ASIC_TYPE_C, 16),
+      asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
       -- AXI-Stream
       asicRxMaster => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -177,7 +177,7 @@ begin
          laneValid(lane)      := asicStatus(lane).valid;
       end loop;
 
-      preamble := fpgaPreambleMap(PIX2PGP_ID_C, r.asicType, toSlv(ASIC_ID_G, 16),
+      preamble := fpgaPreambleMap(PIX2PGP_ID_C, r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
                                   config.fpgaId, fpgaTrgCnt);
 
       header := fpgaHeaderMap(laneDecError, laneOverOcc, lanePause, lanePauseError,
@@ -196,7 +196,7 @@ begin
          -- wait for a request signal
          when IDLE_S =>
             v.busy     := '0';
-            v.asicType := toSlv(ASIC_TYPE_C, 16);
+            v.asicType := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
 
             if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
 
@@ -205,7 +205,7 @@ begin
                -- override designated asicType with the drop-trigger type identifier;
                -- will transmit preamble and then trailer (in next state)
                if r.reqDrop = '1' and r.inPause = '0' then
-                  v.asicType := toSlv(0, 16);
+                  v.asicType := toSlv(0, ASIC_TYPE_LEN_C);
                end if;
 
                -- extreme corner-case; need to close the axi-frame;
