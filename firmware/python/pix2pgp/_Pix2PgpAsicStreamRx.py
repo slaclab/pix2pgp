@@ -163,8 +163,20 @@ class Pix2PgpAsicStreamRx(pr.Device):
 
         addBool(
             name        = 'RealignOnSof',
-            description  = 'Realign on Start-Of-Frame after recovering from Error',
-            offset       = 0x618,
+            description = 'Realign on Start-Of-Frame after recovering from Error',
+            offset      = 0x618,
+        )
+
+        addBool(
+            name        = 'AutoRealign',
+            description = 'Only transmit a frame if FpgaTrgCnt = AsicTrgCnt',
+            offset      = 0x61C,
+        )
+
+        addBool(
+            name        = 'RstFpgaTrgCnt',
+            description = 'Reset the FPGA Trigger Counter',
+            offset      = 0x620,
         )
 
         self.add(pr.RemoteCommand(
@@ -209,6 +221,11 @@ class Pix2PgpAsicStreamRx(pr.Device):
 
     def countReset(self):
         self.CntRst()
+
+    def FpgaCntReset(self):
+        self.RstFpgaTrgCnt.set(True)
+        time.sleep(0.2)
+        self.RstFpgaTrgCnt.set(False)
 
     def HardReset(self):
         self.UsrRst.set(True)

@@ -206,6 +206,7 @@ begin
          asicRst       => asicRst,
          pgpRxClk      => pgpRxClk,
          pgpRxRst      => glblRst,
+         config        => config,
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,

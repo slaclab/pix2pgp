@@ -291,6 +291,8 @@ package Pix2PgpPkg is
       dropColMisalign  : sl;
       dropLaneMisalign : sl;
       realignOnSof     : sl;
+      autoRealign      : sl;
+      rstFpgaTrgCnt    : sl;
       fpgaId           : slv(15 downto 0);
       laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
@@ -302,6 +304,8 @@ package Pix2PgpPkg is
       dropColMisalign  => '1',
       dropLaneMisalign => '1',
       realignOnSof     => toSl(EVAL_SOF_C),
+      autoRealign      => '0',
+      rstFpgaTrgCnt    => '0',
       fpgaId           => FPGA_ID_DEFAULT_C,
       laneEnable       => (others => '1'),
       laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C,       FPGA_TIMEOUT_LIMIT_WIDTH_C),

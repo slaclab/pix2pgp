@@ -40,6 +40,7 @@ entity Pix2PgpTriggerManager is
       asicRst       : in  sl := not(ASIC_RST_POLARITY_G);
       pgpRxClk      : in  sl;
       pgpRxRst      : in  sl := not(LOGIC_RST_POLARITY_G);
+      config        : in  Pix2PgpStreamRxConfigType;
       -- ASIC Control Interface
       asicSro       : in  sl;
       asicSroEn     : in  sl;
@@ -54,10 +55,12 @@ architecture rtl of Pix2PgpTriggerManager is
 
    constant TRGBUFF_WIDTH_C : natural := TRGCNT_WIDTH_C + 1; -- trigger-counter plus SroEn
 
-   signal trgBuffDin  : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
-   signal trgBuffDout : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffDin    : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
+   signal trgBuffDout   : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
 
-   signal fifoRst : sl := not(LOGIC_RST_POLARITY_G);
+   signal fifoRst       : sl := not(LOGIC_RST_POLARITY_G);
+
+   signal rstFpgaTrgCnt : sl := '0';
 
    type RegType is record
       asicSro    : sl;
@@ -77,7 +80,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (asicSro, asicRst, asicSroEn, r) is
+   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, r) is
       variable v : RegType;
    begin
 
@@ -101,6 +104,11 @@ begin
       end if;
 
       trgBuffDin <= r.fpgaTrgCnt & asicSroEn;
+
+      -- Trigger Counter-only reset
+      if rstFpgaTrgCnt = '1' then
+         v.fpgaTrgCnt := (others => '1');
+      end if;
 
       -- Reset
       if (RST_ASYNC_G = false and asicRst = ASIC_RST_POLARITY_G) then
@@ -130,6 +138,14 @@ begin
          clk     => asicClk,
          dataIn  => pgpRxRst,
          dataOut => fifoRst);
+
+   U_SyncRstFpgaTrgCnt : entity surf.Synchronizer
+      generic map (
+         TPD_G   => TPD_G)
+      port map (
+         clk     => asicClk,
+         dataIn  => config.rstFpgaTrgCnt,
+         dataOut => rstFpgaTrgCnt);
 
    ----------------------------------------
    -- Trigger/SRO Buffer

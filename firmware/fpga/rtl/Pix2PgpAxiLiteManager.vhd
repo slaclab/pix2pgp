@@ -191,6 +191,8 @@ begin
       axiSlaveRegister (axilEp, x"610", 0, v.config.dropColMisalign);
       axiSlaveRegister (axilEp, x"614", 0, v.config.dropLaneMisalign);
       axiSlaveRegister (axilEp, x"618", 0, v.config.realignOnSof);
+      axiSlaveRegister (axilEp, x"61C", 0, v.config.autoRealign);
+      axiSlaveRegister (axilEp, x"620", 0, v.config.rstFpgaTrgCnt);
       --
       axiSlaveRegister (axilEp, x"700", 0, v.cntRst);
       axiSlaveRegister (axilEp, x"704", 0, v.usrRst);
@@ -300,5 +302,23 @@ begin
          clk     => pgpRxClk,
          din(0)  => r.config.realignOnSof,
          dout(0) => config.realignOnSof);
+
+   U_PipelineAutoRealign : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.config.autoRealign,
+         dout(0) => config.autoRealign);
+
+   U_PipelineRstFpgaTrgCnt : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.config.rstFpgaTrgCnt,
+         dout(0) => config.rstFpgaTrgCnt);
 
 end rtl;

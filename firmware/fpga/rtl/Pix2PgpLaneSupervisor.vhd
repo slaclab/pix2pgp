@@ -371,7 +371,7 @@ begin
 
             v.state := START_MERGER_S;
 
-            if AUTO_REALIGN_G then
+            if AUTO_REALIGN_G or config.autoRealign = '1' then
 
                if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and
                   v.refTrgCnt /= r.fpgaTrgCnt then
