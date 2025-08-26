@@ -196,7 +196,7 @@ begin
          TPD_G                 => TPD_G,
          RST_ASYNC_G           => RST_ASYNC_G,
          ASIC_RST_POLARITY_G   => ASIC_RST_POLARITY_G,
-         FIFO_RST_POLARITY_G   => RST_POLARITY_G,
+         LOGIC_RST_POLARITY_G  => RST_POLARITY_G,
          TRG_FIFO_ADDR_WIDTH_G => TRG_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
