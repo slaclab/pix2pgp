@@ -82,7 +82,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       mergerBusy    : sl;
       armTimeout    : sl;
       armPseTimeout : sl;
-      inPause       : sl;
+      popTrg        : sl;
       evalLanes     : sl;
       evalError     : sl;
       trgBuffRd     : sl;
@@ -115,7 +115,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       mergerBusy    => '0',
       armTimeout    => '0',
       armPseTimeout => '0',
-      inPause       => '0',
+      popTrg        => '0',
       evalLanes     => '0',
       evalError     => '0',
       trgBuffRd     => '0',
@@ -274,6 +274,7 @@ begin
             v.waitCnt     := (others => '0');
             v.evalError   := '1';
             v.laneRst     := '0';
+            v.popTrg      := '0';
 
             if trgBuffValid = '1' then
 
@@ -282,8 +283,9 @@ begin
                -- if this trigger never reached the ASIC, send a 'drop' frame
                -- same if no receiver lane is enabled/stable
                if trgBuffSroEn = '0' or uOr(r.laneUp) = '0' or uOr(r.laneEnable) = '0' then
-                  v.reqDrop := '1';
-                  v.state   := WAIT_MERGER_S;
+                  v.popTrg    := '1';
+                  v.reqDrop   := '1';
+                  v.laneError := (others => '0');
                end if;
 
             end if;
@@ -328,6 +330,9 @@ begin
          -- if all of equal value -> proceed normally
          -- it not, force an error to all lanes
          -- note that all this is done in one cycle (hence the use of v.)
+         -- also note that the final check against the FPGA trigger counter
+         -- if the ASIC trigger counter and the FPGA trigger counter are not equal,
+         -- some events were probably lost. need to drop triggers to realign
          when EVAL_TRG_CNT_S =>
             v.refTrgCnt   := (others => '0');
             v.waitCnt     := (others => '0');
@@ -365,6 +370,14 @@ begin
 
             v.state := START_MERGER_S;
 
+            if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and v.refTrgCnt /= r.fpgaTrgCnt then
+               v.popTrg    := '1';
+               v.reqDrop   := '1';
+               v.laneError := (others => '0');
+               v.laneValid := (others => '0');
+               v.state     := WAIT_MERGER_S;
+            end if;
+
          -------------------------------------------------------------------------
          -- start the merger FSM; update the status bits sent to the merger
          when START_MERGER_S =>
@@ -395,11 +408,11 @@ begin
 
             -- request pause frame (i.e. don't close) only if not in error
             if uOr(r.lanePause) = '1' and uOr(v.laneError) = '0' then
-               v.inPause    := '1';
+               v.popTrg     := '0';
                v.reqPause   := '1';
                v.reqNominal := '0';
             else
-               v.inPause    := '0';
+               v.popTrg     := '1';
                v.reqPause   := '0';
                v.reqNominal := '1';
             end if;
@@ -413,7 +426,7 @@ begin
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
                v.laneMetaRd := '1';
-               v.trgBuffRd  := not(r.inPause);
+               v.trgBuffRd  := r.popTrg;
 
                v.state := DONE_S;
 
@@ -424,12 +437,12 @@ begin
             end if;
 
          -------------------------------------------------------------------------
-         -- grab the trigger counter. reset the inPause flag,
+         -- grab the trigger counter. reset the popTrg flag,
          -- perform the reset and the post-error flag raising for the lanes;
          -- then go-to DONE_S when done resetting; reset all status bits
          when RESET_S =>
             v.prvTrgCnt     := r.refTrgCnt;
-            v.inPause       := '0';
+            v.popTrg        := '0';
             v.laneRst       := '1';
             v.lanePostError := '1';
             v.laneTimeout   := (others => '0');

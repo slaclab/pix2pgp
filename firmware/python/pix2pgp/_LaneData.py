@@ -261,7 +261,7 @@ class LaneData(object):
 
         # Change to True/False format
         _flags = 'OverOcc,  Pause,  ColErr,  PauseErr,  Timeout     =    0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}'
-        _hmskTrg = f'ColumnHitmask = 0x{{0:0{_hitmaskPadding}X}} {{1}} AsicTiggerCounter = {{2:<d}}'
+        _hmskTrg = f'ColumnHitmask = 0x{{0:0{_hitmaskPadding}X}} {{1}} AsicTriggerCounter = {{2:<d}}'
 
         print(_lanePrint)
         print(_flags.format(self.overOcc, self.pause, self.colErr, self.pauseErr, self.timeout))
