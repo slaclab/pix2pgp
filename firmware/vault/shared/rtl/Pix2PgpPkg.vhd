@@ -283,7 +283,7 @@ package Pix2PgpPkg is
 
    constant FPGA_TIMEOUT_LIMIT_WIDTH_C         : positive := 16;
    --
-   constant FPGA_TIMEOUT_LIMIT_DEFAULT_C       : positive := 16384;
+   constant FPGA_TIMEOUT_LIMIT_DEFAULT_C       : positive := 65535;
    constant FPGA_PAUSE_TIMEOUT_LIMIT_DEFAULT_C : positive := 16;
    --
 
