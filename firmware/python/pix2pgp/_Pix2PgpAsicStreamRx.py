@@ -179,6 +179,12 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset      = 0x620,
         )
 
+        addBool(
+            name        = 'IncrSroEnLow',
+            description = 'Increment the FPGA Trigger Counter even when SRO-enable is low',
+            offset      = 0x624,
+        )
+
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',

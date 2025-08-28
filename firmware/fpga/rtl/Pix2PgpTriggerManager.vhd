@@ -61,6 +61,7 @@ architecture rtl of Pix2PgpTriggerManager is
    signal fifoRst       : sl := not(LOGIC_RST_POLARITY_G);
 
    signal rstFpgaTrgCnt : sl := '0';
+   signal incrSroEnLow  : sl := '0';
 
    type RegType is record
       asicSro    : sl;
@@ -80,7 +81,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, r) is
+   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, incrSroEnLow, r) is
       variable v : RegType;
    begin
 
@@ -95,7 +96,15 @@ begin
 
       -- posedge detection
       if v.asicSro = '1' and r.asicSro = '0' then
-         v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+
+         if asicSroEn = '1' then
+            v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+         end if;
+
+         if asicSroEn = '0' and incrSroEnLow = '1' then
+            v.fpgaTrgCnt := r.fpgaTrgCnt + 1;
+         end if;
+
       end if;
 
       -- negedge detection
@@ -146,6 +155,14 @@ begin
          clk     => asicClk,
          dataIn  => config.rstFpgaTrgCnt,
          dataOut => rstFpgaTrgCnt);
+
+   U_SyncIncrSroEnLow : entity surf.Synchronizer
+      generic map (
+         TPD_G   => TPD_G)
+      port map (
+         clk     => asicClk,
+         dataIn  => config.incrSroEnLow,
+         dataOut => incrSroEnLow);
 
    ----------------------------------------
    -- Trigger/SRO Buffer
