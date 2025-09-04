@@ -185,14 +185,13 @@ begin
 
       axiSlaveRegister (axilEp, x"600", 0, v.config.fpgaId);
       axiSlaveRegister (axilEp, x"604", 0, v.config.laneTimeout);
-      axiSlaveRegister (axilEp, x"608", 0, v.config.lanePauseTimeout);
-      axiSlaveRegister (axilEp, x"60C", 0, v.config.laneEnable);
-      axiSlaveRegister (axilEp, x"610", 0, v.config.dropColMisalign);
-      axiSlaveRegister (axilEp, x"614", 0, v.config.dropLaneMisalign);
-      axiSlaveRegister (axilEp, x"618", 0, v.config.realignOnSof);
-      axiSlaveRegister (axilEp, x"61C", 0, v.config.autoRealign);
-      axiSlaveRegister (axilEp, x"620", 0, v.config.rstFpgaTrgCnt);
-      axiSlaveRegister (axilEp, x"624", 0, v.config.incrSroEnLow);
+      axiSlaveRegister (axilEp, x"608", 0, v.config.laneEnable);
+      axiSlaveRegister (axilEp, x"60C", 0, v.config.dropColMisalign);
+      axiSlaveRegister (axilEp, x"610", 0, v.config.dropLaneMisalign);
+      axiSlaveRegister (axilEp, x"614", 0, v.config.realignOnSof);
+      axiSlaveRegister (axilEp, x"618", 0, v.config.autoRealign);
+      axiSlaveRegister (axilEp, x"61C", 0, v.config.rstFpgaTrgCnt);
+      axiSlaveRegister (axilEp, x"620", 0, v.config.incrSroEnLow);
       --
       axiSlaveRegister (axilEp, x"700", 0, v.cntRst);
       axiSlaveRegister (axilEp, x"704", 0, v.usrRst);
@@ -211,16 +210,7 @@ begin
       readSlave  <= r.readSlave;
 
       -- Outputs
-      config.fpgaId           <= r.config.fpgaId;
-      config.laneTimeout      <= r.config.laneTimeout;
-      config.dropColMisalign  <= r.config.dropColMisalign;
-      config.dropLaneMisalign <= r.config.dropLaneMisalign;
-      config.realignOnSof     <= r.config.realignOnSof;
-      config.autoRealign      <= r.config.autoRealign;
-      config.rstFpgaTrgCnt    <= r.config.rstFpgaTrgCnt;
-      config.lanePauseTimeout <= r.config.lanePauseTimeout;
-      config.laneEnable       <= r.config.laneEnable;
-      config.incrSroEnLow     <= r.config.incrSroEnLow;
+      config <= r.config;
 
       -- user-generated reset
       usrRst <= r.usrRst;

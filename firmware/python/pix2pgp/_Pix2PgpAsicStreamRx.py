@@ -132,19 +132,10 @@ class Pix2PgpAsicStreamRx(pr.Device):
             description = 'Upon reception of a trigger, an internal watchdog starts counting. if the LaneTimeout is reached, the lanes that do not have data will be masked as timed-out and the rest will be read (if any)',
             offset      = 0x604,
         )
-
-        self.add(pr.RemoteVariable(
-            name         = 'LanePauseTimeout',
-            description  = 'FPGA Identifier; is sent with the FPGA-generated header',
-            offset       = 0x608,
-            bitSize      = 16,
-            mode         = 'RW',
-        ))
-
         self.add(pr.RemoteVariable(
             name         = 'LaneEnable',
             description  = 'Lane enable mask; setting a lane to low keeps it in reset',
-            offset       = 0x60C,
+            offset       = 0x608,
             bitSize      = self.numLanes,
             mode         = 'RW',
         ))
@@ -152,37 +143,37 @@ class Pix2PgpAsicStreamRx(pr.Device):
         addBool(
             name        = 'DropColumnMisalign',
             description = 'If True: Lane receiver will drop a frame with uneven trigger counter values from columns within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x610,
+            offset      = 0x60C,
         )
 
         addBool(
             name        = 'DropLaneMisalign',
             description = 'If True: Lane Supervisor will drop a frame with uneven trigger counter values from lanes within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x614,
+            offset      = 0x610,
         )
 
         addBool(
             name        = 'RealignOnSof',
             description = 'Realign on Start-Of-Frame after recovering from Error',
-            offset      = 0x618,
+            offset      = 0x614,
         )
 
         addBool(
             name        = 'AutoRealign',
             description = 'Only transmit a frame if FpgaTrgCnt = AsicTrgCnt',
-            offset      = 0x61C,
+            offset      = 0x618,
         )
 
         addBool(
             name        = 'RstFpgaTrgCnt',
             description = 'Reset the FPGA Trigger Counter',
-            offset      = 0x620,
+            offset      = 0x61C,
         )
 
         addBool(
             name        = 'IncrSroEnLow',
             description = 'Increment the FPGA Trigger Counter even when SRO-enable is low',
-            offset      = 0x624,
+            offset      = 0x620,
         )
 
         self.add(pr.RemoteCommand(

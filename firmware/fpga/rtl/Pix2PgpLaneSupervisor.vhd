@@ -61,9 +61,8 @@ end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
 
-   signal timeout      : sl := '0';
-   signal pauseTimeout : sl := '0';
-   signal linkUpSync   : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal timeout    : sl := '0';
+   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
@@ -82,7 +81,6 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqPause      : sl;
       mergerBusy    : sl;
       armTimeout    : sl;
-      armPseTimeout : sl;
       popTrg        : sl;
       evalLanes     : sl;
       evalError     : sl;
@@ -115,7 +113,6 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqPause      => '0',
       mergerBusy    => '0',
       armTimeout    => '0',
-      armPseTimeout => '0',
       popTrg        => '0',
       evalLanes     => '0',
       evalError     => '0',
@@ -157,7 +154,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, pauseTimeout,
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -174,7 +171,6 @@ begin
       v.reqNominal    := '0';
       v.reqPause      := '0';
       v.armTimeout    := '0';
-      v.armPseTimeout := '0';
       v.trgBuffRd     := '0';
       v.laneMetaRd    := '0';
       v.evalLanes     := '0';
@@ -298,32 +294,13 @@ begin
          -------------------------------------------------------------------------
          -- wait for all activated lanes to go to a ready state
          -- 'ready' might mean that the lane has a valid frame;
-         -- or, that the lane is in some error state;
-         -- trigger a short timeout if pause is detected:
-         -- this allows other paused lanes to be grouped together;
-         -- allow to bypass this feature by setting timeout to 0
+         -- or, that the lane is in some error state
          when EVAL_LANES_S =>
             v.armTimeout := '1';
             v.evalLanes  := '1';
 
-            if config.lanePauseTimeout > 0 then
-
-               v.armPseTimeout := uOr(r.lanePause);
-
-               if r.laneReady = r.laneEnable and r.armPseTimeout = '0' then
-                  v.state := EVAL_TRG_CNT_S;
-               elsif r.lanePause = r.laneEnable then
-                  v.state := EVAL_TRG_CNT_S;
-               elsif pauseTimeout = '1' then
-                  v.state := EVAL_TRG_CNT_S;
-               end if;
-
-            else
-
-               if r.laneReady = r.laneEnable then
-                  v.state := EVAL_TRG_CNT_S;
-               end if;
-
+            if r.laneReady = r.laneEnable then
+               v.state := EVAL_TRG_CNT_S;
             end if;
 
          -------------------------------------------------------------------------
@@ -547,21 +524,5 @@ begin
          -- Control Interface
          set     => r.armTimeout,
          timeout => timeout);
-
-   -- Watchdog
-   U_TimeoutWatchdog : entity pix2pgp.Pix2PgpWatchdog
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
-      port map(
-         -- General Interface
-         clk     => pgpRxClk,
-         rst     => pgpRxRst,
-         limit   => config.lanePauseTimeout,
-         -- Control Interface
-         set     => r.armPseTimeout,
-         timeout => pauseTimeout);
 
 end rtl;
