@@ -1,18 +1,9 @@
 ROOT_DIR := .
-STANDALONE   := 1
+
 ASIC_SOURCED := 0
 
-##################################################
-ifeq ($(STANDALONE), 1)
-	SURF_SUBMODULE_DIR := $(ROOT_DIR)/submodules/surf
-else ifeq ($(STANDALONE), 0)
-	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
-else ifeq ($(STANDALONE), False)
-	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
-else ifeq ($(STANDALONE), false)
-	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
-endif
-##################################################
+# can be overriden externally to use a different surf source
+SURF_SOURCE_DIR := $(ROOT_DIR)/submodules/surf
 
 ##################################################
 ifeq ($(ASIC), SparkPixS)
@@ -101,57 +92,57 @@ clean:
 
 prepareSurf:
 	@echo "[INFO]: Preparing surf directories..."
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/StdRtlPkg.vhd)                               $(SURF_PKG_DIR)/StdRtlPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd)                      $(SURF_PKG_DIR)/Pgp4Pkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/crc/rtl/CrcPkg.vhd)                                      $(SURF_PKG_DIR)/CrcPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/ssi/rtl/SsiPkg.vhd)                                 $(SURF_PKG_DIR)/SsiPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamPkg.vhd)                          $(SURF_PKG_DIR)/AxiStreamPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd)         $(SURF_PKG_DIR)/AxiStreamPacketizer2Pkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/ArbiterPkg.vhd)                              $(SURF_PKG_DIR)/ArbiterPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/StdRtlPkg.vhd)                               $(SURF_PKG_DIR)/StdRtlPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd)                      $(SURF_PKG_DIR)/Pgp4Pkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/CrcPkg.vhd)                                      $(SURF_PKG_DIR)/CrcPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/ssi/rtl/SsiPkg.vhd)                                 $(SURF_PKG_DIR)/SsiPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamPkg.vhd)                          $(SURF_PKG_DIR)/AxiStreamPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd)         $(SURF_PKG_DIR)/AxiStreamPacketizer2Pkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/ArbiterPkg.vhd)                              $(SURF_PKG_DIR)/ArbiterPkg.vhd
 
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/tb/ClkRst.vhd)                                   $(SURF_DIR)/ClkRst.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/delay/rtl/SlvDelay.vhd)                                  $(SURF_DIR)/SlvDelay.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/RstSync.vhd)                                    $(SURF_DIR)/RstSync.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/Synchronizer.vhd)                               $(SURF_DIR)/Synchronizer.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/SynchronizerOneShot.vhd)                        $(SURF_DIR)/SynchronizerOneShot.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/SynchronizerEdge.vhd)                           $(SURF_DIR)/SynchronizerEdge.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/SynchronizerVector.vhd)                         $(SURF_DIR)/SynchronizerVector.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/ram/inferred/SimpleDualPortRam.vhd)                      $(SURF_DIR)/SimpleDualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/FifoOutputPipeline.vhd)                         $(SURF_DIR)/FifoOutputPipeline.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/inferred/FifoWrFsm.vhd)                         $(SURF_DIR)/FifoWrFsm.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/inferred/FifoRdFsm.vhd)                         $(SURF_DIR)/FifoRdFsm.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/inferred/FifoSync.vhd)                          $(SURF_DIR)/FifoSync.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/inferred/FifoAsync.vhd)                         $(SURF_DIR)/FifoAsync.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/tb/ClkRst.vhd)                                   $(SURF_DIR)/ClkRst.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/delay/rtl/SlvDelay.vhd)                                  $(SURF_DIR)/SlvDelay.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/RstSync.vhd)                                    $(SURF_DIR)/RstSync.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/Synchronizer.vhd)                               $(SURF_DIR)/Synchronizer.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerOneShot.vhd)                        $(SURF_DIR)/SynchronizerOneShot.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerEdge.vhd)                           $(SURF_DIR)/SynchronizerEdge.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerVector.vhd)                         $(SURF_DIR)/SynchronizerVector.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/SimpleDualPortRam.vhd)                      $(SURF_DIR)/SimpleDualPortRam.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/FifoOutputPipeline.vhd)                         $(SURF_DIR)/FifoOutputPipeline.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoWrFsm.vhd)                         $(SURF_DIR)/FifoWrFsm.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoRdFsm.vhd)                         $(SURF_DIR)/FifoRdFsm.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoSync.vhd)                          $(SURF_DIR)/FifoSync.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoAsync.vhd)                         $(SURF_DIR)/FifoAsync.vhd
 
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamPipeline.vhd)                     $(SURF_DIR)/AxiStreamPipeline.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/crc/rtl/Crc32Parallel.vhd)                               $(SURF_DIR)/Crc32Parallel.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/crc/rtl/Crc32.vhd)                                       $(SURF_DIR)/Crc32.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/Gearbox.vhd)                                 $(SURF_DIR)/Gearbox.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/Scrambler.vhd)                               $(SURF_DIR)/Scrambler.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd)          $(SURF_DIR)/AxiStreamDepacketizer2.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/ram/inferred/DualPortRam.vhd)                            $(SURF_DIR)/DualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/ram/inferred/LutRam.vhd)                                 $(SURF_DIR)/LutRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/ram/inferred/TrueDualPortRam.vhd)                        $(SURF_DIR)/TrueDualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/sync/rtl/SynchronizerFifo.vhd)                           $(SURF_DIR)/SynchronizerFifo.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd)         $(SURF_DIR)/Pgp3RxGearboxAligner.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd)                     $(SURF_DIR)/Pgp4RxEb.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd)               $(SURF_DIR)/Pgp4RxProtocol.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd)                       $(SURF_DIR)/Pgp4Rx.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd)                   $(SURF_DIR)/Pgp4TxLite.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd)           $(SURF_DIR)/Pgp4TxLiteProtocol.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd)            $(SURF_DIR)/Pgp4TxLiteWrapper.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamMux.vhd)                          $(SURF_DIR)/AxiStreamMux.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamDeMux.vhd)                        $(SURF_DIR)/AxiStreamDeMux.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamGearbox.vhd)                      $(SURF_DIR)/AxiStreamGearbox.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd)                       $(SURF_DIR)/AxiStreamResize.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamPipeline.vhd)                     $(SURF_DIR)/AxiStreamPipeline.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/Crc32Parallel.vhd)                               $(SURF_DIR)/Crc32Parallel.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/Crc32.vhd)                                       $(SURF_DIR)/Crc32.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/Gearbox.vhd)                                 $(SURF_DIR)/Gearbox.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/Scrambler.vhd)                               $(SURF_DIR)/Scrambler.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd)          $(SURF_DIR)/AxiStreamDepacketizer2.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/DualPortRam.vhd)                            $(SURF_DIR)/DualPortRam.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/LutRam.vhd)                                 $(SURF_DIR)/LutRam.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/TrueDualPortRam.vhd)                        $(SURF_DIR)/TrueDualPortRam.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerFifo.vhd)                           $(SURF_DIR)/SynchronizerFifo.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd)         $(SURF_DIR)/Pgp3RxGearboxAligner.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd)                     $(SURF_DIR)/Pgp4RxEb.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd)               $(SURF_DIR)/Pgp4RxProtocol.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd)                       $(SURF_DIR)/Pgp4Rx.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd)                   $(SURF_DIR)/Pgp4TxLite.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd)           $(SURF_DIR)/Pgp4TxLiteProtocol.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd)            $(SURF_DIR)/Pgp4TxLiteWrapper.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamMux.vhd)                          $(SURF_DIR)/AxiStreamMux.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamDeMux.vhd)                        $(SURF_DIR)/AxiStreamDeMux.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamGearbox.vhd)                      $(SURF_DIR)/AxiStreamGearbox.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd)                       $(SURF_DIR)/AxiStreamResize.vhd
 
 	@echo "[INFO]: Linking extra FPGA libraries..."
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/general/rtl/TextUtilPkg.vhd)                             $(SURF_FPGA_PKG_DIR)/TextUtilPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd)                              $(SURF_FPGA_PKG_DIR)/AxiLitePkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/base/fifo/rtl/Fifo.vhd)                                       $(SURF_FPGA_DIR)/Fifo.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd)                            $(SURF_FPGA_DIR)/AxiLiteAsync.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd) $(SURF_FPGA_DIR)/MasterAxiStreamIpIntegrator.vhd
-	ln -sf $(shell readlink -f $(SURF_SUBMODULE_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd)                       $(SURF_FPGA_DIR)/AxiStreamFifoV2.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/TextUtilPkg.vhd)                             $(SURF_FPGA_PKG_DIR)/TextUtilPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd)                              $(SURF_FPGA_PKG_DIR)/AxiLitePkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/Fifo.vhd)                                       $(SURF_FPGA_DIR)/Fifo.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd)                            $(SURF_FPGA_DIR)/AxiLiteAsync.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd) $(SURF_FPGA_DIR)/MasterAxiStreamIpIntegrator.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd)                       $(SURF_FPGA_DIR)/AxiStreamFifoV2.vhd
 
 	@echo "[INFO]: surf preparation complete."
 
