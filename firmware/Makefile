@@ -1,6 +1,18 @@
 ROOT_DIR := .
-
+STANDALONE   := 1
 ASIC_SOURCED := 0
+
+##################################################
+ifeq ($(STANDALONE), 1)
+	SURF_SUBMODULE_DIR := $(ROOT_DIR)/submodules/surf
+else ifeq ($(STANDALONE), 0)
+	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
+else ifeq ($(STANDALONE), False)
+	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
+else ifeq ($(STANDALONE), false)
+	SURF_SUBMODULE_DIR := $(ROOT_DIR)/../../surf
+endif
+##################################################
 
 ##################################################
 ifeq ($(ASIC), SparkPixS)
@@ -43,8 +55,6 @@ SURF_PKG_DIR := $(SURF_DIR)/pkg
 
 SURF_FPGA_DIR     := $(FPGA_RTL_DIR)/surf
 SURF_FPGA_PKG_DIR := $(SURF_FPGA_DIR)/pkg
-
-SURF_SUBMODULE_DIR := $(ROOT_DIR)/submodules/surf
 
 PIX2PGP_ASIC_PKG   := $(PIX2PGP_PKG_DIR)/Pix2PgpAsicPkg.vhd
 ASIC_LINK_GLBL_PKG := $(ROOT_DIR)/vault/shared/rtl/Pix2PgpPkg.vhd
