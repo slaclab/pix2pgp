@@ -103,7 +103,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
-                   reqPause, laneRxMasters, asicRxSlave) is
+                   reqPause, laneRxMasters, asicRxSlave, config) is
       variable v : RegType;
 
       -- internal variables
