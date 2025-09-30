@@ -40,7 +40,7 @@ entity Pix2PgpAsicStreamRx is
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 6);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 8);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
