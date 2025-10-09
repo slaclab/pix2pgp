@@ -167,14 +167,14 @@ begin
       v.fpgaTrgCnt := trgBuffTrgCnt;
 
       -- Default values
-      v.reqDrop       := '0';
-      v.reqNominal    := '0';
-      v.reqPause      := '0';
-      v.armTimeout    := '0';
-      v.trgBuffRd     := '0';
-      v.laneMetaRd    := '0';
-      v.evalLanes     := '0';
-      v.evalError     := '0';
+      v.reqDrop    := '0';
+      v.reqNominal := '0';
+      v.reqPause   := '0';
+      v.armTimeout := '0';
+      v.trgBuffRd  := '0';
+      v.laneMetaRd := '0';
+      v.evalLanes  := '0';
+      v.evalError  := '0';
 
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -378,7 +378,7 @@ begin
                v.asicStatus(lane).down         := r.laneStatus(lane).down;
                v.asicStatus(lane).timeout      := r.laneTimeout(lane);
                v.asicStatus(lane).activeColCnt := r.laneStatus(lane).activeColCnt;
-               v.asicStatus(lane).trgCnt       := r.asicStatus(lane).trgCnt;
+               v.asicStatus(lane).trgCnt       := r.laneStatus(lane).trgCnt;
                v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
 
                -- override if triggers are misaligned

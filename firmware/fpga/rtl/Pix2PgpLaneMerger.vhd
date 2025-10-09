@@ -32,7 +32,7 @@ entity Pix2PgpLaneMerger is
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
       RST_POLARITY_G : sl      := '1';  -- '1' for active high rst, '0' for active low
-      ASIC_ID_G      : natural  := 0);
+      ASIC_ID_G      : natural := 0);
    port(
       -- General Interface
       pgpRxClk      : in  sl;
