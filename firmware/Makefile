@@ -85,6 +85,8 @@ clean:
 	rm -f $(FPGA_TB_FILES)
 	rm -f $(SURF_FILES)
 	rm -f $(SURF_PKG_FILES)
+	rm -f $(SURF_FPGA_FILES)
+	rm -f $(SURF_FPGA_PKG_FILES)
 	rm -f $(SURF_FILES)
 	rm -f $(SURF_PKG_FILES)
 	rm -f $(GHDL_FILES)

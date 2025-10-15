@@ -61,6 +61,10 @@ end Pix2PgpColumnManager;
 
 architecture rtl of Pix2PgpColumnManager is
 
+   constant VIVADO_FIFO_WIDTH_C  : positive := 6;
+   constant VIVADO_FIFO_AF_LVL_C : positive := 5;
+   constant DWARE_FIFO_AF_LVL_C  : positive := 1;
+
    signal statusFifoDout    : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
    signal dataFifoEmpty     : sl;
    signal statusFifoEmpty   : sl;
@@ -76,6 +80,9 @@ architecture rtl of Pix2PgpColumnManager is
    signal statusDin         : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
    signal dataWrEn          : sl;
    signal dataDin           : slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+
+   signal dataCntWr         : slv(VIVADO_FIFO_WIDTH_C-1 downto 0);
+   signal dataCntRd         : slv(VIVADO_FIFO_WIDTH_C-1 downto 0);
 
    type RegType is record
       -- i/o
@@ -328,12 +335,12 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          FWFT_EN_G       => true,
-         DWARE_AF_LVL_G  => 1,
+         DWARE_AF_LVL_G  => DWARE_FIFO_AF_LVL_C,
          WR_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          RD_DATA_WIDTH_G => STATUSFIFO_DWIDTH_C,
          DWARE_DEPTH_G   => STATUS_DEPTH_G,
-         FULL_THRES_G    => 6, -- only for ghdl sim
-         ADDR_WIDTH_G    => 4) -- only for ghdl sim
+         FULL_THRES_G    => VIVADO_FIFO_AF_LVL_C, -- only for vivado fifo
+         ADDR_WIDTH_G    => VIVADO_FIFO_WIDTH_C)  -- only for vivado fifo
       port map (
          -- Resets
          rst      => sparseRst,
@@ -393,12 +400,12 @@ begin
          RST_ASYNC_G     => RST_ASYNC_G,
          RST_POLARITY_G  => RST_POLARITY_G,
          FWFT_EN_G       => true,
-         DWARE_AF_LVL_G  => 1,
+         DWARE_AF_LVL_G  => DWARE_FIFO_AF_LVL_C,
          WR_DATA_WIDTH_G => ASIC_DATABUS_DWIDTH_C,
          RD_DATA_WIDTH_G => PIX2PGP_DATABUS_DWIDTH_C,
          DWARE_DEPTH_G   => DATA_DEPTH_G,
-         FULL_THRES_G    => 6, -- only for ghdl sim
-         ADDR_WIDTH_G    => 4) -- only for ghdl sim
+         FULL_THRES_G    => VIVADO_FIFO_AF_LVL_C, -- only for vivado fifo
+         ADDR_WIDTH_G    => VIVADO_FIFO_WIDTH_C)  -- only for vivado fifo
       port map (
          -- Resets
          rst      => sparseRst,
@@ -408,12 +415,14 @@ begin
          din      => dataDin,
          aFullWr  => dataFifoAlmFull,
          emptyWr  => dataFifoEmpty,
+         datCntWr => dataCntWr,
          -- Read Interface
          rdClk    => pgpClk,
          rdEn     => dataRd,
          emptyRd  => open,
          fullRd   => open,
          rdErr    => dataRdError,
+         datCntRd => dataCntRd,
          dout     => dataBus.data);
 
 end rtl;

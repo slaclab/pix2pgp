@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Company    : SLAC National Accelerator Laboratory
 -------------------------------------------------------------------------------
--- Description: Pix2Pgp FIFO Wrapper for GHDL use
+-- Description: Pix2Pgp FIFO Wrapper for Vivado emulation and ghdl sim use
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -33,7 +33,7 @@ entity Pix2PgpFifoWrapper is
       WR_DATA_WIDTH_G  : integer := 20;
       RD_DATA_WIDTH_G  : integer := 20;
       FULL_THRES_G     : integer := 6;
-      ADDR_WIDTH_G     : integer := 12;
+      ADDR_WIDTH_G     : integer := 4;
       DWARE_DEPTH_G    : integer := 32;
       DWARE_AF_LVL_G   : integer := 2;
       PIPE_STAGES_G    : natural := 0;
@@ -46,6 +46,7 @@ entity Pix2PgpFifoWrapper is
       wrClk    : in  sl;
       wrEn     : in  sl;
       din      : in  slv(WR_DATA_WIDTH_G-1 downto 0);
+      datCntWr : out slv(ADDR_WIDTH_G-1 downto 0);
       aFullWr  : out sl;
       aEmptyWr : out sl;
       fullWr   : out sl := '0';
@@ -56,6 +57,7 @@ entity Pix2PgpFifoWrapper is
       emptyRd  : out sl := '1';
       fullRd   : out sl;
       rdErr    : out sl;
+      datCntRd : out slv(ADDR_WIDTH_G-1 downto 0);
       dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
@@ -81,19 +83,21 @@ begin
             FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
-            rst       => rst,
+            rst           => rst,
             -- Write Interface
-            wr_clk    => wrClk,
-            wr_en     => wrEn,
-            din       => din,
-            prog_full => aFullWr,
-            full      => fullWrStandalone,
+            wr_clk        => wrClk,
+            wr_en         => wrEn,
+            din           => din,
+            prog_full     => aFullWr,
+            full          => fullWrStandalone,
+            wr_data_count => datCntWr,
             -- Read Interface
-            rd_clk    => rdClk,
-            rd_en     => rdEn,
-            valid     => validRdStandalone,
-            underflow => rdErr,
-            dout      => dout);
+            rd_clk        => rdClk,
+            rd_en         => rdEn,
+            valid         => validRdStandalone,
+            underflow     => rdErr,
+            rd_data_count => datCntRd,
+            dout          => dout);
    end generate SYMM_GEN;
 
    ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
@@ -111,19 +115,21 @@ begin
             FULL_THRES_G    => FULL_THRES_G,
             ADDR_WIDTH_G    => ADDR_WIDTH_G)
          port map (
-            rst       => rst,
+            rst           => rst,
             -- Write Interface
-            wr_clk    => wrClk,
-            wr_en     => wrEn,
-            din       => din,
-            prog_full => aFullWr,
-            full      => fullWrStandalone,
+            wr_clk        => wrClk,
+            wr_en         => wrEn,
+            din           => din,
+            prog_full     => aFullWr,
+            full          => fullWrStandalone,
+            wr_data_count => datCntWr,
             -- Read Interface
-            rd_clk    => rdClk,
-            rd_en     => rdEn,
-            valid     => validRdStandalone,
-            underflow => rdErr,
-            dout      => dout);
+            rd_clk        => rdClk,
+            rd_en         => rdEn,
+            valid         => validRdStandalone,
+            underflow     => rdErr,
+            rd_data_count => datCntRd,
+            dout          => dout);
    end generate ASYMM_GEN;
 
    U_syncFull : entity surf.Synchronizer
@@ -150,7 +156,7 @@ begin
          dataIn  => validRdStandalone,
          dataOut => validWr);
 
-   aEmptyWr <= not(validWr); -- not really used in ghdl-based FIFOs
+   aEmptyWr <= not(validWr); -- not really used in vivado-based FIFOs
    emptyWr  <= not(validWr);
    emptyRd  <= not(validRdStandalone);
    fullWr   <= fullWrStandalone;

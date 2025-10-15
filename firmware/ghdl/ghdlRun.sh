@@ -26,8 +26,8 @@ PIX2PGP_ASIC_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpAsicPkg.vhd
 PIX2PGP_PKG=${PIX2PGP_PKG_DIR}/Pix2PgpPkg.vhd
 
 # these are only used by GHDL
-GHDL_FIFO_DIR=${GHDL_DIR}/ghdlFifo
-GHDL_FIFO=${GHDL_FIFO_DIR}/*.vhd
+VIVADO_FIFO_DIR=${GHDL_DIR}/vivadoFifo
+VIVADO_FIFO=${VIVADO_FIFO_DIR}/*.vhd
 
 # Surf stuff
 SURF_DIR=${ASIC_RTL_DIR}/surf
@@ -102,7 +102,7 @@ ghdlAnalyze()
   echo "$(ls ${PIX2PGP_PKG})"
   echo "$(ls ${PIX2PGP_ASIC_TOP})"
   echo "$(ls ${FPGA_RTL})"
-  echo "$(ls ${GHDL_FIFO})"
+  echo "$(ls ${VIVADO_FIFO})"
 
   echo "List of ASIC SURF stuff..."
   checkFileExists ${SURF}
@@ -132,7 +132,7 @@ ghdlAnalyze()
   ${GHDL_IMPORT_PIX2PGP} ${FPGA_TB}
   ${GHDL_IMPORT_PIX2PGP} ${TB_SHARED}
   ${GHDL_IMPORT_PIX2PGP} ${PIX2PGP_ASIC_TOP}
-  ${GHDL_IMPORT_PIX2PGP} ${GHDL_FIFO}
+  ${GHDL_IMPORT_PIX2PGP} ${VIVADO_FIFO}
 
   echo "[INFO]: Analyzing RTL Files..."
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_PKG}
@@ -142,7 +142,7 @@ ghdlAnalyze()
   ${GHDL_ANALYZE} ${FPGA_TB}
   ${GHDL_ANALYZE} ${TB_SHARED}
   ${GHDL_ANALYZE} ${PIX2PGP_ASIC_TOP}
-  ${GHDL_ANALYZE} ${GHDL_FIFO}
+  ${GHDL_ANALYZE} ${VIVADO_FIFO}
   echo "[INFO]: Done!"
 }
 ##########################################################################

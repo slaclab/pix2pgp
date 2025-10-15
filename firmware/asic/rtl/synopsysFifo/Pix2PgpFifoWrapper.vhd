@@ -29,7 +29,7 @@ entity Pix2PgpFifoWrapper is
       WR_DATA_WIDTH_G  : integer   := 20;
       RD_DATA_WIDTH_G  : integer   := 20;
       FULL_THRES_G     : integer   := 6;
-      ADDR_WIDTH_G     : integer   := 12;
+      ADDR_WIDTH_G     : integer   := 4;
       DWARE_DEPTH_G    : integer   := 32;
       DWARE_AF_LVL_G   : integer   := 2;
       PIPE_STAGES_G    : natural   := 0;
@@ -42,6 +42,7 @@ entity Pix2PgpFifoWrapper is
       wrClk    : in  sl;
       wrEn     : in  sl;
       din      : in  slv(WR_DATA_WIDTH_G-1 downto 0);
+      datCntWr : out slv(ADDR_WIDTH_G-1 downto 0);
       aFullWr  : out sl;
       aEmptyWr : out sl;
       fullWr   : out sl := '0';
@@ -52,6 +53,7 @@ entity Pix2PgpFifoWrapper is
       emptyRd  : out sl := '1';
       rdErr    : out sl;
       fullRd   : out sl;
+      datCntRd : out slv(ADDR_WIDTH_G-1 downto 0);
       dout     : out slv(RD_DATA_WIDTH_G-1 downto 0));
 end Pix2PgpFifoWrapper;
 
@@ -157,6 +159,8 @@ begin
    rstDwareFifo  <= not(rst) when RST_POLARITY_G = '1' else rst;
    wrEnDwareFifo <= not(wrEn);
    rdEnDwareFifo <= not(rdEn);
+   datCntWr      <= (others => '0');
+   datCntRd      <= (others => '0');
 
    SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
       U_designwareFifo : DW_fifo_s2_sf
