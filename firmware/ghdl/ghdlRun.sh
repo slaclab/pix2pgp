@@ -104,14 +104,12 @@ ghdlAnalyze()
   echo "$(ls ${FPGA_RTL})"
   echo "$(ls ${VIVADO_FIFO})"
 
-  echo "List of ASIC SURF stuff..."
   checkFileExists ${SURF}
   surf_exists=$?
 
   # surf import
   if [[ $surf_exists -eq 1 ]]; then
-    echo "[INFO]: Surf libraries found in ${SURF}. Importing following files..."
-    echo "${SURF}"
+    echo "[INFO]: Surf libraries found in ${SURF}. Importing..."
     for package in "${SURF_PKG[@]}"
     do
       ${GHDL_IMPORT_SURF} $package

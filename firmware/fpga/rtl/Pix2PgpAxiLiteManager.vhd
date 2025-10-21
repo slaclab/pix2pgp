@@ -67,8 +67,11 @@ architecture rtl of Pix2PgpAxiLiteManager is
       cntRst          : sl;
       usrRst          : sl;
       laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneDecErrCnt   : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFullCnt     : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -83,8 +86,11 @@ architecture rtl of Pix2PgpAxiLiteManager is
       cntRst          => '1',
       usrRst          => '0',
       laneDecError    => (others => '0'),
-      laneFull        => (others => '0'),
+      laneOverOcc     => (others => '0'),
+      lanePause       => (others => '0'),
       lanePauseError  => (others => '0'),
+      laneFull        => (others => '0'),
+      laneTimeout     => (others => '0'),
       laneDecErrCnt   => (others => (others => '0')),
       lanePauseErrCnt => (others => (others => '0')),
       laneFullCnt     => (others => (others => '0')),
@@ -136,8 +142,11 @@ begin
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          v.laneDecError(i)   := asicStatus(i).decError;
-         v.laneFull(i)       := asicStatus(i).overflow;
+         v.laneOverOcc(i)    := asicStatus(i).overOcc;
+         v.lanePause(i)      := asicStatus(i).pause;
          v.lanePauseError(i) := asicStatus(i).pauseError;
+         v.laneFull(i)       := asicStatus(i).overflow;
+         v.laneTimeout(i)    := asicStatus(i).timeout;
          v.laneTrgCnt(i)     := asicStatus(i).trgCnt;
 
          -- status counters
@@ -200,6 +209,12 @@ begin
       axiSlaveRegisterR(axilEp, x"70C", 0, mergerBusy);
       axiSlaveRegisterR(axilEp, x"710", 0, fpgaTrgCnt);
       --
+      axiSlaveRegisterR(axilEp, x"800", 0, r.laneDecError);
+      axiSlaveRegisterR(axilEp, x"804", 0, r.laneOverOcc);
+      axiSlaveRegisterR(axilEp, x"808", 0, r.lanePause);
+      axiSlaveRegisterR(axilEp, x"80C", 0, r.lanePauseError);
+      axiSlaveRegisterR(axilEp, x"810", 0, r.laneFull);
+      axiSlaveRegisterR(axilEp, x"814", 0, r.laneTimeout);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);

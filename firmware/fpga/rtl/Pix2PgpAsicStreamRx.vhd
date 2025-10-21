@@ -57,6 +57,8 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
+      -- ASIC DAQ Current Status Output
+      asicDaqStatus   : out Pix2PgpLaneStatusArray;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -243,6 +245,7 @@ begin
          axilWriteMaster => axilWriteMaster,
          axilWriteSlave  => axilWriteSlave);
 
+   asicDaqStatus <= asicStatus;
 
    glblRst <= (pgpRxRst or usrRst) when (RST_POLARITY_G = '1') else
               (pgpRxRst and not usrRst);

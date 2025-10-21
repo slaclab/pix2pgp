@@ -198,11 +198,11 @@ package Pix2PgpPkg is
                                                      & x"67"  -- g
                                                      & x"70"; -- p
    --
-   constant PIX2PGP_ID_LEN_C : natural := rangeToLen(PIX2PGP_ID_POS_C'high, PIX2PGP_ID_POS_C'low);
-   constant ASIC_TYPE_LEN_C  : natural := rangeToLen(ASIC_TYPE_POS_C'high, ASIC_TYPE_POS_C'low);
-   constant ASIC_ID_LEN_C    : natural := rangeToLen(ASIC_ID_POS_C'high, ASIC_ID_POS_C'low);
-   constant FPGA_ID_LEN_C    : natural := rangeToLen(FPGA_ID_POS_C'high, FPGA_ID_POS_C'low);
-   constant FPGA_TRGCNT_LEN_C: natural := rangeToLen(FPGA_TRGCNT_POS_C'high, FPGA_TRGCNT_POS_C'low);
+   constant PIX2PGP_ID_LEN_C  : natural := 64;
+   constant ASIC_TYPE_LEN_C   : natural := 16;
+   constant ASIC_ID_LEN_C     : natural := 16;
+   constant FPGA_ID_LEN_C     : natural := 16;
+   constant FPGA_TRGCNT_LEN_C : natural := TRGCNT_WIDTH_C;
    --
    ------------------------------------------------------------------------------
    -- FPGA Header Mapping
