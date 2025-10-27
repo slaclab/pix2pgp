@@ -67,12 +67,16 @@ architecture rtl of Pix2PgpTriggerManager is
 
    type RegType is record
       asicSro    : sl;
+      sysDaq     : sl;
+      trgBuffDaq : sl;
       trgBuffWr  : sl;
       fpgaTrgCnt : slv(TRGCNT_WIDTH_C-1 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       asicSro    => '0',
+      sysDaq     => '0',
+      trgBuffDaq => '0',
       trgBuffWr  => '0',
       fpgaTrgCnt => (others => '1'));
 
@@ -94,7 +98,9 @@ begin
       v.asicSro := asicSro;
 
       -- Defaults
-      v.trgBuffWr := '0';
+      v.trgBuffWr  := '0';
+      v.trgBuffDaq := '0';
+      v.sysDaq     := sysDaq;
 
       -- posedge detection
       if v.asicSro = '1' and r.asicSro = '0' then
@@ -112,9 +118,15 @@ begin
       -- negedge detection
       if v.asicSro = '0' and r.asicSro = '1' then
          v.trgBuffWr := '1';
+
+         -- daq and sro signals should be identical
+         if v.sysDaq = '0' and r.sysDaq = '1' then
+            v.trgBuffDaq := '1';
+         end if;
+
       end if;
 
-      trgBuffDin <= r.fpgaTrgCnt & asicSroEn & sysDaq;
+      trgBuffDin <= r.fpgaTrgCnt & asicSroEn & r.trgBuffDaq;
 
       -- Trigger Counter-only reset
       if rstFpgaTrgCnt = '1' then
