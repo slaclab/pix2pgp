@@ -48,6 +48,7 @@ entity Pix2PgpLaneSupervisor is
       -- Trigger Buffer Interface
       trgBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffSroEn   : in  sl;
+      trgBuffSysDaq  : in  sl;
       trgBuffValid   : in  sl;
       trgBuffRd      : out sl;
       -- Lane Merger Interface
@@ -154,7 +155,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, trgBuffSysDaq,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -395,6 +396,8 @@ begin
                v.popTrg     := '0';
                v.reqPause   := '1';
                v.reqNominal := '0';
+            --elsif trgBuffSysDaq = '1' then
+               -- To-Do: add logic
             else
                v.popTrg     := '1';
                v.reqPause   := '0';

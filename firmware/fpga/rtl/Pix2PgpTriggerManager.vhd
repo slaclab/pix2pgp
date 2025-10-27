@@ -44,16 +44,18 @@ entity Pix2PgpTriggerManager is
       -- ASIC Control Interface
       asicSro       : in  sl;
       asicSroEn     : in  sl;
+      sysDaq        : in  sl;
       -- Lane Supervisor Interface
       trgBuffRd     : in  sl;
       trgBuffTrgCnt : out slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffSroEn  : out sl;
+      trgBuffSysDaq : out sl;
       trgBuffValid  : out sl);
 end Pix2PgpTriggerManager;
 
 architecture rtl of Pix2PgpTriggerManager is
 
-   constant TRGBUFF_WIDTH_C : natural := TRGCNT_WIDTH_C + 1; -- trigger-counter plus SroEn
+   constant TRGBUFF_WIDTH_C : natural := TRGCNT_WIDTH_C + 2; -- trigger-counter plus SroEn, sysDaq
 
    signal trgBuffDin    : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffDout   : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
@@ -81,7 +83,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, incrSroEnLow, r) is
+   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, sysDaq, incrSroEnLow, r) is
       variable v : RegType;
    begin
 
@@ -112,7 +114,7 @@ begin
          v.trgBuffWr := '1';
       end if;
 
-      trgBuffDin <= r.fpgaTrgCnt & asicSroEn;
+      trgBuffDin <= r.fpgaTrgCnt & asicSroEn & sysDaq;
 
       -- Trigger Counter-only reset
       if rstFpgaTrgCnt = '1' then
@@ -189,7 +191,8 @@ begin
          dout     => trgBuffDout,
          valid    => trgBuffValid);
 
-   trgBuffTrgCnt <= trgBuffDout(TRGBUFF_WIDTH_C-1 downto 1);
-   trgBuffSroEn  <= trgBuffDout(0);
+   trgBuffTrgCnt <= trgBuffDout(TRGBUFF_WIDTH_C-1 downto 2);
+   trgBuffSroEn  <= trgBuffDout(1);
+   trgBuffSysDaq <= trgBuffDout(0);
 
 end rtl;

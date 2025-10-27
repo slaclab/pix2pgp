@@ -50,6 +50,7 @@ entity Pix2PgpAsicStreamRx is
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
       asicSroEn       : in  sl;
+      sysDaq          : in  sl;
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
@@ -78,6 +79,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal trgBuffRd      : sl := '0';
    signal trgBuffSroEn   : sl := '0';
    signal trgBuffValid   : sl := '0';
+   signal trgBuffSysDaq  : sl := '0';
    signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
    signal trgBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    signal fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
@@ -154,6 +156,7 @@ begin
          -- Trigger Buffer Interface
          trgBuffTrgCnt  => trgBuffTrgCnt,
          trgBuffSroEn   => trgBuffSroEn,
+         trgBuffSysDaq  => trgBuffSysDaq,
          trgBuffValid   => trgBuffValid,
          trgBuffRd      => trgBuffRd,
          -- Lane Merger Interface
@@ -212,10 +215,12 @@ begin
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,
+         sysDaq        => sysDaq,
          -- Lane Supervisor Interface
          trgBuffRd     => trgBuffRd,
          trgBuffTrgCnt => trgBuffTrgCnt,
          trgBuffSroEn  => trgBuffSroEn,
+         trgBuffSysDaq => trgBuffSysDaq,
          trgBuffValid  => trgBuffValid);
 
    -------------------
