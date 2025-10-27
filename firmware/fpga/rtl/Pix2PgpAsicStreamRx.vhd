@@ -96,6 +96,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal reqDrop        : sl := '0';
    signal reqNominal     : sl := '0';
    signal reqPause       : sl := '0';
+   signal reqDump        : sl := '0';
 
    signal usrRst         : sl := '0';
    signal glblRst        : sl := not(RST_POLARITY_G);
@@ -165,7 +166,8 @@ begin
          fpgaTrgCnt     => fpgaTrgCnt,
          reqDrop        => reqDrop,
          reqNominal     => reqNominal,
-         reqPause       => reqPause);
+         reqPause       => reqPause,
+         reqDump        => reqDump);
 
    --------------
    -- Lane Merger
@@ -188,6 +190,7 @@ begin
          reqDrop       => reqDrop,
          reqNominal    => reqNominal,
          reqPause      => reqPause,
+         reqDump       => reqDump,
          -- Lane AXI-Stream Input Interface
          laneRxMasters => laneRxMasters,
          laneRxSlaves  => laneRxSlaves,

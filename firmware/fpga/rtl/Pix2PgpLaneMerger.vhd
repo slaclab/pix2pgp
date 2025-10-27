@@ -45,6 +45,7 @@ entity Pix2PgpLaneMerger is
       reqDrop       : in  sl;
       reqNominal    : in  sl;
       reqPause      : in  sl;
+      reqDump       : in  sl;
       -- Lane AXI-Stream Input Interface
       laneRxMasters : in  AxiStreamMasterArray;
       laneRxSlaves  : out AxiStreamSlaveArray;
@@ -70,6 +71,7 @@ architecture rtl of Pix2PgpLaneMerger is
       reqDrop      : sl;
       reqNominal   : sl;
       reqPause     : sl;
+      reqDump      : sl;
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
@@ -85,6 +87,7 @@ architecture rtl of Pix2PgpLaneMerger is
       reqDrop      => '0',
       reqNominal   => '0',
       reqPause     => '0',
+      reqDump      => '0',
       inPause      => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
@@ -103,7 +106,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
-                   reqPause, laneRxMasters, asicRxSlave, config) is
+                   reqPause, reqDump, laneRxMasters, asicRxSlave, config) is
       variable v : RegType;
 
       -- internal variables
@@ -149,6 +152,12 @@ begin
          v.reqPause := '1';
       else
          v.reqPause := (v.reqPause and not(r.reqPause));
+      end if;
+
+      if r.reqDump = '1' then
+         v.reqDump := '1';
+      else
+         v.reqDump := (v.reqDump and not(r.reqDump));
       end if;
 
       -- Default values

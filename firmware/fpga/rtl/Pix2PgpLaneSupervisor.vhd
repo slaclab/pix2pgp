@@ -57,7 +57,8 @@ entity Pix2PgpLaneSupervisor is
       fpgaTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       reqDrop        : out sl;
       reqNominal     : out sl;
-      reqPause       : out sl);
+      reqPause       : out sl;
+      reqDump        : out sl);
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
@@ -80,6 +81,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqDrop       : sl;
       reqNominal    : sl;
       reqPause      : sl;
+      reqDump       : sl;
       mergerBusy    : sl;
       armTimeout    : sl;
       popTrg        : sl;
@@ -112,6 +114,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqDrop       => '0',
       reqNominal    => '0',
       reqPause      => '0',
+      reqDump       => '0',
       mergerBusy    => '0',
       armTimeout    => '0',
       popTrg        => '0',
@@ -171,6 +174,7 @@ begin
       v.reqDrop    := '0';
       v.reqNominal := '0';
       v.reqPause   := '0';
+      v.reqDump    := '0';
       v.armTimeout := '0';
       v.trgBuffRd  := '0';
       v.laneMetaRd := '0';
@@ -470,6 +474,7 @@ begin
       reqDrop        <= r.reqDrop;
       reqNominal     <= r.reqNominal;
       reqPause       <= r.reqPause;
+      reqDump        <= r.reqDump;
       fpgaTrgCnt     <= r.fpgaTrgCnt;
       trgBuffRd      <= r.trgBuffRd;
       pgp4RxLinkDown <= not(r.laneUp);
