@@ -1,4 +1,7 @@
 -- only for simulation
+-- SparkPixS data format:
+-- dout[19:10] : row
+-- dout[9:0]   : adc
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -19,6 +22,7 @@ entity DummySparkPixSPixel is
         RST_POLARITY_G  : sl       := '1';
         WAIT_WREN_G     : positive := 4;
         IGNORE_ERO_G    : boolean  := false;
+        MAX_ROW_G       : natural  := 384;
         SER_ID_G        : natural  := 0;
         COL_ID_G        : natural  := 0);
     port (
@@ -55,9 +59,9 @@ architecture tb of DummySparkPixSPixel is
       dout     : slv(19 downto 0);
       --
       waitCnt  : natural range 0 to 1023;
-      hitCnt   : slv(5 downto 0);
+      hitCnt   : slv(9 downto 0);
       hitLenCnt: slv(15 downto 0);
-      trgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
+      trgCnt   : slv(9 downto 0);
       state    : StateType;
    end record RegType;
 
@@ -73,9 +77,9 @@ architecture tb of DummySparkPixSPixel is
       dout     => (others => '0'),
       --
       waitCnt  => 0,
-      hitCnt   => toSlv(1, 6),
+      hitCnt   => (others => '0'),
       hitLenCnt=> toSlv(1, 16),
-      trgCnt   => (others => '1'), -- so that it rolls-over to zero on first sro
+      trgCnt   => (others => '0'),
       state    => IDLE_S
    );
 
@@ -86,7 +90,8 @@ begin
 
 comb : process (df_reset_n, r, hitLen, sro, pause) is
 
-      variable v : RegType;
+      variable v       : RegType;
+      variable rowAddr : slv(9 downto 0);
 
    begin
       -- Latch the current value
@@ -102,6 +107,9 @@ comb : process (df_reset_n, r, hitLen, sro, pause) is
       v.eof     := '0';
       v.overOcc := '0';
       v.wrEn    := '0';
+      rowAddr   := resize((r.trgCnt + r.hitCnt), 10);
+      v.dout(19 downto 10) := rowAddr;
+      v.dout(9  downto  0) := toSlv((COL_ID_G+1)*40, 10); -- 25 x 40 = 1000 < 1024
 
       if (v.sro = '1' and r.sro = '0') then -- reset everything
          v.trgCnt := r.trgCnt + 1;
@@ -118,12 +126,11 @@ comb : process (df_reset_n, r, hitLen, sro, pause) is
          -- only register the hitLen if idle
          v.hitLen    := hitLen;
          v.waitCnt   := 0;
-         v.hitCnt    := toSlv(1, 6);
+         v.hitCnt    := (others => '0');
          v.hitLenCnt := toSlv(1, 16);
 
          if (r.sro = '1' and v.pause = '0') then
-            v.sof                := '1';
-            v.dout(19 downto 14) := r.trgCnt;
+            v.sof   := '1';
             v.state := WAIT_WREN_S;
          end if;
 
@@ -153,16 +160,20 @@ comb : process (df_reset_n, r, hitLen, sro, pause) is
             if (v.pause = '0') then
                v.waitCnt := r.waitCnt + 1;
                if (v.waitCnt = WAIT_WREN_G) then
-                  v.wrEn               := '1';
-                  v.waitCnt            := 0;
-                  v.dout(13 downto  8) := r.hitCnt;
-                  v.dout(7  downto  3) := toSlv(COL_ID_G, v.dout(7 downto 3)'length);
-                  v.dout(2  downto  0) := toSlv(SER_ID_G, v.dout(2 downto 0)'length);
+                  v.wrEn    := '1';
+                  v.waitCnt := 0;
                   if (r.hitLenCnt = r.hitLen) then
                      v.eof   := '1';
                      v.state := IDLE_S;
                   else
-                     v.hitCnt    := r.hitCnt + 1;
+
+                     if rowAddr >= MAX_ROW_G then
+                        v.hitCnt := (others => '0');
+                        v.trgCnt := (others => '0');
+                     else
+                        v.hitCnt := r.hitCnt + 1;
+                     end if;
+
                      v.hitLenCnt := r.hitLenCnt + 1;
                      v.state     := WAIT_WREN_S;
                   end if;
