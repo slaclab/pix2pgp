@@ -27,9 +27,11 @@ class AsicData(object):
         """
 
         # class parameters (parameters have _ prefix)
-        self._asicType = asicType
-        self._rawData  = rawData
-        self._verbose  = verbose
+        self._asicType    = asicType
+        self._rawData     = rawData
+        self._verbose     = verbose
+        self._hitPrint    = self._verbose == 4
+        self._headerPrint = self._verbose > 1 and not(self._hitPrint)
 
         # initialize the lane decoding class
         self.laneDecoder = pix2pgp.LaneData(asicType=self._asicType,
@@ -154,7 +156,9 @@ class AsicData(object):
         """
         Externally set the verbosity level
         """
-        self._verbose = verbose
+        self._verbose     = verbose
+        self._hitPrint    = self._verbose == 4
+        self._headerPrint = self._verbose > 1 and not(self._hitPrint)
         self.laneDecoder.verboseSet(verbose)
     #################################################################
 
@@ -213,7 +217,9 @@ class AsicData(object):
         elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
 
-        if ((self.preambleErr or self.typeMismatchErr) and self._verbose > 0) or self._verbose > 1:
+        _errorPrint  = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
+
+        if _errorPrint or self._headerPrint:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
             print(f"")
@@ -257,7 +263,9 @@ class AsicData(object):
         self.headerErr = ( _dict['laneDecError'] > 0 or
                            _dict['laneFull'] > 0)
 
-        if (self.headerErr and self._verbose > 0) or self._verbose > 1:
+        _errorPrint = self.headerErr and self._verbose > 0
+
+        if _errorPrint or self._headerPrint:
             _format = 'Lane: DecError, Full, Timeout, Down, Valid       =     0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X} 0x{4:<01X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
@@ -284,7 +292,9 @@ class AsicData(object):
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
             self.trailerErr = True
 
-        if (self.trailerErr and self._verbose > 0) or self._verbose > 1:
+        _errorPrint = self.trailerErr and self._verbose > 0
+
+        if _errorPrint or self._headerPrint:
             print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
             print(f"")
@@ -564,8 +574,9 @@ class AsicData(object):
             pix2pgp.Tools.printWarning('ASIC Global Trigger Counter Mismatch. Values below')
             print(', '.join(str(value) for value in self.asicGlblTrgCnt))
 
-        if self._verbose == 4:
+        if self._hitPrint:
             self.laneDecoder.dataFormat.dataPrinter(self.asicHits, self._rawData)
+            print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
 
         if self._verbose == 5:
             for name, value in self.__dict__.items():
