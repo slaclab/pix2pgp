@@ -44,6 +44,7 @@ SURF_PKG_DIR=${SURF_DIR}/pkg
 SURF_FPGA_PKG_DIR=${SURF_FPGA_DIR}/pkg
 
 SURF_PKG=("${SURF_PKG_DIR}/StdRtlPkg.vhd"
+          "${SURF_PKG_DIR}/AxiPkg.vhd"
           "${SURF_FPGA_PKG_DIR}/TextUtilPkg.vhd"
           "${SURF_PKG_DIR}/CrcPkg.vhd"
           "${SURF_PKG_DIR}/AxiStreamPkg.vhd"

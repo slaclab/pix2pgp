@@ -95,6 +95,7 @@ clean:
 prepareSurf:
 	@echo "[INFO]: Preparing surf directories..."
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/StdRtlPkg.vhd)                               $(SURF_PKG_DIR)/StdRtlPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi4/rtl/AxiPkg.vhd)                                      $(SURF_PKG_DIR)/AxiPkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd)                      $(SURF_PKG_DIR)/Pgp4Pkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/CrcPkg.vhd)                                      $(SURF_PKG_DIR)/CrcPkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/ssi/rtl/SsiPkg.vhd)                                 $(SURF_PKG_DIR)/SsiPkg.vhd
