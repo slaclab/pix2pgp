@@ -567,10 +567,11 @@ for i in 0 to 12 loop
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '1';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -689,10 +690,11 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '0';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -809,10 +811,11 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '1';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -930,10 +933,11 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '0';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -1052,10 +1056,11 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '1';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -1173,10 +1178,11 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-     wait for CLK_PERIOD_SPARSE_C*2;
-         sro <= '1';
-     wait for CLK_PERIOD_SPARSE_C;
-         sro <= '0';
+   wait for CLK_PERIOD_SPARSE_C*2;
+      daqEnable <= '0';
+      sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C;
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        wait for CLK_PERIOD_SPARSE_C*50;
          ero <= '1';
@@ -1295,9 +1301,10 @@ wait for CLK_PERIOD_SPARSE_C*50;
    ---------------------------------------
    ---------------------------------------
    wait for CLK_PERIOD_SPARSE_C*2;
-      sro <= '1';
+      daqEnable <= '1';
+      sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
-      sro <= '0';
+      sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    wait for CLK_PERIOD_SPARSE_C*800;
       ero <= '1';

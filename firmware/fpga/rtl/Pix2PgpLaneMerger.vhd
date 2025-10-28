@@ -76,7 +76,7 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
-      tLastLane    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDumpAck  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
       asicRxMaster : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -93,7 +93,7 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
-      tLastLane    => (others => '0'),
+      laneDumpAck  => (others => '0'),
       -- AXI-Stream
       asicRxMaster => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -181,7 +181,6 @@ begin
          lanePauseError(lane) := asicStatus(lane).pauseError;
          laneTimeout(lane)    := asicStatus(lane).timeout;
          laneValid(lane)      := asicStatus(lane).valid;
-         v.tLastLane(lane)    := laneRxMasters(lane).tLast;
       end loop;
 
       preamble := fpgaPreambleMap(PIX2PGP_ID_C, r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
@@ -202,8 +201,9 @@ begin
       -------------------------------------------------------------------------
          -- wait for a request signal
          when IDLE_S =>
-            v.busy     := '0';
-            v.asicType := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.busy         := '0';
+            v.asicType     := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.laneDumpAck := (others => '0');
 
             if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
 
@@ -373,15 +373,30 @@ begin
          ----------------------------------------------------------------------
          -- empty the event from the axi-stream FIFO of all lanes
          when DUMP_S =>
+            v.reqDrop    := '0';
+            v.reqNominal := '0';
+            v.reqPause   := '0';
 
             for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-               -- drain until done
-               v.laneRxSlaves(lane).tReady := not(v.tLastLane(lane)) and laneValid(lane);
+               -- drain if we have data
+               v.laneRxSlaves(lane).tReady := laneValid(lane);
+
+               -- latch the tLast status on each lane; stop draining the FIFO
+               if r.laneDumpAck(lane) = '1' or laneValid(lane) = '0' then
+
+                  v.laneDumpAck(lane)         := '1';
+                  v.laneRxSlaves(lane).tReady := '0';
+
+               elsif laneRxMasters(lane).tLast = '1' then
+
+                  v.laneDumpAck(lane) := '1';
+
+               end if;
 
             end loop;
 
-            if uOr(laneValid) = '0' or uAnd(r.tLastLane) = '1' then
+            if uAnd(r.laneDumpAck) = '1' then
                v.state := IDLE_S;
             end if;
 

@@ -626,9 +626,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -844,9 +845,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(1, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1062,9 +1064,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(4, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1280,9 +1283,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1498,9 +1502,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1716,9 +1721,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1934,9 +1940,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(0, hitLen(0)(0)'length);
       ---------------------------------------
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      sro  <= '1';
+      daqEnable <= '1';
+      sro       <= '1';
       wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+      sro       <= '0';
 
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       wait for CLK_PERIOD_SPARSE_C*140;
