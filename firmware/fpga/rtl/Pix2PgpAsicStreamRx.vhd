@@ -50,6 +50,7 @@ entity Pix2PgpAsicStreamRx is
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
       asicSroEn       : in  sl;
+      sysDaq          : in  sl;
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
@@ -57,6 +58,8 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
+      -- ASIC DAQ Current Status Output
+      asicDaqStatus   : out Pix2PgpLaneStatusArray;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -76,6 +79,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal trgBuffRd      : sl := '0';
    signal trgBuffSroEn   : sl := '0';
    signal trgBuffValid   : sl := '0';
+   signal trgBuffSysDaq  : sl := '0';
    signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
    signal trgBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    signal fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
@@ -92,6 +96,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal reqDrop        : sl := '0';
    signal reqNominal     : sl := '0';
    signal reqPause       : sl := '0';
+   signal dumpData       : sl := '0';
 
    signal usrRst         : sl := '0';
    signal glblRst        : sl := not(RST_POLARITY_G);
@@ -152,6 +157,7 @@ begin
          -- Trigger Buffer Interface
          trgBuffTrgCnt  => trgBuffTrgCnt,
          trgBuffSroEn   => trgBuffSroEn,
+         trgBuffSysDaq  => trgBuffSysDaq,
          trgBuffValid   => trgBuffValid,
          trgBuffRd      => trgBuffRd,
          -- Lane Merger Interface
@@ -160,7 +166,8 @@ begin
          fpgaTrgCnt     => fpgaTrgCnt,
          reqDrop        => reqDrop,
          reqNominal     => reqNominal,
-         reqPause       => reqPause);
+         reqPause       => reqPause,
+         dumpData       => dumpData);
 
    --------------
    -- Lane Merger
@@ -183,6 +190,7 @@ begin
          reqDrop       => reqDrop,
          reqNominal    => reqNominal,
          reqPause      => reqPause,
+         dumpData      => dumpData,
          -- Lane AXI-Stream Input Interface
          laneRxMasters => laneRxMasters,
          laneRxSlaves  => laneRxSlaves,
@@ -210,10 +218,12 @@ begin
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,
+         sysDaq        => sysDaq,
          -- Lane Supervisor Interface
          trgBuffRd     => trgBuffRd,
          trgBuffTrgCnt => trgBuffTrgCnt,
          trgBuffSroEn  => trgBuffSroEn,
+         trgBuffSysDaq => trgBuffSysDaq,
          trgBuffValid  => trgBuffValid);
 
    -------------------
@@ -243,6 +253,7 @@ begin
          axilWriteMaster => axilWriteMaster,
          axilWriteSlave  => axilWriteSlave);
 
+   asicDaqStatus <= asicStatus;
 
    glblRst <= (pgpRxRst or usrRst) when (RST_POLARITY_G = '1') else
               (pgpRxRst and not usrRst);

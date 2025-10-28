@@ -216,6 +216,54 @@ class Pix2PgpAsicStreamRx(pr.Device):
             disp        = '{:d}',
         ))
 
+        self.add(pr.RemoteVariable(
+            name         = 'LaneDecError',
+            description  = 'LaneDecError (Last Status)',
+            offset       = 0x800,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneOverOcc',
+            description  = 'LaneOverOcc (Last Status)',
+            offset       = 0x804,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LanePause',
+            description  = 'LanePause (Last Status)',
+            offset       = 0x808,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LanePauseError',
+            description  = 'LanePauseError (Last Status)',
+            offset       = 0x80C,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneFull',
+            description  = 'LaneFull (Last Status)',
+            offset       = 0x810,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneTimeout',
+            description  = 'LaneTimeout (Last Status)',
+            offset       = 0x814,
+            bitSize      = self.numLanes,
+            mode         = 'RO',
+        ))
+
     def countReset(self):
         self.CntRst()
 

@@ -27,10 +27,12 @@ class LaneData(object):
         """
 
         # class parameters (parameters have _ prefix)
-        self._asicType = asicType
-        self._rawData  = rawData
-        self._verbose  = verbose
-        self._laneId   = laneId
+        self._asicType    = asicType
+        self._rawData     = rawData
+        self._verbose     = verbose
+        self._hitPrint    = self._verbose == 4
+        self._headerPrint = self._verbose > 1 and not(self._hitPrint)
+        self._laneId      = laneId
 
         # the real initialization method
         self.reset()
@@ -123,7 +125,9 @@ class LaneData(object):
         """
         Externally set the verbosity level
         """
-        self._verbose = verbose
+        self._verbose     = verbose
+        self._hitPrint    = self._verbose == 4
+        self._headerPrint = self._verbose > 1 and not(self._hitPrint)
     #################################################################
 
     #################################################################
@@ -369,7 +373,7 @@ class LaneData(object):
         """
         Prints out all the data
         """
-        if self._verbose > 2:
+        if self._headerPrint:
             self.headerPrinter()
 
         if self._verbose == 6:

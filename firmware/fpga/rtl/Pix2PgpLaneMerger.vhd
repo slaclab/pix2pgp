@@ -45,6 +45,7 @@ entity Pix2PgpLaneMerger is
       reqDrop       : in  sl;
       reqNominal    : in  sl;
       reqPause      : in  sl;
+      dumpData      : in  sl;
       -- Lane AXI-Stream Input Interface
       laneRxMasters : in  AxiStreamMasterArray;
       laneRxSlaves  : out AxiStreamSlaveArray;
@@ -62,6 +63,7 @@ architecture rtl of Pix2PgpLaneMerger is
       TX_FRAME_SIZE_S,
       TX_COLCNT_S,
       TX_LANE_DATA_S,
+      DUMP_S,
       DONE_S,
       TX_TRAILER_S);
 
@@ -70,9 +72,11 @@ architecture rtl of Pix2PgpLaneMerger is
       reqDrop      : sl;
       reqNominal   : sl;
       reqPause     : sl;
+      dumpData     : sl;
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
+      laneDumpAck  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
       asicRxMaster : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -85,9 +89,11 @@ architecture rtl of Pix2PgpLaneMerger is
       reqDrop      => '0',
       reqNominal   => '0',
       reqPause     => '0',
+      dumpData     => '0',
       inPause      => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
+      laneDumpAck  => (others => '0'),
       -- AXI-Stream
       asicRxMaster => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -103,7 +109,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
-                   reqPause, laneRxMasters, asicRxSlave, config) is
+                   reqPause, dumpData, laneRxMasters, asicRxSlave, config) is
       variable v : RegType;
 
       -- internal variables
@@ -195,8 +201,9 @@ begin
       -------------------------------------------------------------------------
          -- wait for a request signal
          when IDLE_S =>
-            v.busy     := '0';
-            v.asicType := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.busy         := '0';
+            v.asicType     := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.laneDumpAck := (others => '0');
 
             if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
 
@@ -217,6 +224,10 @@ begin
                -- regular pause-continuation request; skip preamble
                if r.reqDrop = '0' and r.inPause = '1' then
                   v.state := TX_HEADER_S;
+               end if;
+
+               if r.reqDrop = '0' and dumpData = '1' then
+                  v.state := DUMP_S;
                end if;
 
             end if;
@@ -356,6 +367,36 @@ begin
                v.asicRxMaster.tValid := '1';
                v.asicRxMaster.tLast  := '1';
 
+               v.state := IDLE_S;
+            end if;
+
+         ----------------------------------------------------------------------
+         -- empty the event from the axi-stream FIFO of all lanes
+         when DUMP_S =>
+            v.reqDrop    := '0';
+            v.reqNominal := '0';
+            v.reqPause   := '0';
+
+            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
+
+               -- drain if we have data
+               v.laneRxSlaves(lane).tReady := laneValid(lane);
+
+               -- latch the tLast status on each lane; stop draining the FIFO
+               if r.laneDumpAck(lane) = '1' or laneValid(lane) = '0' then
+
+                  v.laneDumpAck(lane)         := '1';
+                  v.laneRxSlaves(lane).tReady := '0';
+
+               elsif laneRxMasters(lane).tLast = '1' then
+
+                  v.laneDumpAck(lane) := '1';
+
+               end if;
+
+            end loop;
+
+            if uAnd(r.laneDumpAck) = '1' then
                v.state := IDLE_S;
             end if;
 

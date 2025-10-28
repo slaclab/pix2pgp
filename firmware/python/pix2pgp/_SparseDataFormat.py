@@ -136,15 +136,19 @@ class SparkPixTDataFormat(SparseDataFormatBase):
             _toa.append((_toaC[0] << 8) | _toaF[0])
             _toa.append((_toaC[1] << 8) | _toaF[1])
 
-            ret.append({'col': colId,
-                        'row': _row[0],
-                        'toa': _toa[0],
-                        'tot': _tot[0]})
+            ret.append({'col' : colId,
+                        'row' : _row[0],
+                        'toaC': _toaC[0],
+                        'toaF': _toaF[0],
+                        'toa' : _toa[0],
+                        'tot' : _tot[0]})
 
-            ret.append({'col': colId,
-                        'row': _row[1],
-                        'toa': _toa[1],
-                        'tot': _tot[1]})
+            ret.append({'col' : colId,
+                        'row' : _row[1],
+                        'toaC': _toaC[1],
+                        'toaF': _toaF[1],
+                        'toa' : _toa[1],
+                        'tot' : _tot[1]})
 
         return ret
 
@@ -161,10 +165,10 @@ class SparkPixTDataFormat(SparseDataFormatBase):
                 click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
 
         else:
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<5} TOT = {3:<8}'
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<8} ToA_C = {3:<6} ToA_F = {4:<6} ToT = {5:<8}'
 
             for hit in asicHits:
-                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['toaC'], hit['toaF'], hit['tot']))
 
 class ThriglavDataFormat(SparseDataFormatBase):
     '''
@@ -228,7 +232,7 @@ class ThriglavDataFormat(SparseDataFormatBase):
                 click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
 
         else:
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<5} TOT = {3:<8}'
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<8} ToT = {3:<8}'
 
             for hit in asicHits:
                 click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))

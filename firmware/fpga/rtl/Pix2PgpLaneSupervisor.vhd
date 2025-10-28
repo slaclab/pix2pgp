@@ -48,6 +48,7 @@ entity Pix2PgpLaneSupervisor is
       -- Trigger Buffer Interface
       trgBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       trgBuffSroEn   : in  sl;
+      trgBuffSysDaq  : in  sl;
       trgBuffValid   : in  sl;
       trgBuffRd      : out sl;
       -- Lane Merger Interface
@@ -56,7 +57,8 @@ entity Pix2PgpLaneSupervisor is
       fpgaTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       reqDrop        : out sl;
       reqNominal     : out sl;
-      reqPause       : out sl);
+      reqPause       : out sl;
+      dumpData       : out sl);
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
@@ -79,6 +81,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqDrop       : sl;
       reqNominal    : sl;
       reqPause      : sl;
+      dumpData      : sl;
       mergerBusy    : sl;
       armTimeout    : sl;
       popTrg        : sl;
@@ -111,6 +114,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqDrop       => '0',
       reqNominal    => '0',
       reqPause      => '0',
+      dumpData      => '0',
       mergerBusy    => '0',
       armTimeout    => '0',
       popTrg        => '0',
@@ -154,7 +158,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy,
+   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, trgBuffSysDaq,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -170,6 +174,7 @@ begin
       v.reqDrop    := '0';
       v.reqNominal := '0';
       v.reqPause   := '0';
+      v.dumpData   := not(trgBuffSysDaq);
       v.armTimeout := '0';
       v.trgBuffRd  := '0';
       v.laneMetaRd := '0';
@@ -467,6 +472,7 @@ begin
       reqDrop        <= r.reqDrop;
       reqNominal     <= r.reqNominal;
       reqPause       <= r.reqPause;
+      dumpData       <= r.dumpData;
       fpgaTrgCnt     <= r.fpgaTrgCnt;
       trgBuffRd      <= r.trgBuffRd;
       pgp4RxLinkDown <= not(r.laneUp);

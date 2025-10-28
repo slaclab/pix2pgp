@@ -64,6 +64,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
+   signal daqFinal  : sl := '0';
+   signal daqEnable : sl := '1';
    signal revRst    : sl := '0';
    signal sysClk    : sl := '0';
    signal axiFifoRst: sl := '0';
@@ -208,8 +210,10 @@ begin
     if (rising_edge(sparseClk)) then
       if sro = '1' and sroFinal = '0' then
         sroFinal <= sro;
+        daqFinal <= daqEnable;
       else
         sroFinal <= '0';
+        daqFinal <= '0';
       end if;
     end if;
   end process;
@@ -327,6 +331,7 @@ begin
          -- General Interface
          pgpRxClk        => pgpRxClk,
          sro             => sroFinal,
+         daq             => daqFinal,
          rst             => revRst,
          asicRstL        => rst,
          -- Pix2Pgp Interface
@@ -621,9 +626,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -839,9 +845,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(1, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1057,9 +1064,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(4, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1275,9 +1283,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1493,9 +1502,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1711,9 +1721,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
    ---------------------------------------
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   sro  <= '1';
+   daqEnable <= '1';
+   sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C*2;
-   sro  <= '0';
+   sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1929,9 +1940,10 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
       hitLen(7)(23) <= toSlv(0, hitLen(0)(0)'length);
       ---------------------------------------
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      sro  <= '1';
+      daqEnable <= '1';
+      sro       <= '1';
       wait for CLK_PERIOD_SPARSE_C*2;
-      sro  <= '0';
+      sro       <= '0';
 
       -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       wait for CLK_PERIOD_SPARSE_C*140;
