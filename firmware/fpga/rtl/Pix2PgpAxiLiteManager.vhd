@@ -72,9 +72,11 @@ architecture rtl of Pix2PgpAxiLiteManager is
       lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneDecErrCnt   : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePauseErrCnt : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneFullCnt     : Slv5Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneDecErrCnt   : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseErrCnt : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneFullCnt     : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneOverOccCnt  : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseCnt    : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTrgCnt      : TrgCntArray;
       -- AXI-Lite
       readSlave       : AxiLiteReadSlaveType;
@@ -94,6 +96,8 @@ architecture rtl of Pix2PgpAxiLiteManager is
       laneDecErrCnt   => (others => (others => '0')),
       lanePauseErrCnt => (others => (others => '0')),
       laneFullCnt     => (others => (others => '0')),
+      laneOverOccCnt  => (others => (others => '0')),
+      lanePauseCnt    => (others => (others => '0')),
       laneTrgCnt      => (others => (others => '0')),
       -- AXI-Lite
       readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
@@ -141,6 +145,7 @@ begin
       ----------------------------------------------------------------------------------------------
 
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
+
          v.laneDecError(i)   := asicStatus(i).decError;
          v.laneOverOcc(i)    := asicStatus(i).overOcc;
          v.lanePause(i)      := asicStatus(i).pause;
@@ -157,6 +162,18 @@ begin
             v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
          end if;
 
+         if  (v.laneOverOcc(i) = '1' and r.laneOverOcc(i) = '0') and
+             (r.config.laneEnable(i) = '1')
+         and uAnd(r.laneOverOccCnt(i)) /= '1' then
+            v.laneOverOccCnt(i) := r.laneOverOccCnt(i) + 1;
+         end if;
+
+         if  (v.lanePause(i) = '1' and r.lanePause(i) = '0') and
+             (r.config.laneEnable(i) = '1')
+         and uAnd(r.lanePauseCnt(i)) /= '1' then
+            v.lanePauseCnt(i) := r.lanePauseCnt(i) + 1;
+         end if;
+
          if  (v.lanePauseError(i) = '1' and r.lanePauseError(i) = '0') and
              (r.config.laneEnable(i) = '1')
          and  uAnd(r.lanePauseErrCnt(i)) /= '1' then
@@ -171,9 +188,12 @@ begin
 
          if (r.cntRst = '1') then
             v.laneDecErrCnt(i)   := (others => '0');
+            v.laneOverOccCnt(i)  := (others => '0');
+            v.lanePauseCnt(i)    := (others => '0');
             v.lanePauseErrCnt(i) := (others => '0');
             v.laneFullCnt(i)     := (others => '0');
          end if;
+
       end loop;
       ----------------------------------------------------------------------------------------------
 
@@ -187,34 +207,36 @@ begin
       for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
          -- (Stride=4 bytes)
          axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErrCnt(i));   -- StartAddr=0x200
-         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.lanePauseErrCnt(i)); -- StartAddr=0x300
-         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.laneFullCnt(i));     -- StartAddr=0x400
-         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, r.laneTrgCnt(i));      -- StartAddr=0x500
+         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.laneOverOccCnt(i));  -- StartAddr=0x300
+         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.lanePauseCnt(i));    -- StartAddr=0x400
+         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, r.lanePauseErrCnt(i)); -- StartAddr=0x500
+         axiSlaveRegisterR(axilEp, toSlv(1536+4*i, 12), 0, r.laneFullCnt(i));     -- StartAddr=0x600
+         axiSlaveRegisterR(axilEp, toSlv(1792+4*i, 12), 0, r.laneTrgCnt(i));      -- StartAddr=0x700
       end loop;
 
-      axiSlaveRegister (axilEp, x"600", 0, v.config.fpgaId);
-      axiSlaveRegister (axilEp, x"604", 0, v.config.laneTimeout);
-      axiSlaveRegister (axilEp, x"608", 0, v.config.laneEnable);
-      axiSlaveRegister (axilEp, x"60C", 0, v.config.dropColMisalign);
-      axiSlaveRegister (axilEp, x"610", 0, v.config.dropLaneMisalign);
-      axiSlaveRegister (axilEp, x"614", 0, v.config.realignOnSof);
-      axiSlaveRegister (axilEp, x"618", 0, v.config.autoRealign);
-      axiSlaveRegister (axilEp, x"61C", 0, v.config.rstFpgaTrgCnt);
-      axiSlaveRegister (axilEp, x"620", 0, v.config.incrSroEnLow);
+      axiSlaveRegister (axilEp, x"800", 0, v.config.fpgaId);
+      axiSlaveRegister (axilEp, x"804", 0, v.config.laneTimeout);
+      axiSlaveRegister (axilEp, x"808", 0, v.config.laneEnable);
+      axiSlaveRegister (axilEp, x"80C", 0, v.config.dropColMisalign);
+      axiSlaveRegister (axilEp, x"810", 0, v.config.dropLaneMisalign);
+      axiSlaveRegister (axilEp, x"814", 0, v.config.realignOnSof);
+      axiSlaveRegister (axilEp, x"818", 0, v.config.autoRealign);
+      axiSlaveRegister (axilEp, x"81C", 0, v.config.rstFpgaTrgCnt);
+      axiSlaveRegister (axilEp, x"820", 0, v.config.incrSroEnLow);
       --
-      axiSlaveRegister (axilEp, x"700", 0, v.cntRst);
-      axiSlaveRegister (axilEp, x"704", 0, v.usrRst);
+      axiSlaveRegister (axilEp, x"900", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"904", 0, v.usrRst);
       --
-      axiSlaveRegisterR(axilEp, x"708", 0, laneDown);
-      axiSlaveRegisterR(axilEp, x"70C", 0, mergerBusy);
-      axiSlaveRegisterR(axilEp, x"710", 0, fpgaTrgCnt);
+      axiSlaveRegisterR(axilEp, x"A08", 0, laneDown);
+      axiSlaveRegisterR(axilEp, x"A0C", 0, mergerBusy);
+      axiSlaveRegisterR(axilEp, x"A10", 0, fpgaTrgCnt);
       --
-      axiSlaveRegisterR(axilEp, x"800", 0, r.laneDecError);
-      axiSlaveRegisterR(axilEp, x"804", 0, r.laneOverOcc);
-      axiSlaveRegisterR(axilEp, x"808", 0, r.lanePause);
-      axiSlaveRegisterR(axilEp, x"80C", 0, r.lanePauseError);
-      axiSlaveRegisterR(axilEp, x"810", 0, r.laneFull);
-      axiSlaveRegisterR(axilEp, x"814", 0, r.laneTimeout);
+      axiSlaveRegisterR(axilEp, x"B00", 0, r.laneDecError);
+      axiSlaveRegisterR(axilEp, x"B04", 0, r.laneOverOcc);
+      axiSlaveRegisterR(axilEp, x"B08", 0, r.lanePause);
+      axiSlaveRegisterR(axilEp, x"B0C", 0, r.lanePauseError);
+      axiSlaveRegisterR(axilEp, x"B10", 0, r.laneFull);
+      axiSlaveRegisterR(axilEp, x"B14", 0, r.laneTimeout);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
