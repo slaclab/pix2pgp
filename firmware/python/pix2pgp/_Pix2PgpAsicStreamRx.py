@@ -131,9 +131,20 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         self.addRemoteVariables(
+            name        = 'LaneTimeoutCnt',
+            description = 'Increments by one each time the an FPGA-Rx Lane times-out',
+            offset      = 0x700,
+            bitSize     = self.statusCntWidth,
+            number      = self.numLanes,
+            stride      = 4,
+            mode        = 'RO',
+            disp        = '{:d}',
+        )
+
+        self.addRemoteVariables(
             name        = 'LaneTrgCnt',
             description = 'Value of last ASIC trigger counter received by the lane',
-            offset      = 0x700,
+            offset      = 0x800,
             bitSize     = self.trgCntWidth,
             number      = self.numLanes,
             stride      = 4,
@@ -142,9 +153,19 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         self.add(pr.RemoteVariable(
+            name        = 'FpgaTrgCnt',
+            description = 'Value of last FPGA Trigger counter',
+            offset      = 0x900,
+            bitSize     = self.trgCntWidth,
+            mode        = 'RO',
+            disp        = '{:d}',
+        ))
+
+
+        self.add(pr.RemoteVariable(
             name         = 'FpgaId',
             description  = 'FPGA Identifier; is sent with the FPGA-generated header',
-            offset       = 0x800,
+            offset       = 0x904,
             bitSize      = 16,
             mode         = 'RW',
         ))
@@ -152,12 +173,13 @@ class Pix2PgpAsicStreamRx(pr.Device):
         addTimePair(
             name        = 'LaneTimeout',
             description = 'Upon reception of a trigger, an internal watchdog starts counting. if the LaneTimeout is reached, the lanes that do not have data will be masked as timed-out and the rest will be read (if any)',
-            offset      = 0x804,
+            offset      = 0x908,
         )
+
         self.add(pr.RemoteVariable(
             name         = 'LaneEnable',
             description  = 'Lane enable mask; setting a lane to low keeps it in reset',
-            offset       = 0x808,
+            offset       = 0x90C,
             bitSize      = self.numLanes,
             mode         = 'RW',
         ))
@@ -165,43 +187,43 @@ class Pix2PgpAsicStreamRx(pr.Device):
         addBool(
             name        = 'DropColumnMisalign',
             description = 'If True: Lane receiver will drop a frame with uneven trigger counter values from columns within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x80C,
+            offset      = 0x910,
         )
 
         addBool(
             name        = 'DropLaneMisalign',
             description = 'If True: Lane Supervisor will drop a frame with uneven trigger counter values from lanes within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x810,
+            offset      = 0x914,
         )
 
         addBool(
             name        = 'RealignOnSof',
             description = 'Realign on Start-Of-Frame after recovering from Error',
-            offset      = 0x814,
+            offset      = 0x918,
         )
 
         addBool(
             name        = 'AutoRealign',
             description = 'Only transmit a frame if FpgaTrgCnt = AsicTrgCnt',
-            offset      = 0x818,
+            offset      = 0x91C,
         )
 
         addBool(
             name        = 'RstFpgaTrgCnt',
             description = 'Reset the FPGA Trigger Counter',
-            offset      = 0x81C,
+            offset      = 0x920,
         )
 
         addBool(
             name        = 'IncrSroEnLow',
             description = 'Increment the FPGA Trigger Counter even when SRO-enable is low',
-            offset      = 0x820,
+            offset      = 0x924,
         )
 
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Status counter reset',
-            offset       = 0x900,
+            offset       = 0xA00,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
@@ -210,13 +232,13 @@ class Pix2PgpAsicStreamRx(pr.Device):
         addBool(
             name        = 'UsrRst',
             description = 'Reset Pix2PgpAsicStreamRx',
-            offset      = 0x904,
+            offset      = 0xA04,
         )
 
         self.add(pr.RemoteVariable(
             name         = 'Pgp4RxLinkDown',
             description  = 'PGP4 Link is Down',
-            offset       = 0xA08,
+            offset       = 0xB00,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -224,24 +246,15 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'MergerBusy',
             description  = 'Merger FSM is Busy',
-            offset       = 0xA0C,
+            offset       = 0xB04,
             bitSize      = 1,
             mode         = 'RO',
         ))
 
         self.add(pr.RemoteVariable(
-            name        = 'FpgaTrgCnt',
-            description = 'Value of last FPGA Trigger counter',
-            offset      = 0xA10,
-            bitSize     = self.trgCntWidth,
-            mode        = 'RO',
-            disp        = '{:d}',
-        ))
-
-        self.add(pr.RemoteVariable(
             name         = 'LaneDecErrorStatus',
             description  = 'LaneDecError (Last Status)',
-            offset       = 0xB00,
+            offset       = 0xC00,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -249,7 +262,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneOverOccStatus',
             description  = 'LaneOverOcc (Last Status)',
-            offset       = 0xB04,
+            offset       = 0xC04,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -257,7 +270,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LanePauseStatus',
             description  = 'LanePause (Last Status)',
-            offset       = 0xB08,
+            offset       = 0xC08,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -265,7 +278,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LanePauseErrorStatus',
             description  = 'LanePauseError (Last Status)',
-            offset       = 0xB0C,
+            offset       = 0xC0C,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -273,7 +286,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneFullStatus',
             description  = 'LaneFull (Last Status)',
-            offset       = 0xB10,
+            offset       = 0xC10,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -281,7 +294,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneTimeoutStatus',
             description  = 'LaneTimeout (Last Status)',
-            offset       = 0xB14,
+            offset       = 0xC14,
             bitSize      = self.numLanes,
             mode         = 'RO',
         ))
@@ -295,6 +308,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.RstFpgaTrgCnt.set(False)
 
     def HardReset(self):
+        self.countReset()
         self.UsrRst.set(True)
         time.sleep(0.2)
         self.UsrRst.set(False)

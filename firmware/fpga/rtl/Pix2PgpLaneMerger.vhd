@@ -379,20 +379,18 @@ begin
 
             for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
 
-               -- drain if we have data
-               v.laneRxSlaves(lane).tReady := laneValid(lane);
-
-               -- latch the tLast status on each lane; stop draining the FIFO
-               if r.laneDumpAck(lane) = '1' or laneValid(lane) = '0' then
-
-                  v.laneDumpAck(lane)         := '1';
-                  v.laneRxSlaves(lane).tReady := '0';
-
-               elsif laneRxMasters(lane).tLast = '1' then
+               -- latch the ack on last or on not-valid
+               if laneRxMasters(lane).tLast = '1' or
+                  r.laneDumpAck(lane)       = '1' or
+                  laneValid(lane)           = '0' then
 
                   v.laneDumpAck(lane) := '1';
 
                end if;
+
+               -- drain if we still have data;
+               -- the tLast signal will halt this on the next cycle
+               v.laneRxSlaves(lane).tReady := laneValid(lane) and not(r.laneDumpAck(lane));
 
             end loop;
 
