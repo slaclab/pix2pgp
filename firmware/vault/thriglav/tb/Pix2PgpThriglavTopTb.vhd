@@ -134,6 +134,7 @@ architecture test of Pix2PgpThriglavTopTb is
    signal colBusyCnt        : slv(31 downto 0) := (others => '0');
    signal superBusyCnt      : slv(31 downto 0) := (others => '0');
    signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
+   signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
    constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G;
@@ -144,6 +145,7 @@ architecture test of Pix2PgpThriglavTopTb is
    signal colBusyArray      : IntArrayType := (others => 0);
    signal superBusyArray    : IntArrayType := (others => 0);
    signal totalLatencyArray : IntArrayType := (others => 0);
+   signal frameSizeArray    : IntArrayType := (others => 0);
 
    signal occArray : RealArrayType := (
       0  => 0.5,  1  => 1.0,  2  => 1.5,  3  => 2.0,  4  => 2.5,  5  => 3.0,
@@ -1477,11 +1479,13 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
          colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
          superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
          totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
+         frameSizeArray(i)    <= conv_integer(unsigned(frameSizeCnt));
 
       wait for CLK_PERIOD_SPARSE_C*20;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% frameSizeCnt = " & integer'image(frameSizeArray(i)) severity note;
 
    end loop;
 
@@ -1492,6 +1496,7 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
          report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% frameSizeCnt = " & integer'image(frameSizeArray(i)) severity note;
       end loop;
 
    -- do not touch begin
@@ -1524,6 +1529,34 @@ end generate GEN_BENCHMARK_PROC;
       end if;
     end if;
   end process;
+
+   MeasureFrameSizeProc : process(pgpClk)
+      variable cnt : slv(31 downto 0) := (others => '0');
+     begin
+       if rising_edge(pgpClk) then
+
+         if rstCnt = '1' then
+
+            cnt := (others => '0');
+
+         else
+
+            if m_axis_tvalid = '1' then
+               for i in 0 to AXIS_CONFIG_C.TDATA_BYTES_C - 1 loop
+                  if m_axis_tkeep(i) = '1' then
+                     cnt := cnt + 1;
+                  end if;
+               end loop;
+            end if;
+
+         end if;
+
+         if stream_rx_tlast = '1' then
+            frameSizeCnt <= cnt;
+         end if;
+
+       end if;
+     end process;
 
   MeasureColBusyProc : process(pgpClk)
    variable cnt : slv(31 downto 0) := (others => '0');
