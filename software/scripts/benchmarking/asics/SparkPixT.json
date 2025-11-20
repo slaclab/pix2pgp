@@ -5,7 +5,8 @@
     "allHits": 24,
     "colBusy": 74,
     "superBusy": 125,
-    "totalLatency": 354
+    "totalLatency": 354,
+    "frameSize": 54
   },
   {
     "occ": 1.0,
@@ -13,7 +14,8 @@
     "allHits": 48,
     "colBusy": 130,
     "superBusy": 123,
-    "totalLatency": 411
+    "totalLatency": 411,
+    "frameSize": 104
   },
   {
     "occ": 1.5,
@@ -21,7 +23,8 @@
     "allHits": 72,
     "colBusy": 186,
     "superBusy": 174,
-    "totalLatency": 557
+    "totalLatency": 557,
+    "frameSize": 158
   },
   {
     "occ": 2.0,
@@ -29,7 +32,8 @@
     "allHits": 96,
     "colBusy": 242,
     "superBusy": 174,
-    "totalLatency": 604
+    "totalLatency": 604,
+    "frameSize": 320
   },
   {
     "occ": 2.5,
@@ -37,7 +41,8 @@
     "allHits": 120,
     "colBusy": 297,
     "superBusy": 222,
-    "totalLatency": 735
+    "totalLatency": 735,
+    "frameSize": 542
   },
   {
     "occ": 3.0,
@@ -45,7 +50,8 @@
     "allHits": 144,
     "colBusy": 353,
     "superBusy": 223,
-    "totalLatency": 789
+    "totalLatency": 789,
+    "frameSize": 670
   },
   {
     "occ": 3.5,
@@ -53,7 +59,8 @@
     "allHits": 144,
     "colBusy": 409,
     "superBusy": 233,
-    "totalLatency": 857
+    "totalLatency": 857,
+    "frameSize": 670
   },
   {
     "occ": 4.0,
@@ -61,7 +68,8 @@
     "allHits": 168,
     "colBusy": 408,
     "superBusy": 271,
-    "totalLatency": 919
+    "totalLatency": 919,
+    "frameSize": 910
   },
   {
     "occ": 4.5,
@@ -69,7 +77,8 @@
     "allHits": 192,
     "colBusy": 465,
     "superBusy": 274,
-    "totalLatency": 977
+    "totalLatency": 977,
+    "frameSize": 926
   },
   {
     "occ": 5.0,
@@ -77,7 +86,8 @@
     "allHits": 216,
     "colBusy": 520,
     "superBusy": 324,
-    "totalLatency": 1106
+    "totalLatency": 1106,
+    "frameSize": 1318
   },
   {
     "occ": 5.5,
@@ -85,7 +95,8 @@
     "allHits": 240,
     "colBusy": 575,
     "superBusy": 322,
-    "totalLatency": 1160
+    "totalLatency": 1160,
+    "frameSize": 1310
   },
   {
     "occ": 6.0,
@@ -93,7 +104,8 @@
     "allHits": 264,
     "colBusy": 631,
     "superBusy": 372,
-    "totalLatency": 1292
+    "totalLatency": 1292,
+    "frameSize": 1620
   },
   {
     "occ": 6.5,
@@ -101,7 +113,8 @@
     "allHits": 264,
     "colBusy": 687,
     "superBusy": 373,
-    "totalLatency": 1348
+    "totalLatency": 1348,
+    "frameSize": 1638
   },
   {
     "occ": 7.0,
@@ -109,7 +122,8 @@
     "allHits": 288,
     "colBusy": 687,
     "superBusy": 372,
-    "totalLatency": 1346
+    "totalLatency": 1346,
+    "frameSize": 1644
   },
   {
     "occ": 7.5,
@@ -117,7 +131,8 @@
     "allHits": 312,
     "colBusy": 743,
     "superBusy": 420,
-    "totalLatency": 1478
+    "totalLatency": 1478,
+    "frameSize": 2014
   },
   {
     "occ": 8.0,
@@ -125,7 +140,8 @@
     "allHits": 336,
     "colBusy": 799,
     "superBusy": 422,
-    "totalLatency": 1534
+    "totalLatency": 1534,
+    "frameSize": 2004
   },
   {
     "occ": 8.5,
@@ -133,7 +149,8 @@
     "allHits": 384,
     "colBusy": 1374,
     "superBusy": 496,
-    "totalLatency": 1729
+    "totalLatency": 1729,
+    "frameSize": 3468
   },
   {
     "occ": 9.0,
@@ -141,7 +158,8 @@
     "allHits": 408,
     "colBusy": 1421,
     "superBusy": 595,
-    "totalLatency": 1775
+    "totalLatency": 1775,
+    "frameSize": 3664
   },
   {
     "occ": 9.5,
@@ -149,7 +167,8 @@
     "allHits": 408,
     "colBusy": 1420,
     "superBusy": 596,
-    "totalLatency": 1775
+    "totalLatency": 1775,
+    "frameSize": 3760
   },
   {
     "occ": 10.0,
@@ -157,7 +176,8 @@
     "allHits": 408,
     "colBusy": 1477,
     "superBusy": 596,
-    "totalLatency": 1773
+    "totalLatency": 1773,
+    "frameSize": 5574
   },
   {
     "occ": 15.0,
@@ -165,7 +185,8 @@
     "allHits": 624,
     "colBusy": 1978,
     "superBusy": 843,
-    "totalLatency": 2638
+    "totalLatency": 2638,
+    "frameSize": 16126
   },
   {
     "occ": 20.0,
@@ -173,7 +194,8 @@
     "allHits": 816,
     "colBusy": 2823,
     "superBusy": 1168,
-    "totalLatency": 3188
+    "totalLatency": 3188,
+    "frameSize": 25028
   },
   {
     "occ": 25.0,
@@ -181,7 +203,8 @@
     "allHits": 1008,
     "colBusy": 3269,
     "superBusy": 1364,
-    "totalLatency": 3926
+    "totalLatency": 3926,
+    "frameSize": 30966
   },
   {
     "occ": 30.0,
@@ -189,7 +212,8 @@
     "allHits": 1224,
     "colBusy": 4327,
     "superBusy": 1883,
-    "totalLatency": 4768
+    "totalLatency": 4768,
+    "frameSize": 43500
   },
   {
     "occ": 35.0,
@@ -197,7 +221,8 @@
     "allHits": 1416,
     "colBusy": 4596,
     "superBusy": 1983,
-    "totalLatency": 5328
+    "totalLatency": 5328,
+    "frameSize": 48422
   },
   {
     "occ": 40.0,
@@ -205,7 +230,8 @@
     "allHits": 1632,
     "colBusy": 5506,
     "superBusy": 2449,
-    "totalLatency": 6020
+    "totalLatency": 6020,
+    "frameSize": 58132
   },
   {
     "occ": 45.0,
@@ -213,7 +239,8 @@
     "allHits": 1824,
     "colBusy": 6193,
     "superBusy": 2910,
-    "totalLatency": 6541
+    "totalLatency": 6541,
+    "frameSize": 63324
   },
   {
     "occ": 50.0,
@@ -221,7 +248,8 @@
     "allHits": 2016,
     "colBusy": 6741,
     "superBusy": 3216,
-    "totalLatency": 7331
+    "totalLatency": 7331,
+    "frameSize": 72804
   },
   {
     "occ": 55.0,
@@ -229,7 +257,8 @@
     "allHits": 2232,
     "colBusy": 7539,
     "superBusy": 3681,
-    "totalLatency": 7907
+    "totalLatency": 7907,
+    "frameSize": 79436
   },
   {
     "occ": 60.0,
@@ -237,7 +266,8 @@
     "allHits": 2424,
     "colBusy": 7985,
     "superBusy": 3879,
-    "totalLatency": 8642
+    "totalLatency": 8642,
+    "frameSize": 84996
   },
   {
     "occ": 65.0,
@@ -245,7 +275,8 @@
     "allHits": 2640,
     "colBusy": 8719,
     "superBusy": 4244,
-    "totalLatency": 9159
+    "totalLatency": 9159,
+    "frameSize": 94148
   },
   {
     "occ": 70.0,
@@ -253,7 +284,8 @@
     "allHits": 2832,
     "colBusy": 9229,
     "superBusy": 4548,
-    "totalLatency": 9961
+    "totalLatency": 9961,
+    "frameSize": 99790
   },
   {
     "occ": 75.0,
@@ -261,7 +293,8 @@
     "allHits": 3024,
     "colBusy": 9889,
     "superBusy": 4856,
-    "totalLatency": 10329
+    "totalLatency": 10329,
+    "frameSize": 108118
   },
   {
     "occ": 80.0,
@@ -269,7 +302,8 @@
     "allHits": 3240,
     "colBusy": 10622,
     "superBusy": 5282,
-    "totalLatency": 10943
+    "totalLatency": 10943,
+    "frameSize": 115990
   },
   {
     "occ": 85.0,
@@ -277,7 +311,8 @@
     "allHits": 3432,
     "colBusy": 11207,
     "superBusy": 5640,
-    "totalLatency": 11724
+    "totalLatency": 11724,
+    "frameSize": 121368
   },
   {
     "occ": 90.0,
@@ -285,7 +320,8 @@
     "allHits": 3648,
     "colBusy": 11940,
     "superBusy": 5991,
-    "totalLatency": 12232
+    "totalLatency": 12232,
+    "frameSize": 135066
   },
   {
     "occ": 95.0,
@@ -293,7 +329,8 @@
     "allHits": 3840,
     "colBusy": 12442,
     "superBusy": 6295,
-    "totalLatency": 13015
+    "totalLatency": 13015,
+    "frameSize": 136090
   },
   {
     "occ": 100.0,
@@ -301,6 +338,7 @@
     "allHits": 4032,
     "colBusy": 13185,
     "superBusy": 6763,
-    "totalLatency": 13550
+    "totalLatency": 13550,
+    "frameSize": 150672
   }
 ]

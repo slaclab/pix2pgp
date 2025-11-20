@@ -188,6 +188,7 @@ if __name__ == "__main__":
     colBusy      = []
     superBusy    = []
     totalLatency = []
+    frameSize    = []
 
     for item in data:
         occArray.append(item.get("occ"))
@@ -196,6 +197,7 @@ if __name__ == "__main__":
         colBusy.append(item.get("colBusy"))
         superBusy.append(item.get("superBusy"))
         totalLatency.append(item.get("totalLatency"))
+        frameSize.append(item.get("frameSize"))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,6 +237,7 @@ if __name__ == "__main__":
     _hitPayloadArray   = []
     _totalPayloadArray = []
     _overallEffArray   = []
+    _reqBandwidthArray = []
 
     for i in range(_len):
         _numOfChunks = int(roundUp(colHitArray[i]/_pauseHitLimit))
@@ -249,9 +252,16 @@ if __name__ == "__main__":
 
         totalLatency[i] = round((totalLatency[i]*_pgpClkPeriod/1e3), 2)
 
+        # convert to bits
+        frameSize[i] = round(frameSize[i]*8, 2)
+
         _bottleneckBusy.append(max(superBusy[i], colBusy[i]))
         _maxRateKHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, False))
         _maxRateMHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, True))
+
+        _gbps = round(frameSize[i]*_maxRateKHzArray[i]/1e6, 3)
+
+        _reqBandwidthArray.append(_gbps)
 
     if _verbose:
         print(f"---------- Verbose Mode -----------------")
@@ -269,6 +279,10 @@ if __name__ == "__main__":
         print(f"Data Transfer Efficiency (%) = {_overallEffArray} ")
         print("")
         print(f"totalLatency (us)            = {totalLatency} ")
+        print("")
+        print(f"Frame Size (bits)            = {frameSize} ")
+        print("")
+        print(f"Required Bandwidth (Gb/s)    = {_reqBandwidthArray} ")
         print("")
         print(f"_maxRateKHzArray (kHz)       = {_maxRateKHzArray} ")
         print("")
@@ -373,6 +387,43 @@ if __name__ == "__main__":
     trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
     ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
 
+    for label in ax.get_yticklabels():
+        label.set_weight('bold')
+        label.set_color('darkred')
+        label.set_fontsize(10)
 
     plt.tight_layout() # Adjusts the plot to make sure everything fits
+    plt.show()
+
+    # ---------------------------------------
+
+    plt.figure(figsize=(8, 6))
+
+    #plt.yscale('log')
+
+    plt.bar(occArray, _reqBandwidthArray, color='red', label='Required Back-End Bandwidth', width=0.3)
+
+    xticks = np.concatenate([np.arange(0.5, 1.0, 0.5), np.arange(5.0, 101, 5)])
+    plt.xticks(xticks, rotation=45, fontsize=10, weight='bold', color='darkred')
+
+    plt.title(f"{_asicType} Occupancy vs Required Back-End Bandwidth - Pix2Pgp/PGP Clock Freq = {_pgpClkFreq} MHz", fontsize=14, weight='bold', color='navy')
+
+    plt.ylabel("Required Bandwidth (Gb/s)", fontsize=14, weight='bold', color='darkslategray')
+
+    # increase offset to move the totalHit labels UP
+    # _offset=-4.5
+    # for x, total_hits in zip(occArray, allHitArray):
+    #     if x in xticks:
+    #         plt.text(x-2, _offset, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+
+    plt.grid(True, which='both', linestyle='--', linewidth=1)
+    ax = plt.gca()
+    # trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
+    plt.xlabel("Occupancy (%)", fontsize=14, weight='bold', color='darkslategray')
+
+    for label in ax.get_yticklabels():
+        label.set_weight('bold')
+        label.set_color('darkred')
+        label.set_fontsize(10)
+
     plt.show()
