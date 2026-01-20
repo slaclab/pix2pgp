@@ -84,6 +84,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -95,6 +96,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -106,6 +108,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -117,6 +120,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -128,6 +132,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -139,6 +144,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.addRemoteVariables(
@@ -150,6 +156,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             stride      = 4,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         )
 
         self.add(pr.RemoteVariable(
@@ -159,6 +166,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             bitSize     = self.trgCntWidth,
             mode        = 'RO',
             disp        = '{:d}',
+            pollInterval= 1,
         ))
 
 
@@ -241,6 +249,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xB00,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -249,6 +258,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xB04,
             bitSize      = 1,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -257,6 +267,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC00,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -265,6 +276,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC04,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -273,6 +285,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC08,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -281,6 +294,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC0C,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -289,6 +303,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC10,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
         self.add(pr.RemoteVariable(
@@ -297,6 +312,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset       = 0xC14,
             bitSize      = self.numLanes,
             mode         = 'RO',
+            pollInterval = 1,
         ))
 
     def countReset(self):
