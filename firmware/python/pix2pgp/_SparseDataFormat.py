@@ -165,7 +165,7 @@ class SparkPixTDataFormat(SparseDataFormatBase):
                 click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
 
         else:
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<8} ToA_C = {3:<6} ToA_F = {4:<6} ToT = {5:<8}'
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<8} ToAc = {3:<6} ToAf = {4:<6} ToT = {5:<8}'
 
             for hit in asicHits:
                 click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['toaC'], hit['toaF'], hit['tot']))
@@ -195,27 +195,44 @@ class ThriglavDataFormat(SparseDataFormatBase):
             ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
 
         else:
-            _row  = []
-            _toa  = []
-            _tot  = []
+            _toac     = []
+            _toaf     = []
+            _overflow = []
+            _reserved = []
+            _tot      = []
+            _row      = []
 
-            _row.append ((_hit[0] >>  8) & 0xFF)
-            _toa.append ((_hit[0] >> 16) & 0x7FF)
-            _tot.append ((_hit[0] >>  0) & 0xFF)
+            _tot.append      ((_hit[0] >>  0) & 0xFF)
+            _row.append      ((_hit[0] >>  8) & 0xFF)
+            _toac.append     ((_hit[0] >> 16) & 0xFF)
+            _toaf.append     ((_hit[0] >> 24) & 0x7)
+            _overflow.append ((_hit[0] >> 27) & 0x1)
+            _reserved.append ((_hit[0] >> 28) & 0xF)
 
-            _row.append ((_hit[1] >>  8) & 0xFF)
-            _toa.append ((_hit[1] >> 16) & 0x7FF)
-            _tot.append ((_hit[1] >>  0) & 0xFF)
+            _tot.append      ((_hit[1] >>  0) & 0xFF)
+            _row.append      ((_hit[1] >>  8) & 0xFF)
+            _toac.append     ((_hit[1] >> 16) & 0xFF)
+            _toaf.append     ((_hit[1] >> 24) & 0x7)
+            _overflow.append ((_hit[1] >> 27) & 0x1)
+            _reserved.append ((_hit[1] >> 28) & 0xF)
 
-            ret.append({'col': colId,
-                        'row': _row[0],
-                        'toa': _toa[0],
-                        'tot': _tot[0]})
+            ret.append({'col'      : colId,
+                        'row'      : _row[0],
+                        'toac'     : _toac[0],
+                        'toaf'     : _toaf[0],
+                        'toa'      : _toac[0] << 3 | _toaf[0],
+                        'tot'      : _tot[0],
+                        'overflow' : _overflow[0],
+                        'reserved' : _reserved[0]})
 
-            ret.append({'col': colId,
-                        'row': _row[1],
-                        'toa': _toa[1],
-                        'tot': _tot[1]})
+            ret.append({'col'      : colId,
+                        'row'      : _row[1],
+                        'toac'     : _toac[1],
+                        'toaf'     : _toaf[1],
+                        'toa'      : _toac[1] << 3 | _toaf[1],
+                        'tot'      : _tot[1],
+                        'overflow' : _overflow[1],
+                        'reserved' : _reserved[1]})
 
         return ret
 
@@ -232,10 +249,13 @@ class ThriglavDataFormat(SparseDataFormatBase):
                 click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
 
         else:
-            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToA = {2:<8} ToT = {3:<8}'
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ToAc = {2:<4} ToAf = {3:<4} ToA = {4:<8} ToT = {5:<8} Overflow = {6:<1}'
 
             for hit in asicHits:
-                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['toa'], hit['tot']))
+                click.secho(_formatAsic.format(
+                    hit['col'],  hit['row'],  hit['toac'],
+                    hit['toaf'], hit['toa'],  hit['tot'], hit['overflow'])
+                )
 
 
 SparseDataFormatBase.setData()
