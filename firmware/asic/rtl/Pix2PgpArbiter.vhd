@@ -396,12 +396,13 @@ begin
       U_Gearbox : entity surf.AxiStreamGearbox
          generic map(
             -- General Configurations
-            TPD_G               => TPD_G,
-            RST_POLARITY_G      => RST_POLARITY_G,
-            RST_ASYNC_G         => RST_ASYNC_G,
+            TPD_G                => TPD_G,
+            RST_POLARITY_G       => RST_POLARITY_G,
+            RST_ASYNC_G          => RST_ASYNC_G,
+            FORCE_GEARBOX_IMPL_G => true,
             -- AXI Stream Port Configurations
-            SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
-            MASTER_AXI_CONFIG_G => ASIC_TX_AXI_CONFIG_C)
+            SLAVE_AXI_CONFIG_G   => ASIC_DATA_AXI_CONFIG_C,
+            MASTER_AXI_CONFIG_G  => ASIC_TX_AXI_CONFIG_C)
          port map(
             -- Clock and reset
             axisClk     => pgpClk,

@@ -76,6 +76,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal laneRxSlaves   : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                          := (others => AXI_STREAM_SLAVE_INIT_C);
 
+   signal packGboxMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal packGboxSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+
    signal trgBuffRd      : sl := '0';
    signal trgBuffSroEn   : sl := '0';
    signal trgBuffValid   : sl := '0';
@@ -169,9 +172,9 @@ begin
          reqPause       => reqPause,
          dumpData       => dumpData);
 
-   --------------
-   -- Lane Merger
-   --------------
+   ----------------------------------
+   -- Lane Merger and packing Gearbox
+   ----------------------------------
    U_LaneMerger: entity pix2pgp.Pix2PgpLaneMerger
       generic map(
          TPD_G          => TPD_G,
@@ -195,8 +198,24 @@ begin
          laneRxMasters => laneRxMasters,
          laneRxSlaves  => laneRxSlaves,
          -- AXI-Stream Output Interface (on pgpRxClk domain)
-         asicRxMaster  => asicRxMaster,
-         asicRxSlave   => asicRxSlave);
+         asicRxMaster  => packGboxMaster,
+         asicRxSlave   => packGboxSlave);
+
+   U_tKeepPacking : entity surf.AxiStreamGearbox
+      generic map (
+         TPD_G                => TPD_G,
+         RST_ASYNC_G          => RST_ASYNC_G,
+         RST_POLARITY_G       => RST_POLARITY_G,
+         FORCE_GEARBOX_IMPL_G => true,
+         SLAVE_AXI_CONFIG_G   => PIX2PGP_FPGA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C)
+      port map (
+         axisClk     => pgpRxClk,
+         axisRst     => glblRst,
+         sAxisMaster => packGboxMaster,
+         sAxisSlave  => packGboxSlave,
+         mAxisMaster => asicRxMaster,
+         mAxisSlave  => asicRxSlave);
 
    ------------------
    -- Trigger Manager
