@@ -99,6 +99,7 @@ prepareSurf:
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd)                      $(SURF_PKG_DIR)/Pgp4Pkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/CrcPkg.vhd)                                      $(SURF_PKG_DIR)/CrcPkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/ssi/rtl/SsiPkg.vhd)                                 $(SURF_PKG_DIR)/SsiPkg.vhd
+	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/rssi/v1/rtl/RssiPkg.vhd)                            $(SURF_PKG_DIR)/RssiPkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamPkg.vhd)                          $(SURF_PKG_DIR)/AxiStreamPkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd)         $(SURF_PKG_DIR)/AxiStreamPacketizer2Pkg.vhd
 	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/ArbiterPkg.vhd)                              $(SURF_PKG_DIR)/ArbiterPkg.vhd

@@ -14,6 +14,7 @@ use surf.SsiPkg.all;
 use surf.Pgp4Pkg.all;
 use surf.AxiStreamPacketizer2Pkg.all;
 use surf.AxiLitePkg.all;
+use surf.RssiPkg.all;
 
 library pix2pgp;
 use pix2pgp.Pix2PgpAsicPkg.all;
@@ -56,6 +57,7 @@ architecture test of Pix2PgpThriglavTopTb is
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
    --constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
+   --constant AXIS_CONFIG_C : AxiStreamConfigType := RSSI_AXIS_CONFIG_C;
    constant AXIS_CONFIG_C : AxiStreamConfigType := ssiAxiStreamConfig(16);
 
    signal sparseClk : sl := '0';
