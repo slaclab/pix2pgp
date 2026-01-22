@@ -50,8 +50,8 @@ entity Pix2PgpLaneMerger is
       laneRxMasters : in  AxiStreamMasterArray;
       laneRxSlaves  : out AxiStreamSlaveArray;
       -- AXI-Stream Output Interface (on pgpRxClk domain)
-      asicRxMaster  : out AxiStreamMasterType;
-      asicRxSlave   : in  AxiStreamSlaveType);
+      obAxiMaster  : out AxiStreamMasterType;
+      obAxiSlave   : in  AxiStreamSlaveType);
 end Pix2PgpLaneMerger;
 
 architecture rtl of Pix2PgpLaneMerger is
@@ -78,7 +78,7 @@ architecture rtl of Pix2PgpLaneMerger is
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
       laneDumpAck  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
-      asicRxMaster : AxiStreamMasterType;
+      obAxiMaster  : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- FSM
       state        : stateType;
@@ -95,7 +95,7 @@ architecture rtl of Pix2PgpLaneMerger is
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
       laneDumpAck  => (others => '0'),
       -- AXI-Stream
-      asicRxMaster => AXI_STREAM_MASTER_INIT_C,
+      obAxiMaster  => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
       -- FSM
       state        => IDLE_S
@@ -109,7 +109,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
-                   reqPause, dumpData, laneRxMasters, asicRxSlave, config) is
+                   reqPause, dumpData, laneRxMasters, obAxiSlave, config) is
       variable v : RegType;
 
       -- internal variables
@@ -161,12 +161,12 @@ begin
       v.busy := '1';
 
       -- flow control check
-      if asicRxSlave.tReady = '1' then
-         v.asicRxMaster.tValid := '0';
-         v.asicRxMaster.tLast  := '0';
-         v.asicRxMaster.tUser  := (others => '0');
-         v.asicRxMaster.tData  := (others => '0');
-         v.asicRxMaster.tKeep  := (others => '0');
+      if obAxiSlave.tReady = '1' then
+         v.obAxiMaster.tValid := '0';
+         v.obAxiMaster.tLast  := '0';
+         v.obAxiMaster.tUser  := (others => '0');
+         v.obAxiMaster.tData  := (others => '0');
+         v.obAxiMaster.tKeep  := (others => '0');
       end if;
 
       -- lane loop
@@ -235,12 +235,12 @@ begin
          ----------------------------------------------------------------------
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
-            if v.asicRxMaster.tValid = '0' then
-               v.asicRxMaster.tValid := '1';
+            if v.obAxiMaster.tValid = '0' then
+               v.obAxiMaster.tValid := '1';
 
-               v.asicRxMaster.tKeep  := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.asicRxMaster, '1');
-               v.asicRxMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
+               v.obAxiMaster.tKeep := tKeepSet(FPGA_PREAMBLE_LEN_C);
+               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxiMaster, '1');
+               v.obAxiMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
 
                v.state := TX_HEADER_S;
 
@@ -253,12 +253,12 @@ begin
          ----------------------------------------------------------------------
          -- transmit event header infromation
          when TX_HEADER_S =>
-            if v.asicRxMaster.tValid = '0' then
+            if v.obAxiMaster.tValid = '0' then
 
-               v.asicRxMaster.tValid := '1';
+               v.obAxiMaster.tValid := '1';
 
-               v.asicRxMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
-               v.asicRxMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
+               v.obAxiMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
+               v.obAxiMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
 
                v.state := TX_FRAME_SIZE_S;
             end if;
@@ -266,14 +266,14 @@ begin
          ----------------------------------------------------------------------
          -- transmit all (valid) lane frame size data
          when TX_FRAME_SIZE_S =>
-            if v.asicRxMaster.tValid = '0' then
+            if v.obAxiMaster.tValid = '0' then
 
-               v.asicRxMaster.tValid := '1';
-               v.asicRxMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
-               v.asicRxMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
+               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
+               v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
 
                if laneValid(laneIdx) = '0' then
-                  v.asicRxMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
+                  v.obAxiMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
                end if;
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
@@ -288,14 +288,14 @@ begin
          ----------------------------------------------------------------------
          -- transmit all (valid) lane active column count data
          when TX_COLCNT_S =>
-            if v.asicRxMaster.tValid = '0' then
+            if v.obAxiMaster.tValid = '0' then
 
-               v.asicRxMaster.tValid := '1';
-               v.asicRxMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
-               v.asicRxMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := activeColCnt;
+               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
+               v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := activeColCnt;
 
                if laneValid(laneIdx) = '0' then
-                  v.asicRxMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
+                  v.obAxiMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
                end if;
 
                if laneIdx = NUM_OF_SERIALIZERS_C-1 then
@@ -319,15 +319,15 @@ begin
                   v.laneSel := r.laneSel + 1;
                end if;
 
-            elsif v.asicRxMaster.tValid = '0' then
-               v.asicRxMaster.tKeep := laneAxiStream.tKeep;
-               v.asicRxMaster.tData := laneAxiStream.tData;
+            elsif v.obAxiMaster.tValid = '0' then
+               v.obAxiMaster.tKeep := laneAxiStream.tKeep;
+               v.obAxiMaster.tData := laneAxiStream.tData;
 
-               v.asicRxMaster.tValid          := laneRxMasters(laneIdx).tValid;
-               v.laneRxSlaves(laneIdx).tReady := asicRxSlave.tReady;
+               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid;
+               v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
 
                if laneRxMasters(laneIdx).tLast = '1' and
-                  asicRxSlave.tReady           = '1' then
+                  obAxiSlave.tReady            = '1' then
 
                   if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                      v.state := DONE_S;
@@ -360,12 +360,12 @@ begin
          when TX_TRAILER_S =>
             v.inPause := '0';
 
-            if v.asicRxMaster.tValid = '0' then
-               v.asicRxMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
-               v.asicRxMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
+            if v.obAxiMaster.tValid = '0' then
+               v.obAxiMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
+               v.obAxiMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
                   resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-               v.asicRxMaster.tValid := '1';
-               v.asicRxMaster.tLast  := '1';
+               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tLast  := '1';
 
                v.state := IDLE_S;
             end if;
@@ -406,7 +406,7 @@ begin
 
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
-      asicRxMaster <= r.asicRxMaster;
+      obAxiMaster  <= r.obAxiMaster;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
