@@ -13,9 +13,6 @@ if { [info exists ::env(OVERRIDE_SUBMODULE_LOCKS)] != 1 || $::env(OVERRIDE_SUBMO
 }
 
 # Load Source Code
-loadSource -lib pix2pgp -path "$::DIR_PATH/../asic/rtl/pkg/Pix2PgpAsicPkg.vhd"
-loadSource -lib pix2pgp -path "$::DIR_PATH/../asic/rtl/pkg/Pix2PgpPkg.vhd"
-loadSource -lib pix2pgp -path "$::DIR_PATH/../asic/rtl/Pix2PgpWatchdog.vhd"
 loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl"
 loadSource -lib pix2pgp -dir "$::DIR_PATH/tb"
 
