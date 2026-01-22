@@ -8,8 +8,11 @@ GenBuildString $::env(SYN_DIR)
 loadRuckusTcl "$::env(TOP_DIR)/submodules/surf"
 
 # Load the work library
-loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl"
-loadSource -lib pix2pgp -dir "$::DIR_PATH/../vault/rtl"
+loadSource -lib pix2pgp -dir           "$::DIR_PATH/rtl"
+loadSource -lib pix2pgp -sim_only -dir "$::DIR_PATH/tb"
+
+# Load the shared source files
+loadRuckusTcl "$::DIR_PATH/../shared"
 
 # Analyze source code loaded into ruckus for Cadence Genus
 AnalyzeSrcFileLists

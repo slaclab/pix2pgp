@@ -4,12 +4,10 @@ source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 # Load submodules and shared source code
 loadRuckusTcl $::env(TOP_DIR)/submodules/surf
 
-# SparkPix-S specific
-loadSource -lib pix2pgp -dir           "$::DIR_PATH/../../vault/SparkPixS/rtl"
-loadSource -lib pix2pgp -dir           "$::DIR_PATH/../../vault/shared/rtl"
-loadSource -lib pix2pgp -sim_only -dir "$::DIR_PATH/../../vault/SparkPixS/tb"
+# SparkPix-S Specific
+loadRuckusTcl "$::DIR_PATH/../../vault/SparkPixS"
 
-# Pix2Pgp Shared
+# Pix2Pgp Common
 loadRuckusTcl $::env(TOP_DIR)/asic
 loadRuckusTcl $::env(TOP_DIR)/fpga
 
