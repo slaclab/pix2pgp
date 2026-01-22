@@ -15,4 +15,6 @@ loadSource -lib pix2pgp -sim_only -dir "$::DIR_PATH/tb"
 loadRuckusTcl "$::DIR_PATH/../shared"
 
 # Analyze source code loaded into ruckus for Cadence Genus
-AnalyzeSrcFileLists
+# Comment-out here; add in ASIC's synthesis flow
+
+# AnalyzeSrcFileLists
