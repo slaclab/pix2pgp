@@ -3,8 +3,6 @@ source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 
 # Load submodules and shared source code
 loadRuckusTcl $::env(TOP_DIR)/submodules/surf
-loadRuckusTcl $::env(TOP_DIR)/asic
-loadRuckusTcl $::env(TOP_DIR)/fpga
 
 # the paths below contain the proprietary Synopsys stuff that are instantiated by pix2pgp
 # It is assumed that the user has access to the said dirs when invoking this .tcl script
@@ -30,8 +28,15 @@ if { [file exists $file_test] == 1} {
   loadSource -sim_only -lib dw06  -path "/sdf/group/faders/tools/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_fifo_s2_sf_sim.vhd"
   loadSource -sim_only -lib dw06  -path "/sdf/group/faders/tools/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_asymfifo_s2_sf_sim.vhd"
 } else {
-  puts "Synopsys files do NOT exist!"
+  puts "Synopsys files do NOT exist! Setting the SURF_FIFO variable..."
+  set ::env(SURF_FIFO) "1"
 }
+
+# SparkPix-S Specific
+loadRuckusTcl "$::DIR_PATH/../../../gateware/asics/Thriglav"
+
+# Pix2Pgp FPGA sources
+loadRuckusTcl $::env(TOP_DIR)/fpga
 
 # Load target's source code and constraints
 loadSource      -dir  "$::DIR_PATH/hdl"
