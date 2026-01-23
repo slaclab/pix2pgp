@@ -13,13 +13,5 @@ if { [info exists ::env(OVERRIDE_SUBMODULE_LOCKS)] != 1 || $::env(OVERRIDE_SUBMO
 }
 
 # Load Source Code
-loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl"
-
-# Load the appropriate FIFOs
-if { [info exists ::env(SYNOPSYS_FIFO)] != 0 && $::env(SYNOPSYS_FIFO) == 1 } {
-   loadSource -lib pix2pgp -sim_only -dir "$::DIR_PATH/../asic/rtl/synopsysFifo"
-   puts "\[INFO]: Loading Synopsys FIFOs for this project; for behavioral simulation only!"
-} else {
-   loadSource -lib pix2pgp -dir "$::DIR_PATH/../ghdl/vivadoFifo"
-   puts "\[INFO]: Loading Vivado/surf FIFOs for this project; for behavioral simulation and in-silicon implementation!"
-}
+loadSource           -lib pix2pgp -dir "$::DIR_PATH/rtl"
+loadSource -sim_only -lib pix2pgp -dir "$::DIR_PATH/tb"
