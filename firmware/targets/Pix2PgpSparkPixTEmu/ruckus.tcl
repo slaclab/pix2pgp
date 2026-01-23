@@ -33,7 +33,7 @@ if { [file exists $file_test] == 1} {
 }
 
 # SparkPix-S Specific
-loadRuckusTcl "$::DIR_PATH/../../../gateware/asics/SparkPixT"
+loadRuckusTcl $::DIR_PATH/../../../gateware/asics/SparkPixT
 
 # Pix2Pgp FPGA sources
 loadRuckusTcl $::env(TOP_DIR)/fpga
