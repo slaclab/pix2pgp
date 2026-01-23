@@ -31,7 +31,7 @@ The repository is consisted of three main directories:
 
 ## How To Import to Your Project
 1. Add this repo as a submodule to the base project ($ git clone --recurse-submodules https://github.com/slaclab/pix2pgp.git)
-2. To import the ASIC RTL gateware, one should invoke the `ruckus.tcl` script located within the associated directory, via a TCL script of their own. For example, for `SparkPixS`, this is what the script should look like:
+2. To import the ASIC RTL gateware under Cadence Genus, one should invoke the `ruckus.tcl` script located within the associated directory, via a TCL script of their own. For example, for `SparkPixS`, this is what the script should look like:
 ```
 # Load RUCKUS environment and library
 source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
@@ -44,6 +44,24 @@ loadRuckusTcl $::env(TOP_DIR)/submodules/pix2pgp/gateware/asics/SparkPixS
 
 # Analyze source code loaded into ruckus for Cadence Genus
 AnalyzeSrcFileLists
+```
+3. To import the ASIC RTL gateware under the Synopsys tools, the following snippet should be used instead:
+
+```
+# Load RUCKUS environment and library
+source $::env(RUCKUS_QUIET_FLAG) $::env(RUCKUS_PROC_TCL)
+
+# Load the surf library
+loadRuckusTcl "$::env(TOP_DIR)/submodules/surf"
+AnalyzeSrcFileLists -vhdlLib "surf"
+
+# Load ruckus library (ruckus.BuildInfoPkg.vhd only)
+GenBuildString $::env(SYN_DIR)
+AnalyzeSrcFileLists -vhdlLib "ruckus"
+
+# Load SparkPix-S source code
+loadRuckusTcl $::env(TOP_DIR)/submodules/pix2pgp/gateware/asics/SparkPixS
+AnalyzeSrcFileLists -vhdlLib "pix2pgp" -vhdlTop $::env(PROJECT)
 ```
 
 3. An extra step should be added if one wants to perform a behavioral simulation of the design. The simulation should include the FPGA receiver files, which can be done by adding this line to their TCL script: `loadRuckusTcl $::env(TOP_DIR)/submodules/pix2pgp/firmware/fpga`. Note that the said line should be added after the ones of the above snippet.
