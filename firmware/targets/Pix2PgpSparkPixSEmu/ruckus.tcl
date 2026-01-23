@@ -29,8 +29,7 @@ if { [file exists $file_test] == 1} {
   loadSource -sim_only -lib dw06  -path "/sdf/group/faders/tools/synopsys/syn/P-2019.03-SP3/dw/dw06/src/DW_asymfifo_s2_sf_sim.vhd"
 } else {
   puts "Synopsys files do NOT exist! Setting the SURF_FIFO variable..."
-  setenv SURF_FIFO "1"
-  puts "The value of SURF_FIFO is now: $env(SURF_FIFO)"
+  set ::env(SURF_FIFO) "1"
 }
 
 # SparkPix-S Specific

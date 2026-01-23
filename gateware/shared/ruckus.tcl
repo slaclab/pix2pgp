@@ -19,11 +19,11 @@ loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl"
 # Default is Synopsys DesignWare FIFOs; these should be used when building the ASIC RTL
 # this is overriden in case one wants to emulate the ASIC in an FPGA in-silicon implementation;
 # or if the DesignWare FIFOs are not available for simulation at the host
-if { [info exists ::env(SURF_FIFO)] != 0 && $::env(SURF_FIFO) == 1 } {   
+if { [info exists ::env(SURF_FIFO)] != 0 && $::env(SURF_FIFO) == 1 } {
    puts "\[INFO]: Loading surf generic FIFOs for this project."
-   puts "\[WARNING]: **********************************************"
-   puts "\[WARNING]: Do *NOT* use for ASIC in-silicon RTL building!"
-   puts "\[WARNING]: **********************************************"
+   puts "\[WARNING]: ************************************"
+   puts "\[WARNING]: Do *NOT* use for ASIC RTL building!"
+   puts "\[WARNING]: ************************************"
    loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl/surfFifo"
 } else {
 
