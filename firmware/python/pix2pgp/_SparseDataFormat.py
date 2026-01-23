@@ -220,7 +220,7 @@ class ThriglavDataFormat(SparseDataFormatBase):
                         'row'      : _row[0],
                         'toac'     : _toac[0],
                         'toaf'     : _toaf[0],
-                        'toa'      : _toac[0] << 3 | _toaf[0],
+                        'toa'      : _toac[0] << 3 | (7-_toaf[0]),
                         'tot'      : _tot[0],
                         'overflow' : _overflow[0],
                         'reserved' : _reserved[0]})
@@ -229,7 +229,7 @@ class ThriglavDataFormat(SparseDataFormatBase):
                         'row'      : _row[1],
                         'toac'     : _toac[1],
                         'toaf'     : _toaf[1],
-                        'toa'      : _toac[1] << 3 | _toaf[1],
+                        'toa'      : _toac[1] << 3 | (7-_toaf[1]),
                         'tot'      : _tot[1],
                         'overflow' : _overflow[1],
                         'reserved' : _reserved[1]})
