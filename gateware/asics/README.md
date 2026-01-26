@@ -5,58 +5,39 @@ Use a previous ASIC as a template. For this example, `SparkPix-T` will be used. 
 
 There are two approaches in terms of generating event closure (i.e. `eof` assertion) for the sparse ASICs that Pix2Pgp typically supports:
 * Self-Closure. If the user wishes to generate a Pix2Pgp variant for an ASIC that supports Self-Closure, they should pick `SparkPixS` as a template
-* External-Trigger-Closure (i.e. `ERO` signal support). If the user wishes to generate a Pix2Pgp variant for an ASIC that supports External-Trigger-Closure, they should pick `SparkPixT` as a template
+* External-Trigger-Closure (i.e. `ERO` or End-Of-Readout signal support). If the user wishes to generate a Pix2Pgp variant for an ASIC that supports External-Trigger-Closure, they should pick `SparkPixT` as a template
 
 In this example, it is assumed that `NewAsic` uses an `ERO` trigger to signal event closure. This is the reason why `SparkPixT` has been picked as its template.
 
 ## How-To Add a New ASIC in the RTL Codebase
 
-### Create a New Directory Under `firmware/vault`
+### Create a New Directory Under `gateware/asics`
 
-Go-To `firmware/vault` and create a new directory for the `NewAsic`: do `$ cp -r sparkPixT newAsic`
+Navigate to `gateware/asics` and create a new directory for the `NewAsic`: do `$ cp -r SparkPixT NewAsic`
 
-1. Under `newAsic/rtl`, do:
+1. Under `NewAsic/rtl`, do:
     * `$ mv Pix2PgpSparkPixTTop.vhd Pix2PgpNewAsicTop.vhd`
-    * `$ mv SparkPixTPkg.vhd NewAsicPkg.vhd`
-    1. Edit `NewAsicPkg.vhd` accordingly. Edit the parameters in the `*Pkg.vhd` file. Usually, what should be edited is the following: `NUM_OF_COL_MANAGERS_C` (how many columns does each Pix2Pgp instance serve?); `NUM_OF_SERIALIZERS_C` (how many serializers/Pix2Pgp instances/lanes are on the ASIC?); `ASIC_DATABUS_DWIDTH_C` (what is the data bus width that is driven to Pix2Pgp?). Finally, depending on the internal data width (double the `ASIC_DATABUS_DWIDTH_C`), the user has to edit the Pix2Pgp data frame header bitfield structure accordingly.
-    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. For example, one needs to change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the Analog part of the ASIC (i.e. the value of `ASIC_DATABUS_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in; if the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition.
-2. Under `newAsic/tb`, do:
+    1. Edit `Pix2PgpAsicPkg.vhd` accordingly. Usually, what should be edited is the following: 
+        1. `NUM_OF_COL_MANAGERS_C` (how many columns does each Pix2Pgp instance serve?)
+        2. `NUM_OF_SERIALIZERS_C` (how many serializers/Pix2Pgp instances/lanes are on the ASIC?)
+        3. `ASIC_DATABUS_DWIDTH_C` (what is the data bus width that is driven to Pix2Pgp?)
+        4. Finally, depending on the internal data width (double the `ASIC_DATABUS_DWIDTH_C`), the user has to edit the Pix2Pgp data frame header bitfield structure accordingly.
+    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. For example, one needs to change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the Analog part of the ASIC (i.e. the value of `ASIC_DATABUS_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in. If the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition.
+2. Under `NewAsic/tb`, do:
     * `$ mv DummySparkPixTPixel.vhd DummyNewAsicPixel.vhd`
     * `$ mv Pix2PgpSparkPixTFpgaRxTop.vhd Pix2PgpNewAsicFpgaRxTop.vhd`
     * `$ mv Pix2PgpSparkPixTTopTb.vhd Pix2PgpNewAsicTopTb.vhd`
-    1. Edit `DummyNewAsicPixel.vhd` accordingly. This is a behavioral model of the pixel of the new ASIC and should be mimicking the behavior of the ASIC, mostly in terms of the delay between the `wrEn` signals when writing multiple data words into the Pix2Pgp core. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-level VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into Pix2Pgp.
+    1. Edit `DummyNewAsicPixel.vhd` accordingly. This is a behavioral model of the pixel of the new ASIC and should be mimicking the behavior of the ASIC, e.g. in terms of the delay between the `wrEn` signals when writing multiple data words into the Pix2Pgp core and the delay between the `SRO` assertion and the first (if any) `wrEn` strobe. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-level VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into Pix2Pgp.
     2. Edit `Pix2PgpNewAsicFpgaRxTop.vhd` accordingly. This entity is a wrapper for the FPGA-related receiver logic .vhd files. In principle, one needs to only expand/collapse the number of input ports for the data, and their associated allocation within the architecture, depending on the number of lanes the ASIC has (i.e. `NUM_OF_SERIALIZERS_C`). This file is to also be used within SystemVerilog verification context, hence the use of simple ports for the data buses.
     3. Edit `Pix2PgpNewAsicTopTb.vhd` accordingly. Change the names of the VHDL entities and widths of the buses depending on the amount of columns each Pix2Pgp instance serves. Note that the testbench is instantiating all Lanes of the ASIC (governed by the `NUM_OF_SERIALIZERS_C` parameter) and routing all of them into `Pix2PgpNewAsicFpgaRxTop` which wraps around the ASIC RX logic instantiated in the FPGA of the in-silicon system.
         1. The testbenches usually include a VHDL process that selects specific columns/pixels and assigns a `hitLen` value on a per-trigger/event basis (e.g., the line `hitLen(0)(3) <= toSlv(3, hitLen(0)(0)'length);` assigns three hits for a pixel in column 3 of lane 0). One can create random hit-lengths by using the `software/scripts/hitsToVhd.py` script (e.g. `$ python hitsToVhd.py --numOfLanes=4 --numOfCols=40 --minRange=0 --maxRange=4 --laneEnable=1,1,1,1`) will generate random stimuli for an ASIC with 40 columns-per-Pix2Pgp instance, and 2-lanes-per-ASIC.
 
-### Create a New Entry In the `firmware/Makefile`
+### Test the VHDL syntax via GHDL
 
-There should be a commented-out snippet at the top of the `Makefile`:
-
-```Makefile
-# else ifeq ($(ASIC), Template)
-#     ASIC_SOURCED  := 1
-#     ASIC_LINK_DIR := $(ROOT_DIR)/vault/Template
-#     ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/TemplatePkg.vhd
-#     ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpTemplateTop.vhd
-```
-
-Keep that snippet, and copy and paste a new entry above it. For `NewAsic`, it should look like:
-
-```Makefile
-else ifeq ($(ASIC), NewAsic)
-    ASIC_SOURCED  := 1
-    ASIC_LINK_DIR := $(ROOT_DIR)/vault/newAsic
-    ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/NewAsicPkg.vhd
-    ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpNewAsicTop.vhd
-```
-
-### Test Makefile and VHDL syntax via GHDL
-
-While under the `firmware` directory, run:
+While under the `firmware/ghdl` directory, run:
 
 ```bash
-$ clear && make clean && make ASIC=NewAsic && cd ghdl/ && bash ghdlRun.sh Pix2PgpNewAsicTopTb && cd ..
+$ clear && make clean && make analyze ASIC=NewAsic
 ```
 
 If that command exits without any errors, you can proceed with the next step.
@@ -66,18 +47,18 @@ If that command exits without any errors, you can proceed with the next step.
 Go-To `firmware/targets` and crate a new directory for the `NewAsic`: do `$ cp -r Pix2PgpSparkPixTEmu Pix2PgpNewAsicEmu`
 
 1. Go-To `firmware/targets/Pix2PgpNewAsicEmu/hdl` and do: `$ mv Pix2PgpEmuSparkPixT.vhd Pix2PgpEmuNewAsic.vhd` and `$ mv Pix2PgpEmuSparkPixT.xdc Pix2PgpEmuNewAsic.xdc`. Edit the VHDL entity names within `Pix2PgpEmuNewAsic.vhd` accordingly. Note that these are just dummy files that are not really used in the testbench.
-2. Go-To `firmware/targets/Pix2PgpNewAsicEmu/tb` and do: `$ mv Pix2PgpSparkPixTEmuTb.vhd Pix2PgpNewAsicEmuTb.vhd`. Edit the VHDL entity names within `Pix2PgpNewAsicEmuTb.vhd` accordingly. Note that e.g. `U_Uut : entity pix2pgp.Pix2PgpSparkPixTTopTb` should be changed into `U_Uut : entity pix2pgp.Pix2PgpNewAsicTopTb` (`Pix2PgpNewAsicTopTb` should be the same as the top-level testbench entity name of file `firmware/vault/newAsic/tb/Pix2PgpNewAsicTopTb.vhd` that was created in one of the previous steps).
-3. Edit `firmware/targets/Pix2PgpNewAsicEmu/ruckus.tcl`: Change `set_property top {Pix2PgpSparkPixTEmuTb} [get_filesets sim_1]` into `set_property top {Pix2PgpNewAsicEmuTb} [get_filesets sim_1]`. Note that the name `Pix2PgpNewAsicEmuTb` should be the same as the VHDL entity name in `firmware/targets/Pix2PgpNewAsicEmu/tb/Pix2PgpNewAsicEmuTb.vhd`
+2. Go-To `firmware/targets/Pix2PgpNewAsicEmu/tb` and do: `$ mv Pix2PgpSparkPixTEmuTb.vhd Pix2PgpNewAsicEmuTb.vhd`. Edit the VHDL entity names within `Pix2PgpNewAsicEmuTb.vhd` accordingly. Note that e.g. `U_Uut : entity pix2pgp.Pix2PgpSparkPixTTopTb` should be changed into `U_Uut : entity pix2pgp.Pix2PgpNewAsicTopTb` (`Pix2PgpNewAsicTopTb` should be the same as the top-level testbench entity name of file `gateware/asics/newAsic/tb/Pix2PgpNewAsicTopTb.vhd` that was created in one of the previous steps).
+3. Edit `firmware/targets/Pix2PgpNewAsicEmu/ruckus.tcl`: Change `loadRuckusTcl $::DIR_PATH/../../../gateware/asics/SparkPixT` to `loadRuckusTcl $::DIR_PATH/../../../gateware/asics/NewAsic`. Change `set_property top {Pix2PgpSparkPixTEmuTb} [get_filesets sim_1]` into `set_property top {Pix2PgpNewAsicEmuTb} [get_filesets sim_1]`. Note that the name `Pix2PgpNewAsicEmuTb` should be the same as the VHDL entity name in `firmware/targets/Pix2PgpNewAsicEmu/tb/Pix2PgpNewAsicEmuTb.vhd`
 
 ### Run Testbench using VCS
 
 Follow the instructions on how to run VCS from the `README.md` file at the top-level of this repository (Just change the `Pix2PgpSparkPixSEmu` reference in that section with `Pix2PgpNewAsicEmu`).
 
-If the VCS simulation runs without any errors, one can go ahead and decode the data dump using `software/scripts/axiDataParser.py`; however, in order to do this, one has to add the new ASIC definition into the Pix2Pgp Python data decoding classes. A How-To on this is included below.
+If the VCS simulation runs without any errors, one can go ahead and decode the data dump using `software/scripts/axiDataParser.py`; however, in order to do this, one has to add the new ASIC definition into the Pix2Pgp Python data decoding classes located under `firmware/python/pix2pgp/`. A How-To on this is included below.
 
 ## How-To Add a New ASIC in the Python Data Decoding Codebase
 
-### _AsicParameters.py
+### firmware/python/pix2pgp/_AsicParameters.py
 
 First, add a new entry in the `asicTypeDict` and `asicParams`. The number must correspond to the value of the `ASIC_TYPE_C` constant that was chosen in `NewAsicPkg.vhd`. If, e.g. that number was `3`:
 
@@ -129,7 +110,7 @@ All parameters above correspond to constants found in the `*Pkg.vhd` file. `numO
 
 Note that the class name (`NewAsicParameters`) has the same name as the entry in the `asicParams` dictionary.
 
-### _Pix2PgpHeaderFormat.py
+### firmware/python/pix2pgp/_Pix2PgpHeaderFormat.py
 
 Add a new entry in the `self.asicHeader` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one set in the data header bitfield section of the `*Pkg.vhd` file. Example:
 
@@ -168,7 +149,7 @@ class NewAsicHeaderFormat(Pix2PgpHeaderFormatBase):
 Note that the upper bit of the header corresponds to the `overOcc` flag, and its bit position (i.e. `79`) is associated with the overall length of the data word ('wordLen=10' in `_AsicParameters.py`; which is `10x8=80` bits). The `colHitmask` has a value of `0xFFFFFFFFFF`, which corresponds to the amount of columns (i.e. `numOfCols=40` in `_AsicParameters.py`) served by each Pix2Pgp instance of `NewAsic`.
 
 
-### _Pix2PgpColMetadataFormat.py
+### firmware/python/pix2pgp/_Pix2PgpColMetadataFormat.py
 
 Add a new entry in the `self.asicMetadata` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one set in the data column metadata bitfield section of the `*Pkg.vhd` file. Example:
 
@@ -201,7 +182,7 @@ class NewAsicColMetadataFormat(Pix2PgpColMetadataFormatBase):
         return colMeta_dict
 ```
 
-### _Pix2PgpSparseDataFormat.py
+### firmware/python/pix2pgp/_Pix2PgpSparseDataFormat.py
 
 Add a new entry in the `self.asicData` dictionary. Name the class of `NewAsic` accordingly, and set the bit-mapping to be the same as the one dictated by the analog/digital sparse logic of the ASIC. Example:
 
@@ -278,14 +259,14 @@ class NewAsicDataFormat(SparseDataFormatBase):
 ```
 
 ## Miscellaneous
-1. Update the repo's `README.md` with the new ASIC entry
+1. Update the repo's top-level `README.md` with the new ASIC entry
 2. Perform benchmark measurements for the new ASIC (see `software/scripts/benchmarking/README.md` for more information)
 3. Update Pix2Pgp Confluence page accordingly
 
 ## Limitations
 The width of the data coming into Pix2Pgp from the data source dictates how wide the data frame will be. Pix2Pgp *doubles* the size of that bus. This means that each data bus that is connected to Pix2Pgp is half the width of the data word that Pix2Pgp transmits to the FPGA Receiver.
 
-This can be observed in the `*Pkg.vhd` files found under the various ASIC variants of `firmware/vault`:
+This can be observed in the `*Pkg.vhd` files found under the various ASIC variants under `gateware/asics`:
 
 ```VHDL
    -- data bus width is twice the pixel data width to maximize bandwidth
