@@ -1,173 +1,243 @@
-ROOT_DIR := .
+# Makefile for GHDL wrapper script
+# Example usage: $ make clean && make ASIC=SparkPixS 10
+# To run the SparkPixS testbench for 10us
 
-ASIC_SOURCED := 0
+# If using this Makefile as a template for a manual importing script for ASIC Synthesis flow, import:
+# * $(SURF_PKG)
+# * $(SURF_ASIC_RTL)
+# * $(ASIC_PKG)
+# * $(ASIC_RTL)
+# * $(ASIC_TOP)
 
-# can be overriden externally to use a different surf source
-SURF_SOURCE_DIR := $(ROOT_DIR)/submodules/surf
+# If using this Makefile as a template for a manual importing script for ASIC+FPGA Behavioral Simulation flow, import:
+# * $(SURF_PKG)
+# * $(SURF_ASIC_RTL)
+# * $(SURF_FPGA_RTL)
+# * $(ASIC_PKG)
+# * $(ASIC_RTL)
+# * $(ASIC_TOP)
+# * $(ASIC_TB)
+# * $(FPGA_RTL)
+# * $(FPGA_TB)
 
-##################################################
-ifeq ($(ASIC), SparkPixS)
-    ASIC_SOURCED  := 1
-    ASIC_LINK_DIR := $(ROOT_DIR)/vault/sparkPixS
-    ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/SparkPixSPkg.vhd
-    ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpSparkPixSTop.vhd
-else ifeq ($(ASIC), SparkPixT)
-    ASIC_SOURCED  := 1
-    ASIC_LINK_DIR := $(ROOT_DIR)/vault/sparkPixT
-    ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/SparkPixTPkg.vhd
-    ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpSparkPixTTop.vhd
-else ifeq ($(ASIC), Thriglav)
-    ASIC_SOURCED  := 1
-    ASIC_LINK_DIR := $(ROOT_DIR)/vault/thriglav
-    ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/ThriglavPkg.vhd
-    ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpThriglavTop.vhd
-# else ifeq ($(ASIC), Template)
-#     ASIC_SOURCED  := 1
-#     ASIC_LINK_DIR := $(ROOT_DIR)/vault/Template
-#     ASIC_LINK_PKG := $(ASIC_LINK_DIR)/rtl/TemplatePkg.vhd
-#     ASIC_LINK_TOP := $(ASIC_LINK_DIR)/rtl/Pix2PgpTemplateTop.vhd
-endif
-##################################################
+# In this flow, a GHDL-compatible FIFO RTL wrapper source is used, under gateware/shared/rtl/surfFifo;
+# *Never* include this file if manually importing surf/Pix2Pgp source files into your project.
+# Pix2Pgp is designed to implement proprietary FIFOs in the ASIC flow that should be available in the host
+# The wrapper file for the said FIFOs can be found under gateware/shared/rtl/synopsysFifo
 
-##################################################
-GHDL_DIR := $(ROOT_DIR)/ghdl
+# =============================================
+# Directories
+# =============================================
+ROOT_DIR     := $(CURDIR)/../..
+GATEWARE_DIR := $(ROOT_DIR)/gateware
+FIRMWARE_DIR := $(ROOT_DIR)/firmware
+GHDL_DIR     := $(FIRMWARE_DIR)/ghdl
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ASIC_RTL_DIR := $(GATEWARE_DIR)/shared/rtl
+FPGA_RTL_DIR := $(FIRMWARE_DIR)/fpga/rtl
+FPGA_TB_DIR  := $(FIRMWARE_DIR)/fpga/tb
+SURF_DIR     := $(FIRMWARE_DIR)/submodules/surf
+# =============================================
 
-ASIC_RTL_DIR := $(ROOT_DIR)/asic/rtl
-ASIC_TB_DIR  := $(ROOT_DIR)/asic/tb
 
-FPGA_RTL_DIR := $(ROOT_DIR)/fpga/rtl
-FPGA_TB_DIR  := $(ROOT_DIR)/fpga/tb
+# =============================================
+# Files
+# =============================================
+ASIC_RTL := $(wildcard $(ASIC_RTL_DIR)/*.vhd)
+FPGA_RTL := $(wildcard $(FPGA_RTL_DIR)/*.vhd)
+FPGA_TB  := $(wildcard $(FPGA_TB_DIR)/*.vhd)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ASIC-Specific
+ASIC_PKG     := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2PgpAsicPkg.vhd
+ASIC_TOP     := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2Pgp$(ASIC)Top.vhd
+ASIC_TB      := $(wildcard $(GATEWARE_DIR)/asics/$(ASIC)/tb/*.vhd)
+ASIC_TB_TOP  := $(GATEWARE_DIR)/asics/$(ASIC)/tb/Pix2Pgp$(ASIC)TopTb.vhd
+ASIC_TB_NAME := Pix2Pgp$(ASIC)TopTb
 
-PIX2PGP_ASIC_TOP_DIR := $(ASIC_RTL_DIR)/asicTop
-PIX2PGP_PKG_DIR      := $(ASIC_RTL_DIR)/pkg
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Surf FIFO Wrapper (do *not* include in any ASIC RTL Synthesis flow)
+GHDL_FIFO_DIR := $(ASIC_RTL_DIR)/surfFifo
+GHDL_FIFO_RTL := $(wildcard $(GHDL_FIFO_DIR)/*.vhd)
+# =============================================
 
-SURF_DIR     := $(ASIC_RTL_DIR)/surf
-SURF_PKG_DIR := $(SURF_DIR)/pkg
+# =====================================================================================
+# Surf Packages and Source Files
+# Note that the packages have to be declared separately in order to be imported first
+# The order of the package declaration within SURF_PKG *matters*.
+# =====================================================================================
 
-SURF_FPGA_DIR     := $(FPGA_RTL_DIR)/surf
-SURF_FPGA_PKG_DIR := $(SURF_FPGA_DIR)/pkg
+# =====================================================================================
+# If following a manual ASIC RTL Synthesis flow, include these files
+SURF_PKG = 	$(SURF_DIR)/base/general/rtl/StdRtlPkg.vhd \
+			$(SURF_DIR)/axi/axi4/rtl/AxiPkg.vhd \
+			$(SURF_DIR)/base/general/rtl/TextUtilPkg.vhd \
+			$(SURF_DIR)/base/crc/rtl/CrcPkg.vhd \
+			$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamPkg.vhd \
+			$(SURF_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd \
+			$(SURF_DIR)/protocols/ssi/rtl/SsiPkg.vhd \
+			$(SURF_DIR)/protocols/rssi/v1/rtl/RssiPkg.vhd \
+			$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd \
+			$(SURF_DIR)/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd \
+			$(SURF_DIR)/base/general/rtl/ArbiterPkg.vhd
+# =====================================================================================
 
-PIX2PGP_ASIC_PKG   := $(PIX2PGP_PKG_DIR)/Pix2PgpAsicPkg.vhd
-ASIC_LINK_GLBL_PKG := $(ROOT_DIR)/vault/shared/rtl/Pix2PgpPkg.vhd
-PIX2PGP_GLBL_PKG   := $(PIX2PGP_PKG_DIR)/Pix2PgpPkg.vhd
+# =====================================================================================
+# If following a manual ASIC RTL Synthesis flow, include these files
+SURF_ASIC_RTL = $(SURF_DIR)/base/general/tb/ClkRst.vhd \
+				$(SURF_DIR)/base/delay/rtl/SlvDelay.vhd \
+				$(SURF_DIR)/base/sync/rtl/RstSync.vhd \
+				$(SURF_DIR)/base/sync/rtl/Synchronizer.vhd \
+				$(SURF_DIR)/base/sync/rtl/SynchronizerOneShot.vhd \
+				$(SURF_DIR)/base/sync/rtl/SynchronizerEdge.vhd \
+				$(SURF_DIR)/base/sync/rtl/SynchronizerVector.vhd \
+				$(SURF_DIR)/base/ram/inferred/SimpleDualPortRam.vhd \
+				$(SURF_DIR)/base/fifo/rtl/FifoOutputPipeline.vhd \
+				$(SURF_DIR)/base/fifo/rtl/inferred/FifoWrFsm.vhd \
+				$(SURF_DIR)/base/fifo/rtl/inferred/FifoRdFsm.vhd \
+				$(SURF_DIR)/base/fifo/rtl/inferred/FifoSync.vhd \
+				$(SURF_DIR)/base/fifo/rtl/inferred/FifoAsync.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamPipeline.vhd \
+				$(SURF_DIR)/base/crc/rtl/Crc32Parallel.vhd \
+				$(SURF_DIR)/base/crc/rtl/Crc32.vhd \
+				$(SURF_DIR)/base/general/rtl/Gearbox.vhd \
+				$(SURF_DIR)/base/general/rtl/Scrambler.vhd \
+				$(SURF_DIR)/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd \
+				$(SURF_DIR)/base/ram/inferred/DualPortRam.vhd \
+				$(SURF_DIR)/base/ram/inferred/LutRam.vhd \
+				$(SURF_DIR)/base/ram/inferred/TrueDualPortRam.vhd \
+				$(SURF_DIR)/base/sync/rtl/SynchronizerFifo.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd \
+				$(SURF_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamMux.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamDeMux.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamGearbox.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd
+# =====================================================================================
 
-FPGA_LINK_SHARED := $(ROOT_DIR)/vault/shared/tb/Pix2PgpFpgaTb.vhd
-FPGA_SHARED      := $(FPGA_TB_DIR)/Pix2PgpFpgaTb.vhd
+# =====================================================================================
+# If following a manual ASIC RTL Behavioral Verification flow, include these files
+# Do *not* include the following in the ASIC RTL Synthesis flow (will throw Cadence/Synopsys errors/warnings)
+SURF_FPGA_RTL = $(SURF_DIR)/base/fifo/rtl/Fifo.vhd \
+				$(SURF_DIR)/base/fifo/rtl/FifoCascade.vhd \
+				$(SURF_DIR)/base/fifo/rtl/FifoMux.vhd \
+				$(SURF_DIR)/base/fifo/rtl/xilinx/FifoXpm.vhd \
+				$(SURF_DIR)/base/fifo/rtl/altera/FifoAlteraMf.vhd \
+				$(SURF_DIR)/base/fifo/rtl/dummy/FifoAlteraMfDummy.vhd \
+				$(SURF_DIR)/base/fifo/rtl/dummy/FifoXpmDummy.vhd \
+				$(SURF_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd \
+				$(SURF_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd \
+				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd
+# =====================================================================================
 
-PIX2PGP_PKG_FILES      := $(wildcard $(PIX2PGP_PKG_DIR)/*.vhd)
-PIX2PGP_ASIC_TOP_FILES := $(wildcard $(PIX2PGP_ASIC_TOP_DIR)/*.vhd)
-ASIC_TB_FILES          := $(wildcard $(ASIC_TB_DIR)/*.vhd)
-FPGA_TB_FILES          := $(wildcard $(FPGA_TB_DIR)/*.vhd)
-SURF_FILES             := $(wildcard $(SURF_DIR)/*.vhd)
-SURF_PKG_FILES         := $(wildcard $(SURF_PKG_DIR)/*.vhd)
-SURF_FPGA_FILES        := $(wildcard $(SURF_FPGA_DIR)/*.vhd)
-SURF_FPGA_PKG_FILES    := $(wildcard $(SURF_FPGA_PKG_DIR)/*.vhd)
-GHDL_FILES             := $(wildcard $(GHDL_DIR)/*.cf $(GHDL_DIR)/*.ghw $(GHDL_DIR)/*.vcd $(GHDL_DIR)/*.fst $(GHDL_DIR)/*.o)
+CF   := $(wildcard $(GHDL_DIR)/*.cf)
+GTKW := $(wildcard $(GHDL_DIR)/*.gtkw)
+GHW  := $(wildcard $(GHDL_DIR)/*.ghw)
+VCD  := $(wildcard $(GHDL_DIR)/*.vcd)
+FST  := $(wildcard $(GHDL_DIR)/*.fst)
+OUT  := $(wildcard $(GHDL_DIR)/*.o)
 
-ASIC_LINK_TB_FILES     := $(wildcard $(ASIC_LINK_DIR)/tb/*.vhd)
+# GHDL Command and Flags
+GHDL_CMD        := ghdl-mcode # Or your specific GHDL path, e.g., /home/cb/Work/tools/ghdl/bin/ghdl
+GHDL_GLBL_FLAGS := --ieee=standard -fexplicit -fsynopsys
+GHDL_STD_FLAG   := --std=93c
 
-define create_link
-    ln -sf $(shell readlink -f $(1)) $(2)/
-endef
-##################################################
+GHDL_ANALYZE        := $(GHDL_CMD) -s $(GHDL_GLBL_FLAGS) $(GHDL_STD_FLAG)
+GHDL_IMPORT_SURF    := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=surf
+GHDL_IMPORT_PIX2PGP := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=pix2pgp
+GHDL_IMPORT_WORK    := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=work
+GHDL_MAKE           := $(GHDL_CMD) -m -Psurf -Ppix2pgp -Pwork --warn-unused $(GHDL_GLBL_FLAGS)
+GHDL_RUN            := $(GHDL_CMD) --elab-run $(GHDL_GLBL_FLAGS)
 
+DEFAULT_STOP_TIME := 10
+STOP_TIME ?= $(DEFAULT_STOP_TIME)
+
+# Helper function as a macro (Makefile way of "functions")
+check_directory = $(shell if test -d "$1"; then echo 1; else echo 0; fi)
 
 # Targets
-.PHONY: all clean prepareSurf prepare
+.PHONY: all analyze tb clean
 
-all: prepare
+all: tb
 
-clean:
-	@echo "[INFO]: Cleaning up..."
-	rm -f $(PIX2PGP_PKG_FILES)
-	rm -f $(PIX2PGP_ASIC_TOP_FILES)
-	rm -f $(ASIC_TB_FILES)
-	rm -f $(FPGA_TB_FILES)
-	rm -f $(SURF_FILES)
-	rm -f $(SURF_PKG_FILES)
-	rm -f $(SURF_FPGA_FILES)
-	rm -f $(SURF_FPGA_PKG_FILES)
-	rm -f $(SURF_FILES)
-	rm -f $(SURF_PKG_FILES)
-	rm -f $(GHDL_FILES)
-	@echo "[INFO]: Clean complete."
+analyze: check_asic $(ASIC_PKG) $(ASIC_RTL) $(ASIC_TOP) $(ASIC_TB) $(FPGA_RTL) $(FPGA_TB) $(GHDL_FIFO_RTL)
+	@echo "List of Pix2Pgp Files:"
+	@echo "ASIC_PKG: $(ASIC_PKG)"
+	@echo "ASIC_RTL: $(ASIC_RTL)"
+	@echo "ASIC_TOP: $(ASIC_TOP)"
+	@echo "ASIC_TB:  $(ASIC_TB)"
+	@echo "FPGA_RTL: $(FPGA_RTL)"
+	@echo "FPGA_TB:  $(FPGA_TB)"
+	@echo "GHDL_FIFO_RTL (please omit if using an external script and use gateware/shared/rtl/synopsysFifo): $(GHDL_FIFO_RTL)"
 
-prepareSurf:
-	@echo "[INFO]: Preparing surf directories..."
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/StdRtlPkg.vhd)                               $(SURF_PKG_DIR)/StdRtlPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi4/rtl/AxiPkg.vhd)                                      $(SURF_PKG_DIR)/AxiPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Pkg.vhd)                      $(SURF_PKG_DIR)/Pgp4Pkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/CrcPkg.vhd)                                      $(SURF_PKG_DIR)/CrcPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/ssi/rtl/SsiPkg.vhd)                                 $(SURF_PKG_DIR)/SsiPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/rssi/v1/rtl/RssiPkg.vhd)                            $(SURF_PKG_DIR)/RssiPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamPkg.vhd)                          $(SURF_PKG_DIR)/AxiStreamPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/packetizer/rtl/AxiStreamPacketizer2Pkg.vhd)         $(SURF_PKG_DIR)/AxiStreamPacketizer2Pkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/ArbiterPkg.vhd)                              $(SURF_PKG_DIR)/ArbiterPkg.vhd
+	@echo "[INFO]: Importing surf pkg files..."
+	@echo "============================================================================================"
+	for package in $(SURF_PKG); do \
+		$(GHDL_IMPORT_SURF) $$package; \
+	done; \
 
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/tb/ClkRst.vhd)                                   $(SURF_DIR)/ClkRst.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/delay/rtl/SlvDelay.vhd)                                  $(SURF_DIR)/SlvDelay.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/RstSync.vhd)                                    $(SURF_DIR)/RstSync.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/Synchronizer.vhd)                               $(SURF_DIR)/Synchronizer.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerOneShot.vhd)                        $(SURF_DIR)/SynchronizerOneShot.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerEdge.vhd)                           $(SURF_DIR)/SynchronizerEdge.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerVector.vhd)                         $(SURF_DIR)/SynchronizerVector.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/SimpleDualPortRam.vhd)                      $(SURF_DIR)/SimpleDualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/FifoOutputPipeline.vhd)                         $(SURF_DIR)/FifoOutputPipeline.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoWrFsm.vhd)                         $(SURF_DIR)/FifoWrFsm.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoRdFsm.vhd)                         $(SURF_DIR)/FifoRdFsm.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoSync.vhd)                          $(SURF_DIR)/FifoSync.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/inferred/FifoAsync.vhd)                         $(SURF_DIR)/FifoAsync.vhd
+	@echo "============================================================================================"
 
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamPipeline.vhd)                     $(SURF_DIR)/AxiStreamPipeline.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/Crc32Parallel.vhd)                               $(SURF_DIR)/Crc32Parallel.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/crc/rtl/Crc32.vhd)                                       $(SURF_DIR)/Crc32.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/Gearbox.vhd)                                 $(SURF_DIR)/Gearbox.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/Scrambler.vhd)                               $(SURF_DIR)/Scrambler.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/packetizer/rtl/AxiStreamDepacketizer2.vhd)          $(SURF_DIR)/AxiStreamDepacketizer2.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/DualPortRam.vhd)                            $(SURF_DIR)/DualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/LutRam.vhd)                                 $(SURF_DIR)/LutRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/ram/inferred/TrueDualPortRam.vhd)                        $(SURF_DIR)/TrueDualPortRam.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/sync/rtl/SynchronizerFifo.vhd)                           $(SURF_DIR)/SynchronizerFifo.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp3/core/rtl/Pgp3RxGearboxAligner.vhd)         $(SURF_DIR)/Pgp3RxGearboxAligner.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxEb.vhd)                     $(SURF_DIR)/Pgp4RxEb.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4RxProtocol.vhd)               $(SURF_DIR)/Pgp4RxProtocol.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4Rx.vhd)                       $(SURF_DIR)/Pgp4Rx.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLite.vhd)                   $(SURF_DIR)/Pgp4TxLite.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteProtocol.vhd)           $(SURF_DIR)/Pgp4TxLiteProtocol.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/protocols/pgp/pgp4/core/rtl/Pgp4TxLiteWrapper.vhd)            $(SURF_DIR)/Pgp4TxLiteWrapper.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamMux.vhd)                          $(SURF_DIR)/AxiStreamMux.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamDeMux.vhd)                        $(SURF_DIR)/AxiStreamDeMux.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamGearbox.vhd)                      $(SURF_DIR)/AxiStreamGearbox.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamResize.vhd)                       $(SURF_DIR)/AxiStreamResize.vhd
+	@echo "============================================================================================"
+	@echo "[INFO]: Importing surf ASIC RTL support files..."
+	@echo "============================================================================================"
+	$(GHDL_IMPORT_SURF) $(SURF_ASIC_RTL); \
 
-	@echo "[INFO]: Linking extra FPGA libraries..."
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/general/rtl/TextUtilPkg.vhd)                             $(SURF_FPGA_PKG_DIR)/TextUtilPkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-lite/rtl/AxiLitePkg.vhd)                              $(SURF_FPGA_PKG_DIR)/AxiLitePkg.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/base/fifo/rtl/Fifo.vhd)                                       $(SURF_FPGA_DIR)/Fifo.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd)                            $(SURF_FPGA_DIR)/AxiLiteAsync.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd) $(SURF_FPGA_DIR)/MasterAxiStreamIpIntegrator.vhd
-	ln -sf $(shell readlink -f $(SURF_SOURCE_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd)                       $(SURF_FPGA_DIR)/AxiStreamFifoV2.vhd
+	@echo "============================================================================================"
 
-	@echo "[INFO]: surf preparation complete."
+	@echo "============================================================================================"
+	@echo "[INFO]: Importing surf FPGA RTL/TB support files..."
+	@echo "============================================================================================"
+	$(GHDL_IMPORT_SURF) $(SURF_FPGA_RTL); \
 
-prepare: clean prepareSurf
-	@echo "[INFO]: Linking global/common files..."
-	ln -sf $(shell readlink -f $(ASIC_LINK_GLBL_PKG)) $(PIX2PGP_GLBL_PKG)
-	ln -sf $(shell readlink -f $(FPGA_LINK_SHARED))   $(FPGA_SHARED)
+	@echo "============================================================================================"
 
-	@if [ "$(ASIC_SOURCED)" = 1 ]; then \
-		echo "[INFO]: Preparing $(ASIC) Specific Files..." ;\
-		ln -sf $(shell readlink -f $(ASIC_LINK_PKG)) $(PIX2PGP_ASIC_PKG) ;\
-		ln -sf $(shell readlink -f $(ASIC_LINK_TOP)) $(PIX2PGP_ASIC_TOP_DIR)/ ;\
-		for file in $(ASIC_LINK_TB_FILES); do \
-			$(MAKE) create-link FILE=$$file DIR=$(FPGA_TB_DIR); \
-		done; \
-		echo "";\
-		echo "[INFO]: $(ASIC) Importing successful!";\
-		echo "";\
-	else \
-		echo "[ERROR]: The 'ASIC' variable was not set properly! Please check; Currently: ASIC = $(ASIC)" ;\
+	@echo "============================================================================================"
+	@echo "[INFO]: Importing RTL Files..."
+	@echo "============================================================================================"
+	$(GHDL_IMPORT_PIX2PGP) $(ASIC_PKG)
+	$(GHDL_IMPORT_PIX2PGP) $(ASIC_RTL)
+	$(GHDL_IMPORT_PIX2PGP) $(ASIC_TOP)
+	$(GHDL_IMPORT_PIX2PGP) $(ASIC_TB)
+	$(GHDL_IMPORT_PIX2PGP) $(FPGA_RTL)
+	$(GHDL_IMPORT_PIX2PGP) $(FPGA_TB)
+	$(GHDL_IMPORT_PIX2PGP) $(GHDL_FIFO_RTL)
+
+	@echo "============================================================================================"
+	@echo "[INFO]: Analyzing RTL Files..."
+	@echo "============================================================================================"
+	$(GHDL_ANALYZE) $(ASIC_PKG)
+	$(GHDL_ANALYZE) $(ASIC_RTL)
+	$(GHDL_ANALYZE) $(ASIC_TOP)
+	$(GHDL_ANALYZE) $(ASIC_TB)
+	$(GHDL_ANALYZE) $(FPGA_RTL)
+	$(GHDL_ANALYZE) $(FPGA_TB)
+	$(GHDL_ANALYZE) $(GHDL_FIFO_RTL)
+	@echo "[INFO]: Done!"
+
+# Check if ASIC is defined
+check_asic:
+	@if [ -z "$(ASIC)" ]; then \
+		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make analyze ASIC=SparkPixS')"; \
+		exit 1; \
 	fi
 
-create-link:
-	$(call create_link, $(FILE), $(DIR))
+tb: analyze
+	@echo "[INFO]: Assuming testbench entity name: $(ASIC_TB_NAME)"
+	@echo "[INFO]: Assuming testbench top-level file: $(ASIC_TB_TOP)"
+
+	${GHDL_IMPORT_WORK} $(ASIC_TB_TOP)
+
+	$(GHDL_MAKE) $(ASIC_TB_NAME)
+
+	@echo "Will run testbench for $(STOP_TIME)us."
+
+	$(GHDL_RUN) $(ASIC_TB_NAME) --wave=$(ASIC_TB_NAME).ghw --stop-time="$(STOP_TIME)us"
+	gtkwave $(ASIC_TB_NAME).ghw
+
+clean:
+	@rm -f $(OUT) $(CF) $(GHW) $(VCD) $(FST) # Clean up generated files

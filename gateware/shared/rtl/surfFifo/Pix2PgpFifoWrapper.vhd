@@ -70,7 +70,7 @@ architecture rtl of Pix2PgpFifoWrapper is
 begin
 
    SYMM_GEN: if (WR_DATA_WIDTH_G = RD_DATA_WIDTH_G) generate
-      U_StandaloneFifo : entity pix2pgp.Pix2PgpFifo
+      U_StandaloneFifo : entity surf.Fifo
          generic map (
             TPD_G           => TPD_G,
             RST_ASYNC_G     => RST_ASYNC_G,
@@ -101,7 +101,7 @@ begin
    end generate SYMM_GEN;
 
    ASYMM_GEN: if (WR_DATA_WIDTH_G /= RD_DATA_WIDTH_G) generate
-      U_StandaloneFifo : entity pix2pgp.Pix2PgpFifoMux
+      U_StandaloneFifo : entity surf.FifoMux
          generic map (
             TPD_G           => TPD_G,
             RST_ASYNC_G     => RST_ASYNC_G,
