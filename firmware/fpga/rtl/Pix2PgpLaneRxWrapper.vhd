@@ -213,7 +213,7 @@ begin
          din  => frameMetaDout(LANE_TRGCNT_POS_C),
          dout => laneStatus.trgCnt);
 
-   U_PipelineColCnt : entity surf.SlvDelay
+   U_PipelineEventHitmask : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,

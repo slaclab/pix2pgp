@@ -61,7 +61,6 @@ architecture rtl of Pix2PgpLaneMerger is
       TX_PREAMBLE_S,
       TX_HEADER_S,
       TX_FRAME_SIZE_S,
-      TX_COLCNT_S,
       TX_LANE_DATA_S,
       DUMP_S,
       DONE_S,
@@ -117,7 +116,6 @@ begin
       variable preamble       : slv(FPGA_PREAMBLE_LEN_C-1 downto 0)         := (others => '0');
       variable header         : slv(FPGA_HEADER_LEN_C-1 downto 0)           := (others => '0');
       variable frameSize      : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
-      variable activeColCnt   : slv(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
 
       variable laneAxiStream  : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
 
@@ -193,8 +191,7 @@ begin
 
       laneAxiStream := laneRxMasters(laneIdx);
 
-      frameSize    := resize(asicStatus(laneIdx).frameSize, STREAMRX_FRAME_SIZE_WIDTH_C);
-      activeColCnt := resize(onesCount(asicStatus(laneIdx).eventHitmask), STREAMRX_FRAME_SIZE_WIDTH_C);
+      frameSize := resize(asicStatus(laneIdx).frameSize, STREAMRX_FRAME_SIZE_WIDTH_C);
 
       -------------------------------------------------------------------------
       case r.state is
@@ -271,28 +268,6 @@ begin
                v.obAxiMaster.tValid := '1';
                v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
                v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
-
-               if laneValid(laneIdx) = '0' then
-                  v.obAxiMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
-               end if;
-
-               if laneIdx = NUM_OF_SERIALIZERS_C-1 then
-                  v.laneSel := (others => '0');
-                  v.state   := TX_COLCNT_S;
-               else
-                  v.laneSel := r.laneSel + 1;
-               end if;
-
-            end if;
-
-         ----------------------------------------------------------------------
-         -- transmit all (valid) lane active column count data
-         when TX_COLCNT_S =>
-            if v.obAxiMaster.tValid = '0' then
-
-               v.obAxiMaster.tValid := '1';
-               v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
-               v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := activeColCnt;
 
                if laneValid(laneIdx) = '0' then
                   v.obAxiMaster.tData(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0) := (others => '0');
