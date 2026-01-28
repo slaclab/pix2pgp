@@ -119,9 +119,9 @@ begin
       if v.asicSro = '0' and r.asicSro = '1' then
          v.trgBuffWr := '1';
 
-         -- daq and sro signals should be identical;
+         -- daq should be high while sro is toggling;
          -- otherwise no data are forwarded downstream
-         if v.sysDaq = '0' and r.sysDaq = '1' then
+         if r.sysDaq = '1' then
             v.trgBuffDaq := '1';
          end if;
 

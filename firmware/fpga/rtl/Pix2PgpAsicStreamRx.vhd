@@ -50,7 +50,7 @@ entity Pix2PgpAsicStreamRx is
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
       asicSroEn       : in  sl;
-      sysDaq          : in  sl; -- tie to asicSro to always forward data downstream
+      sysDaq          : in  sl; -- set to high to always forward data downstream
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;

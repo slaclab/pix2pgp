@@ -65,7 +65,6 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
-   signal daqFinal  : sl := '0';
    signal daqEnable : sl := '1';
    signal ero       : sl := '0';
    signal eroFinal  : sl := '0';
@@ -220,10 +219,8 @@ begin
     if (rising_edge(sparseClk)) then
       if sro = '1' and sroFinal = '0' then
         sroFinal <= sro;
-        daqFinal <= daqEnable;
       else
         sroFinal <= '0';
-        daqFinal <= '0';
       end if;
     end if;
   end process;
@@ -357,7 +354,7 @@ begin
          -- General Interface
          pgpRxClk        => pgpRxClk,
          sro             => sroFinal,
-         daq             => daqFinal,
+         daq             => daqEnable,
          rst             => revRst,
          asicRstL        => rst,
          -- Pix2Pgp Interface
