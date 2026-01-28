@@ -61,7 +61,7 @@ entity Pix2PgpSparkPixSFpgaRxTop is
       -- General Interface
       pgpRxClk        : in  std_logic;
       sro             : in  std_logic;
-      daq             : in  std_logic := '1'; -- always in daq mode
+      daq             : in  std_logic;
       rst             : in  std_logic := not RST_POLARITY_G;
       asicRstL        : in  std_logic;
       -- Pix2Pgp Interface
