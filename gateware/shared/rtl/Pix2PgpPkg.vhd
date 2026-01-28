@@ -3,8 +3,7 @@
 -------------------------------------------------------------------------------
 -- Description: Pix2Pgp Package
 --
--- imports the associated Pix2PgpAsicPkg; the latter is a symbolic link;
--- the symbolic link is created by the Makefile
+-- imports the Pix2PgpAsicPkg of the ASIC first
 --
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
@@ -161,20 +160,18 @@ package Pix2PgpPkg is
    -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
    constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   constant COLCNT_WIDTH_C : natural := BITMAX_COL_MANAGERS_C;
-
-   -- trigger counter; plus frame size; plus number of active cols; plus overOcc, pause, pauseError
+   -- trigger counter; plus frame size; plus hitmask width; plus overOcc, pause, pauseError
    constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C +
                                               LANERX_FRAME_SIZE_WIDTH_C +
-                                              COLCNT_WIDTH_C + 3;
+                                              NUM_OF_COL_MANAGERS_C + 3;
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
    constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-1;
    constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-2;
    constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-3;
-   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-4 downto COLCNT_WIDTH_C+TRGCNT_WIDTH_C;
-   subtype  LANE_COLCNT_POS_C   is   natural range COLCNT_WIDTH_C+TRGCNT_WIDTH_C-1 downto TRGCNT_WIDTH_C;
+   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-4 downto NUM_OF_COL_MANAGERS_C+TRGCNT_WIDTH_C;
+   subtype  LANE_HITMASK_POS_C   is  natural range NUM_OF_COL_MANAGERS_C+TRGCNT_WIDTH_C-1 downto TRGCNT_WIDTH_C;
    subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
 
    ------------------------------------------------------------------------------
@@ -261,7 +258,7 @@ package Pix2PgpPkg is
       down         : sl;
       timeout      : sl;
       -- flags end
-      activeColCnt : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      eventHitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       trgCnt       : slv(TRGCNT_WIDTH_C-1 downto 0);
       frameSize    : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
    end record;
@@ -277,7 +274,7 @@ package Pix2PgpPkg is
       down         => '0',
       timeout      => '0',
       -- flags end
-      activeColCnt => (others => '0'),
+      eventHitmask => (others => '0'),
       trgCnt       => (others => '0'),
       frameSize    => (others => '0'));
 
@@ -509,8 +506,8 @@ package body Pix2PgpPkg is
       retLaneMeta(LANE_SIZE_POS_C)        := resize(frameSize, rangeToLen(LANE_SIZE_POS_C'high,
                                                                           LANE_SIZE_POS_C'low));
 
-      retLaneMeta(LANE_COLCNT_POS_C)      := resize(frameSize, rangeToLen(LANE_COLCNT_POS_C'high,
-                                                                          LANE_COLCNT_POS_C'low));
+      retLaneMeta(LANE_HITMASK_POS_C)     := resize(frameSize, rangeToLen(LANE_HITMASK_POS_C'high,
+                                                                          LANE_HITMASK_POS_C'low));
 
       retLaneMeta(LANE_TRGCNT_POS_C)      := resize(trgCnt, rangeToLen(LANE_TRGCNT_POS_C'high,
                                                                        LANE_TRGCNT_POS_C'low));

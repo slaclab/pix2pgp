@@ -216,7 +216,7 @@ begin
          v.lanePause(lane)             := r.laneStatus(lane).pause;
          --
          if r.laneStatus(lane).valid = '1' then
-            v.laneStatus(lane).activeColCnt := laneStatus(lane).activeColCnt;
+            v.laneStatus(lane).eventHitmask := laneStatus(lane).eventHitmask;
             v.laneStatus(lane).trgCnt       := laneStatus(lane).trgCnt;
             v.laneStatus(lane).frameSize    := laneStatus(lane).frameSize;
          end if;
@@ -382,7 +382,7 @@ begin
                v.asicStatus(lane).valid        := r.laneValid(lane);
                v.asicStatus(lane).down         := r.laneStatus(lane).down;
                v.asicStatus(lane).timeout      := r.laneTimeout(lane);
-               v.asicStatus(lane).activeColCnt := r.laneStatus(lane).activeColCnt;
+               v.asicStatus(lane).eventHitmask := r.laneStatus(lane).eventHitmask;
                v.asicStatus(lane).trgCnt       := r.laneStatus(lane).trgCnt;
                v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
 

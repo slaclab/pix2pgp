@@ -217,12 +217,12 @@ begin
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => BITMAX_COL_MANAGERS_C,
+         WIDTH_G        => NUM_OF_COL_MANAGERS_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk  => laneClk,
-         din  => frameMetaDout(LANE_COLCNT_POS_C),
-         dout => laneStatus.activeColCnt);
+         din  => frameMetaDout(LANE_HITMASK_POS_C),
+         dout => laneStatus.eventHitmask);
 
    U_PipelineFrameSize : entity surf.SlvDelay
       generic map (

@@ -194,7 +194,7 @@ begin
       laneAxiStream := laneRxMasters(laneIdx);
 
       frameSize    := resize(asicStatus(laneIdx).frameSize, STREAMRX_FRAME_SIZE_WIDTH_C);
-      activeColCnt := resize(asicStatus(laneIdx).activeColCnt, STREAMRX_FRAME_SIZE_WIDTH_C);
+      activeColCnt := resize(onesCount(asicStatus(laneIdx).eventHitmask), STREAMRX_FRAME_SIZE_WIDTH_C);
 
       -------------------------------------------------------------------------
       case r.state is
