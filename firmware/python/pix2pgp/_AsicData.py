@@ -46,6 +46,8 @@ class AsicData(object):
         """
         Reset Class variables
         """
+        # flag indicating that we are done processing
+        self.done = False
 
         # populated by asicParamSet() (parameters have _ prefix)
         self.numOfLanes   = None
@@ -116,12 +118,6 @@ class AsicData(object):
         # trigger misalignment flag
         self.asicGlblTrgCntMisalign = False
 
-        # data index
-        self.dataIndexStart = 0
-        self.dataIndexEnd   = 0
-
-        # flag indicating that we are done processing
-        self.done = False
     #################################################################
 
     #################################################################
@@ -137,18 +133,11 @@ class AsicData(object):
         - Specific fields are extracted using bitwise operations and slicing.
         - Extracted fields are stored in their respective attributes of the class.
         """
+        #self.reset()
 
         # Convert input data to 64-bit unsigned integers for consistent processing;
         # Parse them in
         self.eventParseFsm(frame=np.array(data), size=dataLen)
-    #################################################################
-
-    #################################################################
-    def dataIndexStartSet(self, dataIndexStart):
-        """
-        Externally set the data index
-        """
-        self.dataIndexStart = dataIndexStart
     #################################################################
 
     #################################################################
@@ -394,7 +383,7 @@ class AsicData(object):
         """
 
         state         = "preamble_s"
-        index         = self.dataIndexStart
+        index         = 0
         _frameSize    = [0] * self.numOfLanes
         _activeColCnt = [0] * self.numOfLanes
         laneSel       = 0
@@ -402,12 +391,12 @@ class AsicData(object):
         rawPrint      = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        while index < size and not(self.done):
+        while index < size:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             # --------------------------------------------------------------------------------------
             if state == "preamble_s":
-                laneSel = 0
+                self.done = False
 
                 _slice = frame[index:index + self.preambleLen]
                 wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
@@ -531,11 +520,8 @@ class AsicData(object):
                     pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Trailer', wordHex)
 
                     self.trailerEval(wordHex)
-                    index += self.trailerLen
 
-                    laneSel = 0
-
-                    self.done = True
+                    state = "end_s"
                 else:
                     # reset and parse in another frame for this event
                     laneSel    = 0
@@ -543,26 +529,30 @@ class AsicData(object):
                     inPause    = False
                     state      = "header_s"
 
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # --------------------------------------------------------------------------------------
+            elif state == "end_s":
+                _frameSize    = [0] * self.numOfLanes
+                _activeColCnt = [0] * self.numOfLanes
+                laneSel       = 0
+                inPause       = False
+                self.done     = True
+                index         += self.trailerLen
 
-        # determine if another frame/event needs to be read
-        if index >= size:
-            self.done = True # terminate no matter what
+                # trigger counter check
+                validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)
 
-        # done; print-out anything that is needed, and determine if there was a trigger misalignment
-        if self.done:
-            self.dataIndexEnd = index
+                for lane in range(self.numOfLanes):
+                    if self.laneValid[lane]:
+                        if self.asicGlblTrgCnt[lane] != self.asicGlblTrgCnt[validLane]:
+                            self.asicGlblTrgCntMisalign = True
+                            break
 
-            # trigger counter check
-            validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)
+                self.asicDataPrinter()
 
-            for lane in range(self.numOfLanes):
-                if self.laneValid[lane]:
-                    if self.asicGlblTrgCnt[lane] != self.asicGlblTrgCnt[validLane]:
-                        self.asicGlblTrgCntMisalign = True
-                        break
+                if index < size:
+                    self.reset()
+                    state = "preamble_s"
 
-            self.asicDataPrinter()
     #################################################################
 
     #################################################################

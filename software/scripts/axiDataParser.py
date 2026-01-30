@@ -56,21 +56,20 @@ if __name__ == "__main__":
     with open(_file) as f:
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
-    _eventSize   = len(_dataArray)
-    currentIndex = 0
+    _fileSize = len(_dataArray)
+    asicLaneValid = [[] for _ in range(4)]
+    asicHits      = [[] for _ in range(4)]
+    asicTrgCnt    = [[] for _ in range(4)]
 
 
     asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
                                    rawData=args.rawData,
-                                   selfRst=True,
                                    verbose=args.verbose)
 
-    while _eventSize > currentIndex:
-        asicDecoder.dataIndexStartSet(dataIndexStart=currentIndex)
-        asicDecoder.formatter(data=_dataArray, dataLen=len(_dataArray))
+    asicDecoder.formatter(data=_dataArray, dataLen=_fileSize)
 
-        while not(asicDecoder.done):
-            time.sleep(0.1) # crude; sleep before checking again
+    _asicId = asicDecoder.asicId
 
-        currentIndex = asicDecoder.dataIndexEnd
-        asicDecoder.reset()
+    asicLaneValid[_asicId].append(asicDecoder.laneValid.copy())
+    asicHits[_asicId].append(asicDecoder.asicHits.copy())
+    asicTrgCnt[_asicId].append(asicDecoder.asicGlblTrgCnt.copy())
