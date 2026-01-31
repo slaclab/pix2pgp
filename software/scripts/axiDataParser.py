@@ -57,19 +57,31 @@ if __name__ == "__main__":
         _dataArray = [int(line.rstrip('\n'), 16) for line in f]
 
     _fileSize = len(_dataArray)
-    asicLaneValid = [[] for _ in range(4)]
-    asicHits      = [[] for _ in range(4)]
-    asicTrgCnt    = [[] for _ in range(4)]
+    _asicId   = 0
+    _maxAsics = 4
 
+    asicLaneValid = [[] for _ in range(_maxAsics)]
+    asicHits      = [[] for _ in range(_maxAsics)]
+    asicTrgCnt    = [[] for _ in range(_maxAsics)]
 
     asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
                                    rawData=args.rawData,
                                    verbose=args.verbose)
 
-    asicDecoder.formatter(data=_dataArray, dataLen=_fileSize)
+    startIndex = 0
+    while startIndex < _fileSize:
+        # Call formatter to start parsing
+        asicDecoder.formatter(data=_dataArray, dataLen=_fileSize, startIndex=startIndex)
 
-    _asicId = asicDecoder.asicId
+        # Accumulate the data
+        asicLaneValid[_asicId].append(asicDecoder.laneValid.copy())
+        asicHits[_asicId].append(asicDecoder.asicHits.copy())
+        asicTrgCnt[_asicId].append(asicDecoder.asicGlblTrgCnt.copy())
 
-    asicLaneValid[_asicId].append(asicDecoder.laneValid.copy())
-    asicHits[_asicId].append(asicDecoder.asicHits.copy())
-    asicTrgCnt[_asicId].append(asicDecoder.asicGlblTrgCnt.copy())
+        # Update startIndex for the next iteration
+        startIndex = asicDecoder.currentIndex
+
+    # Print the accumulated data (example)
+    # print(f"[INFO]: Number of Events Parsed: {len(asicHits[_asicId])}")
+    # print(f"[INFO]: Trigger Counter of Last Event: {asicTrgCnt[_asicId][-1]}")
+    # print(f"[INFO]: Trigger Counter of next-to-Last Event: {asicTrgCnt[_asicId][-2]}")

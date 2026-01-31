@@ -40,7 +40,7 @@ class AsicData(object):
 
         # the real initialization method
         self.reset()
-
+        self.currentIndex = 0 # Initialize a class variable for current index
     #################################################################
     def reset(self):
         """
@@ -117,23 +117,29 @@ class AsicData(object):
 
         # trigger misalignment flag
         self.asicGlblTrgCntMisalign = False
-
     #################################################################
 
     #################################################################
-    def formatter(self, data, dataLen):
+    def formatter(self, data, dataLen, startIndex=0): # Added startIndex
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
 
         Parameters:
         data (numpy array): Input array containing raw frame data to be formatted.
+        dataLen (int): Length of the data in bytes or number of words.
+        startIndex (int): Starting index within the data array
 
         Processing Steps:
         - The input data is interpreted as 64-bit unsigned integers.
         - Specific fields are extracted using bitwise operations and slicing.
         - Extracted fields are stored in their respective attributes of the class.
         """
-        #self.reset()
+
+        # Reset all attributes
+        self.reset()
+
+        # Set the current index to the starting position
+        self.currentIndex = startIndex
 
         # Convert input data to 64-bit unsigned integers for consistent processing;
         # Parse them in
@@ -383,20 +389,20 @@ class AsicData(object):
         """
 
         state         = "preamble_s"
-        index         = 0
+        index         = self.currentIndex
         _frameSize    = [0] * self.numOfLanes
         _activeColCnt = [0] * self.numOfLanes
         laneSel       = 0
         inPause       = False
         rawPrint      = True if self._verbose == 7 else False
+        self.done     = False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        while index < size:
+        while index < size and not self.done:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             # --------------------------------------------------------------------------------------
             if state == "preamble_s":
-                self.done = False
 
                 _slice = frame[index:index + self.preambleLen]
                 wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
@@ -549,10 +555,7 @@ class AsicData(object):
 
                 self.asicDataPrinter()
 
-                if index < size:
-                    self.reset()
-                    state = "preamble_s"
-
+        self.currentIndex = index # Update the current index in the end
     #################################################################
 
     #################################################################
