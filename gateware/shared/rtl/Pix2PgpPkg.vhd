@@ -496,7 +496,7 @@ package body Pix2PgpPkg is
    end fpgaHeaderMap;
 
    function laneMetaMap (overOcc: sl; pause: sl; pauseError: sl;
-                         frameSize: slv; colCnt: slv; trgCnt: slv) return slv is
+                         frameSize: slv; hitmask: slv; trgCnt: slv) return slv is
       variable retLaneMeta: slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
@@ -506,7 +506,7 @@ package body Pix2PgpPkg is
       retLaneMeta(LANE_SIZE_POS_C)        := resize(frameSize, rangeToLen(LANE_SIZE_POS_C'high,
                                                                           LANE_SIZE_POS_C'low));
 
-      retLaneMeta(LANE_HITMASK_POS_C)     := resize(frameSize, rangeToLen(LANE_HITMASK_POS_C'high,
+      retLaneMeta(LANE_HITMASK_POS_C)     := resize(hitmask, rangeToLen(LANE_HITMASK_POS_C'high,
                                                                           LANE_HITMASK_POS_C'low));
 
       retLaneMeta(LANE_TRGCNT_POS_C)      := resize(trgCnt, rangeToLen(LANE_TRGCNT_POS_C'high,
