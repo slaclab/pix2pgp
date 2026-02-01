@@ -32,21 +32,16 @@ entity Pix2PgpAxiLiteManager is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1');   -- '1' for active high rst, '0' for active low
+      RST_POLARITY_G : sl      := '1';   -- '1' for active high rst, '0' for active low
+      LANE_MON_GEN_G : boolean := false);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
       pgpRxRst        : in  sl;
       usrRst          : out sl;
       config          : out Pix2PgpStreamRxConfigType;
-      -- Internal Module Interface
-      mergerBusy      : in  sl;
-      laneDown        : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      asicStatus      : in  Pix2PgpLaneStatusArray;
-      fpgaTrgCnt      : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      -- AXI-Lite Interface
-      axilClk         : in  sl;
-      axilRst         : in  sl;
+      pgp4RxLinkDown  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
       axilWriteMaster : in  AxiLiteWriteMasterType;
@@ -55,226 +50,72 @@ end Pix2PgpAxiLiteManager;
 
 architecture rtl of Pix2PgpAxiLiteManager is
 
-   type TrgCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(TRGCNT_WIDTH_C-1 downto 0);
-
-   signal readMaster    : AxiLiteReadMasterType;
-   signal readSlave     : AxiLiteReadSlaveType;
-   signal writeMaster   : AxiLiteWriteMasterType;
-   signal writeSlave    : AxiLiteWriteSlaveType;
-   signal mergerBusyDly : sl := '0';
-
    type RegType is record
-      config          : Pix2PgpStreamRxConfigType;
-      cntRst          : sl;
-      usrRst          : sl;
-      mergerBusy      : sl;
-      laneDecError    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneOverOcc     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePause       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePauseError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneFull        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneTimeout     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneDecErrCnt   : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePauseErrCnt : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneFullCnt     : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneOverOccCnt  : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePauseCnt    : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneTimeoutCnt  : Slv8Array(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneTrgCnt      : TrgCntArray;
+      config     : Pix2PgpStreamRxConfigType;
+      usrRst     : sl;
+      linkDown   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Lite
-      readSlave       : AxiLiteReadSlaveType;
-      writeSlave      : AxiLiteWriteSlaveType;
+      readSlave  : AxiLiteReadSlaveType;
+      writeSlave : AxiLiteWriteSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      config          => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
-      cntRst          => '1',
-      usrRst          => '0',
-      mergerBusy      => '0',
-      laneDecError    => (others => '0'),
-      laneOverOcc     => (others => '0'),
-      lanePause       => (others => '0'),
-      lanePauseError  => (others => '0'),
-      laneFull        => (others => '0'),
-      laneTimeout     => (others => '0'),
-      laneDecErrCnt   => (others => (others => '0')),
-      lanePauseErrCnt => (others => (others => '0')),
-      laneFullCnt     => (others => (others => '0')),
-      laneOverOccCnt  => (others => (others => '0')),
-      lanePauseCnt    => (others => (others => '0')),
-      laneTimeoutCnt  => (others => (others => '0')),
-      laneTrgCnt      => (others => (others => '0')),
+      config     => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
+      usrRst     => '0',
+      linkDown   => (others => '0'),
       -- AXI-Lite
-      readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
-      writeSlave      => AXI_LITE_WRITE_SLAVE_INIT_C);
+      readSlave  => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave => AXI_LITE_WRITE_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
 begin
 
-   U_AxiLiteAsync : entity surf.AxiLiteAsync
-      generic map (
-         TPD_G           => TPD_G,
-         NUM_ADDR_BITS_G => 12)
-      port map (
-         -- Slave Interface
-         sAxiClk         => axilClk,
-         sAxiClkRst      => axilRst,
-         sAxiReadMaster  => axilReadMaster,
-         sAxiReadSlave   => axilReadSlave,
-         sAxiWriteMaster => axilWriteMaster,
-         sAxiWriteSlave  => axilWriteSlave,
-         -- Master Interface
-         mAxiClk         => pgpRxClk,
-         mAxiClkRst      => pgpRxRst,
-         mAxiReadMaster  => readMaster,
-         mAxiReadSlave   => readSlave,
-         mAxiWriteMaster => writeMaster,
-         mAxiWriteSlave  => writeSlave);
-
-   -- busy is used in a lot of stuff in here; pipeline it
-   U_PipelineMergerBusy : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => 2)
-      port map (
-         clk     => pgpRxClk,
-         din(0)  => mergerBusy,
-         dout(0) => mergerBusyDly);
-
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (readMaster, pgpRxRst, writeMaster, laneDown,
-                   mergerBusyDly, asicStatus, fpgaTrgCnt, r) is
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, pgp4RxLinkDown, r) is
+
       variable v : RegType;
       variable axilEp : AxiLiteEndpointType;
+
    begin
 
       -- Latch the current value
       v := r;
 
-      -- Defaults
-      v.cntRst := '0';
-
-      -- Inputs
-      v.mergerBusy := mergerBusyDly;
-
-      ----------------------------------------------------------------------------------------------
-
-      for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-
-         if r.config.laneEnable(i) = '1' then
-
-            -- update on merger going back to idle
-            if v.mergerBusy = '0' and r.mergerBusy = '1' then
-
-               v.laneDecError(i)   := asicStatus(i).decError;
-               v.laneOverOcc(i)    := asicStatus(i).overOcc;
-               v.lanePause(i)      := asicStatus(i).pause;
-               v.lanePauseError(i) := asicStatus(i).pauseError;
-               v.laneFull(i)       := asicStatus(i).overflow;
-               v.laneTimeout(i)    := asicStatus(i).timeout;
-               v.laneTrgCnt(i)     := asicStatus(i).trgCnt;
-
-               if v.laneDecError(i) = '1' and uAnd(r.laneDecErrCnt(i)) = '0' then
-                  v.laneDecErrCnt(i) := r.laneDecErrCnt(i) + 1;
-               end if;
-
-               if v.laneOverOcc(i) = '1' and uAnd(r.laneOverOccCnt(i)) = '0' then
-                  v.laneOverOccCnt(i) := r.laneOverOccCnt(i) + 1;
-               end if;
-
-               if v.lanePause(i) = '1' and uAnd(r.lanePauseCnt(i)) = '0' then
-                  v.lanePauseCnt(i) := r.lanePauseCnt(i) + 1;
-               end if;
-
-               if v.lanePauseError(i) = '1' and uAnd(r.lanePauseErrCnt(i)) = '0' then
-                  v.lanePauseErrCnt(i) := r.lanePauseErrCnt(i) + 1;
-               end if;
-
-               if v.laneFull(i) = '1' and uAnd(r.laneFullCnt(i)) = '0' then
-                  v.laneFullCnt(i) := r.laneFullCnt(i) + 1;
-               end if;
-
-               if v.laneTimeout(i) = '1' and uAnd(r.laneTimeoutCnt(i)) = '0' then
-                  v.laneTimeoutCnt(i) := r.laneTimeoutCnt(i) + 1;
-               end if;
-
-            end if;
-
-         else
-            v.laneDecError(i)   := '0';
-            v.laneOverOcc(i)    := '0';
-            v.lanePause(i)      := '0';
-            v.lanePauseError(i) := '0';
-            v.laneFull(i)       := '0';
-            v.laneTimeout(i)    := '0';
-            v.laneTrgCnt(i)     := (others => '0');
-         end if;
-
-         if r.cntRst = '1' or r.config.laneEnable(i) = '0' then
-            v.laneDecErrCnt(i)   := (others => '0');
-            v.laneOverOccCnt(i)  := (others => '0');
-            v.lanePauseCnt(i)    := (others => '0');
-            v.lanePauseErrCnt(i) := (others => '0');
-            v.laneFullCnt(i)     := (others => '0');
-            v.laneTimeoutCnt(i)  := (others => '0');
-         end if;
-
-      end loop;
-      ----------------------------------------------------------------------------------------------
+      v.linkDown := pgp4RxLinkDown;
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
       ----------------------------------------------------------------------------------------------
 
       -- Determine the transaction type
-      axiSlaveWaitTxn(axilEp, writeMaster, readMaster, v.writeSlave, v.readSlave);
+      axiSlaveWaitTxn(axilEp, axilWriteMaster, axilReadMaster, v.writeSlave, v.readSlave);
 
-      for i in NUM_OF_SERIALIZERS_C-1 downto 0 loop
-         -- (Stride=4 bytes)
-         axiSlaveRegisterR(axilEp, toSlv(512+4*i,  12), 0, r.laneDecErrCnt(i));   -- StartAddr=0x200
-         axiSlaveRegisterR(axilEp, toSlv(768+4*i,  12), 0, r.laneOverOccCnt(i));  -- StartAddr=0x300
-         axiSlaveRegisterR(axilEp, toSlv(1024+4*i, 12), 0, r.lanePauseCnt(i));    -- StartAddr=0x400
-         axiSlaveRegisterR(axilEp, toSlv(1280+4*i, 12), 0, r.lanePauseErrCnt(i)); -- StartAddr=0x500
-         axiSlaveRegisterR(axilEp, toSlv(1536+4*i, 12), 0, r.laneFullCnt(i));     -- StartAddr=0x600
-         axiSlaveRegisterR(axilEp, toSlv(1792+4*i, 12), 0, r.laneTimeoutCnt(i));  -- StartAddr=0x700
-         axiSlaveRegisterR(axilEp, toSlv(2048+4*i, 12), 0, r.laneTrgCnt(i));      -- StartAddr=0x800
-      end loop;
-
-      axiSlaveRegisterR(axilEp, x"900", 0, fpgaTrgCnt);
-      axiSlaveRegister (axilEp, x"904", 0, v.config.fpgaId);
-      axiSlaveRegister (axilEp, x"908", 0, v.config.laneTimeout);
-      axiSlaveRegister (axilEp, x"90C", 0, v.config.laneEnable);
-      axiSlaveRegister (axilEp, x"910", 0, v.config.dropColMisalign);
-      axiSlaveRegister (axilEp, x"914", 0, v.config.dropLaneMisalign);
-      axiSlaveRegister (axilEp, x"918", 0, v.config.realignOnSof);
-      axiSlaveRegister (axilEp, x"91C", 0, v.config.autoRealign);
-      axiSlaveRegister (axilEp, x"920", 0, v.config.rstFpgaTrgCnt);
-      axiSlaveRegister (axilEp, x"924", 0, v.config.incrSroEnLow);
+      axiSlaveRegister (axilEp, x"400", 0, v.config.fpgaId);
+      axiSlaveRegister (axilEp, x"404", 0, v.config.laneTimeout);
+      axiSlaveRegister (axilEp, x"408", 0, v.config.laneEnable);
+      axiSlaveRegister (axilEp, x"40C", 0, v.config.dropColMisalign);
+      axiSlaveRegister (axilEp, x"410", 0, v.config.dropLaneMisalign);
+      axiSlaveRegister (axilEp, x"414", 0, v.config.realignOnSof);
+      axiSlaveRegister (axilEp, x"418", 0, v.config.autoRealign);
+      axiSlaveRegister (axilEp, x"41C", 0, v.config.rstFpgaTrgCnt);
+      axiSlaveRegister (axilEp, x"420", 0, v.config.incrSroEnLow);
       --
-      axiSlaveRegister (axilEp, x"A00", 0, v.cntRst);
-      axiSlaveRegister (axilEp, x"A04", 0, v.usrRst);
+      axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
       --
-      axiSlaveRegisterR(axilEp, x"B00", 0, laneDown);
-      axiSlaveRegisterR(axilEp, x"B04", 0, r.mergerBusy);
+      axiSlaveRegisterR(axilEp, x"600", 0, toSl(LANE_MON_GEN_G));
+      axiSlaveRegisterR(axilEp, x"604", 0, r.linkDown);
       --
-      axiSlaveRegisterR(axilEp, x"C00", 0, r.laneDecError);
-      axiSlaveRegisterR(axilEp, x"C04", 0, r.laneOverOcc);
-      axiSlaveRegisterR(axilEp, x"C08", 0, r.lanePause);
-      axiSlaveRegisterR(axilEp, x"C0C", 0, r.lanePauseError);
-      axiSlaveRegisterR(axilEp, x"C10", 0, r.laneFull);
-      axiSlaveRegisterR(axilEp, x"C14", 0, r.laneTimeout);
 
       -- Closeout the transaction
       axiSlaveDefault(axilEp, v.writeSlave, v.readSlave, AXI_RESP_DECERR_C);
       ----------------------------------------------------------------------------------------------
 
       -- AXI-Lite Outputs
-      writeSlave <= r.writeSlave;
-      readSlave  <= r.readSlave;
+      axilWriteSlave <= r.writeSlave;
+      axilReadSlave  <= r.readSlave;
 
       -- Outputs
       config <= r.config;
