@@ -47,7 +47,7 @@ package Pix2PgpPkg is
                             lanePauseError: slv; laneFull: slv; laneTimeout: slv;
                             laneDown: slv; laneValid: slv) return slv;
    function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl;
-                            frameSize: slv; colCnt: slv; trgCnt: slv) return slv;
+                            frameSize: slv; hitmask: slv; trgCnt: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
    --
