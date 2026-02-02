@@ -42,7 +42,8 @@ entity Pix2PgpAsicStreamRx is
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 8);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      AXIL_BASE_ADDR_G       : slv(31 downto 0) := x"80000000");
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -77,11 +78,12 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    -- size is equal to the amount of serializers, plus the main axi-lite manager of this module
    constant AXIL_SIZE_C   : positive := NUM_OF_SERIALIZERS_C+1;
-   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, x"80000000", 31, 22);
+   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 16);
 
-   -- AXI-Lite manager is on the forst index;
+   -- AXI-Lite manager is on the first index;
    -- Each lane monitoring module is on its lane+1
    constant AXI_LITE_MANAGER_INDEX_C : natural := 0;
+   constant LANE_MON_INDEX_C         : natural := 1; -- 1,2,3,4,...
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(AXIL_SIZE_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(AXIL_SIZE_C-1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_EMPTY_SLVERR_C);
@@ -229,10 +231,10 @@ begin
             laneRxMaster    => laneRxMasters(lane),
             laneRxSlave     => laneRxSlaves(lane),
             -- AXI-Lite Interface (sync'd to pgpRxClk domain)
-            axilReadMaster  => axilReadMasters(lane+1),
-            axilReadSlave   => axilReadSlaves(lane+1),
-            axilWriteMaster => axilWriteMasters(lane+1),
-            axilWriteSlave  => axilWriteSlaves(lane+1));
+            axilReadMaster  => axilReadMasters(LANE_MON_INDEX_C+lane),
+            axilReadSlave   => axilReadSlaves(LANE_MON_INDEX_C+lane),
+            axilWriteMaster => axilWriteMasters(LANE_MON_INDEX_C+lane),
+            axilWriteSlave  => axilWriteSlaves(LANE_MON_INDEX_C+lane));
 
    end generate GEN_LANE;
 
