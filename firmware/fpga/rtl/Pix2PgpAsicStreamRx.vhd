@@ -136,8 +136,7 @@ begin
    -----------
    U_AxiLiteAsync : entity surf.AxiLiteAsync
    generic map (
-      TPD_G           => TPD_G,
-      NUM_ADDR_BITS_G => 12)
+      TPD_G => TPD_G)
    port map (
       -- Slave Interface
       sAxiClk         => axilClk,
