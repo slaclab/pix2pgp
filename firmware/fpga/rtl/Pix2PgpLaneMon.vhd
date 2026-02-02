@@ -71,6 +71,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneFullCnt     : slv(MON_CNT_WIDTH_G-1 downto 0);
       laneOverOccCnt  : slv(MON_CNT_WIDTH_G-1 downto 0);
       lanePauseCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
+      laneEventCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
       colHitmaskCnt   : HitmaskCntArray;
       -- AXI-Lite
       readSlave       : AxiLiteReadSlaveType;
@@ -94,6 +95,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneFullCnt     => (others => '0'),
       laneOverOccCnt  => (others => '0'),
       lanePauseCnt    => (others => '0'),
+      laneEventCnt    => (others => '0'),
       colHitmaskCnt   => (others => (others => '0')),
       -- AXI-Lite
       readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
@@ -117,6 +119,7 @@ begin
       variable laneFullCntOverflow     : sl := '0';
       variable laneOverOccCntOverflow  : sl := '0';
       variable lanePauseCntOverflow    : sl := '0';
+      variable laneEventCntOverflow    : sl := '0';
       variable colHitmaskCntOverflow   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
 
    begin
@@ -144,6 +147,7 @@ begin
       laneFullCntOverflow     := uAnd(r.laneFullCnt);
       laneOverOccCntOverflow  := uAnd(r.laneOverOccCnt);
       lanePauseCntOverflow    := uAnd(r.lanePauseCnt);
+      laneEventCntOverflow    := uAnd(r.laneEventCnt);
 
       for i in NUM_OF_COL_MANAGERS_C-1 downto 0 loop
          colHitmaskCntOverflow(i) := uAnd(r.colHitmaskCnt(i));
@@ -154,6 +158,10 @@ begin
 
          -- increment on rising-edge of valid
          if v.laneValid = '1' and r.laneValid = '0' then
+
+            if uAnd(r.laneEventCnt) = '0' then
+               v.laneEventCnt := r.laneEventCnt + 1;
+            end if;
 
             if v.laneOverOcc = '1' and uAnd(r.laneOverOccCnt) = '0' then
                v.laneOverOccCnt := r.laneOverOccCnt + 1;
@@ -195,6 +203,7 @@ begin
          v.lanePauseCnt    := (others => '0');
          v.lanePauseErrCnt := (others => '0');
          v.laneFullCnt     := (others => '0');
+         v.laneEventCnt    := (others => '0');
 
          for i in NUM_OF_COL_MANAGERS_C-1 downto 0 loop
             v.colHitmaskCnt(i) := (others => '0');
@@ -219,16 +228,18 @@ begin
       axiSlaveRegisterR(axilEp, x"A08", 0, r.lanePauseCnt);
       axiSlaveRegisterR(axilEp, x"A0C", 0, r.lanePauseErrCnt);
       axiSlaveRegisterR(axilEp, x"A10", 0, r.laneFullCnt);
-      axiSlaveRegisterR(axilEp, x"A14", 0, r.laneDown);
+      axiSlaveRegisterR(axilEp, x"A14", 0, r.laneEventCnt);
+      axiSlaveRegisterR(axilEp, x"A18", 0, r.laneDown);
       --
-      axiSlaveRegisterR(axilEp, x"A18", 0, laneDecErrCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A1C", 0, lanePauseErrCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A20", 0, laneFullCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A24", 0, laneOverOccCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A28", 0, lanePauseCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A2C", 0, colHitmaskCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A1C", 0, laneDecErrCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A20", 0, lanePauseErrCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A24", 0, laneFullCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A28", 0, laneOverOccCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A2C", 0, lanePauseCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
       --
-      axiSlaveRegisterR(axilEp, x"A30", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
+      axiSlaveRegisterR(axilEp, x"A38", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
       axiSlaveRegister (axilEp, x"B00", 0, v.cntRst);
       --
