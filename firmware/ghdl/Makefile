@@ -1,5 +1,5 @@
 # Makefile for GHDL wrapper script
-# Example usage: $ make clean && make ASIC=SparkPixS 10
+# Example usage: $ make clean && make ASIC=SparkPixS STOP_TIME=10
 # To run the SparkPixS testbench for 10us
 
 # If using this Makefile as a template for a manual importing script for ASIC Synthesis flow, import:
