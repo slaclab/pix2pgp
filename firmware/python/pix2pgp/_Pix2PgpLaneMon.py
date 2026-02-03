@@ -16,7 +16,7 @@ import pix2pgp
 class Pix2PgpLaneMon(pr.Device):
     def __init__(self,
             numColPerLane=24,
-            monCntWidth=8,
+            monCntWidth=16,
             **kwargs):
         super().__init__(**kwargs)
 
