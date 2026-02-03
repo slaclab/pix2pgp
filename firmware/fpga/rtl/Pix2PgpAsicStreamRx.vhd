@@ -38,7 +38,7 @@ entity Pix2PgpAsicStreamRx is
       AUTO_REALIGN_G         : boolean  := true; -- set to false for simple testing
       ASIC_ID_G              : natural  := 0;
       LANE_MON_GEN_G         : boolean  := false;
-      LANE_MON_CNT_WIDTH_G   : positive := 8;
+      LANE_MON_CNT_WIDTH_G   : positive := 16;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
