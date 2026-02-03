@@ -129,6 +129,7 @@ SURF_FPGA_RTL = $(SURF_DIR)/base/fifo/rtl/Fifo.vhd \
 				$(SURF_DIR)/base/fifo/rtl/altera/FifoAlteraMf.vhd \
 				$(SURF_DIR)/base/fifo/rtl/dummy/FifoAlteraMfDummy.vhd \
 				$(SURF_DIR)/base/fifo/rtl/dummy/FifoXpmDummy.vhd \
+				$(SURF_DIR)/axi/axi-lite/rtl/AxiLiteCrossbar.vhd \
 				$(SURF_DIR)/axi/axi-lite/rtl/AxiLiteAsync.vhd \
 				$(SURF_DIR)/axi/axi-stream/ip_integrator/MasterAxiStreamIpIntegrator.vhd \
 				$(SURF_DIR)/axi/axi-stream/rtl/AxiStreamFifoV2.vhd

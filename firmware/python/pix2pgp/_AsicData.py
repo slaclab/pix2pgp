@@ -84,7 +84,6 @@ class AsicData(object):
         self.lanePauseError = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
-        self.activeColCnt   = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -388,14 +387,12 @@ class AsicData(object):
         then the trailer.
         """
 
-        state         = "preamble_s"
-        index         = self.currentIndex
-        _frameSize    = [0] * self.numOfLanes
-        _activeColCnt = [0] * self.numOfLanes
-        laneSel       = 0
-        inPause       = False
-        rawPrint      = True if self._verbose == 7 else False
-        self.done     = False
+        state      = "preamble_s"
+        index      = self.dataIndexStart
+        _frameSize = [0] * self.numOfLanes
+        laneSel    = 0
+        inPause    = False
+        rawPrint   = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not self.done:
@@ -453,30 +450,7 @@ class AsicData(object):
                 else:
 
                     laneSel = 0
-                    state = "activeColCnt_s"
-
-            # --------------------------------------------------------------------------------------
-            elif state == "activeColCnt_s":
-                if laneSel < self.numOfLanes:
-
-                    _slice = frame[index:index + self.frameSizeLen]
-
-                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.ActiveColCnt', wordHex)
-
-                    _activeColCnt[laneSel] = int(wordHex, 16)
-
-                    # accumulate activeColCnt
-                    self.activeColCnt[laneSel] = _activeColCnt[laneSel] + self.activeColCnt[laneSel]
-
-                    index += self.frameSizeLen
-                    laneSel += 1
-
-                else:
-
-                    laneSel = 0
                     state = "laneValidCheck_s"
-
 
             # --------------------------------------------------------------------------------------
             elif state == "laneValidCheck_s":

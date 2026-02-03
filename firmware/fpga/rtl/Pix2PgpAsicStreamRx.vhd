@@ -37,10 +37,13 @@ entity Pix2PgpAsicStreamRx is
       ASIC_RST_POLARITY_G    : sl       := '0';  -- '1' for active high rst, '0' for active low
       AUTO_REALIGN_G         : boolean  := true; -- set to false for simple testing
       ASIC_ID_G              : natural  := 0;
+      LANE_MON_GEN_G         : boolean  := false;
+      LANE_MON_CNT_WIDTH_G   : positive := 16;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 8);
+      AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      AXIL_BASE_ADDR_G       : slv(31 downto 0) := x"80000000");
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -63,13 +66,35 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
-      axilReadMaster  : in  AxiLiteReadMasterType;
+      axilReadMaster  : in  AxiLiteReadMasterType  := AXI_LITE_READ_MASTER_INIT_C;
       axilReadSlave   : out AxiLiteReadSlaveType;
-      axilWriteMaster : in  AxiLiteWriteMasterType;
+      axilWriteMaster : in  AxiLiteWriteMasterType := AXI_LITE_WRITE_MASTER_INIT_C;
       axilWriteSlave  : out AxiLiteWriteSlaveType);
 end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
+
+   -- AXI-Lite Signals and Constants
+
+   -- size is equal to the amount of serializers, plus the main axi-lite manager of this module
+   constant AXIL_SIZE_C   : positive := NUM_OF_SERIALIZERS_C+1;
+   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 16);
+
+   -- AXI-Lite manager is on the first index;
+   -- Each lane monitoring module is on its lane+1
+   constant AXI_LITE_MANAGER_INDEX_C : natural := 0;
+   constant LANE_MON_INDEX_C         : natural := 1; -- 1,2,3,4,...
+
+   signal axilWriteMasters : AxiLiteWriteMasterArray(AXIL_SIZE_C-1 downto 0);
+   signal axilWriteSlaves  : AxiLiteWriteSlaveArray(AXIL_SIZE_C-1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_EMPTY_SLVERR_C);
+   signal axilReadMasters  : AxiLiteReadMasterArray(AXIL_SIZE_C-1 downto 0);
+   signal axilReadSlaves   : AxiLiteReadSlaveArray(AXIL_SIZE_C-1 downto 0)  := (others => AXI_LITE_READ_SLAVE_EMPTY_SLVERR_C);
+
+   signal axilReadMasterSync  : AxiLiteReadMasterType  := AXI_LITE_READ_MASTER_INIT_C;
+   signal axilReadSlaveSync   : AxiLiteReadSlaveType   := AXI_LITE_READ_SLAVE_INIT_C;
+   signal axilWriteMasterSync : AxiLiteWriteMasterType := AXI_LITE_WRITE_MASTER_INIT_C;
+   signal axilWriteSlaveSync  : AxiLiteWriteSlaveType  := AXI_LITE_WRITE_SLAVE_INIT_C;
+   --
 
    signal laneRxMasters  : AxiStreamMasterArray(NUM_OF_SERIALIZERS_C-1 downto 0)
                          := (others => AXI_STREAM_MASTER_INIT_C);
@@ -106,6 +131,72 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
 begin
 
+   -----------
+   -- AXI Sync
+   -----------
+   U_AxiLiteAsync : entity surf.AxiLiteAsync
+   generic map (
+      TPD_G => TPD_G)
+   port map (
+      -- Slave Interface
+      sAxiClk         => axilClk,
+      sAxiClkRst      => axilRst,
+      sAxiReadMaster  => axilReadMaster,
+      sAxiReadSlave   => axilReadSlave,
+      sAxiWriteMaster => axilWriteMaster,
+      sAxiWriteSlave  => axilWriteSlave,
+      -- Master Interface
+      mAxiClk         => pgpRxClk,
+      mAxiClkRst      => pgpRxRst,
+      mAxiReadMaster  => axilReadMasterSync,
+      mAxiReadSlave   => axilReadSlaveSync,
+      mAxiWriteMaster => axilWriteMasterSync,
+      mAxiWriteSlave  => axilWriteSlaveSync);
+
+   --------------------
+   -- AXI-Lite Crossbar
+   --------------------
+   U_AxiLiteCrossbar : entity surf.AxiLiteCrossbar
+      generic map (
+         TPD_G                => TPD_G,
+         NUM_SLAVE_SLOTS_G    => 1,
+         NUM_MASTER_SLOTS_G   => AXIL_SIZE_C,
+         MASTERS_CONFIG_G     => AXIL_CONFIG_C)
+      port map (
+         axiClk              => pgpRxClk,
+         axiClkRst           => pgpRxRst,
+         sAxiWriteMasters(0) => axilWriteMasterSync,
+         sAxiWriteSlaves(0)  => axilWriteSlaveSync,
+         sAxiReadMasters(0)  => axilReadMasterSync,
+         sAxiReadSlaves(0)   => axilReadSlaveSync,
+         mAxiWriteMasters    => axilWriteMasters,
+         mAxiWriteSlaves     => axilWriteSlaves,
+         mAxiReadMasters     => axilReadMasters,
+         mAxiReadSlaves      => axilReadSlaves
+      );
+
+   -------------------
+   -- AXI-Lite Manager
+   -------------------
+   U_AxiLiteManager: entity pix2pgp.Pix2PgpAxiLiteManager
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         LANE_MON_GEN_G => LANE_MON_GEN_G)
+      port map(
+         -- General Interface
+         pgpRxClk        => pgpRxClk,
+         pgpRxRst        => pgpRxRst,
+         usrRst          => usrRst,
+         config          => config,
+         pgp4RxLinkDown  => pgp4RxLinkDown,
+         -- AXI-Lite Interface (sync'd to pgpRxClk domain)
+         axilReadMaster  => axilReadMasters(AXI_LITE_MANAGER_INDEX_C),
+         axilReadSlave   => axilReadSlaves(AXI_LITE_MANAGER_INDEX_C),
+         axilWriteMaster => axilWriteMasters(AXI_LITE_MANAGER_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(AXI_LITE_MANAGER_INDEX_C));
+
    -----------------
    -- Lane Receivers
    -----------------
@@ -116,23 +207,33 @@ begin
             TPD_G                  => TPD_G,
             RST_ASYNC_G            => RST_ASYNC_G,
             RST_POLARITY_G         => RST_POLARITY_G,
+            LANE_ID_G              => lane,
             PIPE_STAGES_G          => LANE_PIPE_STAGES_G,
             META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
-            AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G)
+            AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G,
+            LANE_MON_GEN_G         => LANE_MON_GEN_G,
+            LANE_MON_CNT_WIDTH_G   => LANE_MON_CNT_WIDTH_G)
          port map(
             -- General Interface
-            laneClk        => pgpRxClk,
-            laneRst        => laneRst(lane),
-            config         => config,
+            laneClk         => pgpRxClk,
+            laneRst         => laneRst(lane),
+            pgpRxRst        => pgpRxRst,
+            config          => config,
+            linkDown        => pgp4RxLinkDown(lane),
             -- RX FIFO Interface
-            pgp4RxMaster   => pgp4RxMaster(lane),
-            pgp4RxSlave    => pgp4RxSlave(lane),
+            pgp4RxMaster    => pgp4RxMaster(lane),
+            pgp4RxSlave     => pgp4RxSlave(lane),
             -- ASIC Rx Interface
-            lanePostError  => lanePostError(lane),
-            laneStatus     => laneStatus(lane),
-            laneMetaRd     => laneMetaRd(lane),
-            laneRxMaster   => laneRxMasters(lane),
-            laneRxSlave    => laneRxSlaves(lane));
+            lanePostError   => lanePostError(lane),
+            laneStatus      => laneStatus(lane),
+            laneMetaRd      => laneMetaRd(lane),
+            laneRxMaster    => laneRxMasters(lane),
+            laneRxSlave     => laneRxSlaves(lane),
+            -- AXI-Lite Interface (sync'd to pgpRxClk domain)
+            axilReadMaster  => axilReadMasters(LANE_MON_INDEX_C+lane),
+            axilReadSlave   => axilReadSlaves(LANE_MON_INDEX_C+lane),
+            axilWriteMaster => axilWriteMasters(LANE_MON_INDEX_C+lane),
+            axilWriteSlave  => axilWriteSlaves(LANE_MON_INDEX_C+lane));
 
    end generate GEN_LANE;
 
@@ -248,33 +349,6 @@ begin
          trgBuffSroEn  => trgBuffSroEn,
          trgBuffSysDaq => trgBuffSysDaq,
          trgBuffValid  => trgBuffValid);
-
-   -------------------
-   -- Axi-Lite Manager
-   -------------------
-   U_AxiLiteManager: entity pix2pgp.Pix2PgpAxiLiteManager
-      generic map(
-         TPD_G          => TPD_G,
-         RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G)
-      port map(
-         -- General Interface
-         pgpRxClk        => pgpRxClk,
-         pgpRxRst        => pgpRxRst,
-         usrRst          => usrRst,
-         config          => config,
-         -- Internal Module Interface
-         mergerBusy      => mergerBusy,
-         laneDown        => pgp4RxLinkDown,
-         asicStatus      => asicStatus,
-         fpgaTrgCnt      => fpgaTrgCnt,
-         -- AXI-Lite Interface
-         axilClk         => axilClk,
-         axilRst         => axilRst,
-         axilReadMaster  => axilReadMaster,
-         axilReadSlave   => axilReadSlave,
-         axilWriteMaster => axilWriteMaster,
-         axilWriteSlave  => axilWriteSlave);
 
    asicDaqStatus <= asicStatus;
 
