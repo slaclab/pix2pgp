@@ -388,7 +388,7 @@ class AsicData(object):
         """
 
         state      = "preamble_s"
-        index      = self.dataIndexStart
+        index      = self.currentIndex
         _frameSize = [0] * self.numOfLanes
         laneSel    = 0
         inPause    = False
