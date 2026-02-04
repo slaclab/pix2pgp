@@ -43,7 +43,7 @@ entity Pix2PgpAsicStreamRx is
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
-      AXIL_BASE_ADDR_G       : slv(31 downto 0) := x"80000000");
+      AXIL_BASE_ADDR_G       : slv(31 downto 0));
    port(
       -- General Interface
       pgpRxClk        : in  sl;
