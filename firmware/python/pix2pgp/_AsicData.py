@@ -17,9 +17,10 @@ import pix2pgp
 
 class AsicData(object):
     def __init__(self,
-                 asicType = "SparkPixS",
-                 rawData  = False,
-                 verbose  = 0,
+                 asicType  = "SparkPixS",
+                 rawData   = False,
+                 oldFormat = False,
+                 verbose   = 0,
                  **kwargs):
         """
         Class for the entire ASIC dataset.
@@ -30,6 +31,7 @@ class AsicData(object):
         self._asicType    = asicType
         self._rawData     = rawData
         self._verbose     = verbose
+        self._oldFormat   = oldFormat
         self._hitPrint    = self._verbose == 4
         self._headerPrint = self._verbose > 1 and not(self._hitPrint)
 
@@ -84,6 +86,7 @@ class AsicData(object):
         self.lanePauseError = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
+        self.activeColCnt   = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -387,12 +390,13 @@ class AsicData(object):
         then the trailer.
         """
 
-        state      = "preamble_s"
-        index      = self.currentIndex
-        _frameSize = [0] * self.numOfLanes
-        laneSel    = 0
-        inPause    = False
-        rawPrint   = True if self._verbose == 7 else False
+        state         = "preamble_s"
+        index         = self.currentIndex
+        _frameSize    = [0] * self.numOfLanes
+        _activeColCnt = [0] * self.numOfLanes
+        laneSel       = 0
+        inPause       = False
+        rawPrint      = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not self.done:
@@ -432,6 +436,7 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "frameSize_s":
+
                 if laneSel < self.numOfLanes:
 
                     _slice = frame[index:index + self.frameSizeLen]
@@ -443,6 +448,36 @@ class AsicData(object):
 
                     # accumulate frameSize
                     self.frameSize[laneSel] = _frameSize[laneSel] + self.frameSize[laneSel]
+
+                    index += self.frameSizeLen
+                    laneSel += 1
+
+                else:
+
+                    laneSel = 0
+
+                    # skip active-col-cnt stuff by default; this feature was deprecated Feb 2026
+                    # To-Do: skip this check eventually
+                    state = "laneValidCheck_s"
+
+                    if self._oldFormat:
+                        state = "activeColCnt_s"
+
+            # --------------------------------------------------------------------------------------
+            # To-Do: remove this state eventually
+            elif state == "activeColCnt_s":
+
+                if laneSel < self.numOfLanes:
+
+                    _slice = frame[index:index + self.frameSizeLen]
+
+                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
+                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.ActiveColCnt', wordHex)
+
+                    _activeColCnt[laneSel] = int(wordHex, 16)
+
+                    # accumulate activeColCnt
+                    self.activeColCnt[laneSel] = _activeColCnt[laneSel] + self.activeColCnt[laneSel]
 
                     index += self.frameSizeLen
                     laneSel += 1
@@ -465,6 +500,7 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "lane_s":
+
                 _frameSlice = frame[index:index + _frameSize[laneSel] * self.wordLen]
 
                 _frameSliceSwap = pix2pgp.Tools.wordSwap(_frameSlice, self.wordLen)
@@ -511,12 +547,18 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "end_s":
+
                 _frameSize    = [0] * self.numOfLanes
                 _activeColCnt = [0] * self.numOfLanes
                 laneSel       = 0
                 inPause       = False
                 self.done     = True
                 index         += self.trailerLen
+
+                # make sure this is set to something that makes sense if not using old format
+                # To-Do: skip this check eventually
+                if not(self._oldFormat):
+                    self.activeColCnt = [None] * self.numOfLanes
 
                 # trigger counter check
                 validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)

@@ -28,6 +28,7 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                  asicType='SparkPixS',
                  rawData=False,
                  enableOnStart=True,
+                 oldFormat=False,
                  hideData=True,
                  hidden=True,
                  **kwargs):
@@ -38,10 +39,11 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                                  hidden=hidden,
                                  **kwargs)
 
-        self._rawData  = rawData
-        self._verbose  = verbose
-        self._maxAsics = maxAsics
-        self._asicType = asicType
+        self._rawData   = rawData
+        self._verbose   = verbose
+        self._maxAsics  = maxAsics
+        self._asicType  = asicType
+        self._oldFormat = oldFormat
 
         self.asicId        = []
         self.asicLaneValid = [[] for _ in range(maxAsics)]
@@ -49,6 +51,7 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
         self.asicTrgCnt    = [[] for _ in range(maxAsics)]
 
         self.asicDecoder = pix2pgp.AsicData(asicType=self._asicType,
+                                            oldFormat=self._oldFormat,
                                             rawData=self._rawData,
                                             verbose=self._verbose)
 
@@ -67,8 +70,8 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
 
                 # Call formatter to start parsing
                 self.asicDecoder.formatter(data=_frame,
-                                          dataLen=_dataLen,
-                                          startIndex=_startIndex)
+                                           dataLen=_dataLen,
+                                           startIndex=_startIndex)
 
                 # Get the ASIC ID and append it to a local list if not seen before
                 _id = self.asicDecoder.asicId
