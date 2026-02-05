@@ -27,8 +27,8 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                  maxAsics=4,
                  asicType='SparkPixS',
                  rawData=False,
-                 enableOnStart=True,
                  oldFormat=False,
+                 enableOnStart=True,
                  hideData=True,
                  hidden=True,
                  **kwargs):
