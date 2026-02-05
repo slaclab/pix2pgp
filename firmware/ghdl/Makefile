@@ -8,14 +8,6 @@
 # contained in the LICENSE.txt file.
 #-----------------------------------------------------------------------------
 
-# Define default ASIC
-ifndef ASIC
-export ASIC = Thriglav
-endif
-
-# Define default target
-target: check_asic analysis
-
 # Define TOP directory
 export TOP_DIR = $(abspath $(PWD)/..)
 
@@ -28,12 +20,18 @@ export GHDL_TOP_LIB = pix2pgp
 # Define PROJECT with respect to $(ASIC) type
 export PROJECT = Pix2Pgp$(ASIC)TopTb
 
+# Define the simulation time
+export GHDL_STOP_TIME = 10us
+
 # Load the common makefile library
 include $(TOP_DIR)/submodules/ruckus/system_ghdl.mk
+
+# Define default target
+target: check_asic tb
 
 # Check if ASIC is defined
 check_asic:
 	@if [ -z "$(ASIC)" ]; then \
-		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make analyze ASIC=SparkPixS')"; \
+		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make ASIC=Thriglav tb')"; \
 		exit 1; \
 	fi
