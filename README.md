@@ -41,6 +41,8 @@ If one wants to include the files manually, it is advised to follow the procedur
 
 Note that none of the FPGA-related files should be included in the ASIC RTL Synthesis flow.
 
+Note that the `Makefile` contains specific commands to print-out a full list of the required files for both ASIC RTL Synthesis and ASIC+FPGA Behavioral Simulation cases.
+
 ### Cadence Genus Ruckus Support
 To automatically import the ASIC RTL gateware under Cadence Genus via the ruckus framework, one should invoke the `ruckus.tcl` script located within the associated directory, via a TCL script of their own. For example, for `SparkPixS`, this is what the script should look like:
 ```
@@ -123,7 +125,7 @@ with open('pickleData.pkl', 'wb') as f:
 ```
 
 ## GHDL Support
-One can use the `firmware/ghdl/Makefile` to perform quick syntax checking, and/or run behavioral simulation of the design. As stated above, the contents of the said `Makefile` can also be used as a template for any user script that manually imports source files to their project. In the examples below, the `ASIC` argument needs to match one of the directories within `gateware/asics/`.
+One can use the `firmware/ghdl/Makefile` to perform quick syntax checking, and/or run behavioral simulation of the design. As stated above, the said `Makefile` can also be used to also print-out all file dependencies in case the user wishes to manually import files in their project. Please look in the `Makefile` for more info.
 
 ### How to perform simple VHDL syntax checking using GHDL
 Navigate to `firmware/ghdl` and execute: `$ make clean && make analyze ASIC=SparkPixS`.

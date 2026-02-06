@@ -1,29 +1,45 @@
-# Makefile for GHDL wrapper script
-# Example usage: $ make clean && make ASIC=SparkPixS STOP_TIME=10
+#-----------------------------------------------------------------------------
+# This file is part of the 'pix2pgp'. It is subject to
+# the license terms in the LICENSE.txt file found in the top-level directory
+# of this distribution and at:
+#    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+# No part of the 'pix2pgp', including this file, may be
+# copied, modified, propagated, or distributed except according to the terms
+# contained in the LICENSE.txt file.
+#-----------------------------------------------------------------------------
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# README FIRST
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Makefile for GHDL
+# Example usage: $ make clean && make tb ASIC=SparkPixS
 # To run the SparkPixS testbench for 10us
 
-# If using this Makefile as a template for a manual importing script for ASIC Synthesis flow, import:
-# * $(SURF_PKG)
-# * $(SURF_ASIC_RTL)
-# * $(ASIC_PKG)
-# * $(ASIC_RTL)
-# * $(ASIC_TOP)
+# This Makefile can also be used to print-out dependencies;
+# in case one wants to import the files to their project manually.
 
-# If using this Makefile as a template for a manual importing script for ASIC+FPGA Behavioral Simulation flow, import:
-# * $(SURF_PKG)
-# * $(SURF_ASIC_RTL)
-# * $(SURF_FPGA_RTL)
-# * $(ASIC_PKG)
-# * $(ASIC_RTL)
-# * $(ASIC_TOP)
-# * $(ASIC_TB)
-# * $(FPGA_RTL)
-# * $(FPGA_TB)
-
+# =================================================
+# Option 1: Print-Out all ASIC RTL Dependencies:
+# $ make clean && make prepare_asic ASIC=SparkPixS
+# =================================================
+# [WARNING]: Read Below! **************************
 # In this flow, a GHDL-compatible FIFO RTL wrapper source is used, under gateware/shared/rtl/surfFifo;
+# That is the file that will be printed-out by the command above.
 # *Never* include this file if manually importing surf/Pix2Pgp source files into your project.
 # Pix2Pgp is designed to implement proprietary FIFOs in the ASIC flow that should be available in the host
-# The wrapper file for the said FIFOs can be found under gateware/shared/rtl/synopsysFifo
+# I.e. it is assumed that the user is invoking a third-party synthesizer/simulator;
+# the said third-party tool should have a FIFO version of their own
+# One wrapper file can be found under gateware/shared/rtl/synopsysFifo
+
+# =======================================================================
+# Option 2: Print-Out all ASIC+FPGA Behavioral Verification Dependencies:
+# $ make clean && make prepare_tb ASIC=SparkPixS
+# =======================================================================
+# Same applies here.
+# ASIC RTL FIFOs that should be used when invoking proprietary simulators are located under:
+# gateware/shared/rtl/synopsysFifo
+# *Never* use the wrapper located under gateware/shared/rtl/surfFifo when doing actual verification
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # =============================================
 # Directories
@@ -48,11 +64,13 @@ FPGA_RTL := $(wildcard $(FPGA_RTL_DIR)/*.vhd)
 FPGA_TB  := $(wildcard $(FPGA_TB_DIR)/*.vhd)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ASIC-Specific
-ASIC_PKG     := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2PgpAsicPkg.vhd
-ASIC_TOP     := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2Pgp$(ASIC)Top.vhd
-ASIC_TB      := $(wildcard $(GATEWARE_DIR)/asics/$(ASIC)/tb/*.vhd)
-ASIC_TB_TOP  := $(GATEWARE_DIR)/asics/$(ASIC)/tb/Pix2Pgp$(ASIC)TopTb.vhd
-ASIC_TB_NAME := Pix2Pgp$(ASIC)TopTb
+ASIC_PKG      := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2PgpAsicPkg.vhd
+ASIC_TOP      := $(GATEWARE_DIR)/asics/$(ASIC)/rtl/Pix2Pgp$(ASIC)Top.vhd
+ASIC_TOP_NAME := Pix2Pgp$(ASIC)Top
+
+ASIC_TB       := $(wildcard $(GATEWARE_DIR)/asics/$(ASIC)/tb/*.vhd)
+ASIC_TB_TOP   := $(GATEWARE_DIR)/asics/$(ASIC)/tb/Pix2Pgp$(ASIC)TopTb.vhd
+ASIC_TB_NAME  := Pix2Pgp$(ASIC)TopTb
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Surf FIFO Wrapper (do *not* include in any ASIC RTL Synthesis flow)
@@ -143,16 +161,17 @@ FST  := $(wildcard $(GHDL_DIR)/*.fst)
 OUT  := $(wildcard $(GHDL_DIR)/*.o)
 
 # GHDL Command and Flags
-GHDL_CMD        := ghdl-mcode # Or your specific GHDL path, e.g., /home/cb/Work/tools/ghdl/bin/ghdl
-GHDL_GLBL_FLAGS := --ieee=standard -fexplicit -fsynopsys
-GHDL_STD_FLAG   := --std=93c
+GHDL_CMD            := ghdl-llvm # Or your specific GHDL path, e.g., /home/cb/Work/tools/ghdl/bin/ghdl
+GHDL_STANDARD_FLAGS := --ieee=standard -fexplicit -fsynopsys
+GHDL_QUIET_FLAGS    := $(GHDL_STANDARD_FLAGS) -Wno-hide -Wno-unused -Wno-library -Wno-elaboration -Wno-specs
+GHDL_STD_FLAG       := --std=93c
 
-GHDL_ANALYZE        := $(GHDL_CMD) -s $(GHDL_GLBL_FLAGS) $(GHDL_STD_FLAG)
-GHDL_IMPORT_SURF    := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=surf
-GHDL_IMPORT_PIX2PGP := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=pix2pgp
-GHDL_IMPORT_WORK    := $(GHDL_CMD) -i $(GHDL_GLBL_FLAGS) --work=work
-GHDL_MAKE           := $(GHDL_CMD) -m -Psurf -Ppix2pgp -Pwork --warn-unused $(GHDL_GLBL_FLAGS)
-GHDL_RUN            := $(GHDL_CMD) --elab-run $(GHDL_GLBL_FLAGS)
+GHDL_ANALYZE        := $(GHDL_CMD) -s $(GHDL_STANDARD_FLAGS) $(GHDL_STD_FLAG)
+GHDL_IMPORT_SURF    := $(GHDL_CMD) -i $(GHDL_STANDARD_FLAGS) --work=surf
+GHDL_IMPORT_PIX2PGP := $(GHDL_CMD) -i $(GHDL_STANDARD_FLAGS) --work=pix2pgp
+GHDL_IMPORT_WORK    := $(GHDL_CMD) -i $(GHDL_STANDARD_FLAGS) --work=work
+GHDL_MAKE           := $(GHDL_CMD) -m -Psurf -Ppix2pgp -Pwork --warn-unused $(GHDL_QUIET_FLAGS)
+GHDL_RUN            := $(GHDL_CMD) --elab-run $(GHDL_STANDARD_FLAGS)
 
 DEFAULT_STOP_TIME := 10
 STOP_TIME ?= $(DEFAULT_STOP_TIME)
@@ -161,7 +180,7 @@ STOP_TIME ?= $(DEFAULT_STOP_TIME)
 check_directory = $(shell if test -d "$1"; then echo 1; else echo 0; fi)
 
 # Targets
-.PHONY: all analyze tb clean
+.PHONY: all analyze prepare_asic prepare_tb tb clean
 
 all: tb
 
@@ -175,6 +194,7 @@ analyze: check_asic $(ASIC_PKG) $(ASIC_RTL) $(ASIC_TOP) $(ASIC_TB) $(FPGA_RTL) $
 	@echo "FPGA_TB:  $(FPGA_TB)"
 	@echo "GHDL_FIFO_RTL (please omit if using an external script and use gateware/shared/rtl/synopsysFifo): $(GHDL_FIFO_RTL)"
 
+	@echo "============================================================================================"
 	@echo "[INFO]: Importing surf pkg files..."
 	@echo "============================================================================================"
 	for package in $(SURF_PKG); do \
@@ -220,6 +240,28 @@ analyze: check_asic $(ASIC_PKG) $(ASIC_RTL) $(ASIC_TOP) $(ASIC_TB) $(FPGA_RTL) $
 	$(GHDL_ANALYZE) $(GHDL_FIFO_RTL)
 	@echo "[INFO]: Done!"
 
+# Run to print-out all ASIC RTL Dependencies
+prepare_asic: analyze
+	@echo "============================================================================================"
+	@echo "[INFO]:    Printing all dependencies for ASIC RTL..."
+	@echo "[WARNING]: NEVER import the wrapper under gateware/shared/rtl/surfFifo!"
+	@echo "[WARNING]: If using e.g. Synopsys FIFOs, import the wrapper under gateware/shared/rtl/synopsysFifo!"
+	@echo "============================================================================================"
+	${GHDL_IMPORT_WORK} $(ASIC_TOP)
+	$(GHDL_ANALYZE)     $(ASIC_TOP)
+	$(GHDL_MAKE)        $(ASIC_TOP_NAME)
+
+# Run to print-out all ASIC+FPGA RTL Simulation/Verification Dependencies
+prepare_tb: analyze
+	@echo "============================================================================================"
+	@echo "[INFO]: Printing all dependencies for ASIC+FPGA Behavioral Simulation/Verification..."
+	@echo "[WARNING]: NEVER import the wrapper under gateware/shared/rtl/surfFifo!"
+	@echo "[WARNING]: If using e.g. Synopsys FIFOs, import the wrapper under gateware/shared/rtl/synopsysFifo!"
+	@echo "============================================================================================"
+	${GHDL_IMPORT_WORK} $(ASIC_TB_TOP)
+	$(GHDL_ANALYZE)     $(ASIC_TB_TOP)
+	$(GHDL_MAKE)        $(ASIC_TB_NAME)
+
 # Check if ASIC is defined
 check_asic:
 	@if [ -z "$(ASIC)" ]; then \
@@ -227,13 +269,10 @@ check_asic:
 		exit 1; \
 	fi
 
-tb: analyze
+# Runs GHDL simulation
+tb: prepare_tb
 	@echo "[INFO]: Assuming testbench entity name: $(ASIC_TB_NAME)"
 	@echo "[INFO]: Assuming testbench top-level file: $(ASIC_TB_TOP)"
-
-	${GHDL_IMPORT_WORK} $(ASIC_TB_TOP)
-
-	$(GHDL_MAKE) $(ASIC_TB_NAME)
 
 	@echo "Will run testbench for $(STOP_TIME)us."
 
