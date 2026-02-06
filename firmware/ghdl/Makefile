@@ -27,11 +27,11 @@ export GHDL_STOP_TIME = 10us
 include $(TOP_DIR)/submodules/ruckus/system_ghdl.mk
 
 # Define default target
-target: check_asic tb
+target: check_asic build
 
 # Check if ASIC is defined
 check_asic:
 	@if [ -z "$(ASIC)" ]; then \
-		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make ASIC=Thriglav tb')"; \
+		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make ASIC=Thriglav build')"; \
 		exit 1; \
 	fi
