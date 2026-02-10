@@ -1,8 +1,10 @@
 # Load RUCKUS environment and library
-source $::env(RUCKUS_QUIET_FLAG) $::env(RUCKUS_PROC_TCL)
+source $::env(RUCKUS_PROC_TCL)
 
 # Load ruckus library (ruckus.BuildInfoPkg.vhd only)
-GenBuildString $::env(SYN_DIR)
+if { [info exists ::env(SYN_DIR)] } {
+   GenBuildString $::env(SYN_DIR)
+}
 
 # Load the pix2pgp library for this ASIC
 loadSource -lib pix2pgp -dir           "$::DIR_PATH/rtl"

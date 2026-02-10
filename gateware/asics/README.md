@@ -37,7 +37,7 @@ Navigate to `gateware/asics` and create a new directory for the `NewAsic`: do `$
 While under the `firmware/ghdl` directory, run:
 
 ```bash
-$ clear && make clean && make prepare_tb ASIC=NewAsic
+$ make build ASIC=NewAsic
 ```
 
 If that command exits without any errors, you can proceed with the next step.
