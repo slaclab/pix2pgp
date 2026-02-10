@@ -26,8 +26,17 @@ export GHDL_STOP_TIME = 10us
 # Load the common makefile library
 include $(TOP_DIR)/submodules/ruckus/system_ghdl.mk
 
+# Override the ruckus default (ghdl)
+export GHDL_CMD = ghdl-llvm
+
+# Force use bash
+export SHELL := /bin/bash
+
 # Define default target
 target: check_asic build
+
+# Add message
+build: warning_message
 
 # Check if ASIC is defined
 check_asic:
@@ -35,3 +44,18 @@ check_asic:
 		echo "[ERROR]: ASIC must be specified! Please use an ASIC from within gateware/asics/ (e.g., 'make ASIC=Thriglav build')"; \
 		exit 1; \
 	fi
+
+warning_message:
+	@echo ""
+	@echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@echo "                                          [WARNING]: Please Read the following!"
+	@echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@echo "  [WARNING]: If using this Makefile to list the project files to import using an external script:"
+	@echo "  [WARNING]: 1. Replace the file under surfFifo/ with synopsysFifo/ if using a proprietary tool for simulation or synthesis"
+	@echo "  [WARNING]: 2. Use all other listed files for FPGA+ASIC RTL Behavioral Simulation."
+	@echo "  [WARNING]: 3. Do the following files for ASIC RTL Synthesis:"
+	@echo "  [WARNING]:   3a. Omit any pix2pgp-fpga related files"
+	@echo "  [WARNING]:   3b. Omit any pix2pgp-tb related files"
+	@echo "  [WARNING]:   3c. Omit any surf-fifo related files"
+	@echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@echo ""
