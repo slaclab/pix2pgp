@@ -35,6 +35,8 @@ First of all, one should add this repo as a submodule to their base project ($ g
 ### Manual Import of Source Files
 If one wants to include the files manually, it is advised to run `$ make ASIC=SparkPixS build` within `firmware/ghdl/Makefile` to generate a complete list of source files. Please read the printed-out warnings to deduce which files you need to import. The $(ASIC) argument needs to be changed accordingly
 
+Note that the `Makefile` contains specific commands to print-out a full list of the required files for both ASIC RTL Synthesis and ASIC+FPGA Behavioral Simulation cases.
+
 ### Cadence Genus Ruckus Support
 To automatically import the ASIC RTL gateware under Cadence Genus via the ruckus framework, one should invoke the `ruckus.tcl` script located within the associated directory, via a TCL script of their own. For example, for `SparkPixS`, this is what the script should look like:
 ```
