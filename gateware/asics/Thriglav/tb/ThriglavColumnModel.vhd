@@ -1,9 +1,17 @@
--- only for simulation
--- Thriglav data format:
--- dout[31:27] : reserved
--- dout[26:16] : toa
--- dout[15:8]  : row
--- dout[7:0]   : tot
+-------------------------------------------------------------------------------
+-- Company    : SLAC National Accelerator Laboratory
+-------------------------------------------------------------------------------
+-- Description: Model for Thriglav column
+--
+-------------------------------------------------------------------------------
+-- This file is part of 'Pix2Pgp'.
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Pix2Pgp', including this file,
+-- may be copied, modified, propagated, or distributed except according to
+-- the terms contained in the LICENSE.txt file.
+-------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -17,7 +25,7 @@ library pix2pgp;
 use pix2pgp.Pix2PgpAsicPkg.all;
 use pix2pgp.Pix2PgpPkg.all;
 
-entity DummyThriglavPixel is
+entity ThriglavColumnModel is
     generic (
         TPD_G           : time     := 1 ns;
         RST_ASYNC_G     : boolean  := true;
@@ -42,7 +50,7 @@ entity DummyThriglavPixel is
         dout       : out slv(31 downto 0));
 end entity;
 
-architecture tb of DummyThriglavPixel is
+architecture tb of ThriglavColumnModel is
 
     type StateType is (
       IDLE_S,

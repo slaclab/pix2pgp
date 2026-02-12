@@ -1,3 +1,18 @@
+-------------------------------------------------------------------------------
+-- Company    : SLAC National Accelerator Laboratory
+-------------------------------------------------------------------------------
+-- Description: Top-Level Testbench for Thriglav
+--
+-------------------------------------------------------------------------------
+-- This file is part of 'Pix2Pgp'.
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Pix2Pgp', including this file,
+-- may be copied, modified, propagated, or distributed except according to
+-- the terms contained in the LICENSE.txt file.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -72,20 +87,16 @@ architecture test of Pix2PgpThriglavTopTb is
    signal eroDly    : sl := '0';
    signal revRst    : sl := '0';
    signal sysClk    : sl := '0';
-   signal axiFifoRst: sl := '0';
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
-   signal tokFb     : asicArray := (others => (others => '1'));
    signal sof       : asicArray := (others => (others => '1'));
    signal eof       : asicArray := (others => (others => '0'));
    signal overOcc   : asicArray := (others => (others => '0'));
    signal busy      : asicArray := (others => (others => '0'));
-   signal ackN      : asicArray := (others => (others => '1'));
    signal wrEn      : asicArray := (others => (others => '0'));
    signal pause     : asicArray := (others => (others => '0'));
    signal pauseAck  : asicArray := (others => (others => '0'));
-   signal sparseBusy: asicArray := (others => (others => '0'));
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -117,6 +128,7 @@ architecture test of Pix2PgpThriglavTopTb is
    signal m_axis_tid        : slv(7 downto 0) := (others => '0');
    signal m_axis_tuser      : slv(7 downto 0) := (others => '0');
    signal stream_rx_tlast   : sl := '0';
+   signal m_axis_tlast_del  : sl := '0';
 
    signal cfgSel            : sl := '1';
    signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
@@ -167,6 +179,14 @@ architecture test of Pix2PgpThriglavTopTb is
       30 => 65,  31 => 70,  32 => 75,  33 => 80,  34 => 85,  35 => 90,
       36 => 95,  37 => 100
    );
+
+   signal sroCnt   : natural := 0;
+   signal tLastCnt : natural := 0;
+   signal testDone : boolean := false;
+   signal testFail : boolean := false;
+
+   constant CNT_CHECK_TIMEOUT_C : positive := 1000;
+
 
 begin
 
@@ -219,9 +239,17 @@ begin
   begin
     if (rising_edge(sparseClk)) then
       if sro = '1' and sroFinal = '0' then
+
+         -- increment on rising-edge
+        if daqEnable = '1' then
+           sroCnt <= sroCnt + 1;
+        end if;
+
         sroFinal <= sro;
+
       else
         sroFinal <= '0';
+
       end if;
     end if;
   end process;
@@ -238,14 +266,27 @@ begin
     end if;
   end process;
 
+  cntTLastProcess: process(sysClk)
+  begin
+   if (rising_edge(sysClk)) then
 
+      m_axis_tlast_del <= m_axis_tlast;
+
+      -- increment on rising-edge
+      if m_axis_tlast = '1' and m_axis_tlast_del = '0' then
+         tLastCnt <= tLastCnt + 1;
+      end if;
+
+   end if;
+  end process;
    --------
    -- Pixel
    --------
    GEN_SERIALIZER: for ser in 0 to NUM_OF_SERIALIZERS_C-1 generate
 
-      GEN_DUMMY_PIXEL: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
-         U_DummyPixel : entity pix2pgp.DummyThriglavPixel
+      GEN_COLUMN: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+
+         U_ColumnModel : entity pix2pgp.ThriglavColumnModel
             generic map(
               TPD_G           => TPD_G,
               RST_ASYNC_G     => RST_ASYNC_G,
@@ -267,7 +308,8 @@ begin
               overOcc    => overOcc(ser)(col),
               wrEn       => wrEn(ser)(col),
               dout       => din(ser)(col));
-      end generate GEN_DUMMY_PIXEL;
+
+      end generate GEN_COLUMN;
 
          ------
          -- UUT
@@ -1307,20 +1349,34 @@ wait for CLK_PERIOD_SPARSE_C*50;
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*800;
+   wait for CLK_PERIOD_SPARSE_C*50;
       ero <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*93;
+   wait for CLK_PERIOD_SPARSE_C*140;
 end loop;
 
 
-   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     ----------------------------------------------
-     ----------------------------------------------
-     -- regular stimuli end
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ----------------------------------------------
+  ----------------------------------------------
+  -- regular stimuli end
+
+   -- Wait a bit...
+   wait for CLK_PERIOD_SPARSE_C*CNT_CHECK_TIMEOUT_C;
+
+   if sroCnt = tLastCnt then
+     report "[INFO]: Regular test done! Please decode .dat file with axiDataParser.py!" severity note;
+     testDone <= true;
+     testFail <= false;
+   else
+     report "[DEBUG]: sroCnt = " & integer'image(sroCnt) & ", tLastCnt = " & integer'image(tLastCnt) severity note;
+     report "[ERROR]: Regular test counter mismatch!" severity error;
+     testDone <= false;
+     testFail <= true;
+   end if;
 
        -- do not touch begin
        wait;
@@ -1470,7 +1526,14 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
       wait for CLK_PERIOD_SPARSE_C*2;
          sro  <= '0';
 
-      wait until (stream_rx_tlast = '1');
+      wait until (stream_rx_tlast = '1') or (now >= 4 ms);
+         if now >= 4 ms then
+            report "[ERROR]: Benchmarking timeout!" severity error;
+            testDone <= false;
+            testFail <= true;
+            exit;  -- Exit the loop
+         end if;
+
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
 
@@ -1636,5 +1699,21 @@ end generate GEN_BENCHMARK_PROC;
 
     end if;
   end process;
+
+   TimeoutMonitor: process
+   begin
+      wait until testDone or testFail or (now >= 5 ms);
+
+      if testDone then
+         -- will cause severity failure on testDone but user has to ignore (VHDL-93 limitation)
+         assert false report "[INFO]: Testbench passed successfully! Exiting... (ignore severity failure)" severity failure;
+      elsif testFail then
+         assert false report "[ERROR]: Testbench Failed... Exiting..." severity failure;
+      else
+         assert false report "[ERROR]: Testbench Timeout... Exiting..." severity failure;
+      end if;
+
+      wait;
+   end process;
 
 end architecture;

@@ -1,9 +1,21 @@
--- Thriglav Wrapper
-
+-------------------------------------------------------------------------------
+-- Company    : SLAC National Accelerator Laboratory
+-------------------------------------------------------------------------------
+-- Description: Thriglav Wrapper
+--
 -- keeping it simple
 -- maybe can create a dinArray equivalent in systemVerilog?
 -- breaking down the din into individual std_logic_vectors works too though...
 
+-------------------------------------------------------------------------------
+-- This file is part of 'Pix2Pgp'.
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Pix2Pgp', including this file,
+-- may be copied, modified, propagated, or distributed except according to
+-- the terms contained in the LICENSE.txt file.
+-------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
