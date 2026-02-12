@@ -23,14 +23,17 @@ export PROJECT = Pix2Pgp$(ASIC)TopTb
 # Define the simulation time
 export GHDL_STOP_TIME = 10us
 
-# Load the common makefile library
-include $(TOP_DIR)/submodules/ruckus/system_ghdl.mk
+# Override the ruckus default build directory (firmware/build -> ghdl/build)
+export OUT_DIR = $(PWD)/build
 
-# Override the ruckus default (ghdl)
+# Override the ruckus default simulator (ghdl -> ghdl-llvm)
 export GHDL_CMD = ghdl-llvm
 
 # Force use bash
 export SHELL := /bin/bash
+
+# Load the common makefile library
+include $(TOP_DIR)/submodules/ruckus/system_ghdl.mk
 
 # Define default target
 target: check_asic build
@@ -51,9 +54,9 @@ warning_message:
 	@echo "                                          [WARNING]: Please Read the following!"
 	@echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@echo "  [WARNING]: If using this Makefile to list the project files to import using an external script:"
-	@echo "  [WARNING]: 1. Replace the file under surfFifo/ with synopsysFifo/ if using a proprietary tool for simulation or synthesis"
+	@echo "  [WARNING]: 1. Replace all under surfFifo/ with synopsysFifo/ if using a proprietary tool for simulation or synthesis"
 	@echo "  [WARNING]: 2. Use all other listed files for FPGA+ASIC RTL Behavioral Simulation."
-	@echo "  [WARNING]: 3. Do the following files for ASIC RTL Synthesis:"
+	@echo "  [WARNING]: 3. Do the following for ASIC RTL Synthesis:"
 	@echo "  [WARNING]:   3a. Omit any pix2pgp-fpga related files"
 	@echo "  [WARNING]:   3b. Omit any pix2pgp-tb related files"
 	@echo "  [WARNING]:   3c. Omit any surf-fifo related files"
