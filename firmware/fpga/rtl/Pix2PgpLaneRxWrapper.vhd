@@ -37,7 +37,7 @@ entity Pix2PgpLaneRxWrapper is
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
       LANE_MON_GEN_G         : boolean  := false;
-      LANE_MON_CNT_WIDTH_G   : positive := 8);
+      LANE_MON_CNT_WIDTH_G   : positive := 16);
    port(
       -- General Interface
       laneClk         : in  sl;

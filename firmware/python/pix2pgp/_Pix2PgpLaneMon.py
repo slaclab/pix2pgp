@@ -16,12 +16,14 @@ import pix2pgp
 class Pix2PgpLaneMon(pr.Device):
     def __init__(self,
             numColPerLane=24,
+            trgCntWidth=6,
             monCntWidth=16,
             **kwargs):
         super().__init__(**kwargs)
 
         self.numColPerLane = numColPerLane
         self.monCntWidth   = monCntWidth
+        self.trgCntWidth   = trgCntWidth
 
         ###################################################
 
@@ -177,9 +179,78 @@ class Pix2PgpLaneMon(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
+            name         = 'LaneDecError',
+            description  = 'Last Event had a Decoding Error',
+            offset       = 0xA38,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneOverOcc',
+            description  = 'Last Event had an Over-Occ Flag raised',
+            offset       = 0xA3C,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LanePause',
+            description  = 'Last Event had its Pause Flag raised',
+            offset       = 0xA40,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LanePauseError',
+            description  = 'Last Event had its Pause-Error Flag raised',
+            offset       = 0xA44,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'LaneFull',
+            description  = 'Last Event had an Overflow on the FPGA end',
+            offset       = 0xA48,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneTrgCnt',
+            description = 'Last Event AsicTrgCnt for this Lane',
+            offset       = 0xA4C,
+            bitSize      = self.trgCntWidth,
+            mode         = 'RO',
+            disp         = '{:d}',
+            pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneHitmask',
+            description = 'Last Event Hitmask for this Lane',
+            offset       = 0xA50,
+            bitSize      = self.numColPerLane,
+            mode         = 'RO',
+            pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
             name        = 'LaneID',
             description = 'Lane ID',
-            offset       = 0xA38,
+            offset       = 0xA54,
             bitSize      = self.monCntWidth,
             mode         = 'RO',
             disp         = '{:d}',
