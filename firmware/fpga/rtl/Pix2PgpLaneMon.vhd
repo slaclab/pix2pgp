@@ -144,8 +144,8 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly,
-                   laneDown, config, laneStatus, r) is
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly, laneFullDly,
+                   laneDecErrorDly, laneDown, config, laneStatus, r) is
 
       variable v : RegType;
       variable axilEp : AxiLiteEndpointType;
