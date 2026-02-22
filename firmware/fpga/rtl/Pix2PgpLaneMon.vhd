@@ -144,7 +144,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster,
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly,
                    laneDown, config, laneStatus, r) is
 
       variable v : RegType;
