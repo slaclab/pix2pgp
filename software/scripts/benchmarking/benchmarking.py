@@ -33,7 +33,7 @@ parser.add_argument(
     "--matrixClkPeriod",
     type     = float,
     required = False,
-    default  = 10.768,
+    default  = 7.18,
     help     = "Matrix Reference clock frequency (in ns)",
 )
 
@@ -49,7 +49,7 @@ parser.add_argument(
     "--rows",
     type     = int,
     required = False,
-    default  = 612,
+    default  = 614,
     help     = "Number of Rows",
 )
 
@@ -112,10 +112,10 @@ def toFreq(periodIn, MHz=True):
     '''
     if MHz:
         _scaleFactor = 1e3
-        _roundFactor = 6
+        _roundFactor = 2
     else:
         _scaleFactor = 1e6 # kHz
-        _roundFactor = 4
+        _roundFactor = 3
 
     return round(float((1.0/float(periodIn))*_scaleFactor), _roundFactor)
 
@@ -182,13 +182,14 @@ if __name__ == "__main__":
         errorOut("Json file not found!")
         exit()
 
-    occArray     = []
-    colHitArray  = []
-    allHitArray  = []
-    colBusy      = []
-    superBusy    = []
-    totalLatency = []
-    frameSize    = []
+    occArray             = []
+    colHitArray          = []
+    allHitArray          = []
+    colBusy              = []
+    superBusy            = []
+    totalLatency         = []
+    frameSize            = []
+    measuredMaxRateArray = []
 
     for item in data:
         occArray.append(item.get("occ"))
@@ -198,6 +199,7 @@ if __name__ == "__main__":
         superBusy.append(item.get("superBusy"))
         totalLatency.append(item.get("totalLatency"))
         frameSize.append(item.get("frameSize"))
+        measuredMaxRateArray.append(item.get("measuredMaxRate"))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -256,8 +258,17 @@ if __name__ == "__main__":
         frameSize[i] = round(frameSize[i]*8, 2)
 
         _bottleneckBusy.append(max(superBusy[i], colBusy[i]))
-        _maxRateKHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, False))
-        _maxRateMHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, True))
+
+        _plotLabel = f'{_asicType} Matrix+Pix2PGP Max Rate - Behavioral Model'
+
+        # Check if measuredMaxRate exists and is not None
+        if measuredMaxRateArray[i] is not None:
+            _maxRateKHzArray.append(measuredMaxRateArray[i])
+            _maxRateMHzArray.append(measuredMaxRateArray[i]/1000)
+            _plotLabel = f'{_asicType} ASIC Max Rate - Measurements'
+        else:
+            _maxRateKHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, False))
+            _maxRateMHzArray.append(toFreq(_bottleneckBusy[i]*_pgpClkPeriod, True))
 
         _gbps = round(frameSize[i]*_maxRateKHzArray[i]/1e6, 3)
 
@@ -307,10 +318,10 @@ if __name__ == "__main__":
     plt.yscale('log')
 
     # Plot superBusy as a smooth line
-    plt.plot(occArray, [toFreq(x * _pgpClkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2Pgp Max Rate')  # Changed color and linestyle
+    plt.plot(occArray, [toFreq(x * _pgpClkPeriod, False) for x in superBusy], color='tab:orange', linestyle='-', linewidth=2, label='Pix2PGP Max Rate - Behavioral Model')  # Changed color and linestyle
 
     # Plot data with a larger marker size
-    plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=8, label='True Max Rate')
+    plt.plot(occArray, _maxRateKHzArray, marker='o', color='tab:blue', linestyle='-', linewidth=2, markersize=8, label=_plotLabel)
 
     plt.legend(loc='upper right', fontsize=12, frameon=True, fancybox=True, shadow=True, borderpad=1) # add a legend
 
@@ -342,7 +353,7 @@ if __name__ == "__main__":
     _offset=1.2
     for x, total_hits in zip(occArray, allHitArray):
         if x in xticks:
-            plt.text(x-2, _offset, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+            plt.text(x-2, _offset, f"Hits Per Lane = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
     # Set axis limits
     plt.xlim(-1, 105)
@@ -350,7 +361,7 @@ if __name__ == "__main__":
 
     ax = plt.gca()
     trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transAxes)  # Use relative coords
-    ax.text(0.5, -0.2, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
+    ax.text(0.5, -0.25, "Occupancy (%)", fontsize=12, weight='bold', color='darkslategray', ha='center', va='top', transform=trans)
 
     # Show the plot
     plt.tight_layout()
@@ -380,7 +391,7 @@ if __name__ == "__main__":
     _offset=0.75
     for x, total_hits in zip(occArray, allHitArray):
         if x in xticks:
-            plt.text(x-2, _offset, f"Total Hits = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
+            plt.text(x-2, _offset, f"Hits Per Lane = {total_hits}", rotation=45, ha='center', va='bottom', fontsize=9, color='darkgreen', weight='bold')
 
     plt.grid(True, which='both', linestyle='--', linewidth=1)
     ax = plt.gca()

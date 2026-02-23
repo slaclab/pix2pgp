@@ -6,7 +6,8 @@
     "colBusy": 86,
     "superBusy": 159,
     "totalLatency": 398,
-    "frameSize": 1136
+    "frameSize": 1136,
+    "measuredMaxRate": 1050
   },
   {
     "occ": 1.0,
@@ -15,7 +16,8 @@
     "colBusy": 150,
     "superBusy": 218,
     "totalLatency": 571,
-    "frameSize": 1904
+    "frameSize": 1904,
+    "measuredMaxRate": 640
   },
   {
     "occ": 1.5,
@@ -24,7 +26,8 @@
     "colBusy": 214,
     "superBusy": 251,
     "totalLatency": 693,
-    "frameSize": 2304
+    "frameSize": 2304,
+    "measuredMaxRate": 470
   },
   {
     "occ": 2.0,
@@ -33,7 +36,8 @@
     "colBusy": 277,
     "superBusy": 308,
     "totalLatency": 861,
-    "frameSize": 3056
+    "frameSize": 3056,
+    "measuredMaxRate": 295
   },
   {
     "occ": 2.5,
@@ -42,7 +46,8 @@
     "colBusy": 639,
     "superBusy": 431,
     "totalLatency": 1004,
-    "frameSize": 4464
+    "frameSize": 4464,
+    "measuredMaxRate": 250
   },
   {
     "occ": 3.0,
@@ -51,7 +56,8 @@
     "colBusy": 703,
     "superBusy": 495,
     "totalLatency": 1068,
-    "frameSize": 6584
+    "frameSize": 6584,
+    "measuredMaxRate": 220
   },
   {
     "occ": 3.5,
@@ -60,7 +66,8 @@
     "colBusy": 770,
     "superBusy": 531,
     "totalLatency": 1190,
-    "frameSize": 9352
+    "frameSize": 9352,
+    "measuredMaxRate": 210
   },
   {
     "occ": 4.0,
@@ -69,7 +76,8 @@
     "colBusy": 841,
     "superBusy": 608,
     "totalLatency": 1376,
-    "frameSize": 11016
+    "frameSize": 11016,
+    "measuredMaxRate": 180
   },
   {
     "occ": 4.5,
@@ -78,7 +86,8 @@
     "colBusy": 892,
     "superBusy": 621,
     "totalLatency": 1478,
-    "frameSize": 12168
+    "frameSize": 12168,
+    "measuredMaxRate": 160
   },
   {
     "occ": 5.0,
@@ -87,7 +96,8 @@
     "colBusy": 1257,
     "superBusy": 780,
     "totalLatency": 1797,
-    "frameSize": 13824
+    "frameSize": 13824,
+    "measuredMaxRate": 145
   },
   {
     "occ": 5.5,
@@ -96,7 +106,8 @@
     "colBusy": 1337,
     "superBusy": 824,
     "totalLatency": 1830,
-    "frameSize": 16744
+    "frameSize": 16744,
+    "measuredMaxRate": 135
   },
   {
     "occ": 6.0,
@@ -105,7 +116,8 @@
     "colBusy": 1384,
     "superBusy": 873,
     "totalLatency": 1867,
-    "frameSize": 19080
+    "frameSize": 19080,
+    "measuredMaxRate": 125
   },
   {
     "occ": 6.5,
@@ -114,7 +126,8 @@
     "colBusy": 1447,
     "superBusy": 905,
     "totalLatency": 1985,
-    "frameSize": 20168
+    "frameSize": 20168,
+    "measuredMaxRate": 105
   },
   {
     "occ": 7.0,
@@ -123,7 +136,8 @@
     "colBusy": 1831,
     "superBusy": 1069,
     "totalLatency": 2293,
-    "frameSize": 22480
+    "frameSize": 22480,
+    "measuredMaxRate": 95
   },
   {
     "occ": 7.5,
@@ -132,7 +146,8 @@
     "colBusy": 1874,
     "superBusy": 1088,
     "totalLatency": 2308,
-    "frameSize": 23496
+    "frameSize": 23496,
+    "measuredMaxRate": 85
   },
   {
     "occ": 8.0,
@@ -141,7 +156,8 @@
     "colBusy": 1957,
     "superBusy": 1176,
     "totalLatency": 2382,
-    "frameSize": 26960
+    "frameSize": 26960,
+    "measuredMaxRate": 80
   },
   {
     "occ": 8.5,
@@ -150,7 +166,8 @@
     "colBusy": 2024,
     "superBusy": 1216,
     "totalLatency": 2553,
-    "frameSize": 29336
+    "frameSize": 29336,
+    "measuredMaxRate": 76
   },
   {
     "occ": 9.0,
@@ -159,7 +176,8 @@
     "colBusy": 2103,
     "superBusy": 1259,
     "totalLatency": 2683,
-    "frameSize": 30136
+    "frameSize": 30136,
+    "measuredMaxRate": 74
   },
   {
     "occ": 9.5,
@@ -168,7 +186,8 @@
     "colBusy": 2447,
     "superBusy": 1397,
     "totalLatency": 2817,
-    "frameSize": 31888
+    "frameSize": 31888,
+    "measuredMaxRate": 70
   },
   {
     "occ": 10.0,
@@ -177,7 +196,8 @@
     "colBusy": 2531,
     "superBusy": 1451,
     "totalLatency": 2901,
-    "frameSize": 34792
+    "frameSize": 34792,
+    "measuredMaxRate": 68
   },
   {
     "occ": 15.0,
@@ -186,7 +206,8 @@
     "colBusy": 3762,
     "superBusy": 2104,
     "totalLatency": 4187,
-    "frameSize": 54088
+    "frameSize": 54088,
+    "measuredMaxRate": 45
   },
   {
     "occ": 20.0,
@@ -195,7 +216,8 @@
     "colBusy": 5020,
     "superBusy": 2789,
     "totalLatency": 5558,
-    "frameSize": 73976
+    "frameSize": 73976,
+    "measuredMaxRate": 34
   },
   {
     "occ": 25.0,
@@ -204,7 +226,8 @@
     "colBusy": 6251,
     "superBusy": 3426,
     "totalLatency": 6837,
-    "frameSize": 92904
+    "frameSize": 92904,
+    "measuredMaxRate": 26
   },
   {
     "occ": 30.0,
@@ -213,7 +236,8 @@
     "colBusy": 7824,
     "superBusy": 4184,
     "totalLatency": 8172,
-    "frameSize": 112480
+    "frameSize": 112480,
+    "measuredMaxRate": 22
   },
   {
     "occ": 35.0,
@@ -222,7 +246,8 @@
     "colBusy": 9084,
     "superBusy": 4885,
     "totalLatency": 9500,
-    "frameSize": 132680
+    "frameSize": 132680,
+    "measuredMaxRate": 18
   },
   {
     "occ": 40.0,
@@ -231,7 +256,8 @@
     "colBusy": 10316,
     "superBusy": 5537,
     "totalLatency": 10807,
-    "frameSize": 152824
+    "frameSize": 152824,
+    "measuredMaxRate": 16
   },
   {
     "occ": 45.0,
@@ -240,7 +266,8 @@
     "colBusy": 11567,
     "superBusy": 6180,
     "totalLatency": 12047,
-    "frameSize": 172344
+    "frameSize": 172344,
+    "measuredMaxRate": 14.75
   },
   {
     "occ": 50.0,
@@ -249,7 +276,8 @@
     "colBusy": 12824,
     "superBusy": 6857,
     "totalLatency": 13362,
-    "frameSize": 190904
+    "frameSize": 190904,
+    "measuredMaxRate": 12.5
   },
   {
     "occ": 55.0,
@@ -258,7 +286,8 @@
     "colBusy": 14380,
     "superBusy": 7630,
     "totalLatency": 14828,
-    "frameSize": 211456
+    "frameSize": 211456,
+    "measuredMaxRate": 9.75
   },
   {
     "occ": 60.0,
@@ -267,7 +296,8 @@
     "colBusy": 15629,
     "superBusy": 8275,
     "totalLatency": 16130,
-    "frameSize": 230728
+    "frameSize": 230728,
+    "measuredMaxRate": 9.35
   },
   {
     "occ": 65.0,
@@ -276,7 +306,8 @@
     "colBusy": 16874,
     "superBusy": 8935,
     "totalLatency": 17245,
-    "frameSize": 250776
+    "frameSize": 250776,
+    "measuredMaxRate": 9.25
   },
   {
     "occ": 70.0,
@@ -285,7 +316,8 @@
     "colBusy": 18113,
     "superBusy": 9602,
     "totalLatency": 18590,
-    "frameSize": 271304
+    "frameSize": 271304,
+    "measuredMaxRate": 8.2
   },
   {
     "occ": 75.0,
@@ -294,7 +326,8 @@
     "colBusy": 19363,
     "superBusy": 10281,
     "totalLatency": 19897,
-    "frameSize": 290216
+    "frameSize": 290216,
+    "measuredMaxRate": 7.8
   },
   {
     "occ": 80.0,
@@ -303,7 +336,8 @@
     "colBusy": 20644,
     "superBusy": 10961,
     "totalLatency": 21226,
-    "frameSize": 309368
+    "frameSize": 309368,
+    "measuredMaxRate": 7.2
   },
   {
     "occ": 85.0,
@@ -312,7 +346,8 @@
     "colBusy": 22182,
     "superBusy": 11713,
     "totalLatency": 22788,
-    "frameSize": 329280
+    "frameSize": 329280,
+    "measuredMaxRate": 6.4
   },
   {
     "occ": 90.0,
@@ -321,7 +356,8 @@
     "colBusy": 23420,
     "superBusy": 12366,
     "totalLatency": 23835,
-    "frameSize": 349760
+    "frameSize": 349760,
+    "measuredMaxRate": 6.1
   },
   {
     "occ": 95.0,
@@ -330,7 +366,8 @@
     "colBusy": 24665,
     "superBusy": 13006,
     "totalLatency": 25141,
-    "frameSize": 369376
+    "frameSize": 369376,
+    "measuredMaxRate": 5.6
   },
   {
     "occ": 100.0,
@@ -339,6 +376,7 @@
     "colBusy": 25916,
     "superBusy": 13679,
     "totalLatency": 26442,
-    "frameSize": 387880
+    "frameSize": 387880,
+    "measuredMaxRate": 5.3
   }
 ]
