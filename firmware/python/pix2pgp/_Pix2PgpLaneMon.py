@@ -181,7 +181,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LaneOverOcc',
             description  = 'Last Event had an Over-Occ Flag raised',
-            offset       = 0xA38,
+            offset       = 0xB00,
             bitSize      = 1,
             mode         = 'RO',
             pollInterval = 1,
@@ -191,7 +191,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LanePause',
             description  = 'Last Event had its Pause Flag raised',
-            offset       = 0xA3C,
+            offset       = 0xB04,
             bitSize      = 1,
             mode         = 'RO',
             pollInterval = 1,
@@ -201,7 +201,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name         = 'LanePauseError',
             description  = 'Last Event had its Pause-Error Flag raised',
-            offset       = 0xA40,
+            offset       = 0xB08,
             bitSize      = 1,
             mode         = 'RO',
             pollInterval = 1,
@@ -211,7 +211,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name        = 'LaneTrgCnt',
             description = 'Last Event AsicTrgCnt for this Lane',
-            offset       = 0xA44,
+            offset       = 0xB0C,
             bitSize      = self.trgCntWidth,
             mode         = 'RO',
             disp         = '{:d}',
@@ -221,7 +221,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name        = 'LaneHitmask',
             description = 'Last Event Hitmask for this Lane',
-            offset       = 0xA48,
+            offset       = 0xB10,
             bitSize      = self.numColPerLane,
             mode         = 'RO',
             pollInterval = 1,
@@ -230,7 +230,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name        = 'LaneID',
             description = 'Lane ID',
-            offset       = 0xA4C,
+            offset       = 0xC00,
             bitSize      = self.monCntWidth,
             mode         = 'RO',
             disp         = '{:d}',
@@ -240,7 +240,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Counter Reset',
-            offset       = 0xB00,
+            offset       = 0xD00,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,

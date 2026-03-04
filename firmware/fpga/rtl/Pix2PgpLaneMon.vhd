@@ -255,15 +255,15 @@ begin
       axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
       axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
       --
-      axiSlaveRegisterR(axilEp, x"A38", 0, r.laneOverOcc);
-      axiSlaveRegisterR(axilEp, x"A3C", 0, r.lanePause);
-      axiSlaveRegisterR(axilEp, x"A40", 0, r.lanePauseError);
-      axiSlaveRegisterR(axilEp, x"A44", 0, r.laneTrgCnt);
-      axiSlaveRegisterR(axilEp, x"A48", 0, r.laneHitmask);
+      axiSlaveRegisterR(axilEp, x"B00", 0, r.laneOverOcc);
+      axiSlaveRegisterR(axilEp, x"B04", 0, r.lanePause);
+      axiSlaveRegisterR(axilEp, x"B08", 0, r.lanePauseError);
+      axiSlaveRegisterR(axilEp, x"B0C", 0, r.laneTrgCnt);
+      axiSlaveRegisterR(axilEp, x"B10", 0, r.laneHitmask);
       --
-      axiSlaveRegisterR(axilEp, x"A4C", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
+      axiSlaveRegisterR(axilEp, x"C00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
-      axiSlaveRegister (axilEp, x"B00", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"D00", 0, v.cntRst);
       --
 
       -- Closeout the transaction
