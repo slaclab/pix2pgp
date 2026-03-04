@@ -179,7 +179,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteVariable(
             name        = 'LaneID',
             description = 'Lane ID',
-            offset       = 0xB00,
+            offset       = 0xA38,
             bitSize      = self.monCntWidth,
             mode         = 'RO',
             disp         = '{:d}',
@@ -189,7 +189,7 @@ class Pix2PgpLaneMon(pr.Device):
         self.add(pr.RemoteCommand(
             name         = 'CntRst',
             description  = 'Counter Reset',
-            offset       = 0xC00,
+            offset       = 0xB00,
             bitSize      = 1,
             function     = lambda cmd: cmd.post(1),
             hidden       = False,
