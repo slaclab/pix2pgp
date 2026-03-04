@@ -34,7 +34,7 @@ entity Pix2PgpLaneMon is
       RST_ASYNC_G     : boolean  := false;
       RST_POLARITY_G  : sl       := '1'; -- '1' for active high rst, '0' for active low
       LANE_ID_G       : natural  := 0;
-      MON_CNT_WIDTH_G : positive := 8);
+      MON_CNT_WIDTH_G : positive := 16);
    port(
       -- General Interface
       pgpRxClk        : in  sl;
@@ -54,6 +54,8 @@ architecture rtl of Pix2PgpLaneMon is
 
    type HitmaskCntArray is array (natural range NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(MON_CNT_WIDTH_G-1 downto 0);
 
+   signal laneValidDly : sl := '0';
+
    type RegType is record
       cntRst          : sl;
       laneValid       : sl;
@@ -64,6 +66,7 @@ architecture rtl of Pix2PgpLaneMon is
       lanePause       : sl;
       lanePauseError  : sl;
       laneFull        : sl;
+      laneTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
       laneHitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       -- readback
       laneDecErrCnt   : slv(MON_CNT_WIDTH_G-1 downto 0);
@@ -88,6 +91,7 @@ architecture rtl of Pix2PgpLaneMon is
       lanePause       => '0',
       lanePauseError  => '0',
       laneFull        => '0',
+      laneTrgCnt      => (others => '0'),
       laneHitmask     => (others => '0'),
       -- readback
       laneDecErrCnt   => (others => '0'),
@@ -106,12 +110,22 @@ architecture rtl of Pix2PgpLaneMon is
 
 begin
 
+   U_PipelineValid : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => 1)
+      port map (
+         clk     => pgpRxClk,
+         din(0)  => r.laneValid,
+         dout(0) => laneValidDly);
+
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster,
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly,
                    laneDown, config, laneStatus, r) is
 
-      variable v : RegType;
+      variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
 
       variable laneDecErrCntOverflow   : sl := '0';
@@ -134,13 +148,9 @@ begin
       -- Register the lane status bus
       v.laneStatus := laneStatus;
 
-      v.laneValid      := r.laneStatus.valid;
-      v.laneDecError   := r.laneStatus.decError;
-      v.laneOverOcc    := r.laneStatus.overOcc;
-      v.lanePause      := r.laneStatus.pause;
-      v.lanePauseError := r.laneStatus.pauseError;
-      v.laneFull       := r.laneStatus.overflow;
-      v.laneHitmask    := r.laneStatus.eventHitmask;
+      v.laneValid    := r.laneStatus.valid;
+      v.laneDecError := r.laneStatus.decError;
+      v.laneFull     := r.laneStatus.overflow;
 
       laneDecErrCntOverflow   := uAnd(r.laneDecErrCnt);
       lanePauseErrCntOverflow := uAnd(r.lanePauseErrCnt);
@@ -157,7 +167,13 @@ begin
       if config.laneEnable(LANE_ID_G) = '1' and r.cntRst = '0' and r.laneDown = '0' then
 
          -- increment on rising-edge of valid
-         if v.laneValid = '1' and r.laneValid = '0' then
+         if r.laneValid = '1' and laneValidDly = '0' then
+
+            v.laneOverOcc    := r.laneStatus.overOcc;
+            v.lanePause      := r.laneStatus.pause;
+            v.lanePauseError := r.laneStatus.pauseError;
+            v.laneTrgCnt     := r.laneStatus.trgCnt;
+            v.laneHitmask    := r.laneStatus.eventHitmask;
 
             if uAnd(r.laneEventCnt) = '0' then
                v.laneEventCnt := r.laneEventCnt + 1;
@@ -187,17 +203,17 @@ begin
          end if;
 
          -- not going through metadata buffer; increment on rising edge of status bit
-         if v.laneDecError = '1' and r.laneDecError = '0' and uAnd(r.laneDecErrCnt) = '0' then
+         if r.laneStatus.decError = '1' and r.laneDecError = '0' and uAnd(r.laneDecErrCnt) = '0' then
             v.laneDecErrCnt := r.laneDecErrCnt + 1;
          end if;
 
          -- not going through metadata buffer; increment on rising edge of status bit
-         if v.laneFull = '1' and r.laneFull = '0' and uAnd(r.laneFullCnt) = '0' then
+         if r.laneStatus.overflow = '1' and r.laneFull = '0' and uAnd(r.laneFullCnt) = '0' then
             v.laneFullCnt := r.laneFullCnt + 1;
          end if;
 
-
       else
+
          v.laneDecErrCnt   := (others => '0');
          v.laneOverOccCnt  := (others => '0');
          v.lanePauseCnt    := (others => '0');
@@ -239,7 +255,13 @@ begin
       axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
       axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
       --
-      axiSlaveRegisterR(axilEp, x"A38", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
+      axiSlaveRegisterR(axilEp, x"A38", 0, r.laneOverOcc);
+      axiSlaveRegisterR(axilEp, x"A3C", 0, r.lanePause);
+      axiSlaveRegisterR(axilEp, x"A40", 0, r.lanePauseError);
+      axiSlaveRegisterR(axilEp, x"A44", 0, r.laneTrgCnt);
+      axiSlaveRegisterR(axilEp, x"A48", 0, r.laneHitmask);
+      --
+      axiSlaveRegisterR(axilEp, x"A4C", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
       axiSlaveRegister (axilEp, x"B00", 0, v.cntRst);
       --

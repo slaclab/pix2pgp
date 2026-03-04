@@ -78,7 +78,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    -- size is equal to the amount of serializers, plus the main axi-lite manager of this module
    constant AXIL_SIZE_C   : positive := NUM_OF_SERIALIZERS_C+1;
-   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 12);
+   constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 16);
 
    -- AXI-Lite manager is on the first index;
    -- Each lane monitoring module is on its lane+1
