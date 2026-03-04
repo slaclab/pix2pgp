@@ -239,9 +239,9 @@ begin
       axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
       axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
       --
-      axiSlaveRegisterR(axilEp, x"A38", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
+      axiSlaveRegisterR(axilEp, x"B00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
-      axiSlaveRegister (axilEp, x"B00", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"C00", 0, v.cntRst);
       --
 
       -- Closeout the transaction
