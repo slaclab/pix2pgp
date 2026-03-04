@@ -38,7 +38,10 @@ entity Pix2PgpFpgaTb is
       pgpDinReady  : out sl;
       -- FPGA RX Interface
       pgp4RxMaster : out AxiStreamMasterType;
-      pgp4RxSlave  : in  AxiStreamSlaveType := AXI_STREAM_SLAVE_INIT_C);
+      pgp4RxSlave  : in  AxiStreamSlaveType := AXI_STREAM_SLAVE_INIT_C;
+      -- Debug Output
+      pgpDoutValid : out sl;
+      pgpDout      : out slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0));
 end entity Pix2PgpFpgaTb;
 
 architecture test of Pix2PgpFpgaTb is
@@ -52,6 +55,8 @@ architecture test of Pix2PgpFpgaTb is
 
    signal remRxLinkReady : sl := '0';
    signal locRxLinkReady : sl := '0';
+
+   signal gboxMaster     : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
 
 begin
 
@@ -126,10 +131,15 @@ begin
          sSideBand   => (others => '0'),
          sAxisSlave  => open,
          -- Master Port
-         mAxisMaster => pgp4RxMaster,
+         mAxisMaster => gboxMaster,
          mSideBand   => open,
          mAxisSlave  => AXI_STREAM_SLAVE_FORCE_C);
 
    linkReady <= remRxLinkReady and locRxLinkReady;
+
+   pgp4RxMaster <= gboxMaster;
+
+   pgpDoutValid <= gboxMaster.tValid;
+   pgpDout      <= gboxMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
 
 end architecture;

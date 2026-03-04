@@ -18,9 +18,10 @@ class Pix2PgpColMetadataFormatBase:
     @classmethod
     def setMetadata(self):
         self.asicMetadata = {
-            'SparkPixS': SparkPixSColMetadataFormat,
-            'SparkPixT': SparkPixTColMetadataFormat,
-            'Thriglav' : ThriglavColMetadataFormat}
+            'SparkPixS'  : SparkPixSColMetadataFormat,
+            'SparkPixSv2': SparkPixSColMetadataFormat,
+            'SparkPixT'  : SparkPixTColMetadataFormat,
+            'Thriglav'   : ThriglavColMetadataFormat}
 
     def colMetadataDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")

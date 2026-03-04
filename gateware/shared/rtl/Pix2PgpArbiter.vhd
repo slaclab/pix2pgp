@@ -87,7 +87,7 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader  : sl;
       waitColSel   : sl;
       txData       : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
-      dummyCnt     : slv(2 downto 0);
+      dummyCnt     : slv(bitSize(TX_DUMMY_MAX_C) downto 0);
       dataHeader   : slv(HEADER_DWIDTH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -167,27 +167,12 @@ begin
 
       -- flow control check
       if sAxisSlave.tReady = '1' then
-
-         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-         if ASIC_TYPE_C > 1 then
-            v.sAxisMaster.tUser := (others => '0');
-            v.sAxisMaster.tLast := '0';
-         end if;
-
-         -- always present
          v.sAxisMaster.tValid := '0';
-
+         v.sAxisMaster.tLast  := '0';
+         v.sAxisMaster.tUser  := (others => '0');
+         v.sAxisMaster.tData  := (others => '0');
+         v.sAxisMaster.tKeep  := (others => '0');
       end if;
-
-      -- default flags
-      if ASIC_TYPE_C = 1 then
-         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-         v.sAxisMaster.tUser := (others => '0');
-         v.sAxisMaster.tLast := '0';
-      end if;
-
-      -- always present
-      v.sAxisMaster.tKeep  := (others => '1');
 
       -- status Mux
       if PIPELINE_STATUS_G then
@@ -232,8 +217,9 @@ begin
          when PARSE_HEADER_S =>
             if v.sAxisMaster.tValid = '0' then
                ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.sAxisMaster, '1');
-               v.sAxisMaster.tValid   := '1';
-               v.txData               := v.dataHeader;
+               v.sAxisMaster.tValid := '1';
+               v.sAxisMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
+               v.txData             := v.dataHeader;
 
                v.state := CHECK_HITMASK_S;
 
@@ -263,6 +249,7 @@ begin
                      -- column metadata mapping in pkg (changes with ASIC type)
                      v.txData             := colMetaMap(flagsSel, r.colSel, trgCntSel, dataLenSel);
                      v.sAxisMaster.tValid := '1';
+                     v.sAxisMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
                      --
                      v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
 
@@ -287,6 +274,7 @@ begin
                --
                v.txData             := dataBusSel;
                v.sAxisMaster.tValid := '1';
+               v.sAxisMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
                --
                v.dataRdCnt := r.dataRdCnt + 1;
                v.dataRd    := '1';
@@ -316,19 +304,13 @@ begin
                if v.sAxisMaster.tValid = '0' then
                   v.txData             := v.dataHeader;
                   v.sAxisMaster.tValid := '1';
+                  v.sAxisMaster.tKeep  := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
 
                   if sAxisSlave.tReady = '1' then
                      v.dummyCnt := r.dummyCnt + 1;
                   end if;
 
                   if r.dummyCnt = toSlv(TX_DUMMY_MAX_C, r.dummyCnt'length) then
-                     v.sAxisMaster.tValid := '1';
-
-                     -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-                     if ASIC_TYPE_C = 1 then
-                        v.sAxisMaster.tValid := '0';
-                     end if;
-
                      v.sAxisMaster.tLast := '1';
                      v.state             := IDLE_S;
                   end if;

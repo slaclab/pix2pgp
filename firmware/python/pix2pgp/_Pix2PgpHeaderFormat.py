@@ -18,9 +18,10 @@ class Pix2PgpHeaderFormatBase:
     @classmethod
     def setHeader(self):
         self.asicHeader = {
-            'SparkPixS': SparkPixSHeaderFormat,
-            'SparkPixT': SparkPixTHeaderFormat,
-            'Thriglav' : ThriglavHeaderFormat}
+            'SparkPixS'  : SparkPixSHeaderFormat,
+            'SparkPixSv2': SparkPixSHeaderFormat,
+            'SparkPixT'  : SparkPixTHeaderFormat,
+            'Thriglav'   : ThriglavHeaderFormat}
 
     def headerDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")

@@ -18,9 +18,10 @@ class SparseDataFormatBase:
     @classmethod
     def setData(self):
         self.asicData = {
-            'SparkPixS': SparkPixSDataFormat,
-            'SparkPixT': SparkPixTDataFormat,
-            'Thriglav' : ThriglavDataFormat}
+            'SparkPixS'  : SparkPixSDataFormat,
+            'SparkPixSv2': SparkPixSDataFormat,
+            'SparkPixT'  : SparkPixTDataFormat,
+            'Thriglav'   : ThriglavDataFormat}
 
     def dataDecoder(self, colId=0, hitData=None, rawData=False):
         raise NotImplementedError("This method should be overridden by subclasses")

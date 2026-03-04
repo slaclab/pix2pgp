@@ -1,0 +1,2256 @@
+-------------------------------------------------------------------------------
+-- Company    : SLAC National Accelerator Laboratory
+-------------------------------------------------------------------------------
+-- Description: Top-Level Testbench for SparkPix-Sv2
+--
+-------------------------------------------------------------------------------
+-- This file is part of 'Pix2Pgp'.
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Pix2Pgp', including this file,
+-- may be copied, modified, propagated, or distributed except according to
+-- the terms contained in the LICENSE.txt file.
+-------------------------------------------------------------------------------
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_arith.all;
+
+-- required for writing/reading std_logic etc.
+use std.textio.all;
+use ieee.std_logic_textio.all;
+
+library surf;
+use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
+use surf.SsiPkg.all;
+use surf.Pgp4Pkg.all;
+use surf.AxiStreamPacketizer2Pkg.all;
+use surf.AxiLitePkg.all;
+use surf.RssiPkg.all;
+
+library pix2pgp;
+use pix2pgp.Pix2PgpAsicPkg.all;
+use pix2pgp.Pix2PgpPkg.all;
+
+entity Pix2PgpSparkPixSv2TopTb is
+   generic(
+      TPD_G                     : time     := 1 ns;
+      RST_ASYNC_G               : boolean  := true;
+      RST_POLARITY_G            : sl       := '0';
+      FPGA_SYNTH_G              : boolean  := false;
+      PIPELINE_DATA_G           : boolean  := false;
+      PIPELINE_STATUS_G         : boolean  := true;
+      BENCHMARKING_G            : boolean  := false;
+      TIMEOUT_LIMIT_WIDTH_G     : positive := 16;
+      COLMANAGER_DATA_DEPTH_G   : integer  := 8;
+      COLMANAGER_STATUS_DEPTH_G : integer  := 8;
+      DATAFIFO_PIPE_G           : natural  := 1;
+      STATUSFIFO_PIPE_G         : natural  := 1;
+      NUM_VC_G                  : natural  := 1
+   );
+   port (
+    dummyIn : in sl
+  );
+
+end entity Pix2PgpSparkPixSv2TopTb;
+
+-- * about the AF_LVL_G flags:
+-- the surf-based fifos issue their almost-full/prog-full when wr_index = AF_LVL_G;
+-- the synopsys fifos raise their flag when wr_index = DEPTH_G-AF_LVL_G;
+-- i.e. for the synopsys fifos, the AF_LVL_G denotes the amount of empty memory spaces before
+-- the almost-full flag is asserted
+
+architecture test of Pix2PgpSparkPixSv2TopTb is
+
+   constant CLK_PERIOD_SPARSE_C : time := 7.143  ns; -- matrix clock of ASIC (~140 MHz)
+   constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
+   constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
+   constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
+   constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
+
+   --constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
+   --constant AXIS_CONFIG_C : AxiStreamConfigType := RSSI_AXIS_CONFIG_C;
+   constant AXIS_CONFIG_C : AxiStreamConfigType := ssiAxiStreamConfig(16);
+
+   signal sparseClk : sl := '0';
+   signal pgpClk    : sl := '0';
+   signal pgpRxClk  : sl := '0';
+   signal rst       : sl := '0';
+   signal sro       : sl := '0';
+   signal sroFinal  : sl := '0';
+   signal daqEnable : sl := '1';
+   signal revRst    : sl := '0';
+   signal sysClk    : sl := '0';
+
+   type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+
+   signal sof       : asicArray := (others => (others => '1'));
+   signal eof       : asicArray := (others => (others => '0'));
+   signal overOcc   : asicArray := (others => (others => '0'));
+   signal busy      : asicArray := (others => (others => '0'));
+   signal wrEn      : asicArray := (others => (others => '0'));
+   signal pause     : asicArray := (others => (others => '0'));
+   signal pauseAck  : asicArray := (others => (others => '0'));
+
+   type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
+   signal din : asicDinArray := (others => (others =>  (others => '0')));
+
+   type hitLenArray is array (0 to NUM_OF_COL_MANAGERS_C-1) of slv(15 downto 0);
+
+   type metaHitLenArray is array (0 to NUM_OF_SERIALIZERS_C-1) of hitLenArray;
+
+   signal hitLen  : metaHitLenArray := (others => (others => (others => '0')));
+
+   type pgpDataAsicType is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(SER_DWIDTH_C-1 downto 0);
+
+   signal pgpDataAsic      : pgpDataAsicType := (others => (others => '0'));
+   signal pgpDataAsicValid : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgpDataAsicReady : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal pgp4RxLinkUp     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal pgpDataAsicValidVec : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+
+   signal pgp4RxMaster : AxiStreamMasterArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_MASTER_INIT_C);
+   signal pgp4RxSlave : AxiStreamSlaveArray(0 to NUM_OF_SERIALIZERS_C-1) := (others => AXI_STREAM_SLAVE_INIT_C);
+
+   signal m_axis_tvalid    : sl := '0';
+   signal m_axis_tdata     : slv(AXIS_CONFIG_C.TDATA_BYTES_C*8-1 downto 0) := (others => '0');
+   signal m_axis_tstrb     : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tkeep     : slv(AXIS_CONFIG_C.TDATA_BYTES_C-1 downto 0)   := (others => '0');
+   signal m_axis_tlast     : sl := '0';
+   signal m_axis_tdest     : slv(7 downto 0) := (others => '0');
+   signal m_axis_tid       : slv(7 downto 0) := (others => '0');
+   signal m_axis_tuser     : slv(7 downto 0) := (others => '0');
+   signal stream_rx_tlast  : sl := '0';
+   signal m_axis_tlast_del : sl := '0';
+
+   signal cfgSel            : sl := '1';
+   signal cfgTimeoutLimit   : slv(11 downto 0) := toSlv(0,  12);
+   signal cfgColumnEnable   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '1');
+   signal cfgColBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgColDataEmpty   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgColStatusEmpty : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '1');
+   signal cfgSuperBusy      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+   signal cfgArbBusy        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)  := (others => '0');
+
+   -- benchmarking
+   signal rstCnt            : sl := '0';
+   signal cfgColBusyDel     : sl := '0';
+   signal cfgSuperBusyDel   : sl := '0';
+   signal colBusyCnt        : slv(31 downto 0) := (others => '0');
+   signal superBusyCnt      : slv(31 downto 0) := (others => '0');
+   signal totalLatencyCnt   : slv(31 downto 0) := (others => '0');
+   signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
+
+   constant OCC_BENCHMARK_COUNT : positive := 38;
+
+   type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
+   type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
+
+   signal colBusyArray      : IntArrayType := (others => 0);
+   signal superBusyArray    : IntArrayType := (others => 0);
+   signal totalLatencyArray : IntArrayType := (others => 0);
+   signal frameSizeArray    : IntArrayType := (others => 0);
+
+   signal occArray : RealArrayType := (
+      0  => 0.5,  1  => 1.0,  2  => 1.5,  3  => 2.0,  4  => 2.5,  5  => 3.0,
+      6  => 3.5,  7  => 4.0,  8  => 4.5,  9  => 5.0,  10 => 5.5,  11 => 6.0,
+      12 => 6.5,  13 => 7.0,  14 => 7.5,  15 => 8.0,  16 => 8.5,  17 => 9.0,
+      18 => 9.5,  19 => 10.0, 20 => 15.0, 21 => 20.0, 22 => 25.0, 23 => 30.0,
+      24 => 35.0, 25 => 40.0, 26 => 45.0, 27 => 50.0, 28 => 55.0, 29 => 60.0,
+      30 => 65.0, 31 => 70.0, 32 => 75.0, 33 => 80.0, 34 => 85.0, 35 => 90.0,
+      36 => 95.0, 37 => 100.0
+   );
+
+   signal colHitsArray : IntArrayType := (
+      0  => 4,   1  => 7,   2  => 10,  3  => 13,  4  => 16,  5  => 19,
+      6  => 22,  7  => 25,  8  => 28,  9  => 31,  10 => 34,  11 => 37,
+      12 => 40,  13 => 43,  14 => 46,  15 => 49,  16 => 53,  17 => 56,
+      18 => 59,  19 => 62,  20 => 92,  21 => 123, 22 => 153, 23 => 184,
+      24 => 215, 25 => 245, 26 => 276, 27 => 306, 28 => 337, 29 => 368,
+      30 => 398, 31 => 429, 32 => 459, 33 => 490, 34 => 521, 35 => 551,
+      36 => 582, 37 => 612
+   );
+
+   signal sroCnt   : natural := 0;
+   signal tLastCnt : natural := 0;
+   signal testDone : boolean := false;
+   signal testFail : boolean := false;
+
+   constant CNT_CHECK_TIMEOUT_C : positive := 1000;
+
+begin
+
+   -- clocks
+   U_ClkRst_pgpClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_PGP_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => pgpClk,
+         clkN => open);
+
+   U_ClkRst_sparseClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SPARSE_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sparseClk,
+         clkN => open);
+
+   U_ClkRst_pgpRxClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_PGP_RX_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => pgpRxClk,
+         clkN => open);
+
+   U_ClkRst_sysClk : entity surf.ClkRst
+      generic map (
+         CLK_PERIOD_G      => CLK_PERIOD_SYS_C,
+         CLK_DELAY_G       => 1 ns,
+         RST_START_DELAY_G => 0 ns,
+         RST_HOLD_TIME_G   => 5 us,
+         SYNC_RESET_G      => true)
+      port map (
+         clkP => sysClk,
+         clkN => open);
+
+  issueSroProcess: process(sparseClk)
+  begin
+    if (rising_edge(sparseClk)) then
+      if sro = '1' and sroFinal = '0' then
+
+         -- increment on rising-edge
+        if daqEnable = '1' then
+           sroCnt <= sroCnt + 1;
+        end if;
+
+        sroFinal <= sro;
+
+      else
+        sroFinal <= '0';
+
+      end if;
+    end if;
+  end process;
+
+
+  cntTLastProcess: process(sysClk)
+  begin
+   if (rising_edge(sysClk)) then
+
+      m_axis_tlast_del <= m_axis_tlast;
+
+      -- increment on rising-edge
+      if m_axis_tlast = '1' and m_axis_tlast_del = '0' then
+         tLastCnt <= tLastCnt + 1;
+      end if;
+
+   end if;
+  end process;
+
+   --------
+   -- Pixel
+   --------
+   GEN_SERIALIZER: for ser in 0 to NUM_OF_SERIALIZERS_C-1 generate
+
+      GEN_COLUMN: for col in 0 to NUM_OF_COL_MANAGERS_C-1 generate
+
+         U_ColumnModel : entity pix2pgp.SparkPixSv2ColumnModel
+            generic map(
+               TPD_G          => TPD_G,
+               RST_ASYNC_G    => RST_ASYNC_G,
+               RST_POLARITY_G => RST_POLARITY_G,
+               WAIT_WREN_G    => 8,
+               SER_ID_G       => ser,
+               COL_ID_G       => col)
+            port map(
+               clk        => sparseClk,
+               df_reset_n => rst,
+               sro        => sroFinal,
+               pause      => pause(ser)(col),
+               hitLen     => hitLen(ser)(col),
+               pauseAck   => pauseAck(ser)(col),
+               sof        => sof(ser)(col),
+               eof        => eof(ser)(col),
+               overOcc    => overOcc(ser)(col),
+               wrEn       => wrEn(ser)(col),
+               dout       => din(ser)(col));
+
+      end generate GEN_COLUMN;
+
+      ------
+      -- UUT
+      ------
+      U_Uut : entity pix2pgp.Pix2PgpSparkPixSv2Top
+         generic map(
+            TPD_G                      => TPD_G,
+            RST_ASYNC_G                => RST_ASYNC_G,
+            RST_POLARITY_G             => RST_POLARITY_G,
+            DATAFIFO_PIPE_G            => DATAFIFO_PIPE_G,
+            STATUSFIFO_PIPE_G          => STATUSFIFO_PIPE_G,
+            PIPELINE_DATA_G            => PIPELINE_DATA_G,
+            PIPELINE_STATUS_G          => PIPELINE_STATUS_G,
+            COLMANAGER_DATA_DEPTH_G    => COLMANAGER_DATA_DEPTH_G,
+            COLMANAGER_STATUS_DEPTH_G  => COLMANAGER_STATUS_DEPTH_G)
+         port map(
+            sparseClk         => sparseClk,
+            sparseRst         => rst,
+            pgpClk            => pgpClk,
+            pgpRst            => rst,
+            pgpHardRst        => rst,
+            cfgSel            => cfgSel,
+            cfgTimeoutLimit   => cfgTimeoutLimit,
+            cfgColumnEnable   => cfgColumnEnable,
+            cfgColBusy        => cfgColBusy(ser),
+            cfgColDataEmpty   => cfgColDataEmpty(ser),
+            cfgColStatusEmpty => cfgColStatusEmpty(ser),
+            cfgSuperBusy      => cfgSuperBusy(ser),
+            cfgArbBusy        => cfgArbBusy(ser),
+            pause             => pause(ser),
+            sof               => sof(ser),
+            eof               => eof(ser),
+            busy              => busy(ser),
+            overOcc           => overOcc(ser),
+            pauseAck          => pauseAck(ser),
+            wrEn              => wrEn(ser),
+            din0              => din(ser)(0),
+            din1              => din(ser)(1),
+            din2              => din(ser)(2),
+            din3              => din(ser)(3),
+            din4              => din(ser)(4),
+            din5              => din(ser)(5),
+            din6              => din(ser)(6),
+            din7              => din(ser)(7),
+            din8              => din(ser)(8),
+            din9              => din(ser)(9),
+            din10             => din(ser)(10),
+            din11             => din(ser)(11),
+            din12             => din(ser)(12),
+            din13             => din(ser)(13),
+            din14             => din(ser)(14),
+            din15             => din(ser)(15),
+            din16             => din(ser)(16),
+            din17             => din(ser)(17),
+            din18             => din(ser)(18),
+            din19             => din(ser)(19),
+            din20             => din(ser)(20),
+            din21             => din(ser)(21),
+            din22             => din(ser)(22),
+            din23             => din(ser)(23),
+            pgpDout           => pgpDataAsic(ser),
+            pgpDoutValid      => pgpDataAsicValid(ser),
+            pgpDoutReady      => pgpDataAsicReady(ser));
+
+   end generate GEN_SERIALIZER;
+
+   -------
+   -- FPGA
+   -------
+   revRst <= not(rst);
+
+   -- Using the same wrapper that is used in sysVerilog verification;
+   -- hence the ugly association of the data ports
+   U_FpgaRx: entity pix2pgp.Pix2PgpSparkPixSv2FpgaRxTop
+      generic map(
+         TPD_G                  => TPD_G,
+         RST_ASYNC_G            => false,
+         RST_POLARITY_G         => REV_RST_POLARITY_C,
+         NUM_VC_G               => NUM_VC_G,
+         AXIS_FIFO_ADDR_WIDTH_G => 11,
+         -- IP Integrator AXI Stream Configuration
+         AXIS_CONFIG_G          => AXIS_CONFIG_C)
+      port map(
+         -- General Interface
+         pgpRxClk        => pgpRxClk,
+         sro             => sroFinal,
+         daq             => daqEnable,
+         rst             => revRst,
+         asicRstL        => rst,
+         -- Pix2Pgp Interface
+         pgpDin0         => pgpDataAsic(0),
+         pgpDin1         => pgpDataAsic(1),
+         pgpDin2         => pgpDataAsic(2),
+         pgpDin3         => pgpDataAsic(3),
+         pgpDin4         => pgpDataAsic(4),
+         pgpDin5         => pgpDataAsic(5),
+         pgpDin6         => pgpDataAsic(6),
+         pgpDin7         => pgpDataAsic(7),
+         pgpDinValid     => pgpDataAsicValid,
+         pgpDinReady     => pgpDataAsicReady,
+         linkReady       => pgp4RxLinkUp,
+         -- AXI interface
+         axisClk         => open,
+         axisRst         => open,
+         m_axis_aresetn  => '1',
+         m_axis_aclk     => sysClk,
+         m_axis_tvalid   => m_axis_tvalid,
+         m_axis_tdata    => m_axis_tdata,
+         m_axis_tstrb    => m_axis_tstrb,
+         m_axis_tkeep    => m_axis_tkeep,
+         m_axis_tlast    => m_axis_tlast,
+         m_axis_tdest    => m_axis_tdest,
+         m_axis_tid      => m_axis_tid,
+         m_axis_tuser    => m_axis_tuser,
+         m_axis_tready   => '1',
+         stream_rx_tlast => stream_rx_tlast);
+
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
+
+     -- Generate the test stimulus
+     regularStimulus: process begin
+
+       -- do not touch begin
+       ----------------------------------------------
+       ----------------------------------------------
+       -- issue reset here
+       wait for CLK_PERIOD_SPARSE_C;
+         rstCnt <= '1'; -- keep the benchmarking counters in reset
+         rst    <= RST_POLARITY_G;
+       wait for CLK_PERIOD_SPARSE_C*150;
+         rst  <= not(RST_POLARITY_G);
+
+       -- Wait for the rst to be released before doing anything else
+       wait until (rst = not(RST_POLARITY_G));
+       for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+          for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+            hitLen(ser)(col) <= toSlv(0, hitLen(ser)(col)'length);
+          end loop;
+       end loop;
+
+       wait for CLK_PERIOD_SPARSE_C*3000; -- extend wait to align pgp protocol
+         sro <= '1';
+       wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+       ----------------------------------------------
+       ----------------------------------------------
+       -- do not touch end
+
+       -- regular stimuli begin
+       ----------------------------------------------
+       ----------------------------------------------
+
+       wait for CLK_PERIOD_SPARSE_C*140;
+         sro <= '1';
+       wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+
+      wait for CLK_PERIOD_SPARSE_C*140;
+         sro <= '1';
+       wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+   for i in 0 to 12 loop
+      ---------------------------------------
+      hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   daqEnable <= '1';
+   sro       <= '1';
+   wait for CLK_PERIOD_SPARSE_C*2;
+   sro       <= '0';
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   wait for CLK_PERIOD_SPARSE_C*140;
+   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ---------------------------------------
+      hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(4) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(7) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(0)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(15) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(0)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(0)(20) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(0)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(0)(23) <= toSlv(3, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(1)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(1) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(6) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(1)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(12) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(13) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(15) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(16) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(1)(17) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(18) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(1)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(1)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(1)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(2)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(3) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(4) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(5) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(11) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(12) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(14) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(20) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(22) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(2)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(3)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(2) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(4) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(6) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(7) <= toSlv(21, hitLen(0)(0)'length);
+      hitLen(3)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(9) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(10) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(11) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(3)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(14) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(3)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(17) <= toSlv(15, hitLen(0)(0)'length);
+      hitLen(3)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(19) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(3)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(3)(22) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(3)(23) <= toSlv(4, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(4)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(1) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(3) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(4) <= toSlv(40, hitLen(0)(0)'length);
+      hitLen(4)(5) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(4)(9) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(13) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(4)(18) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(19) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(4)(21) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(4)(22) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(4)(23) <= toSlv(0, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(5)(0) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(1) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(2) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(3) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(5) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(6) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(7) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(8) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(9) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(11) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(5)(14) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(15) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(17) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(18) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(19) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(5)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(5)(21) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(5)(22) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(5)(23) <= toSlv(2, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(6)(0) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(3) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(4) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(6) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(8) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(9) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(10) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(11) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(12) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(13) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(14) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(6)(16) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(17) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(18) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(6)(19) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(6)(21) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(6)(22) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(6)(23) <= toSlv(1, hitLen(0)(0)'length);
+   ---------------------------------------
+   ---------------------------------------
+      hitLen(7)(0) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(1) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(2) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(3) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(4) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(5) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(6) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(7) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(8) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(9) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(10) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(11) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(12) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(13) <= toSlv(3, hitLen(0)(0)'length);
+      hitLen(7)(14) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(15) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(16) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(17) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(18) <= toSlv(2, hitLen(0)(0)'length);
+      hitLen(7)(19) <= toSlv(0, hitLen(0)(0)'length);
+      hitLen(7)(20) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(21) <= toSlv(4, hitLen(0)(0)'length);
+      hitLen(7)(22) <= toSlv(1, hitLen(0)(0)'length);
+      hitLen(7)(23) <= toSlv(0, hitLen(0)(0)'length);
+      ---------------------------------------
+      -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      daqEnable <= '1';
+      sro       <= '1';
+      wait for CLK_PERIOD_SPARSE_C*2;
+      sro       <= '0';
+
+      -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      wait for CLK_PERIOD_SPARSE_C*140;
+   end loop;
+
+
+    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     ----------------------------------------------
+     ----------------------------------------------
+     -- regular stimuli end
+
+    -- Wait a bit...
+    wait for CLK_PERIOD_SPARSE_C*CNT_CHECK_TIMEOUT_C;
+
+    if sroCnt = tLastCnt then
+      report "[INFO]: Regular test done! Please decode .dat file with axiDataParser.py!" severity note;
+      testDone <= true;
+      testFail <= false;
+    else
+      report "[DEBUG]: sroCnt = " & integer'image(sroCnt) & ", tLastCnt = " & integer'image(tLastCnt) severity note;
+      report "[ERROR]: Regular test counter mismatch!" severity error;
+      testDone <= false;
+      testFail <= true;
+    end if;
+
+    -- do not touch begin
+    wait;
+    -- do not touch end
+
+  end process regularStimulus;
+
+end generate GEN_REGULAR_PROC;
+
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+
+GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
+
+ benchmarkStimulus: process begin
+
+   wait for CLK_PERIOD_SPARSE_C;
+      rst <= RST_POLARITY_G;
+   wait for CLK_PERIOD_SPARSE_C*150;
+      rst  <= not(RST_POLARITY_G);
+
+   -- Wait for the rst to be released before doing anything else
+   wait until (rst = not(RST_POLARITY_G));
+
+   wait for CLK_PERIOD_SPARSE_C*3000; -- extend wait to align pgp protocol
+
+   for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+
+      wait for CLK_PERIOD_SPARSE_C*250;
+         rstCnt <= '1';
+
+      wait for CLK_PERIOD_SPARSE_C*1;
+         rstCnt <= '0';
+
+         for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+            for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+               hitLen(ser)(col) <= toSlv(colHitsArray(i), hitLen(ser)(col)'length);
+            end loop;
+         end loop;
+
+         sro <= '1';
+
+      wait for CLK_PERIOD_SPARSE_C*2;
+         sro  <= '0';
+
+      wait until (stream_rx_tlast = '1') or (now >= 4 ms);
+         if now >= 4 ms then
+            report "[ERROR]: Benchmarking timeout!" severity error;
+            testDone <= false;
+            testFail <= true;
+            exit;  -- Exit the loop
+         end if;
+
+         report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
+
+      wait for CLK_PERIOD_SPARSE_C*30;
+         colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
+         superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
+         totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
+         frameSizeArray(i)    <= conv_integer(unsigned(frameSizeCnt));
+
+      wait for CLK_PERIOD_SPARSE_C*30;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% frameSizeCnt = " & integer'image(frameSizeArray(i)) severity note;
+
+   end loop;
+
+   wait for CLK_PERIOD_SPARSE_C*150;
+      report "[INFO]: Done benchmarking! Final results below..." severity note;
+
+      for i in 0 to OCC_BENCHMARK_COUNT-1 loop
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
+         report "[INFO]: occ = " & real'image(occArray(i)) & "% frameSizeCnt = " & integer'image(frameSizeArray(i)) severity note;
+      end loop;
+
+      report "[INFO]: Test Done! Please decode .dat file with axiDataParser.py";
+      testDone <= true;
+      testFail <= false;
+
+    wait;
+    -- do not touch end
+
+ end process benchmarkStimulus;
+
+end generate GEN_BENCHMARK_PROC;
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+
+  -- Process to Monitor AXI Stream and Write to File
+  FileWriteProcessAsic : process(sysClk)
+    file myFile : text open write_mode is "pix2pgpAxiDataDump.dat";
+    variable row : line;
+    variable byte : std_logic_vector(7 downto 0);
+  begin
+    if rising_edge(sysClk) then
+      if m_axis_tvalid = '1' then
+        for i in 0 to AXIS_CONFIG_C.TDATA_BYTES_C - 1 loop
+          if m_axis_tkeep(i) = '1' then
+            byte := m_axis_tdata((i*8+7) downto (i*8));
+            hwrite(row, byte, LEFT, 0);
+            writeline(myFile, row);
+            row.all := "";
+          end if;
+        end loop;
+      end if;
+    end if;
+  end process;
+
+  MeasureFrameSizeProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+
+      if rstCnt = '1' then
+
+         cnt := (others => '0');
+
+      else
+
+         if m_axis_tvalid = '1' then
+            for i in 0 to AXIS_CONFIG_C.TDATA_BYTES_C - 1 loop
+               if m_axis_tkeep(i) = '1' then
+                  cnt := cnt + 1;
+               end if;
+            end loop;
+         end if;
+
+      end if;
+
+      if stream_rx_tlast = '1' then
+         frameSizeCnt <= cnt;
+      end if;
+
+    end if;
+  end process;
+
+  MeasureColBusyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+      cfgColBusyDel <= cfgColBusy(0);
+
+      if rstCnt = '1' then
+
+         cnt        := (others => '0');
+         colBusyCnt <= (others => '0');
+
+      else
+
+         if cfgColBusyDel = '1' then
+            cnt := cnt + 1;
+         end if;
+
+         if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+            (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
+            colBusyCnt <= cnt;
+         end if;
+
+      end if;
+
+    end if;
+  end process;
+
+  MeasureSuperBusyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+
+      if rstCnt = '1' then
+
+         cnt          := (others => '0');
+         superBusyCnt <= (others => '0');
+
+      else
+         cfgSuperBusyDel <= cfgSuperBusy(0);
+
+         if cfgSuperBusyDel = '1' then
+            cnt := cnt + 1;
+         end if;
+
+         if (cfgColBusyDel = '1' and cfgColBusy(0) = '0') or
+            (cfgSuperBusyDel = '1' and cfgSuperBusy(0) = '0') then
+            superBusyCnt <= cnt;
+         end if;
+      end if;
+
+    end if;
+  end process;
+
+  MeasureTotalLatencyProc : process(pgpClk)
+   variable cnt : slv(31 downto 0) := (others => '0');
+  begin
+    if rising_edge(pgpClk) then
+
+      if rstCnt = '1' then
+
+         cnt             := (others => '0');
+         totalLatencyCnt <= (others => '0');
+
+      else
+
+         if cnt > 0 then
+            cnt := cnt + 1;
+         elsif sro = '1' and sroFinal = '0' then
+            cnt := cnt + 1;
+         end if;
+
+         if stream_rx_tlast = '1' then
+            totalLatencyCnt <= cnt;
+         end if;
+
+      end if;
+
+    end if;
+  end process;
+
+   TimeoutMonitor: process
+   begin
+      wait until testDone or testFail or (now >= 5 ms);
+
+      if testDone then
+         -- will cause severity failure on testDone but user has to ignore (VHDL-93 limitation)
+         assert false report "[INFO]: Testbench passed successfully! Exiting... (ignore severity failure)" severity failure;
+      elsif testFail then
+         assert false report "[ERROR]: Testbench Failed... Exiting..." severity failure;
+      else
+         assert false report "[ERROR]: Testbench Timeout... Exiting..." severity failure;
+      end if;
+
+      wait;
+   end process;
+
+end architecture;
