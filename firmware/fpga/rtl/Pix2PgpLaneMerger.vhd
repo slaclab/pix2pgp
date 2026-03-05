@@ -294,12 +294,12 @@ begin
                   v.laneSel := r.laneSel + 1;
                end if;
 
-            elsif v.obAxiMaster.tValid = '0' then
+            elsif (v.obAxiMaster.tValid = '0') and (laneRxMasters(laneIdx).tValid = '1') then
                v.obAxiMaster.tKeep := laneAxiStream.tKeep;
                v.obAxiMaster.tData := laneAxiStream.tData;
 
-               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid;
-               v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
+               v.obAxiMaster.tValid           := '1';
+               v.laneRxSlaves(laneIdx).tReady := '1';
 
                if laneRxMasters(laneIdx).tLast = '1' and
                   obAxiSlave.tReady            = '1' then
