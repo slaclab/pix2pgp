@@ -50,8 +50,8 @@ entity Pix2PgpLaneMerger is
       laneRxMasters : in  AxiStreamMasterArray;
       laneRxSlaves  : out AxiStreamSlaveArray;
       -- AXI-Stream Output Interface (on pgpRxClk domain)
-      obAxiMaster  : out AxiStreamMasterType;
-      obAxiSlave   : in  AxiStreamSlaveType);
+      obAxiMaster   : out AxiStreamMasterType;
+      obAxiSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneMerger;
 
 architecture rtl of Pix2PgpLaneMerger is
