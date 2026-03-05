@@ -302,25 +302,21 @@ begin
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
-   -- Bypassing packing gearbox
-   asicRxMaster   <= mergerAxiMaster;
-   mergerAxiSlave <= asicRxSlave;
-
-   --U_tKeepPacking : entity surf.AxiStreamGearbox
-   --   generic map (
-   --      TPD_G                => TPD_G,
-   --      RST_ASYNC_G          => RST_ASYNC_G,
-   --      RST_POLARITY_G       => RST_POLARITY_G,
-   --      FORCE_GEARBOX_IMPL_G => true,
-   --      SLAVE_AXI_CONFIG_G   => PIX2PGP_FPGA_AXI_CONFIG_C,
-   --      MASTER_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C)
-   --   port map (
-   --      axisClk     => pgpRxClk,
-   --      axisRst     => glblRst,
-   --      sAxisMaster => mergerAxiMaster,
-   --      sAxisSlave  => mergerAxiSlave,
-   --      mAxisMaster => asicRxMaster,
-   --      mAxisSlave  => asicRxSlave);
+   U_tKeepPacking : entity surf.AxiStreamGearbox
+      generic map (
+         TPD_G                => TPD_G,
+         RST_ASYNC_G          => RST_ASYNC_G,
+         RST_POLARITY_G       => RST_POLARITY_G,
+         FORCE_GEARBOX_IMPL_G => true,
+         SLAVE_AXI_CONFIG_G   => PIX2PGP_FPGA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C)
+      port map (
+         axisClk     => pgpRxClk,
+         axisRst     => glblRst,
+         sAxisMaster => mergerAxiMaster,
+         sAxisSlave  => mergerAxiSlave,
+         mAxisMaster => asicRxMaster,
+         mAxisSlave  => asicRxSlave);
 
    ------------------
    -- Trigger Manager
