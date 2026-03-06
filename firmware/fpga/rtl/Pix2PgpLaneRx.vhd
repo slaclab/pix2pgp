@@ -33,7 +33,7 @@ entity Pix2PgpLaneRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1'; -- '1' for active high rst, '0' for active low
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 8);
+      LANE_FIFO_ADDR_WIDTH_G : positive := 8);
    port(
       -- General Interface
       laneClk        : in  sl;
@@ -56,8 +56,6 @@ entity Pix2PgpLaneRx is
 end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
-
-   constant LANERX_FIFO_ADDR_WIDTH_C : positive := 5;
 
    type StateType is (
       WAIT_HEADER_S,
@@ -149,7 +147,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => LANERX_FIFO_ADDR_WIDTH_C,
+         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
@@ -509,7 +507,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_G,
+         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)

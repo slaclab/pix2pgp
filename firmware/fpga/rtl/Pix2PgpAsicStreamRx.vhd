@@ -42,7 +42,7 @@ entity Pix2PgpAsicStreamRx is
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      LANE_FIFO_ADDR_WIDTH_G : positive := 8;
       AXIL_BASE_ADDR_G       : slv(31 downto 0));
    port(
       -- General Interface
@@ -210,7 +210,7 @@ begin
             LANE_ID_G              => lane,
             PIPE_STAGES_G          => LANE_PIPE_STAGES_G,
             META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
-            AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G,
+            LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G,
             LANE_MON_GEN_G         => LANE_MON_GEN_G,
             LANE_MON_CNT_WIDTH_G   => LANE_MON_CNT_WIDTH_G)
          port map(
