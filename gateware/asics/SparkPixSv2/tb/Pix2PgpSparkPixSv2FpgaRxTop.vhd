@@ -51,7 +51,7 @@ entity Pix2PgpSparkPixSv2FpgaRxTop is
       RST_ASYNC_G            : boolean   := True;
       RST_POLARITY_G         : std_logic := '1';
       NUM_VC_G               : natural   := 1;
-      AXIS_FIFO_ADDR_WIDTH_G : positive  := 11;
+      LANE_FIFO_ADDR_WIDTH_G : positive  := 11;
       TUSER_WIDTH_G          : positive  := 8;
       TID_WIDTH_G            : positive  := 8;
       TDEST_WIDTH_G          : positive  := 8;
@@ -154,7 +154,7 @@ begin
          LANE_PIPE_STAGES_G     => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
-         AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G,
+         LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G,
          AXIL_BASE_ADDR_G       => x"0800_0000")
       port map(
          -- General Interface
@@ -187,7 +187,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => AXIS_FIFO_ADDR_WIDTH_G,
+         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => AXIS_CONFIG_G)

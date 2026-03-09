@@ -61,7 +61,6 @@ package Pix2PgpAsicPkg is
    constant EVAL_SOF_C  : boolean := False;
    constant EVAL_EOFE_C : boolean := False;
 
-   constant TX_DUMMY_MAX_C   : natural := 7;
    constant EVAL_DUMMY_MAX_C : natural := 4;
    --
    -- **************************************************************************
