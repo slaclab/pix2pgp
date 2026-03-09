@@ -35,7 +35,7 @@ entity Pix2PgpLaneRxWrapper is
       LANE_ID_G              : natural  := 0;
       PIPE_STAGES_G          : natural  := 1;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      AXIS_FIFO_ADDR_WIDTH_G : positive := 8;
+      LANE_FIFO_ADDR_WIDTH_G : positive := 8;
       LANE_MON_GEN_G         : boolean  := false;
       LANE_MON_CNT_WIDTH_G   : positive := 16);
    port(
@@ -85,7 +85,7 @@ begin
          RST_ASYNC_G            => RST_ASYNC_G,
          RST_POLARITY_G         => RST_POLARITY_G,
          META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
-         AXIS_FIFO_ADDR_WIDTH_G => AXIS_FIFO_ADDR_WIDTH_G)
+         LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
          laneClk        => laneClk,

@@ -390,7 +390,7 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          NUM_VC_G               => NUM_VC_G,
-         AXIS_FIFO_ADDR_WIDTH_G => 11,
+         LANE_FIFO_ADDR_WIDTH_G => 11,
          -- IP Integrator AXI Stream Configuration
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
