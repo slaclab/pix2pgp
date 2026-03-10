@@ -7,7 +7,7 @@ For more info:
 
 * [Confluence Page](https://confluence.slac.stanford.edu/x/nIkaGg)
 
-As of `v2.7.7`, Pix2PGP supports the following ASIC variants:
+As of `v2.7.8`, Pix2PGP supports the following ASIC variants:
 
 * [SparkPix-S](https://confluence.slac.stanford.edu/x/CZp8F)
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
