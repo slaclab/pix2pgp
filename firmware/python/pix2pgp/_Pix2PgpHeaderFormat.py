@@ -19,7 +19,7 @@ class Pix2PgpHeaderFormatBase:
     def setHeader(self):
         self.asicHeader = {
             'SparkPixS'  : SparkPixSHeaderFormat,
-            'SparkPixSv2': SparkPixSHeaderFormat,
+            'SparkPixSv2': SparkPixSv2HeaderFormat,
             'SparkPixT'  : SparkPixTHeaderFormat,
             'Thriglav'   : ThriglavHeaderFormat}
 
@@ -29,6 +29,27 @@ class Pix2PgpHeaderFormatBase:
 class SparkPixSHeaderFormat(Pix2PgpHeaderFormatBase):
     '''
     SparkPix-S Header Format
+    '''
+    def headerDecoder(self, header):
+        '''
+        Header mapping and decoding
+        '''
+        _header = int(header, 16)
+
+        header_dict = {'overOcc'    : bool((_header >> 39) & 0x1),
+                       'pause'      : bool((_header >> 38) & 0x1),
+                       'colErr'     : bool((_header >> 37) & 0x1),
+                       'pauseErr'   : bool((_header >> 36) & 0x1),
+                       'dummy'      : bool((_header >> 35) & 0x1),
+                       'timeout'    : bool((_header >> 34) & 0x1),
+                       'colHitmask' :      (_header >>  8) & 0xFFFFFF,
+                       'trgCnt'     :      (_header >>  0) & 0xFF}
+
+        return header_dict
+
+class SparkPixSv2HeaderFormat(Pix2PgpHeaderFormatBase):
+    '''
+    SparkPix-Sv2 Header Format
     '''
     def headerDecoder(self, header):
         '''

@@ -24,7 +24,7 @@ class AsicParameterBase:
     def setParams(self):
         self.asicParams = {
             'SparkPixS'   : SparkPixSParameters,
-            'SparkPixSv2' : SparkPixSParameters,
+            'SparkPixSv2' : SparkPixSv2Parameters,
             'SparkPixT'   : SparkPixTParameters,
             'Thriglav'    : ThriglavParameters}
 
@@ -38,7 +38,31 @@ class SparkPixSParameters(AsicParameterBase):
     @property
     def asicTypeId(self):
         for key, value in AsicParameterBase.asicTypeDict.items():
-            if value == "SparkPixS" or value == "SparkPixSv2":
+            if value == "SparkPixS":
+                return key
+        raise ValueError("ASIC type not found in asicTypeDict!")
+
+    def asicParamExtract(self):
+        '''
+        Parameter dictionary
+        '''
+
+        param_dict = {'asicTypeId' : self.asicTypeId,
+                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                      'numOfLanes' : 8,
+                      'numOfCols'  : 24,
+                      'wordLen'    : 5}
+
+        return param_dict
+
+class SparkPixSv2Parameters(AsicParameterBase):
+    '''
+    SparkPix-Sv2 Parameters
+    '''
+    @property
+    def asicTypeId(self):
+        for key, value in AsicParameterBase.asicTypeDict.items():
+            if value == "SparkPixSv2":
                 return key
         raise ValueError("ASIC type not found in asicTypeDict!")
 
