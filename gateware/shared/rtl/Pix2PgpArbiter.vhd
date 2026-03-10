@@ -307,12 +307,12 @@ begin
          -- essentially flushes out the last words written into the gearbox
          when TX_DUMMY_S =>
             v.dummyHeader := '1';
-            v.txData      := v.dataHeader;
 
             if r.dummyHeader = '1' then
 
                if v.sAxisMaster.tValid = '0' then
                   v.sAxisMaster.tValid := '1';
+                  v.txData             := v.dataHeader;
 
                   -- got lucky, still need to flush the gearbox with one full dummy trailer
                   if flushWords = 0 and PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C then
