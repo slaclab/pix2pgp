@@ -22,14 +22,14 @@ Navigate to `gateware/asics` and create a new directory for the `NewAsic`: do `$
         2. `NUM_OF_SERIALIZERS_C` (how many serializers/Pix2Pgp instances/lanes are on the ASIC?)
         3. `ASIC_DATABUS_DWIDTH_C` (what is the data bus width that is driven to Pix2Pgp?)
         4. Finally, depending on the internal data width (double the `ASIC_DATABUS_DWIDTH_C`), the user has to edit the Pix2Pgp data frame header bitfield structure accordingly.
-    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. For example, one needs to change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the Analog part of the ASIC (i.e. the value of `ASIC_DATABUS_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in. If the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition.
+    2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. Change the VHDL entity name. One probably needs to also change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the data-generating User Logic (i.e. the value of `ASIC_DATABUS_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in. If the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition.
 2. Under `NewAsic/tb`, do:
     * `$ mv DummySparkPixTPixel.vhd DummyNewAsicPixel.vhd`
     * `$ mv Pix2PgpSparkPixTFpgaRxTop.vhd Pix2PgpNewAsicFpgaRxTop.vhd`
     * `$ mv Pix2PgpSparkPixTTopTb.vhd Pix2PgpNewAsicTopTb.vhd`
-    1. Edit `DummyNewAsicPixel.vhd` accordingly. This is a behavioral model of the pixel of the new ASIC and should be mimicking the behavior of the ASIC, e.g. in terms of the delay between the `wrEn` signals when writing multiple data words into the Pix2Pgp core and the delay between the `SRO` assertion and the first (if any) `wrEn` strobe. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-level VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into Pix2Pgp.
-    2. Edit `Pix2PgpNewAsicFpgaRxTop.vhd` accordingly. This entity is a wrapper for the FPGA-related receiver logic .vhd files. In principle, one needs to only expand/collapse the number of input ports for the data, and their associated allocation within the architecture, depending on the number of lanes the ASIC has (i.e. `NUM_OF_SERIALIZERS_C`). This file is to also be used within SystemVerilog verification context, hence the use of simple ports for the data buses.
-    3. Edit `Pix2PgpNewAsicTopTb.vhd` accordingly. Change the names of the VHDL entities and widths of the buses depending on the amount of columns each Pix2Pgp instance serves. Note that the testbench is instantiating all Lanes of the ASIC (governed by the `NUM_OF_SERIALIZERS_C` parameter) and routing all of them into `Pix2PgpNewAsicFpgaRxTop` which wraps around the ASIC RX logic instantiated in the FPGA of the in-silicon system.
+    1. Edit `DummyNewAsicPixel.vhd` accordingly. Change the VHDL entity name. This is a behavioral model of the pixel of the new ASIC and should be mimicking the behavior of the ASIC, e.g. in terms of the delay between the `wrEn` signals when writing multiple data words into the Pix2Pgp core and the delay between the `SRO` assertion and the first (if any) `wrEn` strobe. This model is used in the top-level VHDL testbench (`Pix2PgpNewAsicTopTb.vhd`). Note the `hitLen` port. Within the top-level VHDL testbench, one can edit the value of this dynamically to change how many hits each pixel model injects into Pix2Pgp.
+    2. Edit `Pix2PgpNewAsicFpgaRxTop.vhd` accordingly. Change the VHDL entity name. This entity is a wrapper for the FPGA-related receiver logic .vhd files. In principle, one needs to only expand/collapse the number of input ports for the data, and their associated allocation within the architecture, depending on the number of lanes the ASIC has (i.e. `NUM_OF_SERIALIZERS_C`). This file is to also be used within SystemVerilog verification context, hence the use of simple ports for the data buses.
+    3. Edit `Pix2PgpNewAsicTopTb.vhd` accordingly. Change all VHDL entity names and module instantiation names. Change the widths of the buses depending on the amount of columns each Pix2Pgp instance serves. Note that the testbench is instantiating all Lanes of the ASIC (governed by the `NUM_OF_SERIALIZERS_C` parameter) and routing all of them into `Pix2PgpNewAsicFpgaRxTop` which wraps around the ASIC RX logic instantiated in the FPGA of the in-silicon system.
         1. The testbenches usually include a VHDL process that selects specific columns/pixels and assigns a `hitLen` value on a per-trigger/event basis (e.g., the line `hitLen(0)(3) <= toSlv(3, hitLen(0)(0)'length);` assigns three hits for a pixel in column 3 of lane 0). One can create random hit-lengths by using the `software/scripts/hitsToVhd.py` script (e.g. `$ python hitsToVhd.py --numOfLanes=4 --numOfCols=40 --minRange=0 --maxRange=4 --laneEnable=1,1,1,1`) will generate random stimuli for an ASIC with 40 columns-per-Pix2Pgp instance, and 2-lanes-per-ASIC.
 
 ### Test the VHDL syntax via GHDL
@@ -264,9 +264,19 @@ class NewAsicDataFormat(SparseDataFormatBase):
 3. Update Pix2Pgp Confluence page accordingly
 
 ## Limitations
-The width of the data coming into Pix2Pgp from the data source dictates how wide the data frame will be. Pix2Pgp *doubles* the size of that bus. This means that each data bus that is connected to Pix2Pgp is half the width of the data word that Pix2Pgp transmits to the FPGA Receiver.
+Pix2Pgp supports the following data bus widths, as set in the `ASIC_DATABUS_DWIDTH_C` parameter of each supported ASIC within its associated `Pix2PgpAsicPkg` file:
+* 4 bits
+* 8 bits
+* 12 bits
+* 16 bits
+* 20 bits
+* 24 bits
+* 28 bits
+* 32 bits
 
-This can be observed in the `*Pkg.vhd` files found under the various ASIC variants under `gateware/asics`:
+This is due to the fact that the outbound AXI-Stream of `Pix2PgpTop` is 64-bit wide. This is a limitation of the *Lite* version of the PGP4 Protocol (it has a fixed inbound AXI-Stream width of 64 bits).
+
+Once the user chooses the data bus width, the internal data width is fixed, and double that size, as dictated by the relevant line of `Pix2PgpPkg`:
 
 ```VHDL
    -- data bus width is twice the pixel data width to maximize bandwidth
@@ -279,4 +289,4 @@ This sets a limitation on how many columns can be served by each Pix2Pgp instanc
 * The *Trigger Counter*, that has a configurable width (usually *6-bit*)
 * The *Column Hitmask*, which has the same width as the amount of columns served; i.e. this is what needs to fit in the header.
 
-For example, If each Pix2Pgp instance of an ASIC serves `40` columns, then `ASIC_DATABUS_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served. Or, `ASIC_DATABUS_DWIDTH_C` can be widened (by e.g. padding) in order for the internal word to be able to accommodate the amount of column hitmask bits in the Lane Header.
+For example, If each Pix2Pgp instance of an ASIC serves `40` columns, then `ASIC_DATABUS_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served. Or, `ASIC_DATABUS_DWIDTH_C` can be widened (by e.g. zero-padding unused data bus bits) in order for the `PIX2PGP_DATABUS_DWIDTH_C` bus width to be able to accommodate the amount of column-hitmask bits in the Lane Header.

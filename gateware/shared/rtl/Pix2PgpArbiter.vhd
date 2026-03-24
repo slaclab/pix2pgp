@@ -87,7 +87,8 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader  : sl;
       waitColSel   : sl;
       txData       : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
-      dummyCnt     : slv(2 downto 0);
+      wordCnt      : slv(BITMAX_DUMMY_C-1 downto 0);
+      dummyCnt     : slv(BITMAX_DUMMY_C-1 downto 0);
       dataHeader   : slv(HEADER_DWIDTH_C-1 downto 0);
       dataRdCnt    : slv(DATALEN_WIDTH_C-1 downto 0);
       dataRdCycles : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -114,6 +115,7 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader   => '0',
       waitColSel    => '0',
       txData        => (others => '0'),
+      wordCnt       => (others => '0'),
       dummyCnt      => (others => '0'),
       dataHeader    => (others => '0'),
       dataRdCnt     => toSlv(0, DATALEN_WIDTH_C),
@@ -148,6 +150,7 @@ begin
       variable trgCntSel   : slv(TRGCNT_WIDTH_C-1 downto 0);
       -- temp variables for data bus
       variable dataBusSel  : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
+      variable flushWords  : slv(BITMAX_DUMMY_C-1 downto 0);
 
    begin
 
@@ -167,27 +170,13 @@ begin
 
       -- flow control check
       if sAxisSlave.tReady = '1' then
-
-         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-         if ASIC_TYPE_C > 1 then
-            v.sAxisMaster.tUser := (others => '0');
-            v.sAxisMaster.tLast := '0';
-         end if;
-
-         -- always present
          v.sAxisMaster.tValid := '0';
-
+         v.sAxisMaster.tLast  := '0';
+         v.sAxisMaster.tUser  := (others => '0');
+         v.sAxisMaster.tData  := (others => '0');
       end if;
 
-      -- default flags
-      if ASIC_TYPE_C = 1 then
-         -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-         v.sAxisMaster.tUser := (others => '0');
-         v.sAxisMaster.tLast := '0';
-      end if;
-
-      -- always present
-      v.sAxisMaster.tKeep  := (others => '1');
+      v.sAxisMaster.tKeep := tKeepSet(PIX2PGP_DATABUS_DWIDTH_C);
 
       -- status Mux
       if PIPELINE_STATUS_G then
@@ -210,6 +199,9 @@ begin
       -- data Mux
       dataBusSel := v.dataBus(conv_integer(unsigned(r.colSel))).data;
 
+      -- how many words are needed to flush?
+      flushWords := getDummyFlushWords(r.wordCnt);
+
       -------------------------------------------------------------------------
       case r.state is
       -------------------------------------------------------------------------
@@ -218,6 +210,7 @@ begin
          when IDLE_S =>
             v.arbBusy     := '0';
             v.dummyHeader := '0';
+            v.wordCnt     := (others => '0');
             v.dummyCnt    := (others => '0');
             v.colSel      := (others => '0');
 
@@ -232,8 +225,9 @@ begin
          when PARSE_HEADER_S =>
             if v.sAxisMaster.tValid = '0' then
                ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.sAxisMaster, '1');
-               v.sAxisMaster.tValid   := '1';
-               v.txData               := v.dataHeader;
+               v.sAxisMaster.tValid := '1';
+               v.wordCnt            := r.wordCnt + 1;
+               v.txData             := v.dataHeader;
 
                v.state := CHECK_HITMASK_S;
 
@@ -263,6 +257,7 @@ begin
                      -- column metadata mapping in pkg (changes with ASIC type)
                      v.txData             := colMetaMap(flagsSel, r.colSel, trgCntSel, dataLenSel);
                      v.sAxisMaster.tValid := '1';
+                     v.wordCnt            := r.wordCnt + 1;
                      --
                      v.dataRdCnt := toSlv(0, DATALEN_WIDTH_C);
 
@@ -287,6 +282,7 @@ begin
                --
                v.txData             := dataBusSel;
                v.sAxisMaster.tValid := '1';
+               v.wordCnt            := r.wordCnt + 1;
                --
                v.dataRdCnt := r.dataRdCnt + 1;
                v.dataRd    := '1';
@@ -313,26 +309,37 @@ begin
             v.dummyHeader := '1';
 
             if r.dummyHeader = '1' then
+
                if v.sAxisMaster.tValid = '0' then
-                  v.txData             := v.dataHeader;
                   v.sAxisMaster.tValid := '1';
+                  v.txData             := v.dataHeader;
 
-                  if sAxisSlave.tReady = '1' then
-                     v.dummyCnt := r.dummyCnt + 1;
+                  -- got lucky, still need to flush the gearbox with one full dummy trailer
+                  if flushWords = 0 and PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C then
+                     v.wordCnt := r.wordCnt + 1;
                   end if;
 
-                  if r.dummyCnt = toSlv(TX_DUMMY_MAX_C, r.dummyCnt'length) then
-                     v.sAxisMaster.tValid := '1';
-
-                     -- SparkPix-S -> ASIC_TYPE_C=1; emulate AXI behavior of SparkPix-S
-                     if ASIC_TYPE_C = 1 then
-                        v.sAxisMaster.tValid := '0';
-                     end if;
-
+                  -- only need to transmit one dummy word
+                  if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C then
                      v.sAxisMaster.tLast := '1';
-                     v.state             := IDLE_S;
                   end if;
+
+                  if r.dummyCnt < flushWords and flushWords > 0 then
+                     v.sAxisMaster.tValid := '1';
+                     v.dummyCnt           := r.dummyCnt + 1;
+                  end if;
+
+                  if r.dummyCnt + 1 = flushWords and flushWords > 0 then
+                     v.sAxisMaster.tLast := '1';
+                  end if;
+
+                  -- go back to IDLE once the tLast has been issued
+                  if v.sAxisMaster.tLast = '1' then
+                     v.state := IDLE_S;
+                  end if;
+
                end if;
+
             end if;
 
       end case;

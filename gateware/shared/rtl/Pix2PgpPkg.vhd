@@ -33,6 +33,18 @@ package Pix2PgpPkg is
    ------------------------------ Pix2PgpPkg -----------------------------------
    -----------------------------------------------------------------------------
 
+   type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of
+      slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
+
+   constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C);
+   constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C);
+
+   constant PGP_DWIDTH_C : natural := 64;
+   constant SER_DWIDTH_C : natural := 32;
+
+   -- maximum amount of dummy words depends on the output data bus width
+   constant BITMAX_DUMMY_C : natural := bitSize(PGP_DWIDTH_C/8);
+
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    -- Functions
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,20 +64,13 @@ package Pix2PgpPkg is
    function rangeToLen     (high : integer; low : integer) return integer;
    --
    function powerOfTwo(N: natural) return slv;
+   --
+   function getDummyFlushWords (wordCnt : slv(BITMAX_DUMMY_C-1 downto 0)) return slv;
    -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
    --
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   type Pix2PgpSparseDinArray is array (NUM_OF_COL_MANAGERS_C-1 downto 0) of
-      slv(ASIC_DATABUS_DWIDTH_C-1 downto 0);
-
-   constant BITMAX_COL_MANAGERS_C : natural := bitSize(NUM_OF_COL_MANAGERS_C);
-   constant BITMAX_SERIALIZERS_C  : natural := bitSize(NUM_OF_SERIALIZERS_C);
-
-   constant PGP_DWIDTH_C : natural := 64;
-   constant SER_DWIDTH_C : natural := 32;
 
    -- *** ColumnManager-related (for SparkPix-S) ***
    -- even though we have 672 pixels max, DATALEN_WIDTH_C should be less than 10 (10 bits fit 672);
@@ -515,5 +520,96 @@ package body Pix2PgpPkg is
       return retLaneMeta;
 
    end laneMetaMap;
+
+   function getDummyFlushWords (wordCnt : slv(BITMAX_DUMMY_C-1 downto 0)) return slv is
+
+      variable dummyWords : slv(BITMAX_DUMMY_C-1 downto 0);
+      variable cntInt     : natural;
+      variable cntMod     : natural;
+
+   begin
+
+      cntInt := conv_integer(wordCnt);
+
+      case PIX2PGP_DATABUS_DWIDTH_C is
+
+         when 8 =>
+            cntMod := cntInt mod 8;
+            if cntMod = 0 then
+               dummyWords := (others => '0');
+            else
+               dummyWords := conv_std_logic_vector(8 - cntMod, dummyWords'length);
+            end if;
+
+         when 16 =>
+            cntMod := cntInt mod 4;
+            if cntMod = 0 then
+               dummyWords := (others => '0');
+            else
+               dummyWords := conv_std_logic_vector(4 - cntMod, dummyWords'length);
+            end if;
+
+         when 24 =>
+            cntMod := cntInt mod 8;
+            case cntMod is
+               when 0         => dummyWords := (others => '0');
+               when 1 | 4 | 7 => dummyWords := conv_std_logic_vector(2, dummyWords'length);
+               when 2 | 5     => dummyWords := conv_std_logic_vector(1, dummyWords'length);
+               when 3 | 6     => dummyWords := conv_std_logic_vector(3, dummyWords'length);
+               when others    => dummyWords := (others => '0');
+            end case;
+
+         when 32 =>
+            cntMod := cntInt mod 2;
+            if cntMod = 0 then
+               dummyWords := (others => '0');
+            else
+               dummyWords := conv_std_logic_vector(1, dummyWords'length);
+            end if;
+
+         when 40 =>
+            cntMod := cntInt mod 8;
+            case cntMod is
+               when 0      => dummyWords := (others => '0');
+               when 1      => dummyWords := conv_std_logic_vector(7, dummyWords'length);
+               when 2      => dummyWords := conv_std_logic_vector(6, dummyWords'length);
+               when 3      => dummyWords := conv_std_logic_vector(5, dummyWords'length);
+               when 4      => dummyWords := conv_std_logic_vector(4, dummyWords'length);
+               when 5      => dummyWords := conv_std_logic_vector(3, dummyWords'length);
+               when 6      => dummyWords := conv_std_logic_vector(2, dummyWords'length);
+               when 7      => dummyWords := conv_std_logic_vector(1, dummyWords'length);
+               when others => dummyWords := (others => '0');
+            end case;
+
+         when 48 =>
+            cntMod := cntInt mod 4;
+            case cntMod is
+               when 0      => dummyWords := (others => '0');
+               when 1 | 2  => dummyWords := conv_std_logic_vector(2, dummyWords'length);
+               when 3      => dummyWords := conv_std_logic_vector(1, dummyWords'length);
+               when others => dummyWords := (others => '0');
+            end case;
+
+         when 56 =>
+            cntMod := cntInt mod 8;
+            case cntMod is
+               when 0             => dummyWords := (others => '0');
+               when 1 | 3 | 5 | 7 => dummyWords := conv_std_logic_vector(1, dummyWords'length);
+               when 2 | 6         => dummyWords := conv_std_logic_vector(2, dummyWords'length);
+               when 4             => dummyWords := conv_std_logic_vector(4, dummyWords'length);
+               when others        => dummyWords := (others => '0');
+            end case;
+
+         when 64 =>
+            dummyWords := (others => '0');
+
+         when others =>
+            dummyWords := (others => '0');
+
+      end case;
+
+      return dummyWords;
+
+   end function getDummyFlushWords;
 
 end package body Pix2PgpPkg;

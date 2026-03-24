@@ -18,9 +18,10 @@ class SparseDataFormatBase:
     @classmethod
     def setData(self):
         self.asicData = {
-            'SparkPixS': SparkPixSDataFormat,
-            'SparkPixT': SparkPixTDataFormat,
-            'Thriglav' : ThriglavDataFormat}
+            'SparkPixS'  : SparkPixSDataFormat,
+            'SparkPixSv2': SparkPixSv2DataFormat,
+            'SparkPixT'  : SparkPixTDataFormat,
+            'Thriglav'   : ThriglavDataFormat}
 
     def dataDecoder(self, colId=0, hitData=None, rawData=False):
         raise NotImplementedError("This method should be overridden by subclasses")
@@ -30,6 +31,53 @@ class SparseDataFormatBase:
 class SparkPixSDataFormat(SparseDataFormatBase):
     '''
     SparkPix-S Data Format
+    '''
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
+        _hitData = int(hitData, 16)
+
+        _hit = []
+        ret  = []
+
+        _hit.append((_hitData >> 20) & 0xFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFF)
+
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
+
+        else:
+            _row = []
+            _LR  = []
+            _adc = []
+
+            _row.append((_hit[0] >> 10) & 0x1FF)
+            _LR.append ((_hit[0] >> 19) & 0x1)
+            _adc.append((_hit[0] >>  0) & 0x3FF)
+
+            _row.append((_hit[1] >> 10) & 0x1FF)
+            _LR.append ((_hit[1] >> 19) & 0x1)
+            _adc.append((_hit[1] >>  0) & 0x3FF)
+
+            ret.append({'col': (2*colId + _LR[0]),
+                        'row': _row[0],
+                        'adc': _adc[0]})
+
+            ret.append({'col': (2*colId + _LR[1]),
+                        'row': _row[1],
+                        'adc': _adc[1]})
+
+        return ret
+
+class SparkPixSv2DataFormat(SparseDataFormatBase):
+    '''
+    SparkPix-Sv2 Data Format
     '''
     def dataDecoder(self, colId=0, hitData=None, rawData=False):
         '''
