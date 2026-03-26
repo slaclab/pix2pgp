@@ -103,6 +103,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal mergerAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal mergerAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal gboxRxMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal gboxRxSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
    signal trgBuffRd      : sl := '0';
    signal trgBuffSroEn   : sl := '0';
@@ -302,6 +304,28 @@ begin
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
+      U_Fifo : entity surf.AxiStreamFifoV2
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => pgpRxClk,
+         sAxisRst    => glblRst,
+         sAxisMaster => mergerAxiMaster,
+         sAxisSlave  => mergerAxiSlave,
+         -- Master Port
+         mAxisClk    => pgpRxClk,
+         mAxisRst    => glblRst,
+         mAxisMaster => gboxRxMaster,
+         mAxisSlave  => gboxRxSlave);
+
    U_tKeepPacking : entity surf.AxiStreamGearbox
       generic map (
          TPD_G                => TPD_G,
@@ -313,10 +337,13 @@ begin
       port map (
          axisClk     => pgpRxClk,
          axisRst     => glblRst,
-         sAxisMaster => mergerAxiMaster,
-         sAxisSlave  => mergerAxiSlave,
+         sAxisMaster => gboxRxMaster,
+         sAxisSlave  => gboxRxSlave,
          mAxisMaster => asicRxMaster,
          mAxisSlave  => asicRxSlave);
+
+--   asicRxMaster   <= mergerAxiMaster;
+--   mergerAxiSlave <= asicRxSlave;
 
    ------------------
    -- Trigger Manager

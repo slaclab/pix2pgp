@@ -601,10 +601,10 @@ package body Pix2PgpPkg is
             end case;
 
          when 64 =>
-            dummyWords := (others => '0');
+            dummyWords := conv_std_logic_vector(7, dummyWords'length);
 
          when others =>
-            dummyWords := (others => '0');
+            dummyWords := conv_std_logic_vector(7, dummyWords'length);
 
       end case;
 
