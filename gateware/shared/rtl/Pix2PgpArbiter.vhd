@@ -315,14 +315,15 @@ begin
                   v.txData             := v.dataHeader;
 
                   -- got lucky, still need to flush the gearbox with one full dummy trailer
-                  --if flushWords = 0 and PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C then
-                  --   v.wordCnt := r.wordCnt + 1;
-                  --end if;
+                  if flushWords = 0 and PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C then
+                     v.wordCnt := r.wordCnt + 1;
+                  end if;
 
-                  ---- only need to transmit one dummy word
-                  --if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C then
-                  --   v.sAxisMaster.tLast := '1';
-                  --end if;
+                  -- only need to transmit one dummy word;
+                  -- also emulate behavior of some 64->64 ASICs that TX several dummies
+                  if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C and ASIC_TYPE_C > 3 then
+                     v.sAxisMaster.tLast := '1';
+                  end if;
 
                   if r.dummyCnt < flushWords then
                      v.sAxisMaster.tValid := '1';
