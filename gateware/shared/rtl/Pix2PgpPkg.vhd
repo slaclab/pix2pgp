@@ -58,7 +58,7 @@ package Pix2PgpPkg is
    function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
                             lanePauseError: slv; laneFull: slv; laneTimeout: slv;
                             laneDown: slv; laneValid: slv) return slv;
-   function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl;
+   function laneMetaMap    (overOcc: sl; pause: sl; pauseError: sl; decError: sl;
                             frameSize: slv; hitmask: slv; trgCnt: slv) return slv;
    function tKeepSet       (dataLen : natural) return slv;
    function rangeToLen     (high : integer; low : integer) return integer;
@@ -165,17 +165,18 @@ package Pix2PgpPkg is
    -- has to be greater or equal to LANERX_FRAME_SIZE_WIDTH_C
    constant STREAMRX_FRAME_SIZE_WIDTH_C : integer := 16;
 
-   -- trigger counter; plus frame size; plus hitmask width; plus overOcc, pause, pauseError
+   -- trigger counter; plus frame size; plus hitmask width; + overOcc, pause, pauseError, decError
    constant LANERX_META_DWIDTH_C : integer := TRGCNT_WIDTH_C +
                                               LANERX_FRAME_SIZE_WIDTH_C +
-                                              NUM_OF_COL_MANAGERS_C + 3;
+                                              NUM_OF_COL_MANAGERS_C + 4;
    -- ~~~~~~~~~~~~~~~~~~
    -- FPGA Lane Metadata
    -- ~~~~~~~~~~~~~~~~~~
    constant LANE_OVEROCC_POS_C     : natural := LANERX_META_DWIDTH_C-1;
    constant LANE_PAUSE_POS_C       : natural := LANERX_META_DWIDTH_C-2;
    constant LANE_PAUSE_ERROR_POS_C : natural := LANERX_META_DWIDTH_C-3;
-   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-4 downto NUM_OF_COL_MANAGERS_C+TRGCNT_WIDTH_C;
+   constant LANE_DEC_ERROR_POS_C   : natural := LANERX_META_DWIDTH_C-4;
+   subtype  LANE_SIZE_POS_C     is   natural range LANERX_META_DWIDTH_C-5 downto NUM_OF_COL_MANAGERS_C+TRGCNT_WIDTH_C;
    subtype  LANE_HITMASK_POS_C   is  natural range NUM_OF_COL_MANAGERS_C+TRGCNT_WIDTH_C-1 downto TRGCNT_WIDTH_C;
    subtype  LANE_TRGCNT_POS_C   is   natural range TRGCNT_WIDTH_C-1 downto 0;
 
@@ -504,7 +505,7 @@ package body Pix2PgpPkg is
 
    end fpgaHeaderMap;
 
-   function laneMetaMap (overOcc: sl; pause: sl; pauseError: sl;
+   function laneMetaMap (overOcc: sl; pause: sl; pauseError: sl; decError: sl;
                          frameSize: slv; hitmask: slv; trgCnt: slv) return slv is
       variable retLaneMeta: slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    begin
@@ -512,6 +513,7 @@ package body Pix2PgpPkg is
       retLaneMeta(LANE_OVEROCC_POS_C)     := overOcc;
       retLaneMeta(LANE_PAUSE_POS_C)       := pause;
       retLaneMeta(LANE_PAUSE_ERROR_POS_C) := pauseError;
+      retLaneMeta(LANE_DEC_ERROR_POS_C)   := decError;
       retLaneMeta(LANE_SIZE_POS_C)        := resize(frameSize, rangeToLen(LANE_SIZE_POS_C'high,
                                                                           LANE_SIZE_POS_C'low));
 

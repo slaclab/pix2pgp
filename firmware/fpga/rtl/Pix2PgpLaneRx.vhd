@@ -48,7 +48,6 @@ entity Pix2PgpLaneRx is
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
       laneRxFull     : out sl;
-      laneRxError    : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -66,6 +65,7 @@ architecture rtl of Pix2PgpLaneRx is
       PARSE_DATA_S,
       CLOSE_FRAME_S,
       WAIT_DUMMY_S,
+      WR_ERROR_S,
       ERROR_S);
 
    type RegType is record
@@ -77,6 +77,7 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      : sl;
       inPause        : sl;
       inPauseError   : sl;
+      inError        : sl;
       rxError        : sl;
       inFull         : sl;
       laneFull       : sl;
@@ -102,6 +103,7 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      => '0',
       inPause        => '0',
       inPauseError   => '0',
+      inError        => '0',
       rxError        => '0',
       inFull         => '0',
       laneFull       => '0',
@@ -271,6 +273,7 @@ begin
          v.inOverOcc    := '0';
          v.inPause      := '0';
          v.inPauseError := '0';
+         v.inError      := '0';
          v.eventHitmask := (others => '0');
          v.frameSizeCnt := (others => '0');
       end if;
@@ -290,7 +293,7 @@ begin
 
             -- lane full or decoding error detected
             elsif r.inFull = '1' or r.decError = '1' then
-               v.state := ERROR_S;
+               v.state := WR_ERROR_S;
 
             -- nominal
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
@@ -322,7 +325,7 @@ begin
 
             -- lane full or decoding error detected
             if r.inFull = '1' or r.decError = '1' then
-               v.state := ERROR_S;
+               v.state := WR_ERROR_S;
 
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
@@ -349,7 +352,7 @@ begin
                if (metaTrgCnt /= r.trgCntHeader and config.dropColMisalign = '1') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
-                  v.state    := ERROR_S;
+                  v.state    := WR_ERROR_S;
                end if;
             end if;
 
@@ -359,7 +362,7 @@ begin
 
             -- lane full or decoding error detected
             if r.inFull = '1' or r.decError = '1' then
-               v.state := ERROR_S;
+               v.state := WR_ERROR_S;
 
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tValid         := '1'; -- write to axiFifo
@@ -390,7 +393,7 @@ begin
 
             -- lane full or decoding error detected
             if r.inFull = '1' or r.decError = '1' then
-               v.state := ERROR_S;
+               v.state := WR_ERROR_S;
 
             elsif axiFifoSlave.tReady = '1' then
                -- close frame (no valid data is sent on this cycle; tKeep is low)
@@ -412,7 +415,7 @@ begin
 
             -- lane full or decoding error detected
             if r.inFull = '1' or r.decError = '1' then
-               v.state := ERROR_S;
+               v.state := WR_ERROR_S;
 
             elsif rxFifoMaster.tValid = '1' and postError = '0' then
                tReady := '1';  -- read rxFifo
@@ -427,6 +430,18 @@ begin
                   v.dummyCnt := (others => '0');
                end if;
             end if;
+
+         ------------------------------------------------------------------------
+         -- write the decoding error word into the FIFO
+         when WR_ERROR_S =>
+            v.frameMetaWr  := '1';
+            v.inError      := '1';
+            v.inOverOcc    := '0';
+            v.inPause      := '0';
+            v.inPauseError := '0';
+            v.eventHitmask := (others => '0');
+            v.frameSizeCnt := (others => '0');
+            v.state        := ERROR_S;
 
          ------------------------------------------------------------------------
          -- stay here until reset; error flags that got us here will still be up
@@ -444,6 +459,7 @@ begin
       v.frameMetaDin := laneMetaMap(r.inOverOcc,
                                     r.inPause,
                                     r.inPauseError,
+                                    r.inError,
                                     r.frameSizeCnt,
                                     r.eventHitmask,
                                     r.trgCntHeader);
@@ -452,7 +468,6 @@ begin
       axiFifoMaster <= r.axiFifoMaster;
 
       laneRxFull  <= r.inFull;
-      laneRxError <= r.decError;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
