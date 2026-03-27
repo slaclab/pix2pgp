@@ -31,8 +31,7 @@ entity Pix2PgpLaneSupervisor is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';   -- '1' for active high rst, '0' for active low
-      AUTO_REALIGN_G : boolean := true); -- set to false for simple testing
+      RST_POLARITY_G : sl      := '1');   -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
       pgpRxClk       : in  sl;
@@ -168,7 +167,7 @@ begin
 
       -- Register Inputs
       v.mergerBusy := mergerBusy;
-      v.fpgaTrgCnt := trgBuffTrgCnt;
+      v.fpgaTrgCnt := ite(toBoolean(config.triggerless), toSlv(0, TRGCNT_WIDTH_C), trgBuffTrgCnt);
 
       -- Default values
       v.reqDrop    := '0';
@@ -278,7 +277,7 @@ begin
             v.laneRst     := '0';
             v.popTrg      := '0';
 
-            if trgBuffValid = '1' then
+            if trgBuffValid = '1' and config.triggerless = '0' then
 
                v.state := EVAL_LANES_S;
 
@@ -292,6 +291,11 @@ begin
 
             end if;
 
+            -- proceed if running triggerless and some lanes that are enabled are up
+            if config.triggerless = '1' and uOr(r.laneUp and r.laneEnable) = '1' then
+               v.state := EVAL_LANES_S;
+            end if;
+
             if uOr(r.laneError) = '1' then
                v.state := RESET_S;
             end if;
@@ -301,7 +305,7 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
          when EVAL_LANES_S =>
-            v.armTimeout := '1';
+            v.armTimeout := not(config.triggerless);
             v.evalLanes  := '1';
 
             if r.laneReady = r.laneEnable then
@@ -353,7 +357,7 @@ begin
 
             v.state := START_MERGER_S;
 
-            if AUTO_REALIGN_G or config.autoRealign = '1' then
+            if config.autoRealign = '1' and config.triggerless = '0' then
 
                if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and
                   v.refTrgCnt /= r.fpgaTrgCnt then

@@ -102,6 +102,7 @@ begin
       axiSlaveRegister (axilEp, x"418", 0, v.config.autoRealign);
       axiSlaveRegister (axilEp, x"41C", 0, v.config.rstFpgaTrgCnt);
       axiSlaveRegister (axilEp, x"420", 0, v.config.incrSroEnLow);
+      axiSlaveRegister (axilEp, x"424", 0, v.config.triggerless);
       --
       axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
       --

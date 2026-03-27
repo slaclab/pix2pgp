@@ -35,14 +35,13 @@ entity Pix2PgpAsicStreamRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_RST_POLARITY_G    : sl       := '0';  -- '1' for active high rst, '0' for active low
-      AUTO_REALIGN_G         : boolean  := true; -- set to false for simple testing
       ASIC_ID_G              : natural  := 0;
       LANE_MON_GEN_G         : boolean  := false;
-      LANE_MON_CNT_WIDTH_G   : positive := 16;
+      LANE_MON_CNT_WIDTH_G   : positive := 20;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      LANE_FIFO_ADDR_WIDTH_G : positive := 8;
+      LANE_FIFO_ADDR_WIDTH_G : positive := 9;
       AXIL_BASE_ADDR_G       : slv(31 downto 0));
    port(
       -- General Interface
@@ -61,8 +60,8 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
-      -- ASIC DAQ Current Status Output
-      asicDaqStatus   : out Pix2PgpLaneStatusArray;
+      -- ASIC Monitoring Status Output
+      asicMonStatus   : out Pix2PgpLaneStatusArray;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -74,8 +73,9 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   -- AXI-Lite Signals and Constants
+   constant TKEEP_FIFO_ADDR_WIDTH_C : positive := 6;
 
+   -- AXI-Lite Signals and Constants
    -- size is equal to the amount of serializers, plus the main axi-lite manager of this module
    constant AXIL_SIZE_C   : positive := NUM_OF_SERIALIZERS_C+1;
    constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 16);
@@ -103,6 +103,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal mergerAxiMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal mergerAxiSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
+   signal gboxRxMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+   signal gboxRxSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
    signal trgBuffRd      : sl := '0';
    signal trgBuffSroEn   : sl := '0';
@@ -115,6 +117,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal laneStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
    signal asicStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
+   signal laneMon        : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
 
    signal mergerBusy     : sl := '0';
    signal laneMetaRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -220,13 +223,16 @@ begin
             pgpRxRst        => pgpRxRst,
             config          => config,
             linkDown        => pgp4RxLinkDown(lane),
-            -- RX FIFO Interface
+            -- ASIC Data Lane Interface
             pgp4RxMaster    => pgp4RxMaster(lane),
             pgp4RxSlave     => pgp4RxSlave(lane),
-            -- ASIC Rx Interface
+            -- Supervisor Interface
             lanePostError   => lanePostError(lane),
             laneStatus      => laneStatus(lane),
             laneMetaRd      => laneMetaRd(lane),
+            -- Monitoring Output Interface
+            laneMon         => laneMon(lane),
+            -- Merger Interface
             laneRxMaster    => laneRxMasters(lane),
             laneRxSlave     => laneRxSlaves(lane),
             -- AXI-Lite Interface (sync'd to pgpRxClk domain)
@@ -244,8 +250,7 @@ begin
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         AUTO_REALIGN_G => AUTO_REALIGN_G)
+         RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
          pgpRxClk       => pgpRxClk,
@@ -273,9 +278,9 @@ begin
          reqPause       => reqPause,
          dumpData       => dumpData);
 
-   ----------------------------------
-   -- Lane Merger and packing Gearbox
-   ----------------------------------
+   ---------------------------------------------
+   -- Lane Merger and tKeep packing FIFO+Gearbox
+   ---------------------------------------------
    U_LaneMerger: entity pix2pgp.Pix2PgpLaneMerger
       generic map(
          TPD_G          => TPD_G,
@@ -302,7 +307,29 @@ begin
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
-   U_tKeepPacking : entity surf.AxiStreamGearbox
+   U_tKeepFifo : entity surf.AxiStreamFifoV2
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         RST_ASYNC_G         => RST_ASYNC_G,
+         -- FIFO configurations
+         FIFO_ADDR_WIDTH_G   => TKEEP_FIFO_ADDR_WIDTH_C,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
+         MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => pgpRxClk,
+         sAxisRst    => glblRst,
+         sAxisMaster => mergerAxiMaster,
+         sAxisSlave  => mergerAxiSlave,
+         -- Master Port
+         mAxisClk    => pgpRxClk,
+         mAxisRst    => glblRst,
+         mAxisMaster => gboxRxMaster,
+         mAxisSlave  => gboxRxSlave);
+
+   U_tKeepGearbox : entity surf.AxiStreamGearbox
       generic map (
          TPD_G                => TPD_G,
          RST_ASYNC_G          => RST_ASYNC_G,
@@ -313,8 +340,8 @@ begin
       port map (
          axisClk     => pgpRxClk,
          axisRst     => glblRst,
-         sAxisMaster => mergerAxiMaster,
-         sAxisSlave  => mergerAxiSlave,
+         sAxisMaster => gboxRxMaster,
+         sAxisSlave  => gboxRxSlave,
          mAxisMaster => asicRxMaster,
          mAxisSlave  => asicRxSlave);
 
@@ -346,7 +373,7 @@ begin
          trgBuffSysDaq => trgBuffSysDaq,
          trgBuffValid  => trgBuffValid);
 
-   asicDaqStatus <= asicStatus;
+   asicMonStatus <= laneMon;
 
    glblRst <= (pgpRxRst or usrRst) when (RST_POLARITY_G = '1') else
               (pgpRxRst and not usrRst);

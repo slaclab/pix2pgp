@@ -56,6 +56,8 @@ end Pix2PgpLaneMerger;
 
 architecture rtl of Pix2PgpLaneMerger is
 
+   constant ASIC_STREAMRX_FRAME_TYPE_C : natural := 0;
+
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
@@ -181,7 +183,9 @@ begin
          laneValid(lane)      := asicStatus(lane).valid;
       end loop;
 
-      preamble := fpgaPreambleMap(PIX2PGP_ID_C, r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
+      preamble := fpgaPreambleMap(PIX2PGP_ID_C,
+                                  toSlv(ASIC_STREAMRX_FRAME_TYPE_C, PIX2PGP_TYPE_LEN_C),
+                                  r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
                                   config.fpgaId, fpgaTrgCnt);
 
       header := fpgaHeaderMap(laneDecError, laneOverOcc, lanePause, lanePauseError,
@@ -294,15 +298,14 @@ begin
                   v.laneSel := r.laneSel + 1;
                end if;
 
-            elsif (v.obAxiMaster.tValid = '0') and (laneRxMasters(laneIdx).tValid = '1') then
+            elsif v.obAxiMaster.tValid = '0' then
                v.obAxiMaster.tKeep := laneAxiStream.tKeep;
                v.obAxiMaster.tData := laneAxiStream.tData;
 
-               v.obAxiMaster.tValid           := '1';
-               v.laneRxSlaves(laneIdx).tReady := '1';
+               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid;
+               v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
 
-               if laneRxMasters(laneIdx).tLast = '1' and
-                  obAxiSlave.tReady            = '1' then
+               if laneRxMasters(laneIdx).tLast = '1' and obAxiSlave.tReady = '1' then
 
                   if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                      v.state := DONE_S;
