@@ -31,8 +31,7 @@ entity Pix2PgpLaneSupervisor is
    generic(
       TPD_G          : time    := 1 ns;
       RST_ASYNC_G    : boolean := false;
-      RST_POLARITY_G : sl      := '1';   -- '1' for active high rst, '0' for active low
-      AUTO_REALIGN_G : boolean := true); -- set to false for simple testing
+      RST_POLARITY_G : sl      := '1');   -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
       pgpRxClk       : in  sl;
@@ -353,7 +352,7 @@ begin
 
             v.state := START_MERGER_S;
 
-            if AUTO_REALIGN_G or config.autoRealign = '1' then
+            if config.autoRealign = '1' then
 
                if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and
                   v.refTrgCnt /= r.fpgaTrgCnt then

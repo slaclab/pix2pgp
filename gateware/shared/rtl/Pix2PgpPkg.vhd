@@ -305,7 +305,7 @@ package Pix2PgpPkg is
       dropColMisalign  => '1',
       dropLaneMisalign => '1',
       realignOnSof     => toSl(EVAL_SOF_C),
-      autoRealign      => '0',
+      autoRealign      => '1',
       rstFpgaTrgCnt    => '0',
       incrSroEnLow     => '0',
       fpgaId           => FPGA_ID_DEFAULT_C,

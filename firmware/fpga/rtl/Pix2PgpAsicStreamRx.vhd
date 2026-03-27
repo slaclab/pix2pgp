@@ -35,7 +35,6 @@ entity Pix2PgpAsicStreamRx is
       RST_ASYNC_G            : boolean  := false;
       RST_POLARITY_G         : sl       := '1';  -- '1' for active high rst, '0' for active low
       ASIC_RST_POLARITY_G    : sl       := '0';  -- '1' for active high rst, '0' for active low
-      AUTO_REALIGN_G         : boolean  := true; -- set to false for simple testing
       ASIC_ID_G              : natural  := 0;
       LANE_MON_GEN_G         : boolean  := false;
       LANE_MON_CNT_WIDTH_G   : positive := 16;
@@ -247,8 +246,7 @@ begin
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         AUTO_REALIGN_G => AUTO_REALIGN_G)
+         RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
          pgpRxClk       => pgpRxClk,
