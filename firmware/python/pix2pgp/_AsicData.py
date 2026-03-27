@@ -65,6 +65,7 @@ class AsicData(object):
         self.preambleErr     = False
         self.typeMismatchErr = False
         self.dropFrame       = False
+        self.streamRxFrame   = False
         self.asicType        = 0
         self.asicId          = 0
         self.fpgaId          = 0
@@ -207,18 +208,23 @@ class AsicData(object):
         self.fpgaTrgCnt = _dict['fpgaTrgCnt']
 
         # error-checking
-        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pixpgp":
             self.preambleErr = True
-        elif self.asicType == 0:
+
+        if _dict['pix2pgpType'] == 0:
+            self.streamRxFrame = True
+
+        if self.asicType == 0:
             self.dropFrame = True
-        elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
+
+        if self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
 
-        _errorPrint  = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
+        _errorPrint = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
 
-        if _errorPrint or self._headerPrint:
+        if (_errorPrint or self._headerPrint) and self.streamRxFrame:
             print(f"")
-            print(f"+=+=+=+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp Frame Begin =+=+=+=+=+=+=+=+=+=+=+=+=+=+=")
+            print(f"+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp AsicStreamRx Frame Begin =+=+=+=+=+=+=+=+=+=+=+")
             print(f"")
             _format = 'AsicType={0:<20} AsicId={1:<8} FpgaId={2:<11x} FpgaTrgCnt={3:<8}'
             print(_format.format(self.asicParams.asicParamExtract()['asicType'],
@@ -286,14 +292,14 @@ class AsicData(object):
         """
         _dict = self.fpgaDataFormat.fpgaTrailerDecoder(trailer=trailer)
 
-        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pix2pgp":
+        if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pixpgp":
             self.trailerErr = True
 
         _errorPrint = self.trailerErr and self._verbose > 0
 
         if _errorPrint or self._headerPrint:
             print(f"")
-            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp Frame End -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+            print(f"-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp AsicStreamRx Frame End -=-=-=-=-=-=-=-=-=-=-=-")
             print(f"")
 
             if self.trailerErr:
@@ -413,8 +419,10 @@ class AsicData(object):
 
                 index += self.preambleLen
 
-                # usually this is not a drop-frame; so go-to header
-                if not(self.dropFrame):
+                # check if this is not a drop-frame and if this originated from asicStreamRx
+                if not(self.streamRxFrame):
+                    break
+                elif not(self.dropFrame):
                     state = "header_s"
                 else:
                     # in the special case of a drop-frame, a trailer follows the preamble

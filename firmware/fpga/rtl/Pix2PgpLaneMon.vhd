@@ -43,6 +43,8 @@ entity Pix2PgpLaneMon is
       laneDown        : in  sl;
       laneStatus      : in  Pix2PgpLaneStatusType;
       config          : in  Pix2PgpStreamRxConfigType;
+      -- Monitoring Output
+      laneMon         : out Pix2PgpLaneStatusType;
       -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
@@ -68,6 +70,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneFull        : sl;
       laneTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
       laneHitmask     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      laneFrameSize   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
       -- readback
       laneDecErrCnt   : slv(MON_CNT_WIDTH_G-1 downto 0);
       lanePauseErrCnt : slv(MON_CNT_WIDTH_G-1 downto 0);
@@ -93,6 +96,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneFull        => '0',
       laneTrgCnt      => (others => '0'),
       laneHitmask     => (others => '0'),
+      laneFrameSize   => (others => '0'),
       -- readback
       laneDecErrCnt   => (others => '0'),
       lanePauseErrCnt => (others => '0'),
@@ -119,6 +123,15 @@ begin
          clk     => pgpRxClk,
          din(0)  => r.laneValid,
          dout(0) => laneValidDly);
+
+   U_OneShotValid : entity surf.SynchronizerOneShot
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G)
+      port map (
+         clk     => pgpRxClk,
+         dataIn  => laneValidDly,
+         dataOut => laneMon.valid);
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
@@ -174,6 +187,7 @@ begin
             v.lanePauseError := r.laneStatus.pauseError;
             v.laneTrgCnt     := r.laneStatus.trgCnt;
             v.laneHitmask    := r.laneStatus.eventHitmask;
+            v.laneFrameSize  := r.laneStatus.frameSize;
 
             if uAnd(r.laneEventCnt) = '0' then
                v.laneEventCnt := r.laneEventCnt + 1;
@@ -260,6 +274,7 @@ begin
       axiSlaveRegisterR(axilEp, x"B08", 0, r.lanePauseError);
       axiSlaveRegisterR(axilEp, x"B0C", 0, r.laneTrgCnt);
       axiSlaveRegisterR(axilEp, x"B10", 0, r.laneHitmask);
+      axiSlaveRegisterR(axilEp, x"B14", 0, r.laneFrameSize);
       --
       axiSlaveRegisterR(axilEp, x"C00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
@@ -273,6 +288,15 @@ begin
       -- AXI-Lite Outputs
       axilWriteSlave <= r.writeSlave;
       axilReadSlave  <= r.readSlave;
+
+      -- Monitoring Output
+      --laneMon.valid        <= laneValidDly; -- one-shot (look up)
+      laneMon.overOcc      <= r.laneOverOcc;
+      laneMon.pause        <= r.lanePause;
+      laneMon.pauseError   <= r.lanePauseError;
+      laneMon.trgCnt       <= r.laneTrgCnt;
+      laneMon.eventHitmask <= r.laneHitmask;
+      laneMon.frameSize    <= r.laneFrameSize;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

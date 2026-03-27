@@ -133,6 +133,12 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         addBool(
+            name        = 'Trigerless',
+            description = 'Ignore SRO/DAQ trigger input and forward data on LaneRx activity only',
+            offset      = 0x424,
+        )
+
+        addBool(
             name        = 'UsrRst',
             description = 'Reset Pix2PgpAsicStreamRx',
             offset      = 0x500,

@@ -57,6 +57,9 @@ end Pix2PgpLaneRx;
 
 architecture rtl of Pix2PgpLaneRx is
 
+   -- first buffer level does not have to be as deep
+   constant LANERX_FIFO_ADDR_WIDTH_C : positive := LANE_FIFO_ADDR_WIDTH_G - 2;
+
    type StateType is (
       WAIT_HEADER_S,
       PARSE_COL_METADATA_S,
@@ -147,7 +150,7 @@ begin
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
+         FIFO_ADDR_WIDTH_G   => LANERX_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)

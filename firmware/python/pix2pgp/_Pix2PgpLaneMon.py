@@ -18,12 +18,14 @@ class Pix2PgpLaneMon(pr.Device):
             numColPerLane=24,
             trgCntWidth=6,
             monCntWidth=16,
+            frameSizeWidth=16,
             **kwargs):
         super().__init__(**kwargs)
 
-        self.numColPerLane = numColPerLane
-        self.monCntWidth   = monCntWidth
-        self.trgCntWidth   = trgCntWidth
+        self.numColPerLane  = numColPerLane
+        self.monCntWidth    = monCntWidth
+        self.trgCntWidth    = trgCntWidth
+        self.frameSizeWidth = frameSizeWidth
 
         ###################################################
 
@@ -224,6 +226,16 @@ class Pix2PgpLaneMon(pr.Device):
             offset       = 0xB10,
             bitSize      = self.numColPerLane,
             mode         = 'RO',
+            pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneFrameSize',
+            description = 'Last Event FrameSize for this Lane',
+            offset       = 0xB14,
+            bitSize      = self.frameSizeWidth,
+            mode         = 'RO',
+            disp         = '{:d}',
             pollInterval = 1,
         ))
 

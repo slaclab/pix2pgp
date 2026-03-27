@@ -37,11 +37,11 @@ entity Pix2PgpAsicStreamRx is
       ASIC_RST_POLARITY_G    : sl       := '0';  -- '1' for active high rst, '0' for active low
       ASIC_ID_G              : natural  := 0;
       LANE_MON_GEN_G         : boolean  := false;
-      LANE_MON_CNT_WIDTH_G   : positive := 16;
+      LANE_MON_CNT_WIDTH_G   : positive := 20;
       LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
-      LANE_FIFO_ADDR_WIDTH_G : positive := 8;
+      LANE_FIFO_ADDR_WIDTH_G : positive := 9;
       AXIL_BASE_ADDR_G       : slv(31 downto 0));
    port(
       -- General Interface
@@ -60,8 +60,8 @@ entity Pix2PgpAsicStreamRx is
       -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
-      -- ASIC DAQ Current Status Output
-      asicDaqStatus   : out Pix2PgpLaneStatusArray;
+      -- ASIC Monitoring Status Output
+      asicMonStatus   : out Pix2PgpLaneStatusArray;
       -- AXI-Lite Interface
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -117,6 +117,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal laneStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
    signal asicStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
+   signal laneMon        : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
 
    signal mergerBusy     : sl := '0';
    signal laneMetaRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
@@ -222,13 +223,16 @@ begin
             pgpRxRst        => pgpRxRst,
             config          => config,
             linkDown        => pgp4RxLinkDown(lane),
-            -- RX FIFO Interface
+            -- ASIC Data Lane Interface
             pgp4RxMaster    => pgp4RxMaster(lane),
             pgp4RxSlave     => pgp4RxSlave(lane),
-            -- ASIC Rx Interface
+            -- Supervisor Interface
             lanePostError   => lanePostError(lane),
             laneStatus      => laneStatus(lane),
             laneMetaRd      => laneMetaRd(lane),
+            -- Monitoring Output Interface
+            laneMon         => laneMon(lane),
+            -- Merger Interface
             laneRxMaster    => laneRxMasters(lane),
             laneRxSlave     => laneRxSlaves(lane),
             -- AXI-Lite Interface (sync'd to pgpRxClk domain)
@@ -369,7 +373,7 @@ begin
          trgBuffSysDaq => trgBuffSysDaq,
          trgBuffValid  => trgBuffValid);
 
-   asicDaqStatus <= asicStatus;
+   asicMonStatus <= laneMon;
 
    glblRst <= (pgpRxRst or usrRst) when (RST_POLARITY_G = '1') else
               (pgpRxRst and not usrRst);

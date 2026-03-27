@@ -60,7 +60,9 @@ architecture rtl of Pix2PgpTriggerManager is
    signal trgBuffDin    : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
    signal trgBuffDout   : slv(TRGBUFF_WIDTH_C-1 downto 0) := (others => '0');
 
+   signal asicRxRst     : sl := not(LOGIC_RST_POLARITY_G);
    signal fifoRst       : sl := not(LOGIC_RST_POLARITY_G);
+   signal cfgRst        : sl := '0';
 
    signal rstFpgaTrgCnt : sl := '0';
    signal incrSroEnLow  : sl := '0';
@@ -87,7 +89,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (asicSro, asicRst, asicSroEn, rstFpgaTrgCnt, sysDaq, incrSroEnLow, r) is
+   comb : process (asicSro, asicRst, cfgRst, asicSroEn, rstFpgaTrgCnt, sysDaq, incrSroEnLow, r) is
       variable v : RegType;
    begin
 
@@ -135,7 +137,7 @@ begin
       end if;
 
       -- Reset
-      if (RST_ASYNC_G = false and asicRst = ASIC_RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and (asicRst = ASIC_RST_POLARITY_G or cfgRst = '1')) then
          v := REG_INIT_C;
       end if;
 
@@ -144,9 +146,9 @@ begin
 
    end process comb;
 
-   seq : process (asicClk, asicRst) is
+   seq : process (asicClk, asicRst, cfgRst) is
    begin
-      if (RST_ASYNC_G and asicRst = ASIC_RST_POLARITY_G) then
+      if (RST_ASYNC_G and (asicRst = ASIC_RST_POLARITY_G or cfgRst = '1')) then
          r <= REG_INIT_C after TPD_G;
       elsif rising_edge(asicClk) then
          r <= rin after TPD_G;
@@ -161,7 +163,15 @@ begin
       port map (
          clk     => asicClk,
          dataIn  => pgpRxRst,
-         dataOut => fifoRst);
+         dataOut => asicRxRst);
+
+   U_SyncCfgRst : entity surf.Synchronizer
+      generic map (
+         TPD_G   => TPD_G)
+      port map (
+         clk     => asicClk,
+         dataIn  => config.triggerless,
+         dataOut => cfgRst);
 
    U_SyncRstFpgaTrgCnt : entity surf.Synchronizer
       generic map (
@@ -203,6 +213,10 @@ begin
          rd_en    => trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
+
+   fifoRst <= ite(toBoolean(LOGIC_RST_POLARITY_G),
+                 (asicRxRst or cfgRst),
+                 (asicRxRst and not(cfgRst)));
 
    trgBuffTrgCnt <= trgBuffDout(TRGBUFF_WIDTH_C-1 downto 2);
    trgBuffSroEn  <= trgBuffDout(1);

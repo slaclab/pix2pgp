@@ -45,13 +45,15 @@ entity Pix2PgpLaneRxWrapper is
       pgpRxRst        : in  sl := not(RST_POLARITY_G);
       config          : in  Pix2PgpStreamRxConfigType;
       linkDown        : in  sl;
-      -- RX FIFO Interface
+      -- ASIC Data Lane Interface
       pgp4RxMaster    : in  AxiStreamMasterType;
       pgp4RxSlave     : out AxiStreamSlaveType;
       -- Supervisor Interface
       lanePostError   : in  sl;
       laneStatus      : out Pix2PgpLaneStatusType;
       laneMetaRd      : in  sl;
+      -- Monitoring Output Interface
+      laneMon         : out Pix2PgpLaneStatusType;
       -- Merger Interface
       laneRxMaster    : out AxiStreamMasterType;
       laneRxSlave     : in  AxiStreamSlaveType;
@@ -122,6 +124,8 @@ begin
          laneDown        => laneLinkDown,
          laneStatus      => status,
          config          => configLane,
+         -- Monitoring Output
+         laneMon         => laneMon,
          -- AXI-Lite Interface  (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMaster,
          axilReadSlave   => axilReadSlave,
