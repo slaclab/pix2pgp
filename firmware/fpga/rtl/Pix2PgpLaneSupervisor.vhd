@@ -39,6 +39,7 @@ entity Pix2PgpLaneSupervisor is
       config         : in  Pix2PgpStreamRxConfigType;
       pgp4RxLinkUp   : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgp4RxLinkDown : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      monState       : out slv(STATE_MON_WIDTH_C-1 downto 0);
       -- Lane Interface
       laneStatus     : in  Pix2PgpLaneStatusArray;
       laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -106,6 +107,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       fpgaTrgCnt    : slv(TRGCNT_WIDTH_C-1 downto 0);
       prvTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
       waitCnt       : slv(7 downto 0);
+      monState      : slv(STATE_MON_WIDTH_C-1 downto 0);
       state         : stateType;
    end record RegType;
 
@@ -139,6 +141,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       fpgaTrgCnt    => (others => '0'),
       prvTrgCnt     => (others => '0'),
       waitCnt       => (others => '0'),
+      monState      => (others => '0'),
       state         => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -497,6 +500,20 @@ begin
          laneMetaRd(lane) <= r.laneMetaRd and (r.laneValid(lane));
 
       end loop;
+
+      -- monitoring
+      case r.state is
+      when IDLE_S         => v.monState := toSlv(0, STATE_MON_WIDTH_C);
+      when EVAL_LANES_S   => v.monState := toSlv(1, STATE_MON_WIDTH_C);
+      when EVAL_TRG_CNT_S => v.monState := toSlv(2, STATE_MON_WIDTH_C);
+      when START_MERGER_S => v.monState := toSlv(3, STATE_MON_WIDTH_C);
+      when WAIT_MERGER_S  => v.monState := toSlv(4, STATE_MON_WIDTH_C);
+      when RESET_S        => v.monState := toSlv(5, STATE_MON_WIDTH_C);
+      when DONE_S         => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when others         => v.monState := toSlv(7, STATE_MON_WIDTH_C);
+      end case;
+
+      monState <= r.monState;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

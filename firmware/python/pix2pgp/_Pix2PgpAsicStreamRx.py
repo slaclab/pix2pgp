@@ -27,6 +27,24 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.sysClkFreq        = sysClkFreq
         self.trgCntWidth       = trgCntWidth
 
+        self.laneMergerStateEnum = {0:'IDLE_S',
+                                    1:'TX_PREAMBLE_S',
+                                    2:'TX_HEADER_S',
+                                    3:'TX_FRAME_SIZE_S',
+                                    4:'TX_LANE_DATA_S',
+                                    5:'DUMP_S',
+                                    6:'DONE_S',
+                                    7:'TX_TRAILER_S'}
+
+        self.laneSupervisorStateEnum = {0:'IDLE_S',
+                                        1:'EVAL_LANES_S',
+                                        2:'EVAL_TRG_CNT_S',
+                                        3:'START_MERGER_S',
+                                        4:'WAIT_MERGER_S',
+                                        5:'RESET_S',
+                                        6:'DONE_S',
+                                        7:'UNDEFINED'}
+
         ###################################################
 
         def getNs(var):
@@ -162,6 +180,22 @@ class Pix2PgpAsicStreamRx(pr.Device):
             mode         = 'RO',
             pollInterval = 1,
         ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneMergerState',
+            description = 'Current State of LaneMerger',
+            offset      = 0x608,
+            bitSize     = 4,
+            mode        = 'RO',
+            enum        = self.laneMergerStateEnum))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneSupervisorState',
+            description = 'Current State of LaneSupervisor',
+            offset      = 0x60C,
+            bitSize     = 4,
+            mode        = 'RO',
+            enum        = self.laneSupervisorStateEnum))
 
     def FpgaCntReset(self):
         self.RstFpgaTrgCnt.set(True)

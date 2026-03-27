@@ -43,6 +43,8 @@ entity Pix2PgpLaneMon is
       laneDown        : in  sl;
       laneStatus      : in  Pix2PgpLaneStatusType;
       config          : in  Pix2PgpStreamRxConfigType;
+      monState        : in  slv(STATE_MON_WIDTH_C-1 downto 0);
+      monDin          : in  slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       -- Monitoring Output
       laneMon         : out Pix2PgpLaneStatusType;
       -- AXI-Lite Interface (sync'd to pgpRxClk domain)
@@ -136,7 +138,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly,
-                   laneDown, config, laneStatus, r) is
+                   laneDown, config, laneStatus, monState, monDin, r) is
 
       variable v      : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -274,6 +276,8 @@ begin
       axiSlaveRegisterR(axilEp, x"B0C", 0, r.laneTrgCnt);
       axiSlaveRegisterR(axilEp, x"B10", 0, r.laneHitmask);
       axiSlaveRegisterR(axilEp, x"B14", 0, r.laneFrameSize);
+      axiSlaveRegisterR(axilEp, x"B18", 0, monDin);
+      axiSlaveRegisterR(axilEp, x"B20", 0, monState);
       --
       axiSlaveRegisterR(axilEp, x"C00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --

@@ -73,6 +73,8 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
    signal laneLinkDown   : sl := '0';
+   signal monState       : slv(STATE_MON_WIDTH_C-1 downto 0)        := (others => '0');
+   signal monDin         : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    signal status         : Pix2PgpLaneStatusType     := DEFAULT_PIX2PGP_LANESTATUS_C;
    signal configLane     : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
    signal obAxiMaster    : AxiStreamMasterType       := AXI_STREAM_MASTER_INIT_C;
@@ -92,6 +94,8 @@ begin
          laneClk        => laneClk,
          laneRst        => laneRxRst,
          config         => configLane,
+         monState       => monState,
+         monDin         => monDin,
          -- RX FIFO Interface
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
@@ -122,6 +126,8 @@ begin
          laneDown        => laneLinkDown,
          laneStatus      => status,
          config          => configLane,
+         monState        => monState,
+         monDin          => monDin,
          -- Monitoring Output
          laneMon         => laneMon,
          -- AXI-Lite Interface  (sync'd to pgpRxClk domain)
@@ -141,7 +147,6 @@ begin
          clk     => laneClk,
          din(0)  => linkDown,
          dout(0) => laneLinkDown);
-
 
    U_PipelineLaneRxReset : entity surf.SlvDelay
       generic map (

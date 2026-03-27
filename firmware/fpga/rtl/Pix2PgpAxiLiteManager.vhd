@@ -41,6 +41,8 @@ entity Pix2PgpAxiLiteManager is
       usrRst          : out sl;
       config          : out Pix2PgpStreamRxConfigType;
       pgp4RxLinkDown  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      mergerState     : in  slv(STATE_MON_WIDTH_C-1 downto 0);
+      superState      : in  slv(STATE_MON_WIDTH_C-1 downto 0);
       -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
@@ -74,7 +76,8 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, pgp4RxLinkDown, r) is
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster,
+                   mergerState, superState,  pgp4RxLinkDown, r) is
 
       variable v : RegType;
       variable axilEp : AxiLiteEndpointType;
@@ -108,6 +111,8 @@ begin
       --
       axiSlaveRegisterR(axilEp, x"600", 0, toSl(LANE_MON_GEN_G));
       axiSlaveRegisterR(axilEp, x"604", 0, r.linkDown);
+      axiSlaveRegisterR(axilEp, x"608", 0, mergerState);
+      axiSlaveRegisterR(axilEp, x"60C", 0, superState);
       --
 
       -- Closeout the transaction

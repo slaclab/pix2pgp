@@ -38,6 +38,7 @@ entity Pix2PgpLaneMerger is
       pgpRxClk      : in  sl;
       pgpRxRst      : in  sl := not(RST_POLARITY_G);
       config        : in  Pix2PgpStreamRxConfigType;
+      monState      : out slv(STATE_MON_WIDTH_C-1 downto 0);
       -- Supervisor Interface
       mergerBusy    : out sl;
       asicStatus    : in  Pix2PgpLaneStatusArray;
@@ -82,6 +83,7 @@ architecture rtl of Pix2PgpLaneMerger is
       obAxiMaster  : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- FSM
+      monState     : slv(STATE_MON_WIDTH_C-1 downto 0);
       state        : stateType;
    end record RegType;
 
@@ -99,6 +101,7 @@ architecture rtl of Pix2PgpLaneMerger is
       obAxiMaster  => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
       -- FSM
+      monState     => (others => '0'),
       state        => IDLE_S
    );
 
@@ -385,6 +388,21 @@ begin
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
       obAxiMaster  <= r.obAxiMaster;
+
+      -- monitoring
+      case r.state is
+      when IDLE_S          => v.monState := toSlv(0, STATE_MON_WIDTH_C);
+      when TX_PREAMBLE_S   => v.monState := toSlv(1, STATE_MON_WIDTH_C);
+      when TX_HEADER_S     => v.monState := toSlv(2, STATE_MON_WIDTH_C);
+      when TX_FRAME_SIZE_S => v.monState := toSlv(3, STATE_MON_WIDTH_C);
+      when TX_LANE_DATA_S  => v.monState := toSlv(4, STATE_MON_WIDTH_C);
+      when DUMP_S          => v.monState := toSlv(5, STATE_MON_WIDTH_C);
+      when DONE_S          => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when TX_TRAILER_S    => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when others          => v.monState := toSlv(7, STATE_MON_WIDTH_C);
+      end case;
+
+      monState <= r.monState;
 
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then

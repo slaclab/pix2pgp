@@ -39,6 +39,8 @@ entity Pix2PgpLaneRx is
       laneClk        : in  sl;
       laneRst        : in  sl;
       config         : in  Pix2PgpStreamRxConfigType;
+      monState       : out slv(STATE_MON_WIDTH_C-1 downto 0);
+      monDin         : out slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       -- RX FIFO Interface
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
@@ -91,6 +93,7 @@ architecture rtl of Pix2PgpLaneRx is
       dataLenCnt     : slv(7 downto 0);
       axiFifoMaster  : AxiStreamMasterType;
       rxFifoSlave    : AxiStreamSlaveType;
+      monState       : slv(STATE_MON_WIDTH_C-1 downto 0);
       state          : StateType;
    end record RegType;
 
@@ -117,6 +120,7 @@ architecture rtl of Pix2PgpLaneRx is
       dataLenCnt     => (others => '0'),
       axiFifoMaster  => AXI_STREAM_MASTER_INIT_C,
       rxFifoSlave    => AXI_STREAM_SLAVE_INIT_C,
+      monState       => (others => '0'),
       state          => WAIT_HEADER_S);
 
    signal r   : RegType := REG_INIT_C;
@@ -468,6 +472,21 @@ begin
       axiFifoMaster <= r.axiFifoMaster;
 
       laneRxFull  <= r.inFull;
+
+      -- monitoring
+      case r.state is
+      when WAIT_HEADER_S        => v.monState := toSlv(0, STATE_MON_WIDTH_C);
+      when PARSE_COL_METADATA_S => v.monState := toSlv(1, STATE_MON_WIDTH_C);
+      when PARSE_DATA_S         => v.monState := toSlv(2, STATE_MON_WIDTH_C);
+      when CLOSE_FRAME_S        => v.monState := toSlv(3, STATE_MON_WIDTH_C);
+      when WAIT_DUMMY_S         => v.monState := toSlv(4, STATE_MON_WIDTH_C);
+      when WR_ERROR_S           => v.monState := toSlv(5, STATE_MON_WIDTH_C);
+      when ERROR_S              => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when others               => v.monState := toSlv(7, STATE_MON_WIDTH_C);
+      end case;
+
+      monState <= r.monState;
+      monDin   <= r.din;
 
       -- Reset
       if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then

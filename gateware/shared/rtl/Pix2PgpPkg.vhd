@@ -288,6 +288,8 @@ package Pix2PgpPkg is
    --
    constant FPGA_TIMEOUT_LIMIT_DEFAULT_C : positive := 65535;
    --
+   constant STATE_MON_WIDTH_C            : positive := 4;
+   --
 
    type Pix2PgpStreamRxConfigType is record
       dropColMisalign  : sl;

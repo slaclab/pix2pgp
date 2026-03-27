@@ -129,6 +129,9 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal reqPause       : sl := '0';
    signal dumpData       : sl := '0';
 
+   signal mergerState    : slv(STATE_MON_WIDTH_C-1 downto 0) := (others => '0');
+   signal superState     : slv(STATE_MON_WIDTH_C-1 downto 0) := (others => '0');
+
    signal usrRst         : sl := '0';
    signal glblRst        : sl := not(RST_POLARITY_G);
 
@@ -194,6 +197,8 @@ begin
          usrRst          => usrRst,
          config          => config,
          pgp4RxLinkDown  => pgp4RxLinkDown,
+         mergerState     => mergerState,
+         superState      => superState,
          -- AXI-Lite Interface (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMasters(AXI_LITE_MANAGER_INDEX_C),
          axilReadSlave   => axilReadSlaves(AXI_LITE_MANAGER_INDEX_C),
@@ -258,6 +263,7 @@ begin
          config         => config,
          pgp4RxLinkUp   => pgp4RxLinkUp,
          pgp4RxLinkDown => pgp4RxLinkDown,
+         monState       => superState,
          -- Lane Interface
          laneRst        => laneRst,
          laneStatus     => laneStatus,
@@ -292,6 +298,7 @@ begin
          pgpRxClk      => pgpRxClk,
          pgpRxRst      => glblRst,
          config        => config,
+         monState      => mergerState,
          -- Supervisor Interface
          mergerBusy    => mergerBusy,
          asicStatus    => asicStatus,

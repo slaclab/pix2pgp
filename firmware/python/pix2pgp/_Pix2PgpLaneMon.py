@@ -19,6 +19,7 @@ class Pix2PgpLaneMon(pr.Device):
             trgCntWidth=6,
             monCntWidth=16,
             frameSizeWidth=16,
+            dataWordWidth=64,
             **kwargs):
         super().__init__(**kwargs)
 
@@ -26,6 +27,16 @@ class Pix2PgpLaneMon(pr.Device):
         self.monCntWidth    = monCntWidth
         self.trgCntWidth    = trgCntWidth
         self.frameSizeWidth = frameSizeWidth
+        self.dataWordWidth  = dataWordWidth
+
+        self.laneRxStateEnum = {0:'WAIT_HEADER_S',
+                                1:'PARSE_COL_METADATA_S',
+                                2:'PARSE_DATA_S',
+                                3:'CLOSE_FRAME_S',
+                                4:'WAIT_DUMMY_S',
+                                5:'WR_ERROR_S',
+                                6:'ERROR_S',
+                                7:'UNDEFINED'}
 
         ###################################################
 
@@ -238,6 +249,24 @@ class Pix2PgpLaneMon(pr.Device):
             disp         = '{:d}',
             pollInterval = 1,
         ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneRxDin',
+            description = 'Last Data Word received',
+            offset       = 0xB18,
+            bitSize      = self.dataWordWidth,
+            mode         = 'RO',
+            disp         = '{:#x}',
+            pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneRxState',
+            description = 'Current State of LaneRx',
+            offset      = 0xB20,
+            bitSize     = 4,
+            mode        = 'RO',
+            enum        = self.laneRxStateEnum))
 
         self.add(pr.RemoteVariable(
             name        = 'LaneID',
