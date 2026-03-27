@@ -210,8 +210,8 @@ begin
          --
 
          -- lane status signals are all masked against the valid
-         v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneEnable(lane);
          v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneEnable(lane);
+         v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
          v.laneStatus(lane).overOcc    := laneStatus(lane).overOcc    and r.laneStatus(lane).valid;
          v.laneStatus(lane).pause      := laneStatus(lane).pause      and r.laneStatus(lane).valid;
          v.laneStatus(lane).pauseError := laneStatus(lane).pauseError and r.laneStatus(lane).valid;
@@ -311,7 +311,7 @@ begin
             v.armTimeout := not(config.triggerless);
             v.evalLanes  := '1';
 
-            if r.laneReady = r.laneEnable then
+            if (r.laneReady and r.laneEnable) = r.laneEnable then
                v.state := EVAL_TRG_CNT_S;
             end if;
 

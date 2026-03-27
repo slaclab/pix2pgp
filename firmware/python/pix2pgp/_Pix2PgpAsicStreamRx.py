@@ -151,9 +151,23 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         addBool(
-            name        = 'Trigerless',
+            name        = 'Triggerless',
             description = 'Ignore SRO/DAQ trigger input and forward data on LaneRx activity only',
             offset      = 0x424,
+        )
+
+        self.add(pr.RemoteVariable(
+            name         = 'DummyMax',
+            description  = 'Maximum amount of dummy words to align on',
+            offset       = 0x428,
+            bitSize      = 3,
+            mode         = 'RW',
+        ))
+
+        addBool(
+            name        = 'RealignOnDummy',
+            description = 'Realing on dummy words instead of SoF',
+            offset      = 0x42C,
         )
 
         addBool(

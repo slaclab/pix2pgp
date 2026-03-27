@@ -178,7 +178,7 @@ begin
          din(0)  => config.dropColMisalign,
          dout(0) => configLane.dropColMisalign);
 
-   U_PipelineRealign : entity surf.SlvDelay
+   U_PipelineRealignSof : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
@@ -187,6 +187,27 @@ begin
          clk     => laneClk,
          din(0)  => config.realignOnSof,
          dout(0) => configLane.realignOnSof);
+
+   U_PipelineRealignDummy : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk     => laneClk,
+         din(0)  => config.realignOnDummy,
+         dout(0) => configLane.realignOnDummy);
+
+   U_PipelineDummyMax : entity surf.SlvDelay
+      generic map (
+         TPD_G          => TPD_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         WIDTH_G        => bitSize(EVAL_DUMMY_MAX_C),
+         DELAY_G        => PIPE_STAGES_G)
+      port map (
+         clk  => laneClk,
+         din  => config.dummyMax,
+         dout => configLane.dummyMax);
 
    U_PipelineEnable : entity surf.SlvDelay
       generic map (

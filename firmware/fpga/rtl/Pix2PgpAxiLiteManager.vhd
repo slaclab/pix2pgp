@@ -106,6 +106,8 @@ begin
       axiSlaveRegister (axilEp, x"41C", 0, v.config.rstFpgaTrgCnt);
       axiSlaveRegister (axilEp, x"420", 0, v.config.incrSroEnLow);
       axiSlaveRegister (axilEp, x"424", 0, v.config.triggerless);
+      axiSlaveRegister (axilEp, x"428", 0, v.config.dummyMax);
+      axiSlaveRegister (axilEp, x"42C", 0, v.config.realignOnDummy);
       --
       axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
       --

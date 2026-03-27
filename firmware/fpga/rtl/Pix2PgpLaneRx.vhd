@@ -246,7 +246,8 @@ begin
       end if;
 
       -- flow control
-      sof       := ite(EVAL_SOF_C,  ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,  rxFifoMaster), '1');
+      sof := ite(toBoolean(config.realignOnSof), ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,
+                 rxFifoMaster), '1');
       v.rxError := ite(EVAL_EOFE_C, ssiGetUserEofe(ASIC_DATA_AXI_CONFIG_C, rxFifoMaster), '0');
 
       -- flow control check
@@ -291,8 +292,8 @@ begin
 
             -- post-error state takes precedence; go look for dummy headers
             -- if realignOnSof is high though, just wait for an SoF;
-            -- the option exists because SparkPix-S does not feature conventional frame delimiters
-            if postError = '1' and config.realignOnSof = '0' then
+            -- the option exists because SparkPix-Sv1 does not feature conventional frame delimiters
+            if (postError = '1' and config.realignOnSof = '0') or config.realignOnDummy = '1' then
                v.state := WAIT_DUMMY_S;
 
             -- lane full or decoding error detected
@@ -426,7 +427,7 @@ begin
 
                if v.dummy = '1' then
                   v.dummyCnt := r.dummyCnt + 1;
-                  if r.dummyCnt = EVAL_DUMMY_MAX_C then
+                  if r.dummyCnt = config.dummyMax then
                      v.dummyCnt := (others => '0');
                      v.state    := WAIT_HEADER_S;
                   end if;
