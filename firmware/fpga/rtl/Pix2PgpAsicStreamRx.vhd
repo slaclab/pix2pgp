@@ -85,6 +85,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    constant AXI_LITE_MANAGER_INDEX_C : natural := 0;
    constant LANE_MON_INDEX_C         : natural := 1; -- 1,2,3,4,...
 
+   constant TKEEP_FIFO_ADDR_WIDTH_C : positive := 6;
+
    signal axilWriteMasters : AxiLiteWriteMasterArray(AXIL_SIZE_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(AXIL_SIZE_C-1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_EMPTY_SLVERR_C);
    signal axilReadMasters  : AxiLiteReadMasterArray(AXIL_SIZE_C-1 downto 0);
@@ -275,9 +277,9 @@ begin
          reqPause       => reqPause,
          dumpData       => dumpData);
 
-   ----------------------------------
-   -- Lane Merger and packing Gearbox
-   ----------------------------------
+   ---------------------------------------------
+   -- Lane Merger and tKeep packing FIFO+Gearbox
+   ---------------------------------------------
    U_LaneMerger: entity pix2pgp.Pix2PgpLaneMerger
       generic map(
          TPD_G          => TPD_G,
@@ -304,13 +306,13 @@ begin
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
-      U_Fifo : entity surf.AxiStreamFifoV2
+   U_tKeepFifo : entity surf.AxiStreamFifoV2
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         FIFO_ADDR_WIDTH_G   => LANE_FIFO_ADDR_WIDTH_G,
+         FIFO_ADDR_WIDTH_G   => TKEEP_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
@@ -326,7 +328,7 @@ begin
          mAxisMaster => gboxRxMaster,
          mAxisSlave  => gboxRxSlave);
 
-   U_tKeepPacking : entity surf.AxiStreamGearbox
+   U_tKeepGearbox : entity surf.AxiStreamGearbox
       generic map (
          TPD_G                => TPD_G,
          RST_ASYNC_G          => RST_ASYNC_G,
@@ -341,9 +343,6 @@ begin
          sAxisSlave  => gboxRxSlave,
          mAxisMaster => asicRxMaster,
          mAxisSlave  => asicRxSlave);
-
---   asicRxMaster   <= mergerAxiMaster;
---   mergerAxiSlave <= asicRxSlave;
 
    ------------------
    -- Trigger Manager

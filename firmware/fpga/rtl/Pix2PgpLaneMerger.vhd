@@ -301,8 +301,7 @@ begin
                v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid;
                v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
 
-               if laneRxMasters(laneIdx).tLast = '1' and
-                  obAxiSlave.tReady            = '1' then
+               if laneRxMasters(laneIdx).tLast = '1' and obAxiSlave.tReady = '1' then
 
                   if laneIdx = NUM_OF_SERIALIZERS_C-1 then
                      v.state := DONE_S;
