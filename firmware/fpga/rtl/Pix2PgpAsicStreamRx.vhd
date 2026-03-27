@@ -74,8 +74,9 @@ end Pix2PgpAsicStreamRx;
 
 architecture rtl of Pix2PgpAsicStreamRx is
 
-   -- AXI-Lite Signals and Constants
+   constant TKEEP_FIFO_ADDR_WIDTH_C : positive := 6;
 
+   -- AXI-Lite Signals and Constants
    -- size is equal to the amount of serializers, plus the main axi-lite manager of this module
    constant AXIL_SIZE_C   : positive := NUM_OF_SERIALIZERS_C+1;
    constant AXIL_CONFIG_C : AxiLiteCrossbarMasterConfigArray(AXIL_SIZE_C-1 downto 0) := genAxiLiteConfig(AXIL_SIZE_C, AXIL_BASE_ADDR_G, 26, 16);
@@ -84,8 +85,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
    -- Each lane monitoring module is on its lane+1
    constant AXI_LITE_MANAGER_INDEX_C : natural := 0;
    constant LANE_MON_INDEX_C         : natural := 1; -- 1,2,3,4,...
-
-   constant TKEEP_FIFO_ADDR_WIDTH_C : positive := 6;
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(AXIL_SIZE_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(AXIL_SIZE_C-1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_EMPTY_SLVERR_C);
