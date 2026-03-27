@@ -53,7 +53,7 @@ package Pix2PgpPkg is
                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                           colHitmask: slv; trgCntGlbl: slv) return slv;
    function isDummy        (din : slv) return boolean;
-   function fpgaPreambleMap(pix2pgpId: slv; asicType: slv;
+   function fpgaPreambleMap(pix2pgpId: slv; pix2pgpType: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
    function fpgaHeaderMap  (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
                             lanePauseError: slv; laneFull: slv; laneTimeout: slv;
@@ -183,7 +183,8 @@ package Pix2PgpPkg is
    -- FPGA Preamble Mapping
    ------------------------------------------------------------------------------
    constant FPGA_PREAMBLE_LEN_C : natural := 128;
-   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 64;
+   subtype PIX2PGP_ID_POS_C    is natural range  FPGA_PREAMBLE_LEN_C-1 downto 80;
+   subtype PIX2PGP_TYPE_POS_C  is natural range  79 downto 64;
    subtype ASIC_TYPE_POS_C     is natural range  63 downto 48;
    subtype ASIC_ID_POS_C       is natural range  47 downto 32;
    subtype FPGA_ID_POS_C       is natural range  31 downto 16;
@@ -191,20 +192,19 @@ package Pix2PgpPkg is
    subtype FPGA_TRGCNT_POS_C   is natural range  TRGCNT_WIDTH_C-1 downto  0;
    --
    constant FPGA_ID_DEFAULT_C   : slv(15 downto  0) := x"1925";
-   constant PIX2PGP_ID_C        : slv(63 downto  0) := x"00"  -- 0
-                                                     & x"70"  -- p
+   constant PIX2PGP_ID_C        : slv(47 downto  0) := x"70"  -- p
                                                      & x"69"  -- i
                                                      & x"78"  -- x
-                                                     & x"32"  -- 2
                                                      & x"70"  -- p
                                                      & x"67"  -- g
                                                      & x"70"; -- p
    --
-   constant PIX2PGP_ID_LEN_C  : natural := 64;
-   constant ASIC_TYPE_LEN_C   : natural := 16;
-   constant ASIC_ID_LEN_C     : natural := 16;
-   constant FPGA_ID_LEN_C     : natural := 16;
-   constant FPGA_TRGCNT_LEN_C : natural := TRGCNT_WIDTH_C;
+   constant PIX2PGP_ID_LEN_C   : natural := 48;
+   constant PIX2PGP_TYPE_LEN_C : natural := 16;
+   constant ASIC_TYPE_LEN_C    : natural := 16;
+   constant ASIC_ID_LEN_C      : natural := 16;
+   constant FPGA_ID_LEN_C      : natural := 16;
+   constant FPGA_TRGCNT_LEN_C  : natural := TRGCNT_WIDTH_C;
    --
    ------------------------------------------------------------------------------
    -- FPGA Header Mapping
@@ -243,7 +243,7 @@ package Pix2PgpPkg is
 
    -- trailer is fixed; contains the pix2pgp identifier string
    ------------------------------------------------------------------------------
-   constant FPGA_TRAILER_LEN_C : natural := 64;
+   constant FPGA_TRAILER_LEN_C : natural := PIX2PGP_ID_LEN_C;
    ------------------------------------------------------------------------------
 
    type Pix2PgpFpgaRxDataArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of
@@ -295,7 +295,7 @@ package Pix2PgpPkg is
       autoRealign      : sl;
       rstFpgaTrgCnt    : sl;
       incrSroEnLow     : sl;
-      trigerless       : sl;
+      triggerless      : sl;
       fpgaId           : slv(15 downto 0);
       laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
@@ -309,7 +309,7 @@ package Pix2PgpPkg is
       autoRealign      => '1',
       rstFpgaTrgCnt    => '0',
       incrSroEnLow     => '0',
-      trigerless       => '0',
+      triggerless      => '0',
       fpgaId           => FPGA_ID_DEFAULT_C,
       laneEnable       => (others => '1'),
       laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C, FPGA_TIMEOUT_LIMIT_WIDTH_C));
@@ -449,12 +449,14 @@ package body Pix2PgpPkg is
    end function;
 
    -- pretty much fixed
-   function fpgaPreambleMap (pix2pgpId: slv; asicType: slv;
+   function fpgaPreambleMap (pix2pgpId: slv; pix2pgpType: slv; asicType: slv;
                              asicId: slv; fpgaId: slv; fpgaTrgCnt: slv ) return slv is
       variable retPreamble: slv(FPGA_PREAMBLE_LEN_C-1 downto 0) := (others => '0');
    begin
 
       retPreamble(PIX2PGP_ID_POS_C)  := resize(pix2pgpId, PIX2PGP_ID_LEN_C);
+
+      retPreamble(PIX2PGP_TYPE_POS_C)  := resize(pix2pgpType, PIX2PGP_TYPE_LEN_C);
 
       retPreamble(ASIC_TYPE_POS_C) := resize(asicType, ASIC_TYPE_LEN_C);
 
