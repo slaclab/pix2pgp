@@ -75,6 +75,24 @@ class SparkPixSDataFormat(SparseDataFormatBase):
 
         return ret
 
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<4} ADC = {2:<8}'
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['adc']))
+
 class SparkPixSv2DataFormat(SparseDataFormatBase):
     '''
     SparkPix-Sv2 Data Format
