@@ -79,7 +79,6 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      : sl;
       inPause        : sl;
       inPauseError   : sl;
-      inError        : sl;
       rxError        : sl;
       inFull         : sl;
       laneFull       : sl;
@@ -106,7 +105,6 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc      => '0',
       inPause        => '0',
       inPauseError   => '0',
-      inError        => '0',
       rxError        => '0',
       inFull         => '0',
       laneFull       => '0',
@@ -278,7 +276,7 @@ begin
          v.inOverOcc    := '0';
          v.inPause      := '0';
          v.inPauseError := '0';
-         v.inError      := '0';
+         v.decError     := '0';
          v.eventHitmask := (others => '0');
          v.frameSizeCnt := (others => '0');
       end if;
@@ -439,14 +437,8 @@ begin
          ------------------------------------------------------------------------
          -- write the decoding error word into the FIFO
          when WR_ERROR_S =>
-            v.frameMetaWr  := '1';
-            v.inError      := '1';
-            v.inOverOcc    := '0';
-            v.inPause      := '0';
-            v.inPauseError := '0';
-            v.eventHitmask := (others => '0');
-            v.frameSizeCnt := (others => '0');
-            v.state        := ERROR_S;
+            v.frameMetaWr := '1';
+            v.state       := ERROR_S;
 
          ------------------------------------------------------------------------
          -- stay here until reset; error flags that got us here will still be up
@@ -464,7 +456,7 @@ begin
       v.frameMetaDin := laneMetaMap(r.inOverOcc,
                                     r.inPause,
                                     r.inPauseError,
-                                    r.inError,
+                                    r.decError,
                                     r.frameSizeCnt,
                                     r.eventHitmask,
                                     r.trgCntHeader);
