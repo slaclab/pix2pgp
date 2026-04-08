@@ -312,7 +312,7 @@ package Pix2PgpPkg is
       dropLaneMisalign => '1',
       realignOnSof     => toSl(EVAL_SOF_C),
       realignOnDummy   => '0',
-      autoRealign      => '1',
+      autoRealign      => '0',
       rstFpgaTrgCnt    => '0',
       incrSroEnLow     => '0',
       triggerless      => '0',
