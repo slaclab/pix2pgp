@@ -318,7 +318,7 @@ class AsicData(object):
             np.array(self.laneDecoder.overOcc)).tolist()
 
         self.asicGlblPause[laneSel] = (
-            np.array(self.asicGlblOverOcc[laneSel]) |
+            np.array(self.asicGlblPause[laneSel]) |
             np.array(self.laneDecoder.pause)).tolist()
 
         self.asicGlblColErr[laneSel] = (
