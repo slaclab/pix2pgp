@@ -179,7 +179,7 @@ class AsicData(object):
         try:
             self.asicParams = pix2pgp.AsicParameterBase.asicParams[self._asicType]()
         except KeyError:
-            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(_asicParams.keys())}", bg='red')
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(pix2pgp.AsicParameterBase.asicParams.keys())}", bg='red')
             sys.exit()
 
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
