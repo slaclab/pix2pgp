@@ -157,7 +157,7 @@ class LaneData(object):
             self.colMetadataFormat = pix2pgp.Pix2PgpColMetadataFormatBase.asicMetadata[self._asicType]()
             self.dataFormat = pix2pgp.SparseDataFormatBase.asicData[self._asicType]()
         except KeyError:
-            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(_asicParams.keys())}", bg='red')
+            click.secho(f"[ERROR]: asicType parameter not set properly! options: {', '.join(pix2pgp.AsicParameterBase.asicParams.keys())}", bg='red')
             sys.exit()
 
         self.numOfCols = self.asicParams.asicParamExtract()['numOfCols']
