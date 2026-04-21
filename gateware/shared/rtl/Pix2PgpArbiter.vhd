@@ -326,6 +326,9 @@ begin
          ----------------------------------------------------------------------
          -- stuffs the gearbox with dummy headers
          -- essentially flushes out the last words written into the gearbox
+         -- note that the dummy header is not the full-sized header;
+         -- (in case the header is a multiple of the databus width)
+         -- the state grabs the most significant sub-word -> is the dummy
          when TX_DUMMY_S =>
             v.dummyHeader := '1';
 
@@ -333,7 +336,8 @@ begin
 
                if v.sAxisMaster.tValid = '0' then
                   v.sAxisMaster.tValid := '1';
-                  v.txData             := v.dataHeader;
+                  v.txData             := v.dataHeader(HEADER_DWIDTH_C-1 downto
+                                                       HEADER_DWIDTH_C-PIX2PGP_DATABUS_DWIDTH_C);
 
                   -- got lucky, still need to flush the gearbox with one full dummy trailer
                   if flushWords = 0 and PIX2PGP_DATABUS_DWIDTH_C /= PGP_DWIDTH_C then
