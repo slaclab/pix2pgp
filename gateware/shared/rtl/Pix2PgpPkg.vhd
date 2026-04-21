@@ -117,7 +117,7 @@ package Pix2PgpPkg is
       cfgArbBusy        : sl;
    end record;
 
-   constant DEFAULT_PIX2PGP_ASICRDBK_C : Pix2PgpCfgReadbackType := (
+   constant DEFAULT_PIX2PGP_ASICREADBACK_C : Pix2PgpCfgReadbackType := (
       cfgColBusy        => '0',
       cfgColDataEmpty   => '1',
       cfgColStatusEmpty => '1',

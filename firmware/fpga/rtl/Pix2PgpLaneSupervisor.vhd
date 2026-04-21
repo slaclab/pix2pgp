@@ -308,7 +308,7 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
          when EVAL_LANES_S =>
-            v.armTimeout := not(config.triggerless);
+            v.armTimeout := '1';
             v.evalLanes  := '1';
 
             if (r.laneReady and r.laneEnable) = r.laneEnable then
