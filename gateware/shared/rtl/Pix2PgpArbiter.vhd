@@ -86,6 +86,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty   : sl;
       dummyHeader  : sl;
       waitColSel   : sl;
+      headerCnt    : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
       txData       : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       wordCnt      : slv(BITMAX_DUMMY_C-1 downto 0);
       dummyCnt     : slv(BITMAX_DUMMY_C-1 downto 0);
@@ -114,6 +115,7 @@ architecture rtl of Pix2PgpArbiter is
       eventEmpty    => '0',
       dummyHeader   => '0',
       waitColSel    => '0',
+      headerCnt     => (others => '0'),
       txData        => (others => '0'),
       wordCnt       => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -224,17 +226,36 @@ begin
          -- determine what to do next
          when PARSE_HEADER_S =>
             if v.sAxisMaster.tValid = '0' then
-               ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.sAxisMaster, '1');
+
                v.sAxisMaster.tValid := '1';
-               v.wordCnt            := r.wordCnt + 1;
-               v.txData             := v.dataHeader;
+               v.txData := v.dataHeader(
+                           (conv_integer(unsigned(r.headerCnt))+1)*PIX2PGP_DATABUS_DWIDTH_C-1 downto
+                            conv_integer(unsigned(r.headerCnt))*PIX2PGP_DATABUS_DWIDTH_C);
 
-               v.state := CHECK_HITMASK_S;
+               v.wordCnt   := r.wordCnt + 1;
+               v.headerCnt := r.headerCnt + 1;
 
-               -- if empty, go-to state where dummy headers are TX'd
-               if v.eventEmpty = '1' then
-                  v.state := TX_DUMMY_S;
+               -- Only set SOF on first header word
+               if r.headerCnt = 0 then
+                  ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.sAxisMaster, '1');
                end if;
+
+               -- state flow control; check headerCnt value and act accordingly
+               if r.headerCnt = HEADER_WIDTH_MULT_C-1 then
+                  v.headerCnt := (others => '0');
+
+                  v.state := CHECK_HITMASK_S;
+
+                  -- if empty, go-to state where dummy headers are TX'd
+                  if v.eventEmpty = '1' then
+                     v.state := TX_DUMMY_S;
+                  end if;
+
+               else
+                  v.headerCnt := r.headerCnt + 1;
+                  v.state := PARSE_HEADER_S;
+               end if;
+
             end if;
 
          ----------------------------------------------------------------------

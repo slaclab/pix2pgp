@@ -70,8 +70,11 @@ package Pix2PgpAsicPkg is
    -- ~~~~~~
    -- Header
    -- ~~~~~~
-   -- Pix2Pgp data frame header *has* to be an equal to the databus width
-   constant HEADER_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C;
+   -- Pix2Pgp data frame header *has* to be an integer-multiple of the databus width
+   constant HEADER_WIDTH_MULT_C : natural := 1;
+   --
+   constant HEADER_DWIDTH_C     : natural := HEADER_WIDTH_MULT_C*PIX2PGP_DATABUS_DWIDTH_C;
+   --
 
    -- bitfields
    constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 63

@@ -47,6 +47,7 @@ class LaneData(object):
         # populated by laneParamSet() (parameters have _ prefix)
         self.numOfCols = None
         self.wordLen   = None
+        self.headerLen = None
 
         # asic-specific formats
         self.asicParams        = None
@@ -162,6 +163,7 @@ class LaneData(object):
 
         self.numOfCols = self.asicParams.asicParamExtract()['numOfCols']
         self.wordLen   = self.asicParams.asicParamExtract()['wordLen']
+        self.headerLen = self.asicParams.asicParamExtract()['headerLen']
 
     #################################################################
 
@@ -296,13 +298,13 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             if state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
+                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.headerLen])
                 pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Header', wordHex)
 
                 self.headerEval(wordHex)
 
 
-                index += self.wordLen
+                index += self.headerLen
 
                 if self.hasData and self.dummy == False:
                     state = "hitmaskCheck_s"
