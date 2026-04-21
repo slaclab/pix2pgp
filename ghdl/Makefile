@@ -9,7 +9,7 @@
 #-----------------------------------------------------------------------------
 
 # Define TOP directory
-export TOP_DIR = $(abspath $(PWD)/..)
+export TOP_DIR = $(abspath $(PWD)/../firmware)
 
 # Define default SURF_FIFO for "pix2pgp/gateware/shared/ruckus.tcl"
 export SURF_FIFO = 1

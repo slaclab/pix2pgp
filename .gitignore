@@ -21,10 +21,7 @@
 *.ghw
 
 # tb executable names
-firmware/ghdl/*top*
-
-# pkg file (now linked over by ghdl script)
-firmware/core/pkg/Pix2PgpPkg.vhd
+ghdl/*top*
 
 # Matlab
 *.autosave
