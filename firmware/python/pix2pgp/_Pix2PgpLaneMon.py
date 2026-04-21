@@ -17,7 +17,7 @@ class Pix2PgpLaneMon(pr.Device):
     def __init__(self,
             numColPerLane=24,
             trgCntWidth=6,
-            monCntWidth=16,
+            monCntWidth=20,
             frameSizeWidth=16,
             dataWordWidth=64,
             **kwargs):
