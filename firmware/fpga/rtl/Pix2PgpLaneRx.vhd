@@ -83,6 +83,7 @@ architecture rtl of Pix2PgpLaneRx is
       inFull         : sl;
       laneFull       : sl;
       dummy          : sl;
+      headerCnt      : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
       waitCnt        : slv(2 downto 0);
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
@@ -109,6 +110,7 @@ architecture rtl of Pix2PgpLaneRx is
       inFull         => '0',
       laneFull       => '0',
       dummy          => '0',
+      headerCnt      => (others => '0'),
       waitCnt        => (others => '0'),
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
@@ -182,6 +184,7 @@ begin
       -- various data fields encoded in variables; are used in data checks and FSM flow control
 
       -- header
+      variable headerData : slv(HEADER_DWIDTH_C-1 downto 0) := (others => '0');
       variable overOcc    : sl := '0';
       variable pause      : sl := '0';
       variable colErr     : sl := '0';
@@ -228,17 +231,24 @@ begin
       -- full monitor
       v.laneFull := laneFull;
 
+      -- Accumulate header data
+      headerData((conv_integer(unsigned(r.headerCnt))+1)*PIX2PGP_DATABUS_DWIDTH_C-1 downto
+                  conv_integer(unsigned(r.headerCnt))*PIX2PGP_DATABUS_DWIDTH_C) := v.din;
+
       -- header variables
+      if rxFifoMaster.tValid = '1' and r.headerCnt = HEADER_WIDTH_MULT_C-1 then
+         overOcc    := headerData(OVEROCC_FLAG_POS_C);
+         pause      := headerData(PAUSE_FLAG_POS_C);
+         colErr     := headerData(COLUMN_ERROR_FLAG_POS_C);
+         pauseErr   := headerData(PAUSE_ERROR_FLAG_POS_C);
+         timeout    := headerData(TIMEOUT_FLAG_POS_C);
+         colHitmask := headerData(COL_HITMASK_POS_C);
+         trgCnt     := resize(headerData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
+      end if;
+
+      -- dummy and metadata
       if rxFifoMaster.tValid = '1' then
-         overOcc     := v.din(OVEROCC_FLAG_POS_C);
-         pause       := v.din(PAUSE_FLAG_POS_C);
-         colErr      := v.din(COLUMN_ERROR_FLAG_POS_C);
-         pauseErr    := v.din(PAUSE_ERROR_FLAG_POS_C);
-         timeout     := v.din(TIMEOUT_FLAG_POS_C);
          v.dummy     := toSl(isDummy(v.din));
-         colHitmask  := v.din(COL_HITMASK_POS_C);
-         trgCnt      := resize(v.din(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-         -- column metadata variables
          metaTrgCnt  := v.din(META_TRGCNT_POS_C);
          metaDataLen := v.din(META_DATALEN_POS_C);
       end if;
@@ -302,22 +312,35 @@ begin
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
 
-               if v.dummy = '0' and sof = '1' then
-                  ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
+               if v.dummy = '0' then
                   tValid         := '1';                -- write to axiFifo
                   v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
-                  v.inOverOcc    := overOcc;
-                  v.inPause      := pause and not(pauseErr); -- mask if in pause-error
-                  v.inPauseError := pauseErr;
-                  v.trgCntHeader := trgCnt;
-                  v.eventHitmask := colHitmask;
+                  v.headerCnt    := r.headerCnt + 1;    -- increment header cnt
 
-                  if uOr(colHitmask) = '0' then
-                     v.state := CLOSE_FRAME_S;
-                  else
-                     v.activeColCnt := onesCount(colHitmask);
-                     v.state        := PARSE_COL_METADATA_S;
+                  -- forward the SoF
+                  if sof = '1' then
+                     ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
                   end if;
+
+                  -- done parsing the header; grab the flags and proceed
+                  if r.headerCnt = HEADER_WIDTH_MULT_C-1 then
+
+                     v.inOverOcc    := overOcc;
+                     v.inPause      := pause and not(pauseErr); -- mask if in pause-error
+                     v.inPauseError := pauseErr;
+                     v.trgCntHeader := trgCnt;
+                     v.eventHitmask := colHitmask;
+                     v.headerCnt    := (others => '0');
+
+                     if uOr(colHitmask) = '0' then
+                        v.state := CLOSE_FRAME_S;
+                     else
+                        v.activeColCnt := onesCount(colHitmask);
+                        v.state        := PARSE_COL_METADATA_S;
+                     end if;
+
+                  end if;
+
                end if;
 
             end if;

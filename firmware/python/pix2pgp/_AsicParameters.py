@@ -51,7 +51,8 @@ class SparkPixSParameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
-                      'wordLen'    : 5}
+                      'wordLen'    : 5,
+                      'headerLen'  : 5}
 
         return param_dict
 
@@ -75,7 +76,8 @@ class SparkPixSv2Parameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
-                      'wordLen'    : 5}
+                      'wordLen'    : 5,
+                      'headerLen'  : 5}
 
         return param_dict
 
@@ -100,7 +102,8 @@ class SparkPixTParameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
-                      'wordLen'    : 8}
+                      'wordLen'    : 8,
+                      'headerLen'  : 8}
 
         return param_dict
 
@@ -125,7 +128,8 @@ class ThriglavParameters(AsicParameterBase):
                       'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
                       'numOfLanes' : 2,
                       'numOfCols'  : 50,
-                      'wordLen'    : 8}
+                      'wordLen'    : 8,
+                      'headerLen'  : 8}
 
         return param_dict
 

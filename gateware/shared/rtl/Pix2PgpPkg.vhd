@@ -45,6 +45,10 @@ package Pix2PgpPkg is
    -- maximum amount of dummy words depends on the output data bus width
    constant BITMAX_DUMMY_C : natural := bitSize(PGP_DWIDTH_C/8);
 
+   -- the dummy bit is set on a truncated dummy header/word
+   constant DUMMY_BIT_POS_C : natural := DUMMY_HEADER_POS_C-
+                                        (HEADER_DWIDTH_C-PIX2PGP_DATABUS_DWIDTH_C);
+
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    -- Functions
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -409,7 +413,7 @@ package body Pix2PgpPkg is
    function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
                            colPauseError: sl; timeoutError: sl; dummyHeader: sl;
                            colHitmask: slv; trgCntGlbl: slv) return slv is
-      variable retHeader: slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
+      variable retHeader: slv(HEADER_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
       retHeader(OVEROCC_FLAG_POS_C)      := overOccError  and not(dummyHeader);
@@ -421,7 +425,7 @@ package body Pix2PgpPkg is
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
       retHeader(COL_HITMASK_POS_C)       := colHitmask;
       retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, rangeToLen(TRGCNT_POS_C'high,
-                                                                TRGCNT_POS_C'low));
+                                                                          TRGCNT_POS_C'low));
 
       return retHeader;
    end asicHeaderMap;
@@ -431,7 +435,7 @@ package body Pix2PgpPkg is
       variable retBool : boolean := False;
    begin
 
-      if onesCount(din) = conv_std_logic_vector(1, din'length) and din(DUMMY_HEADER_POS_C) = '1' then
+      if onesCount(din) = conv_std_logic_vector(1, din'length) and din(DUMMY_BIT_POS_C) = '1' then
          retBool := True;
       end if;
 
