@@ -21,7 +21,7 @@ Navigate to `gateware/asics` and create a new directory for the `NewAsic`: do `$
         1. `NUM_OF_COL_MANAGERS_C` (how many columns does each Pix2Pgp instance serve?)
         2. `NUM_OF_SERIALIZERS_C` (how many serializers/Pix2Pgp instances/lanes are on the ASIC?)
         3. `ASIC_DATABUS_DWIDTH_C` (what is the data bus width that is driven to Pix2Pgp?)
-        4. Finally, depending on the internal data width (double the `ASIC_DATABUS_DWIDTH_C`), the user has to edit the Pix2Pgp data frame header bitfield structure accordingly.
+        4. Finally, depending on the internal data width (double the `ASIC_DATABUS_DWIDTH_C`), the user has to edit the Pix2Pgp Header bitfield structure accordingly. Same applies for the Column Metadata fields. Please see 'Data Word Width Considerations' below for more information.
     2. Edit `Pix2PgpNewAsicTop.vhd` accordingly. Change the VHDL entity name. One probably needs to also change the width of the `sof, eof, overOcc` etc. signals to have the same width as `NUM_OF_COL_MANAGERS_C`, and the amount of `dinXX` ports to be the same as the `NUM_OF_COL_MANAGERS_C`. Also, the width of the data that are being written into Pix2Pgp by the data-generating User Logic (i.e. the value of `ASIC_DATABUS_DWIDTH_C` in the `*Pkg.vhd` file) must be the same as the width of each `dinXX` port. Note the lack of use of complex VHDL types (i.e. custom types/arrays) in the top-level interfacing. This is because there needs to be flexibility in terms of where the top-level can be instantiated in. If the top-level VHDL file needs to be instantiated within the context of Verilog/SystemVerilog, there can be no complex types at the top-level VHDL entity definition.
 2. Under `NewAsic/tb`, do:
     * `$ mv DummySparkPixTPixel.vhd DummyNewAsicPixel.vhd`
@@ -263,8 +263,8 @@ class NewAsicDataFormat(SparseDataFormatBase):
 2. Perform benchmark measurements for the new ASIC (see `software/scripts/benchmarking/README.md` for more information)
 3. Update Pix2Pgp Confluence page accordingly
 
-## Limitations
-Pix2Pgp supports the following data bus widths, as set in the `ASIC_DATABUS_DWIDTH_C` parameter of each supported ASIC within its associated `Pix2PgpAsicPkg` file:
+## Data Word Width Considerations
+Pix2Pgp supports the following input data bus widths, as set in the `ASIC_DATABUS_DWIDTH_C` parameter of each supported ASIC within its associated `Pix2PgpAsicPkg` file:
 * 4 bits
 * 8 bits
 * 12 bits
@@ -274,7 +274,7 @@ Pix2Pgp supports the following data bus widths, as set in the `ASIC_DATABUS_DWID
 * 28 bits
 * 32 bits
 
-This is due to the fact that the outbound AXI-Stream of `Pix2PgpTop` is 64-bit wide. This is a limitation of the *Lite* version of the PGP4 Protocol (it has a fixed inbound AXI-Stream width of 64 bits).
+It is strongly advised to use `ASIC_DATABUS_DWIDTH_C` of 16 bits or more. Padding can be added to the input if the data width is actually smaller than 16 bits, at the expense of bandwidth. If the `ASIC_DATABUS_DWIDTH_C` has to be larger than 32 bits, the user should take care to drive the data into the core in multiple cycles and retain the widths listed above.
 
 Once the user chooses the data bus width, the internal data width is fixed, and double that size, as dictated by the relevant line of `Pix2PgpPkg`:
 
@@ -283,10 +283,9 @@ Once the user chooses the data bus width, the internal data width is fixed, and 
    constant PIX2PGP_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*2;
 ```
 
-This sets a limitation on how many columns can be served by each Pix2Pgp instance of a specified data bus width. This is because of the structure of the Pix2Pgp Lane Header, which has to fit the following:
+Whatever the case of the final/internal data width might be, the user should take care to:
 
-* Lane Header *Flags* (usually *six*)
-* The *Trigger Counter*, that has a configurable width (usually *6-bit*)
-* The *Column Hitmask*, which has the same width as the amount of columns served; i.e. this is what needs to fit in the header.
-
-For example, If each Pix2Pgp instance of an ASIC serves `40` columns, then `ASIC_DATABUS_DWIDTH_C` has to be at least `26-`bit wide, in order for the header to fit `6` bits of Flags, plus `6` bits of Trigger Counter, plus the `40-`bit Hitmask (`40+6+6=52`, and since the final bus width is double the sparse data size: `52/2=26`). If this prerequisite is not satisfied, then the ASIC architecture needs to be modified accordingly by adding more Pix2Pgp modules and serializers to support them, in order to reduce the amount of columns served. Or, `ASIC_DATABUS_DWIDTH_C` can be widened (by e.g. zero-padding unused data bus bits) in order for the `PIX2PGP_DATABUS_DWIDTH_C` bus width to be able to accommodate the amount of column-hitmask bits in the Lane Header.
+1. Fit all of the contents of the ASIC Header in a word equal to the width of `PIX2PGP_DATABUS_DWIDTH_C`. The said header can be found in `Pix2PgpAsicPkg.vhd`. If the width of the data bus is not enough to accommodate all header information, the user should increase the scaling factor of the header, by increasing `HEADER_WIDTH_MULT_C`. This value doubles/triples/etc. the size of the header with respect to the native data bus width, in order to fit all required header information. Note that the mapping of the header fields should be modified accordingly in the VHDL package, as well as their equivalents in `_Pix2PgpHeaderFormat.py`
+    1. Example: A Pix2Pgp core that accepts 20-bit data words uses a 40-bit internal data bus. The core manages data from 24 Column Managers, so 6-bit flags + 24-bit columnHitmask + 8-bit trigger counter fits in 40 bits
+    2. Example: A Pix2Pgp core that accepts 20-bit data words uses a 40-bit internal data bus. The core manages data from 64 Column Managers, so 6-bit flags + 64-bit columnHitmask + 8-bit trigger counter do not fit in 40 bits. One needs 78 bits to fit this information, so a scaling factor of 2 (40x2=80) is required.
+2. Fit all of the contents of the ASIC Column Metadata in a word equal to the width of `PIX2PGP_DATABUS_DWIDTH_C`. The column metadata word does not feature a scaling factor as the header does, so this requirement has to be met using the native width of the data bus.

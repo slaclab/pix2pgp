@@ -299,10 +299,13 @@ class LaneData(object):
             if state == "header_s":
 
                 wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.headerLen])
+
+                # Reverse word order: split into wordLen chunks and reverse
+                wordHex = ''.join(reversed([wordHex[i:i+self.wordLen*2]
+                                  for i in range(0, len(wordHex), self.wordLen*2)]))
                 pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Header', wordHex)
 
                 self.headerEval(wordHex)
-
 
                 index += self.headerLen
 
@@ -328,7 +331,6 @@ class LaneData(object):
                 pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.ColMetaData', wordHex)
 
                 self.colMetaEval(colSel, wordHex)
-
 
                 index += self.wordLen
 
