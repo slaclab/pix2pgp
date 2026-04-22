@@ -270,7 +270,7 @@ begin
          when CHECK_HITMASK_S =>
             if colHitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
-               -- Check if last column or check hitmask counter in later versions
+               -- check hitmask counter or check if last column in earlier versions
                if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
                   (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
@@ -283,7 +283,7 @@ begin
 
                if r.waitColSel = '1' then
                   if v.sAxisMaster.tValid = '0' then
-                     -- column metadata mapping in pkg (changes with ASIC type)
+                     -- column metadata mapping in pkg (might change with ASIC type)
                      v.txData             := colMetaMap(flagsSel, r.colSel, trgCntSel, dataLenSel);
                      v.sAxisMaster.tValid := '1';
                      v.wordCnt            := r.wordCnt + 1;
@@ -326,7 +326,7 @@ begin
                v.dataRd := '0';
                v.state  := CHECK_HITMASK_S;
                --
-               -- Check if last column or check hitmask counter in later versions
+               -- check hitmask counter or check if last column in earlier versions
                if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
                   (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
