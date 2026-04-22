@@ -87,6 +87,8 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader  : sl;
       waitColSel   : sl;
       headerCnt    : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
+      hitmaskCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      arbCnt       : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
       txData       : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       wordCnt      : slv(BITMAX_DUMMY_C-1 downto 0);
       dummyCnt     : slv(BITMAX_DUMMY_C-1 downto 0);
@@ -116,6 +118,8 @@ architecture rtl of Pix2PgpArbiter is
       dummyHeader   => '0',
       waitColSel    => '0',
       headerCnt     => (others => '0'),
+      hitmaskCnt    => (others => '0'),
+      arbCnt        => (others => '0'),
       txData        => (others => '0'),
       wordCnt       => (others => '0'),
       dummyCnt      => (others => '0'),
@@ -161,6 +165,7 @@ begin
 
       -- inputs
       v.eventEmpty := not(uOr(colHitmask));
+      v.hitmaskCnt := onesCount(colHitmask);
       v.sAxisSlave := sAxisSlave;
       v.arbStart   := arbStart;
       v.statusBus  := statusBus;
@@ -215,6 +220,7 @@ begin
             v.wordCnt     := (others => '0');
             v.dummyCnt    := (others => '0');
             v.colSel      := (others => '0');
+            v.arbCnt      := (others => '0');
 
             if r.arbStart = '1' then
                v.arbBusy := '1';
@@ -264,7 +270,9 @@ begin
          when CHECK_HITMASK_S =>
             if colHitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
-               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+               -- Check if last column or check hitmask counter in later versions
+               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
+                  (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
                else
                   v.colSel := r.colSel + 1;
@@ -289,7 +297,10 @@ begin
                      else
                         v.dataRdCycles := rightShift(dataLenSel, 1);
                      end if;
+
+                     v.arbCnt := r.arbCnt + 1;
                      v.state := PARSE_DATA_S;
+
                   end if;
                end if;
             end if;
@@ -315,8 +326,9 @@ begin
                v.dataRd := '0';
                v.state  := CHECK_HITMASK_S;
                --
-               -- Check if last column
-               if conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1 then
+               -- Check if last column or check hitmask counter in later versions
+               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
+                  (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
                else
                   v.colSel := r.colSel + 1;
