@@ -101,7 +101,6 @@ architecture rtl of Pix2PgpColumnManager is
       statusWr       : sl;
       dataWr         : sl;
       statusFifoOk   : sl;
-      statusFifoWr   : sl;
       trgCnt         : slv(TRGCNT_WIDTH_C-1 downto 0);
       statusFifoDin  : slv(STATUSFIFO_DWIDTH_C-1 downto 0);
       wrEnCnt        : slv(DATALEN_WIDTH_C-1 downto 0);
@@ -124,7 +123,6 @@ architecture rtl of Pix2PgpColumnManager is
       statusWr       => '0',
       dataWr         => '0',
       statusFifoOk   => '0',
-      statusFifoWr   => '0',
       trgCnt         => (others => '1'),
       statusFifoDin  => (others => '0'),
       wrEnCnt        => (others => '0'));
@@ -181,10 +179,10 @@ begin
       -- trigger counter control; essentially increments once per SRO
       -- sof is easy...just increment on rising-edge. this is the nominal case
       -- if INCR_TRGCNT_OVEROCC_C:
-         -- note how the trigger counter is incremented on over-Occ;
-         -- upon reception of over-occ, the trgCnt increments one cycle later,
+         -- note how the trigger counter is incremented on overOcc;
+         -- upon reception of overOcc, the trgCnt increments one cycle later,
          -- since the *previous* trgCnt should be written into the status FIFO;
-         -- note that over-occ acts as an eof and a sof, and is always single-cycle wide
+         -- note that overOcc acts as an eof and a sof, and is always single-cycle wide
       -- elsif not(INCR_TRGCNT_OVEROCC_C):
          -- overOcc acts as an Eof Only and does NOT increment the trigger counter
       if v.sof = '1' and r.sof = '0' then
@@ -197,8 +195,8 @@ begin
       -- only write while busy (in-frame)
       v.dataWr := wrEn and v.busy;
 
-      -- wrEn counter management (rising-edge detection)
-      if v.dataWr = '1' and r.dataWr = '0' then
+      -- wrEn counter management
+      if v.dataWr = '1' then
          v.wrEnCnt := r.wrEnCnt + 1;
       end if;
 
@@ -257,6 +255,7 @@ begin
             v.eofStatus := '0';
             v.busy      := '0';
          end if;
+
       end if;
       -- ///////////////////////////////////////////////////////////////////////////////////////////
       -- pause output handling
