@@ -35,98 +35,114 @@ class SparkPixSParameters(AsicParameterBase):
     '''
     SparkPix-S Parameters
     '''
+    _asicTypeId = None
+    _params = None
+
     @property
     def asicTypeId(self):
-        for key, value in AsicParameterBase.asicTypeDict.items():
-            if value == "SparkPixS":
-                return key
-        raise ValueError("ASIC type not found in asicTypeDict!")
+        if SparkPixSParameters._asicTypeId is None:
+            for key, value in AsicParameterBase.asicTypeDict.items():
+                if value == "SparkPixS":
+                    SparkPixSParameters._asicTypeId = key
+                    break
+            else:
+                raise ValueError("ASIC type not found in asicTypeDict!")
+        return SparkPixSParameters._asicTypeId
 
     def asicParamExtract(self):
-        '''
-        Parameter dictionary
-        '''
-
-        param_dict = {'asicTypeId' : self.asicTypeId,
-                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
-                      'numOfLanes' : 8,
-                      'numOfCols'  : 24,
-                      'wordLen'    : 5}
-
-        return param_dict
+        if SparkPixSParameters._params is None:
+            SparkPixSParameters._params = {
+                'asicTypeId' : self.asicTypeId,
+                'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                'numOfLanes' : 8,
+                'numOfCols'  : 24,
+                'wordLen'    : 5}
+        return SparkPixSParameters._params
 
 class SparkPixSv2Parameters(AsicParameterBase):
     '''
     SparkPix-Sv2 Parameters
     '''
+    _asicTypeId = None
+    _params = None
+
     @property
     def asicTypeId(self):
-        for key, value in AsicParameterBase.asicTypeDict.items():
-            if value == "SparkPixSv2":
-                return key
-        raise ValueError("ASIC type not found in asicTypeDict!")
+        if SparkPixSv2Parameters._asicTypeId is None:
+            for key, value in AsicParameterBase.asicTypeDict.items():
+                if value == "SparkPixSv2":
+                    SparkPixSv2Parameters._asicTypeId = key
+                    break
+            else:
+                raise ValueError("ASIC type not found in asicTypeDict!")
+        return SparkPixSv2Parameters._asicTypeId
 
     def asicParamExtract(self):
-        '''
-        Parameter dictionary
-        '''
-
-        param_dict = {'asicTypeId' : self.asicTypeId,
-                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
-                      'numOfLanes' : 8,
-                      'numOfCols'  : 24,
-                      'wordLen'    : 5}
-
-        return param_dict
+        if SparkPixSv2Parameters._params is None:
+            SparkPixSv2Parameters._params = {
+                'asicTypeId' : self.asicTypeId,
+                'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                'numOfLanes' : 8,
+                'numOfCols'  : 24,
+                'wordLen'    : 5}
+        return SparkPixSv2Parameters._params
 
 
 class SparkPixTParameters(AsicParameterBase):
     '''
     SparkPix-T Parameters
     '''
+    _asicTypeId = None
+    _params = None
+
     @property
     def asicTypeId(self):
-        for key, value in AsicParameterBase.asicTypeDict.items():
-            if value == "SparkPixT":
-                return key
-        raise ValueError("ASIC type not found in asicTypeDict!")
+        if SparkPixTParameters._asicTypeId is None:
+            for key, value in AsicParameterBase.asicTypeDict.items():
+                if value == "SparkPixT":
+                    SparkPixTParameters._asicTypeId = key
+                    break
+            else:
+                raise ValueError("ASIC type not found in asicTypeDict!")
+        return SparkPixTParameters._asicTypeId
 
     def asicParamExtract(self):
-        '''
-        Parameter dictionary
-        '''
-
-        param_dict = {'asicTypeId' : self.asicTypeId,
-                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
-                      'numOfLanes' : 8,
-                      'numOfCols'  : 24,
-                      'wordLen'    : 8}
-
-        return param_dict
+        if SparkPixTParameters._params is None:
+            SparkPixTParameters._params = {
+                'asicTypeId' : self.asicTypeId,
+                'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                'numOfLanes' : 8,
+                'numOfCols'  : 24,
+                'wordLen'    : 8}
+        return SparkPixTParameters._params
 
 
 class ThriglavParameters(AsicParameterBase):
     '''
     Thriglav Parameters
     '''
+    _asicTypeId = None
+    _params = None
+
     @property
     def asicTypeId(self):
-        for key, value in AsicParameterBase.asicTypeDict.items():
-            if value == "Thriglav":
-                return key
-        raise ValueError("ASIC type not found in asicTypeDict!")
+        if ThriglavParameters._asicTypeId is None:
+            for key, value in AsicParameterBase.asicTypeDict.items():
+                if value == "Thriglav":
+                    ThriglavParameters._asicTypeId = key
+                    break
+            else:
+                raise ValueError("ASIC type not found in asicTypeDict!")
+        return ThriglavParameters._asicTypeId
 
     def asicParamExtract(self):
-        '''
-        Parameter dictionary
-        '''
-
-        param_dict = {'asicTypeId' : self.asicTypeId,
-                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
-                      'numOfLanes' : 2,
-                      'numOfCols'  : 50,
-                      'wordLen'    : 8}
-
-        return param_dict
+        if ThriglavParameters._params is None:
+            ThriglavParameters._params = {
+                'asicTypeId' : self.asicTypeId,
+                'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                'numOfLanes' : 2,
+                'numOfCols'  : 50,
+                'wordLen'    : 8}
+        return ThriglavParameters._params
 
 AsicParameterBase.setParams()

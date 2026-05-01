@@ -15,25 +15,8 @@ class Tools:
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def toAscii(inputArg):
-
-        asciiChars = []
-
-        # first convert to hex (and remove the "0x" prefix)
-        hexString = hex(inputArg)[2:]
-
-        # ensure the hex string length is even
-        if len(hexString) % 2 != 0:
-            hexString = '0' + hexString
-
-        for i in range(0, len(hexString), 2):
-            _byteHex = hexString[i:i+2]
-            _byteInt = int(_byteHex, 16)
-            _char    = chr(_byteInt)
-            asciiChars.append(_char)
-
-        retString = ''.join(asciiChars)
-
-        return retString
+        n = (inputArg.bit_length() + 7) // 8 or 1
+        return inputArg.to_bytes(n, 'big').decode('latin-1')
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @staticmethod
@@ -71,14 +54,10 @@ class Tools:
            _inListSwap = [2, 1, 0, 4, 3];
            (for groupSize = 3)
         '''
-
-        _inListSwap = []
-
-        for i in range(0, len(inList), groupSize):
-            subList = inList[i:i + groupSize]
-            _rev = subList[::-1]
-            _inListSwap.extend(_rev)
-
+        n = len(inList)
+        _inListSwap = list(inList)
+        for i in range(0, n, groupSize):
+            _inListSwap[i:i + groupSize] = _inListSwap[i:i + groupSize][::-1]
         return _inListSwap
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

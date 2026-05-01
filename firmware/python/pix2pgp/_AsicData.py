@@ -10,10 +10,16 @@
 import sys
 import numpy as np
 import click
-import time
 
 import copy
 import pix2pgp
+
+try:
+    from pix2pgp._fast_parse import parse_event as _fast_parse_event
+    from pix2pgp._fast_parse import make_config as _fast_make_config
+    _HAVE_FAST_PARSE = True
+except ImportError:
+    _HAVE_FAST_PARSE = False
 
 class AsicData(object):
     def __init__(self,
@@ -40,9 +46,15 @@ class AsicData(object):
                                             rawData=self._rawData,
                                             verbose=self._verbose)
 
+        # Cython fast-parse config (created once, reused for all events)
+        if _HAVE_FAST_PARSE and not rawData:
+            self._fast_cfg = _fast_make_config(asicType, oldFormat)
+        else:
+            self._fast_cfg = None
+
         # the real initialization method
         self.reset()
-        self.currentIndex = 0 # Initialize a class variable for current index
+        self.currentIndex = 0
     #################################################################
     def reset(self):
         """
@@ -123,30 +135,23 @@ class AsicData(object):
     #################################################################
 
     #################################################################
-    def formatter(self, data, dataLen, startIndex=0): # Added startIndex
+    def formatter(self, data, dataLen, startIndex=0):
         """
         Parses raw frame data and extracts specific fields based on predefined bit masks.
-
-        Parameters:
-        data (numpy array): Input array containing raw frame data to be formatted.
-        dataLen (int): Length of the data in bytes or number of words.
-        startIndex (int): Starting index within the data array
-
-        Processing Steps:
-        - The input data is interpreted as 64-bit unsigned integers.
-        - Specific fields are extracted using bitwise operations and slicing.
-        - Extracted fields are stored in their respective attributes of the class.
         """
+        # Fast Cython path (no verbose printing, no raw-data mode)
+        if self._fast_cfg is not None and self._verbose < 2:
+            frame_buf = np.ascontiguousarray(data, dtype=np.uint8)
+            result = _fast_parse_event(frame_buf, dataLen, startIndex,
+                                       self._fast_cfg)
+            (self.asicId, self.laneValid, self.asicHits,
+             self.asicGlblTrgCnt, self.currentIndex, _) = result
+            return
 
-        # Reset all attributes
+        # Original pure-Python path
         self.reset()
-
-        # Set the current index to the starting position
         self.currentIndex = startIndex
-
-        # Convert input data to 64-bit unsigned integers for consistent processing;
-        # Parse them in
-        self.eventParseFsm(frame=np.array(data), size=dataLen)
+        self.eventParseFsm(frame=data, size=dataLen)
     #################################################################
 
     #################################################################
@@ -311,78 +316,39 @@ class AsicData(object):
         Extracts lane data from the lane decoder into the AsicData class arrays.
         """
         # ~~~~~~~~~~~~~~~~~~~~~~~~~
-        # header data
+        # header data (scalar OR)
         # ~~~~~~~~~~~~~~~~~~~~~~~~~
-        self.asicGlblOverOcc[laneSel] = (
-            np.array(self.asicGlblOverOcc[laneSel]) |
-            np.array(self.laneDecoder.overOcc)).tolist()
-
-        self.asicGlblPause[laneSel] = (
-            np.array(self.asicGlblPause[laneSel]) |
-            np.array(self.laneDecoder.pause)).tolist()
-
-        self.asicGlblColErr[laneSel] = (
-            np.array(self.asicGlblColErr[laneSel]) |
-            np.array(self.laneDecoder.colErr)).tolist()
-
-        self.asicGlblPauseErr[laneSel] = (
-            np.array(self.asicGlblPauseErr[laneSel]) |
-            np.array(self.laneDecoder.pauseErr)).tolist()
-
-        self.asicGlblDummy[laneSel] = (
-            np.array(self.asicGlblDummy[laneSel]) |
-            np.array(self.laneDecoder.dummy)).tolist()
-
-        self.asicGlblColTimeout[laneSel] = (
-            np.array(self.asicGlblColTimeout[laneSel]) |
-            np.array(self.laneDecoder.timeout)).tolist()
+        self.asicGlblOverOcc[laneSel]  = self.asicGlblOverOcc[laneSel]  | self.laneDecoder.overOcc
+        self.asicGlblPause[laneSel]    = self.asicGlblPause[laneSel]    | self.laneDecoder.pause
+        self.asicGlblColErr[laneSel]   = self.asicGlblColErr[laneSel]   | self.laneDecoder.colErr
+        self.asicGlblPauseErr[laneSel] = self.asicGlblPauseErr[laneSel] | self.laneDecoder.pauseErr
+        self.asicGlblDummy[laneSel]    = self.asicGlblDummy[laneSel]    | self.laneDecoder.dummy
+        self.asicGlblColTimeout[laneSel] = self.asicGlblColTimeout[laneSel] | self.laneDecoder.timeout
 
         # should not change within the same event
         self.asicGlblTrgCnt[laneSel] = self.laneDecoder.trgCnt
 
-        # Errors and status flags
-        self.laneDecErr[laneSel] = (
-            np.array(self.laneDecErr[laneSel]) |
-            np.array(self.laneDecoder.decErr)).tolist()
-
-        self.laneHasData[laneSel] = (
-            np.array(self.laneHasData[laneSel]) |
-            np.array(self.laneDecoder.hasData)).tolist()
+        # Errors and status flags (scalar OR)
+        self.laneDecErr[laneSel]  = self.laneDecErr[laneSel]  | self.laneDecoder.decErr
+        self.laneHasData[laneSel] = self.laneHasData[laneSel] | self.laneDecoder.hasData
 
         offset = laneSel * self.numOfCols
+        s = slice(offset, offset + self.numOfCols)
+        ld = self.laneDecoder
 
-        self.colHitmask[offset:offset + self.numOfCols] = (
-            np.array(self.colHitmask[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colHitmask)).tolist()
-
-        self.colTimeout[offset:offset + self.numOfCols] = (
-            np.array(self.colTimeout[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colTimeout)).tolist()
-
-        self.colOverOcc[offset:offset + self.numOfCols] = (
-            np.array(self.colOverOcc[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colOverOcc)).tolist()
-
-        self.colPause[offset:offset + self.numOfCols] = (
-            np.array(self.colPause[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colPause)).tolist()
-
-        self.colDecColId[offset:offset + self.numOfCols] = (
-            np.array(self.colDecColId[offset:offset + self.numOfCols]) |
-            np.array(self.laneDecoder.colId)).tolist()
-
-        # each column-length accumulates on itself for each frame
-        self.colLen[offset:offset + self.numOfCols] = (
-            np.array(self.colLen[offset:offset + self.numOfCols]) +
-            np.array(self.laneDecoder.colLen)).tolist()
+        self.colHitmask[s] = [a | b for a, b in zip(self.colHitmask[s], ld.colHitmask)]
+        self.colTimeout[s] = [a | b for a, b in zip(self.colTimeout[s], ld.colTimeout)]
+        self.colOverOcc[s] = [a | b for a, b in zip(self.colOverOcc[s], ld.colOverOcc)]
+        self.colPause[s]   = [a | b for a, b in zip(self.colPause[s],   ld.colPause)]
+        self.colDecColId[s] = [a | b for a, b in zip(self.colDecColId[s], ld.colId)]
+        self.colLen[s]     = [a + b for a, b in zip(self.colLen[s], ld.colLen)]
 
         # should not change within the same event
-        self.colTrgCnt[offset:offset + self.numOfCols] = self.laneDecoder.colTrgCnt
+        self.colTrgCnt[s] = ld.colTrgCnt
 
         # Actual hits
         if self.laneHasData[laneSel]:
-            for hit in self.laneDecoder.laneHits:
-                self.asicHits.append(hit)
+            self.asicHits.extend(ld.laneHits)
     #################################################################
 
     #################################################################
@@ -411,10 +377,12 @@ class AsicData(object):
             if state == "preamble_s":
 
                 _slice = frame[index:index + self.preambleLen]
-                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Preamble', wordHex)
+                wordInt = int.from_bytes(bytes(_slice), 'little')
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'AsicData.Preamble',
+                                           ''.join(format(x, '02x') for x in _slice[::-1]))
 
-                self.preambleEval(wordHex)
+                self.preambleEval(wordInt)
 
                 index += self.preambleLen
 
@@ -431,11 +399,12 @@ class AsicData(object):
             elif state == "header_s":
 
                 _slice = frame[index:index + self.headerLen]
+                wordInt = int.from_bytes(bytes(_slice), 'little')
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'AsicData.Header',
+                                           ''.join(format(x, '02x') for x in _slice[::-1]))
 
-                wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Header', wordHex)
-
-                self.headerEval(wordHex)
+                self.headerEval(wordInt)
 
 
                 index += self.headerLen
@@ -447,11 +416,12 @@ class AsicData(object):
                 if laneSel < self.numOfLanes:
 
                     _slice = frame[index:index + self.frameSizeLen]
+                    wordInt = int.from_bytes(bytes(_slice), 'little')
+                    if rawPrint:
+                        pix2pgp.Tools.rawPrint(True, 'AsicData.FrameSize',
+                                               ''.join(format(x, '02x') for x in _slice[::-1]))
 
-                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.FrameSize', wordHex)
-
-                    _frameSize[laneSel] = int(wordHex, 16)
+                    _frameSize[laneSel] = wordInt
 
                     # accumulate frameSize
                     self.frameSize[laneSel] = _frameSize[laneSel] + self.frameSize[laneSel]
@@ -477,11 +447,12 @@ class AsicData(object):
                 if laneSel < self.numOfLanes:
 
                     _slice = frame[index:index + self.frameSizeLen]
+                    wordInt = int.from_bytes(bytes(_slice), 'little')
+                    if rawPrint:
+                        pix2pgp.Tools.rawPrint(True, 'AsicData.ActiveColCnt',
+                                               ''.join(format(x, '02x') for x in _slice[::-1]))
 
-                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.ActiveColCnt', wordHex)
-
-                    _activeColCnt[laneSel] = int(wordHex, 16)
+                    _activeColCnt[laneSel] = wordInt
 
                     # accumulate activeColCnt
                     self.activeColCnt[laneSel] = _activeColCnt[laneSel] + self.activeColCnt[laneSel]
@@ -518,9 +489,9 @@ class AsicData(object):
                 self.laneDecoder.laneIdSet(laneId=laneSel)
                 self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSlice))
 
-                while not(self.laneDecoder.done):
-                    time.sleep(0.1) # crude; sleep before checking again
-
+                # laneDecoder.formatter is synchronous — done is set before it returns.
+                # The previous polling loop could hang the receiver if the FSM ever
+                # exited without setting done.
                 self.extractLaneData(laneSel=laneSel)
 
                 # update the index
@@ -538,11 +509,12 @@ class AsicData(object):
 
                 if not(inPause) or self.headerErr:
                     _slice = frame[index:index + self.trailerLen]
+                    wordInt = int.from_bytes(bytes(_slice), 'little')
+                    if rawPrint:
+                        pix2pgp.Tools.rawPrint(True, 'AsicData.Trailer',
+                                               ''.join(format(x, '02x') for x in _slice[::-1]))
 
-                    wordHex = ''.join(format(x, '02x') for x in _slice[::-1])
-                    pix2pgp.Tools.rawPrint(rawPrint, 'AsicData.Trailer', wordHex)
-
-                    self.trailerEval(wordHex)
+                    self.trailerEval(wordInt)
 
                     state = "end_s"
                 else:

@@ -44,37 +44,45 @@ class LaneData(object):
         Reset Class variables
         """
 
-        # populated by laneParamSet() (parameters have _ prefix)
-        self.numOfCols = None
-        self.wordLen   = None
+        # First call: set up params and allocate lists.
+        # Subsequent calls: reuse existing lists — just zero them.
+        if getattr(self, 'numOfCols', None) is None:
+            self.numOfCols = None
+            self.wordLen   = None
+            self.asicParams        = None
+            self.headerFormat      = None
+            self.colMetadataFormat = None
+            self.dataFormat        = None
+            self.laneParamSet()
 
-        # asic-specific formats
-        self.asicParams        = None
-        self.headerFormat      = None
-        self.colMetadataFormat = None
-        self.dataFormat        = None
+            self.colHitmask = [False] * self.numOfCols
+            self.colTimeout = [False] * self.numOfCols
+            self.colOverOcc = [False] * self.numOfCols
+            self.colPause   = [False] * self.numOfCols
+            self.colId      = [0]     * self.numOfCols
+            self.colTrgCnt  = [0]     * self.numOfCols
+            self.colLen     = [0]     * self.numOfCols
+            self.currColLen = [0]     * self.numOfCols
+        else:
+            nc = self.numOfCols
+            for i in range(nc):
+                self.colHitmask[i] = False
+                self.colTimeout[i] = False
+                self.colOverOcc[i] = False
+                self.colPause[i]   = False
+                self.colId[i]      = 0
+                self.colTrgCnt[i]  = 0
+                self.colLen[i]     = 0
+                self.currColLen[i] = 0
 
-        # initialize the values
-        self.laneParamSet()
-
-        # header contents
+        # header contents (scalars)
         self.overOcc    = False
         self.pause      = False
         self.colErr     = False
         self.pauseErr   = False
         self.dummy      = False
         self.timeout    = False
-        self.colHitmask = [False] * self.numOfCols
         self.trgCnt     = 0
-
-        # column metadata
-        self.colTimeout = [False] * self.numOfCols
-        self.colOverOcc = [False] * self.numOfCols
-        self.colPause   = [False] * self.numOfCols
-        self.colId      = [0]     * self.numOfCols
-        self.colTrgCnt  = [0]     * self.numOfCols
-        self.colLen     = [0]     * self.numOfCols
-        self.currColLen = [0]     * self.numOfCols
 
         # lane hits
         self.laneHits = []
@@ -109,7 +117,7 @@ class LaneData(object):
 
         # Convert input data to 64-bit unsigned integers for consistent processing;
         # Parse them in
-        self.eventParseFsm(frame=np.array(data), size=dataLen)
+        self.eventParseFsm(frame=data, size=dataLen)
     #################################################################
 
     #################################################################
@@ -296,10 +304,12 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             if state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Header', wordHex)
+                wordInt = int.from_bytes(bytes(frame[index:index + self.wordLen]), 'big')
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.Header',
+                                           ''.join(format(x, '02x') for x in frame[index:index + self.wordLen]))
 
-                self.headerEval(wordHex)
+                self.headerEval(wordInt)
 
 
                 index += self.wordLen
@@ -322,10 +332,12 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.ColMetaData', wordHex)
+                wordInt = int.from_bytes(bytes(frame[index:index + self.wordLen]), 'big')
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.ColMetaData',
+                                           ''.join(format(x, '02x') for x in frame[index:index + self.wordLen]))
 
-                self.colMetaEval(colSel, wordHex)
+                self.colMetaEval(colSel, wordInt)
 
 
                 index += self.wordLen
@@ -343,11 +355,13 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Hits', wordHex)
+                wordInt = int.from_bytes(bytes(frame[index:index + self.wordLen]), 'big')
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.Hits',
+                                           ''.join(format(x, '02x') for x in frame[index:index + self.wordLen]))
 
                 if subLen > 0:
-                    self.hitAlloc(colSel, wordHex, subLen)
+                    self.hitAlloc(colSel, wordInt, subLen)
 
                 index += self.wordLen
 
@@ -360,12 +374,11 @@ class LaneData(object):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        if index >= size:
-            self.done = True
-
-        if self.done:
-            self.laneDataPrinter()
-            self.dataIndexEnd = index
+        # Always mark done before returning so callers (e.g. AsicData) cannot
+        # observe a False done flag and stall waiting on a synchronous result.
+        self.done = True
+        self.laneDataPrinter()
+        self.dataIndexEnd = index
     #################################################################
 
     #################################################################
