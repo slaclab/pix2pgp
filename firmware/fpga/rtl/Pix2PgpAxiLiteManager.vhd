@@ -58,7 +58,7 @@ architecture rtl of Pix2PgpAxiLiteManager is
       usrRst      : sl;
       linkDown    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       txDataReady : sl;
-      fullCnt     : slv(15 downto 0);
+      fullCnt     : slv(7 downto 0);
       -- AXI-Lite
       readSlave   : AxiLiteReadSlaveType;
       writeSlave  : AxiLiteWriteSlaveType;

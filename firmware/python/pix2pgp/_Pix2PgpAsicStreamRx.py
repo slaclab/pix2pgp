@@ -215,7 +215,7 @@ class Pix2PgpAsicStreamRx(pr.Device):
             name        = 'DownstreamFullCnt',
             description = 'Downstream FIFO backpressure counter',
             offset       = 0x610,
-            bitSize      = 16,
+            bitSize      = 8,
             mode         = 'RO',
             disp         = '{:d}',
             pollInterval = 1,
