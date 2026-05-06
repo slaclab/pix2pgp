@@ -63,6 +63,7 @@ architecture rtl of Pix2PgpLaneRx is
 
    type StateType is (
       WAIT_HEADER_S,
+      EVAL_HEADER_S,
       PARSE_COL_METADATA_S,
       PARSE_DATA_S,
       CLOSE_FRAME_S,
@@ -84,6 +85,7 @@ architecture rtl of Pix2PgpLaneRx is
       laneFull       : sl;
       dummy          : sl;
       headerCnt      : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
+      headerData     : slv(HEADER_DWIDTH_C-1 downto 0);
       waitCnt        : slv(2 downto 0);
       trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
       activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
@@ -111,6 +113,7 @@ architecture rtl of Pix2PgpLaneRx is
       laneFull       => '0',
       dummy          => '0',
       headerCnt      => (others => '0'),
+      headerData     => (others => '0'),
       waitCnt        => (others => '0'),
       trgCntHeader   => (others => '0'),
       activeColCnt   => (others => '0'),
@@ -184,7 +187,6 @@ begin
       -- various data fields encoded in variables; are used in data checks and FSM flow control
 
       -- header
-      variable headerData : slv(HEADER_DWIDTH_C-1 downto 0) := (others => '0');
       variable overOcc    : sl := '0';
       variable pause      : sl := '0';
       variable colErr     : sl := '0';
@@ -230,21 +232,6 @@ begin
 
       -- full monitor
       v.laneFull := laneFull;
-
-      -- Accumulate header data
-      headerData((conv_integer(unsigned(r.headerCnt))+1)*PIX2PGP_DATABUS_DWIDTH_C-1 downto
-                  conv_integer(unsigned(r.headerCnt))*PIX2PGP_DATABUS_DWIDTH_C) := v.din;
-
-      -- header variables
-      if rxFifoMaster.tValid = '1' and r.headerCnt = HEADER_WIDTH_MULT_C-1 then
-         overOcc    := headerData(OVEROCC_FLAG_POS_C);
-         pause      := headerData(PAUSE_FLAG_POS_C);
-         colErr     := headerData(COLUMN_ERROR_FLAG_POS_C);
-         pauseErr   := headerData(PAUSE_ERROR_FLAG_POS_C);
-         timeout    := headerData(TIMEOUT_FLAG_POS_C);
-         colHitmask := headerData(COL_HITMASK_POS_C);
-         trgCnt     := resize(headerData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
-      end if;
 
       -- dummy and metadata
       if rxFifoMaster.tValid = '1' then
@@ -298,6 +285,10 @@ begin
          -- discard dummies; register important flags
          when WAIT_HEADER_S =>
 
+            -- Accumulate header data
+            v.headerData((conv_integer(unsigned(r.headerCnt))+1)*PIX2PGP_DATABUS_DWIDTH_C-1 downto
+                          conv_integer(unsigned(r.headerCnt))*PIX2PGP_DATABUS_DWIDTH_C) := v.din;
+
             -- post-error state takes precedence; go look for dummy headers
             -- if realignOnSof is high though, just wait for an SoF;
             -- the option exists because SparkPix-Sv1 does not feature conventional frame delimiters
@@ -324,26 +315,37 @@ begin
 
                   -- done parsing the header; grab the flags and proceed
                   if r.headerCnt = HEADER_WIDTH_MULT_C-1 then
-
-                     v.inOverOcc    := overOcc;
-                     v.inPause      := pause and not(pauseErr); -- mask if in pause-error
-                     v.inPauseError := pauseErr;
-                     v.trgCntHeader := trgCnt;
-                     v.eventHitmask := colHitmask;
-                     v.headerCnt    := (others => '0');
-
-                     if uOr(colHitmask) = '0' then
-                        v.state := CLOSE_FRAME_S;
-                     else
-                        v.activeColCnt := onesCount(colHitmask);
-                        v.state        := PARSE_COL_METADATA_S;
-                     end if;
-
+                     v.headerCnt := (others => '0');
+                     v.state := EVAL_HEADER_S;
                   end if;
 
                end if;
 
             end if;
+
+            ----------------------------------------------------------------------
+            -- evaluate header information
+            when EVAL_HEADER_S =>
+               overOcc    := r.headerData(OVEROCC_FLAG_POS_C);
+               pause      := r.headerData(PAUSE_FLAG_POS_C);
+               colErr     := r.headerData(COLUMN_ERROR_FLAG_POS_C);
+               pauseErr   := r.headerData(PAUSE_ERROR_FLAG_POS_C);
+               timeout    := r.headerData(TIMEOUT_FLAG_POS_C);
+               colHitmask := r.headerData(COL_HITMASK_POS_C);
+               trgCnt     := resize(r.headerData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
+
+               v.inOverOcc    := overOcc;
+               v.inPause      := pause and not(pauseErr); -- mask if in pause-error
+               v.inPauseError := pauseErr;
+               v.trgCntHeader := trgCnt;
+               v.eventHitmask := colHitmask;
+
+               if uOr(colHitmask) = '0' then
+                  v.state := CLOSE_FRAME_S;
+               else
+                  v.activeColCnt := onesCount(colHitmask);
+                  v.state        := PARSE_COL_METADATA_S;
+               end if;
 
          ----------------------------------------------------------------------
          -- parse column metadata
