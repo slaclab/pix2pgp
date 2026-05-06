@@ -211,6 +211,16 @@ class Pix2PgpAsicStreamRx(pr.Device):
             mode        = 'RO',
             enum        = self.laneSupervisorStateEnum))
 
+        self.add(pr.RemoteVariable(
+            name        = 'DownstreamFullCnt',
+            description = 'Downstream FIFO backpressure counter',
+            offset       = 0x610,
+            bitSize      = 16,
+            mode         = 'RO',
+            disp         = '{:d}',
+            pollInterval = 1,
+        ))
+
     def FpgaCntReset(self):
         self.RstFpgaTrgCnt.set(True)
         time.sleep(0.2)

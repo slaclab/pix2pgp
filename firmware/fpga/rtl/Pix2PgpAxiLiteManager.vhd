@@ -43,6 +43,7 @@ entity Pix2PgpAxiLiteManager is
       pgp4RxLinkDown  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       mergerState     : in  slv(STATE_MON_WIDTH_C-1 downto 0);
       superState      : in  slv(STATE_MON_WIDTH_C-1 downto 0);
+      txDataReady     : in  sl;
       -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
@@ -53,21 +54,25 @@ end Pix2PgpAxiLiteManager;
 architecture rtl of Pix2PgpAxiLiteManager is
 
    type RegType is record
-      config     : Pix2PgpStreamRxConfigType;
-      usrRst     : sl;
-      linkDown   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      config      : Pix2PgpStreamRxConfigType;
+      usrRst      : sl;
+      linkDown    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      txDataReady : sl;
+      fullCnt     : slv(15 downto 0);
       -- AXI-Lite
-      readSlave  : AxiLiteReadSlaveType;
-      writeSlave : AxiLiteWriteSlaveType;
+      readSlave   : AxiLiteReadSlaveType;
+      writeSlave  : AxiLiteWriteSlaveType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      config     => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
-      usrRst     => '0',
-      linkDown   => (others => '0'),
+      config      => DEFAULT_PIX2PGP_STREAMRX_CONFIG_C,
+      usrRst      => '0',
+      linkDown    => (others => '0'),
+      txDataReady => '0',
+      fullCnt     => (others => '0'),
       -- AXI-Lite
-      readSlave  => AXI_LITE_READ_SLAVE_INIT_C,
-      writeSlave => AXI_LITE_WRITE_SLAVE_INIT_C);
+      readSlave   => AXI_LITE_READ_SLAVE_INIT_C,
+      writeSlave  => AXI_LITE_WRITE_SLAVE_INIT_C);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -76,7 +81,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster,
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, txDataReady,
                    mergerState, superState,  pgp4RxLinkDown, r) is
 
       variable v : RegType;
@@ -87,7 +92,12 @@ begin
       -- Latch the current value
       v := r;
 
-      v.linkDown := pgp4RxLinkDown;
+      v.linkDown    := pgp4RxLinkDown;
+      v.txDataReady := txDataReady;
+
+      if v.txDataReady = '0' and r.txDataReady = '1' and uAnd(r.fullCnt) = '0' then
+         v.fullCnt := r.fullCnt + 1;
+      end if;
 
       ----------------------------------------------------------------------------------------------
       -- AXI-Lite Transactions
@@ -115,6 +125,7 @@ begin
       axiSlaveRegisterR(axilEp, x"604", 0, r.linkDown);
       axiSlaveRegisterR(axilEp, x"608", 0, mergerState);
       axiSlaveRegisterR(axilEp, x"60C", 0, superState);
+      axiSlaveRegisterR(axilEp, x"610", 0, r.fullCnt);
       --
 
       -- Closeout the transaction

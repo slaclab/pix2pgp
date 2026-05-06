@@ -199,6 +199,7 @@ begin
          pgp4RxLinkDown  => pgp4RxLinkDown,
          mergerState     => mergerState,
          superState      => superState,
+         txDataReady     => asicRxSlave.tReady,
          -- AXI-Lite Interface (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMasters(AXI_LITE_MANAGER_INDEX_C),
          axilReadSlave   => axilReadSlaves(AXI_LITE_MANAGER_INDEX_C),
