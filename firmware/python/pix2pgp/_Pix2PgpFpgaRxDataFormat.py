@@ -55,7 +55,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         FPGA Preamble Decoder
         '''
-        _preamble = int(preamble, 16)
+        _preamble = preamble if isinstance(preamble, int) else int(preamble, 16)
 
         preamble_dict = {'pix2pgpId'   : (_preamble >> 80) & 0xFFFFFFFFFFFF,
                          'pix2pgpType' : (_preamble >> 64) & 0xFFFF,
@@ -70,7 +70,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         FPGA Header Decoder (default is 8xlanes)
         '''
-        _header = int(header, 16)
+        _header = header if isinstance(header, int) else int(header, 16)
 
         _bitmask = (1 << self.numOfLanes) - 1
 
@@ -89,7 +89,7 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         '''
         FPGA Trailer Decoder
         '''
-        _trailer = int(trailer, 16)
+        _trailer = trailer if isinstance(trailer, int) else int(trailer, 16)
 
         trailer_dict = {'pix2pgpId' : (_trailer >>  0) & 0xFFFFFFFFFFFF}
 

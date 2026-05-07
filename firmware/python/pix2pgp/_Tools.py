@@ -8,34 +8,38 @@
 # -- the terms contained in the LICENSE.txt file.
 # -------------------------------------------------------------------------------
 import click
-import inspect
+import numpy as np
 
 class Tools:
 
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def toAscii(inputArg):
-
-        asciiChars = []
-
-        # first convert to hex (and remove the "0x" prefix)
-        hexString = hex(inputArg)[2:]
-
-        # ensure the hex string length is even
-        if len(hexString) % 2 != 0:
+        hexString = format(int(inputArg), 'x')
+        if len(hexString) % 2:
             hexString = '0' + hexString
-
-        for i in range(0, len(hexString), 2):
-            _byteHex = hexString[i:i+2]
-            _byteInt = int(_byteHex, 16)
-            _char    = chr(_byteInt)
-            asciiChars.append(_char)
-
-        retString = ''.join(asciiChars)
-
-        return retString
+        return bytes.fromhex(hexString).decode('ascii', errors='replace')
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def bytesToInt(data, byteorder='big'):
+        '''
+        Convert a numpy array/list of bytes to a Python integer.
+        Explicit element iteration — avoids buffer protocol issues with numpy slices.
+        '''
+        if byteorder == 'big':
+            result = 0
+            for b in data:
+                result = (result << 8) | int(b)
+            return result
+        else:
+            result = 0
+            for i, b in enumerate(data):
+                result |= int(b) << (8 * i)
+            return result
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def printError(inputArg):
@@ -71,26 +75,31 @@ class Tools:
            _inListSwap = [2, 1, 0, 4, 3];
            (for groupSize = 3)
         '''
+        arr = np.asarray(inList)
+        n = len(arr)
+        fullGroups = n // groupSize
+        remainder = n % groupSize
 
-        _inListSwap = []
+        if fullGroups > 0:
+            main = arr[:fullGroups * groupSize].reshape(fullGroups, groupSize)[:, ::-1].ravel()
+        else:
+            main = np.array([], dtype=arr.dtype)
 
-        for i in range(0, len(inList), groupSize):
-            subList = inList[i:i + groupSize]
-            _rev = subList[::-1]
-            _inListSwap.extend(_rev)
+        if remainder > 0:
+            tail = arr[fullGroups * groupSize:][::-1]
+            return np.concatenate([main, tail])
 
-        return _inListSwap
+        return main
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def rawPrint(enable, label, hexData):
-        if enable:
+    def rawPrint(label, hexData):
+        if isinstance(hexData, (list, np.ndarray)):
+            _toPrint = "".join(f"{x:02x}" for x in hexData)
+        else:
             _toPrint = hexData
 
-            if isinstance(hexData, list):
-                _toPrint = "".join(f"{x:02x}" for x in hexData)
-
-            click.secho(f"{label}: {_toPrint}")
+        click.secho(f"{label}: {_toPrint}")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

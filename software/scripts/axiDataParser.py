@@ -27,12 +27,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--oldFormat",
-    action   ="store_true",
-    help     = "Set to true if data frame has the old activeColCnt feature",
-)
-
-parser.add_argument(
     "--asicType",
     type     = str,
     required = False,
@@ -72,7 +66,6 @@ if __name__ == "__main__":
 
     asicDecoder = pix2pgp.AsicData(asicType=args.asicType,
                                    rawData=args.rawData,
-                                   oldFormat=args.oldFormat,
                                    verbose=args.verbose)
 
     startIndex = 0

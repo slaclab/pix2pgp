@@ -27,7 +27,6 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                  maxAsics=4,
                  asicType='SparkPixS',
                  rawData=False,
-                 oldFormat=False,
                  enableOnStart=True,
                  hideData=True,
                  hidden=True,
@@ -39,11 +38,10 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                                  hidden=hidden,
                                  **kwargs)
 
-        self._rawData   = rawData
-        self._verbose   = verbose
-        self._maxAsics  = maxAsics
-        self._asicType  = asicType
-        self._oldFormat = oldFormat
+        self._rawData  = rawData
+        self._verbose  = verbose
+        self._maxAsics = maxAsics
+        self._asicType = asicType
 
         self.asicId        = []
         self.asicLaneValid = [[] for _ in range(maxAsics)]
@@ -51,7 +49,6 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
         self.asicTrgCnt    = [[] for _ in range(maxAsics)]
 
         self.asicDecoder = pix2pgp.AsicData(asicType=self._asicType,
-                                            oldFormat=self._oldFormat,
                                             rawData=self._rawData,
                                             verbose=self._verbose)
 

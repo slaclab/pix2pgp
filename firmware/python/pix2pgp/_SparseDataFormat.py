@@ -40,7 +40,7 @@ class SparkPixSDataFormat(SparseDataFormatBase):
             click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
             return
 
-        _hitData = int(hitData, 16)
+        _hitData = hitData if isinstance(hitData, int) else int(hitData, 16)
 
         _hit = []
         ret  = []
@@ -105,7 +105,7 @@ class SparkPixSv2DataFormat(SparseDataFormatBase):
             click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
             return
 
-        _hitData = int(hitData, 16)
+        _hitData = hitData if isinstance(hitData, int) else int(hitData, 16)
 
         _hit = []
         ret  = []
@@ -170,7 +170,7 @@ class SparkPixTDataFormat(SparseDataFormatBase):
             click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
             return
 
-        _hitData = int(hitData, 16)
+        _hitData = hitData if isinstance(hitData, int) else int(hitData, 16)
 
         _hit = []
         ret  = []
@@ -248,7 +248,7 @@ class ThriglavDataFormat(SparseDataFormatBase):
             click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
             return
 
-        _hitData = int(hitData, 16)
+        _hitData = hitData if isinstance(hitData, int) else int(hitData, 16)
 
         _hit = []
         ret  = []
