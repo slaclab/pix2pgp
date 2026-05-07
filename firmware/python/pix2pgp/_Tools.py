@@ -73,13 +73,12 @@ class Tools:
 
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def rawPrint(enable, label, hexData):
-        if enable:
-            if isinstance(hexData, (list, np.ndarray)):
-                _toPrint = "".join(f"{x:02x}" for x in hexData)
-            else:
-                _toPrint = hexData
+    def rawPrint(label, hexData):
+        if isinstance(hexData, (list, np.ndarray)):
+            _toPrint = "".join(f"{x:02x}" for x in hexData)
+        else:
+            _toPrint = hexData
 
-            click.secho(f"{label}: {_toPrint}")
+        click.secho(f"{label}: {_toPrint}")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

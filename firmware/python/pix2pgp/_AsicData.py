@@ -18,7 +18,6 @@ class AsicData(object):
     def __init__(self,
                  asicType  = "SparkPixS",
                  rawData   = False,
-                 oldFormat = False,
                  verbose   = 0,
                  **kwargs):
         """
@@ -30,7 +29,6 @@ class AsicData(object):
         self._asicType    = asicType
         self._rawData     = rawData
         self._verbose     = verbose
-        self._oldFormat   = oldFormat
         self._hitPrint    = self._verbose == 4
         self._headerPrint = self._verbose > 1 and not(self._hitPrint)
 
@@ -86,7 +84,6 @@ class AsicData(object):
         self.lanePauseError = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
-        self.activeColCnt   = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
         self.asicGlblOverOcc    = [False]  * self.numOfLanes
@@ -354,13 +351,12 @@ class AsicData(object):
         then the trailer.
         """
 
-        state         = "preamble_s"
-        index         = self.currentIndex
-        _frameSize    = [0] * self.numOfLanes
-        _activeColCnt = [0] * self.numOfLanes
-        laneSel       = 0
-        inPause       = False
-        rawPrint      = True if self._verbose == 7 else False
+        state      = "preamble_s"
+        index      = self.currentIndex
+        _frameSize = [0] * self.numOfLanes
+        laneSel    = 0
+        inPause    = False
+        rawPrint   = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         while index < size and not self.done:
@@ -372,7 +368,7 @@ class AsicData(object):
                 _slice = frame[index:index + self.preambleLen]
 
                 if rawPrint:
-                    pix2pgp.Tools.rawPrint(True, 'AsicData.Preamble', _slice[::-1])
+                    pix2pgp.Tools.rawPrint('AsicData.Preamble', _slice[::-1])
 
                 _preambleInt = int.from_bytes(_slice, byteorder='little')
                 self.preambleEval(_preambleInt)
@@ -394,7 +390,7 @@ class AsicData(object):
                 _slice = frame[index:index + self.headerLen]
 
                 if rawPrint:
-                    pix2pgp.Tools.rawPrint(True, 'AsicData.Header', _slice[::-1])
+                    pix2pgp.Tools.rawPrint('AsicData.Header', _slice[::-1])
 
                 _headerInt = int.from_bytes(_slice, byteorder='little')
                 self.headerEval(_headerInt)
@@ -410,56 +406,12 @@ class AsicData(object):
                     _slice = frame[index:index + self.frameSizeLen]
 
                     if rawPrint:
-                        pix2pgp.Tools.rawPrint(True, 'AsicData.FrameSize', _slice[::-1])
+                        pix2pgp.Tools.rawPrint('AsicData.FrameSize', _slice[::-1])
 
                     _frameSize[laneSel] = int.from_bytes(_slice, byteorder='little')
 
                     # accumulate frameSize
                     self.frameSize[laneSel] = _frameSize[laneSel] + self.frameSize[laneSel]
-
-                    index += self.frameSizeLen
-                    laneSel += 1
-
-                else:
-
-                    laneSel = 0
-
-                    # Early exit for empty events: if all valid lanes have frameSize <= 1,
-                    # there are no hits — skip lane parsing entirely
-                    if self._verbose < 2 and not self._oldFormat:
-                        _allEmpty = all(
-                            _frameSize[i] <= 1
-                            for i in range(self.numOfLanes)
-                            if self.laneValid[i]
-                        )
-                        if _allEmpty:
-                            self.asicGlblTrgCnt = [self.fpgaTrgCnt] * self.numOfLanes
-                            for i in range(self.numOfLanes):
-                                if self.laneValid[i]:
-                                    index += _frameSize[i] * self.wordLen
-                            state = "trailer_s"
-                            continue
-
-                    state = "laneValidCheck_s"
-
-                    if self._oldFormat:
-                        state = "activeColCnt_s"
-
-            # --------------------------------------------------------------------------------------
-            # To-Do: remove this state eventually
-            elif state == "activeColCnt_s":
-
-                if laneSel < self.numOfLanes:
-
-                    _slice = frame[index:index + self.frameSizeLen]
-
-                    if rawPrint:
-                        pix2pgp.Tools.rawPrint(True, 'AsicData.ActiveColCnt', _slice[::-1])
-
-                    _activeColCnt[laneSel] = int.from_bytes(_slice, byteorder='little')
-
-                    # accumulate activeColCnt
-                    self.activeColCnt[laneSel] = _activeColCnt[laneSel] + self.activeColCnt[laneSel]
 
                     index += self.frameSizeLen
                     laneSel += 1
@@ -489,7 +441,7 @@ class AsicData(object):
 
                 if rawPrint:
                     _label = 'AsicData.AllLaneData.Lane=' + str(laneSel)
-                    pix2pgp.Tools.rawPrint(True, _label, _frameSliceSwap)
+                    pix2pgp.Tools.rawPrint(_label, _frameSliceSwap)
 
                 self.laneDecoder.laneIdSet(laneId=laneSel)
                 self.laneDecoder.formatter(data=_frameSliceSwap, dataLen=len(_frameSlice))
@@ -513,7 +465,7 @@ class AsicData(object):
                     _slice = frame[index:index + self.trailerLen]
 
                     if rawPrint:
-                        pix2pgp.Tools.rawPrint(True, 'AsicData.Trailer', _slice[::-1])
+                        pix2pgp.Tools.rawPrint('AsicData.Trailer', _slice[::-1])
 
                     _trailerInt = int.from_bytes(_slice, byteorder='little')
                     self.trailerEval(_trailerInt)
@@ -528,18 +480,11 @@ class AsicData(object):
 
             # --------------------------------------------------------------------------------------
             elif state == "end_s":
-
-                _frameSize    = [0] * self.numOfLanes
-                _activeColCnt = [0] * self.numOfLanes
-                laneSel       = 0
-                inPause       = False
-                self.done     = True
-                index         += self.trailerLen
-
-                # make sure this is set to something that makes sense if not using old format
-                # To-Do: skip this check eventually
-                if not(self._oldFormat):
-                    self.activeColCnt = [None] * self.numOfLanes
+                _frameSize = [0] * self.numOfLanes
+                laneSel    = 0
+                inPause    = False
+                self.done  = True
+                index      += self.trailerLen
 
                 # trigger counter check
                 validLane = next((index for index, value in enumerate(self.laneValid) if value is True), None)
