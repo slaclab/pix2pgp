@@ -230,6 +230,7 @@ class AsicData(object):
 
             if self.preambleErr:
                 pix2pgp.Tools.printError('Preamble')
+                print(_dict['pix2pgpId'])
 
             if self.typeMismatchErr:
                 pix2pgp.Tools.printError('ASIC Type Mismatch')
@@ -370,7 +371,7 @@ class AsicData(object):
                 if rawPrint:
                     pix2pgp.Tools.rawPrint('AsicData.Preamble', _slice[::-1])
 
-                _preambleInt = int.from_bytes(_slice, byteorder='little')
+                _preambleInt = pix2pgp.Tools.bytesToInt(_slice, byteorder='little')
                 self.preambleEval(_preambleInt)
 
                 index += self.preambleLen
@@ -392,7 +393,7 @@ class AsicData(object):
                 if rawPrint:
                     pix2pgp.Tools.rawPrint('AsicData.Header', _slice[::-1])
 
-                _headerInt = int.from_bytes(_slice, byteorder='little')
+                _headerInt = pix2pgp.Tools.bytesToInt(_slice, byteorder='little')
                 self.headerEval(_headerInt)
 
                 index += self.headerLen
@@ -408,7 +409,7 @@ class AsicData(object):
                     if rawPrint:
                         pix2pgp.Tools.rawPrint('AsicData.FrameSize', _slice[::-1])
 
-                    _frameSize[laneSel] = int.from_bytes(_slice, byteorder='little')
+                    _frameSize[laneSel] = pix2pgp.Tools.bytesToInt(_slice, byteorder='little')
 
                     # accumulate frameSize
                     self.frameSize[laneSel] = _frameSize[laneSel] + self.frameSize[laneSel]
@@ -467,7 +468,7 @@ class AsicData(object):
                     if rawPrint:
                         pix2pgp.Tools.rawPrint('AsicData.Trailer', _slice[::-1])
 
-                    _trailerInt = int.from_bytes(_slice, byteorder='little')
+                    _trailerInt = pix2pgp.Tools.bytesToInt(_slice, byteorder='little')
                     self.trailerEval(_trailerInt)
 
                     state = "end_s"

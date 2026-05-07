@@ -15,10 +15,31 @@ class Tools:
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def toAscii(inputArg):
-        byte_len = (inputArg.bit_length() + 7) // 8 or 1
-        return inputArg.to_bytes(byte_len, byteorder='big').decode('ascii', errors='replace')
+        hexString = format(int(inputArg), 'x')
+        if len(hexString) % 2:
+            hexString = '0' + hexString
+        return bytes.fromhex(hexString).decode('ascii', errors='replace')
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def bytesToInt(data, byteorder='big'):
+        '''
+        Convert a numpy array/list of bytes to a Python integer.
+        Explicit element iteration — avoids buffer protocol issues with numpy slices.
+        '''
+        if byteorder == 'big':
+            result = 0
+            for b in data:
+                result = (result << 8) | int(b)
+            return result
+        else:
+            result = 0
+            for i, b in enumerate(data):
+                result |= int(b) << (8 * i)
+            return result
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     @staticmethod
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def printError(inputArg):

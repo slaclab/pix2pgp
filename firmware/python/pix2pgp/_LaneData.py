@@ -309,7 +309,7 @@ class LaneData(object):
                 if rawPrint:
                     pix2pgp.Tools.rawPrint('LaneData.Header', _swapped)
 
-                _headerInt = int.from_bytes(_swapped, byteorder='big')
+                _headerInt = pix2pgp.Tools.bytesToInt(_swapped, byteorder='big')
                 self.headerEval(_headerInt)
 
                 index += self.headerLen
@@ -337,7 +337,7 @@ class LaneData(object):
                 if rawPrint:
                     pix2pgp.Tools.rawPrint('LaneData.ColMetaData', _metaSlice)
 
-                _metaInt = int.from_bytes(_metaSlice, byteorder='big')
+                _metaInt = pix2pgp.Tools.bytesToInt(_metaSlice, byteorder='big')
                 self.colMetaEval(colSel, _metaInt)
 
                 index += self.wordLen
@@ -361,7 +361,7 @@ class LaneData(object):
                     pix2pgp.Tools.rawPrint('LaneData.Hits', _hitSlice)
 
                 if subLen > 0:
-                    _hitInt = int.from_bytes(_hitSlice, byteorder='big')
+                    _hitInt = pix2pgp.Tools.bytesToInt(_hitSlice, byteorder='big')
                     self.hitAlloc(colSel, _hitInt, subLen)
 
                 index += self.wordLen
