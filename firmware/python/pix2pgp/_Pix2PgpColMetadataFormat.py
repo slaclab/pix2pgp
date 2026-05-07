@@ -34,7 +34,7 @@ class SparkPixSColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         Column Metadata mapping and decoding
         '''
-        _colMeta = int(colMeta, 16)
+        _colMeta = colMeta if isinstance(colMeta, int) else int(colMeta, 16)
 
         colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
                         'colOverOcc' : bool((_colMeta >> 25) & 0x1),
@@ -53,7 +53,7 @@ class SparkPixSv2ColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         Column Metadata mapping and decoding
         '''
-        _colMeta = int(colMeta, 16)
+        _colMeta = colMeta if isinstance(colMeta, int) else int(colMeta, 16)
 
         colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
                         'colOverOcc' : bool((_colMeta >> 25) & 0x1),
@@ -72,7 +72,7 @@ class SparkPixTColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         Column Metadata mapping and decoding
         '''
-        _colMeta = int(colMeta, 16)
+        _colMeta = colMeta if isinstance(colMeta, int) else int(colMeta, 16)
 
         colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
                         'colOverOcc' : bool((_colMeta >> 25) & 0x1),
@@ -91,7 +91,7 @@ class ThriglavColMetadataFormat(Pix2PgpColMetadataFormatBase):
         '''
         Column Metadata mapping and decoding
         '''
-        _colMeta = int(colMeta, 16)
+        _colMeta = colMeta if isinstance(colMeta, int) else int(colMeta, 16)
 
         colMeta_dict = {'colTimeout' : bool((_colMeta >> 26) & 0x1),
                         'colOverOcc' : bool((_colMeta >> 25) & 0x1),

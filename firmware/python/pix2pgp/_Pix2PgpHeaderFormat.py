@@ -34,7 +34,7 @@ class SparkPixSHeaderFormat(Pix2PgpHeaderFormatBase):
         '''
         Header mapping and decoding
         '''
-        _header = int(header, 16)
+        _header = header if isinstance(header, int) else int(header, 16)
 
         header_dict = {'overOcc'    : bool((_header >> 39) & 0x1),
                        'pause'      : bool((_header >> 38) & 0x1),
@@ -55,7 +55,7 @@ class SparkPixSv2HeaderFormat(Pix2PgpHeaderFormatBase):
         '''
         Header mapping and decoding
         '''
-        _header = int(header, 16)
+        _header = header if isinstance(header, int) else int(header, 16)
 
         header_dict = {'overOcc'    : bool((_header >> 39) & 0x1),
                        'pause'      : bool((_header >> 38) & 0x1),
@@ -76,7 +76,7 @@ class SparkPixTHeaderFormat(Pix2PgpHeaderFormatBase):
         '''
         Header mapping and decoding
         '''
-        _header = int(header, 16)
+        _header = header if isinstance(header, int) else int(header, 16)
 
         header_dict = {'overOcc'    : bool((_header >> 63) & 0x1),
                        'pause'      : bool((_header >> 62) & 0x1),
@@ -97,7 +97,7 @@ class ThriglavHeaderFormat(Pix2PgpHeaderFormatBase):
         '''
         Header mapping and decoding
         '''
-        _header = int(header, 16)
+        _header = header if isinstance(header, int) else int(header, 16)
 
         header_dict = {'overOcc'    : bool((_header >> 63) & 0x1),
                        'pause'      : bool((_header >> 62) & 0x1),

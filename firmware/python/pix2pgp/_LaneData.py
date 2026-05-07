@@ -298,14 +298,19 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             if state == "header_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.headerLen])
+                _headerSlice = frame[index:index + self.headerLen]
+                # Word-reverse: for multi-word headers, reverse word order
+                _nWords = self.headerLen // self.wordLen
+                if _nWords > 1:
+                    _swapped = np.asarray(_headerSlice).reshape(_nWords, self.wordLen)[::-1].ravel()
+                else:
+                    _swapped = _headerSlice
 
-                # Reverse word order: split into wordLen chunks and reverse
-                wordHex = ''.join(reversed([wordHex[i:i+self.wordLen*2]
-                                  for i in range(0, len(wordHex), self.wordLen*2)]))
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Header', wordHex)
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.Header', _swapped)
 
-                self.headerEval(wordHex)
+                _headerInt = int.from_bytes(_swapped, byteorder='big')
+                self.headerEval(_headerInt)
 
                 index += self.headerLen
 
@@ -327,10 +332,13 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "colMetaParse_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.ColMetaData', wordHex)
+                _metaSlice = frame[index:index + self.wordLen]
 
-                self.colMetaEval(colSel, wordHex)
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.ColMetaData', _metaSlice)
+
+                _metaInt = int.from_bytes(_metaSlice, byteorder='big')
+                self.colMetaEval(colSel, _metaInt)
 
                 index += self.wordLen
 
@@ -347,11 +355,14 @@ class LaneData(object):
             # --------------------------------------------------------------------------------------
             elif state == "parseHits_s":
 
-                wordHex = ''.join(format(x, '02x') for x in frame[index:index + self.wordLen])
-                pix2pgp.Tools.rawPrint(rawPrint, 'LaneData.Hits', wordHex)
+                _hitSlice = frame[index:index + self.wordLen]
+
+                if rawPrint:
+                    pix2pgp.Tools.rawPrint(True, 'LaneData.Hits', _hitSlice)
 
                 if subLen > 0:
-                    self.hitAlloc(colSel, wordHex, subLen)
+                    _hitInt = int.from_bytes(_hitSlice, byteorder='big')
+                    self.hitAlloc(colSel, _hitInt, subLen)
 
                 index += self.wordLen
 
