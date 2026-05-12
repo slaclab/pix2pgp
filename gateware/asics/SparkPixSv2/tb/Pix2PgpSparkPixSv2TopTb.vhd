@@ -67,7 +67,6 @@ architecture test of Pix2PgpSparkPixSv2TopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 7.143  ns; -- matrix clock of ASIC (~140 MHz)
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
-   constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
@@ -77,7 +76,6 @@ architecture test of Pix2PgpSparkPixSv2TopTb is
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
-   signal pgpRxClk  : sl := '0';
    signal rst       : sl := '0';
    signal sro       : sl := '0';
    signal sroFinal  : sl := '0';
@@ -205,17 +203,6 @@ begin
          SYNC_RESET_G      => true)
       port map (
          clkP => sparseClk,
-         clkN => open);
-
-   U_ClkRst_pgpRxClk : entity surf.ClkRst
-      generic map (
-         CLK_PERIOD_G      => CLK_PERIOD_PGP_RX_C,
-         CLK_DELAY_G       => 1 ns,
-         RST_START_DELAY_G => 0 ns,
-         RST_HOLD_TIME_G   => 5 us,
-         SYNC_RESET_G      => true)
-      port map (
-         clkP => pgpRxClk,
          clkN => open);
 
    U_ClkRst_sysClk : entity surf.ClkRst
@@ -376,7 +363,7 @@ begin
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
-         pgpRxClk        => pgpRxClk,
+         pgpRxClk        => pgpClk,
          sro             => sroFinal,
          daq             => daqEnable,
          rst             => revRst,

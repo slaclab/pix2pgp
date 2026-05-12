@@ -34,15 +34,15 @@ entity Pix2PgpLaneSupervisor is
       RST_POLARITY_G : sl      := '1');   -- '1' for active high rst, '0' for active low
    port(
       -- General Interface
-      pgpRxClk       : in  sl;
-      pgpRxRst       : in  sl := not(RST_POLARITY_G);
+      coreClk        : in  sl;
+      coreRst        : in  sl := not(RST_POLARITY_G);
       config         : in  Pix2PgpStreamRxConfigType;
       pgp4RxLinkUp   : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       pgp4RxLinkDown : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       monState       : out slv(STATE_MON_WIDTH_C-1 downto 0);
       -- Lane Interface
       laneStatus     : in  Pix2PgpLaneStatusArray;
-      laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneRxRst      : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneMetaRd     : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePostError  : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- Trigger Buffer Interface
@@ -90,7 +90,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       trgBuffRd     : sl;
       trgMisalign   : sl;
       postReset     : sl;
-      laneRst       : sl;
+      laneRxRst     : sl;
       lanePostError : sl;
       laneMetaRd    : sl;
       laneValid     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -124,7 +124,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       trgBuffRd     => '0',
       trgMisalign   => '0',
       postReset     => '0',
-      laneRst       => '1',
+      laneRxRst     => '1',
       lanePostError => '0',
       laneMetaRd    => '0',
       laneValid     => (others => '0'),
@@ -154,13 +154,13 @@ begin
          TPD_G   => TPD_G,
          WIDTH_G => NUM_OF_SERIALIZERS_C)
       port map (
-         clk     => pgpRxClk,
+         clk     => coreClk,
          dataIn  => pgp4RxLinkUp,
          dataOut => linkUpSync);
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, trgBuffSysDaq,
+   comb : process (r, coreRst, trgBuffValid, trgBuffSroEn, mergerBusy, trgBuffSysDaq,
                    timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
       variable v : RegType;
    begin
@@ -277,7 +277,7 @@ begin
             v.laneValid   := (others => '0');
             v.waitCnt     := (others => '0');
             v.evalError   := '1';
-            v.laneRst     := '0';
+            v.laneRxRst   := '0';
             v.popTrg      := '0';
 
             if trgBuffValid = '1' and config.triggerless = '0' then
@@ -439,7 +439,7 @@ begin
          when RESET_S =>
             v.prvTrgCnt     := r.refTrgCnt;
             v.popTrg        := '0';
-            v.laneRst       := '1';
+            v.laneRxRst     := '1';
             v.lanePostError := '1';
             v.laneTimeout   := (others => '0');
             v.laneReady     := (others => '0');
@@ -457,7 +457,7 @@ begin
             -- don't pop the trigger buffer word if in pause;
             -- if in pause, will go back to idle and straight to lane evaluation
             if r.waitCnt = toSlv(1, r.waitCnt'length) then
-               v.laneRst := '0';
+               v.laneRxRst := '0';
             end if;
 
             if r.waitCnt = toSlv(5, r.waitCnt'length) then
@@ -486,11 +486,11 @@ begin
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
          if RST_POLARITY_G = '1' then
-            laneRst(lane) <= pgpRxRst or r.laneRst   or
-                             not(r.laneEnable(lane)) or
-                             r.laneStatus(lane).down;
+            laneRxRst(lane) <= coreRst or r.laneRxRst   or
+                                not(r.laneEnable(lane)) or
+                                r.laneStatus(lane).down;
          else
-            laneRst(lane) <= pgpRxRst and not(r.laneRst) and
+            laneRxRst(lane) <= coreRst and not(r.laneRxRst) and
                             (r.laneEnable(lane) and not(r.laneStatus(lane).down));
          end if;
 
@@ -516,7 +516,7 @@ begin
       monState <= r.monState;
 
       -- Reset
-      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and coreRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -525,11 +525,11 @@ begin
 
    end process comb;
 
-   seq : process (pgpRxClk, pgpRxRst) is
+   seq : process (coreClk, coreRst) is
    begin
-      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and coreRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(pgpRxClk) then
+      elsif rising_edge(coreClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
@@ -545,8 +545,8 @@ begin
          CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
       port map(
          -- General Interface
-         clk     => pgpRxClk,
-         rst     => pgpRxRst,
+         clk     => coreClk,
+         rst     => coreRst,
          limit   => config.laneTimeout,
          -- Control Interface
          set     => r.armTimeout,

@@ -35,8 +35,8 @@ entity Pix2PgpLaneMerger is
       ASIC_ID_G      : natural := 0);
    port(
       -- General Interface
-      pgpRxClk      : in  sl;
-      pgpRxRst      : in  sl := not(RST_POLARITY_G);
+      coreClk       : in  sl;
+      coreRst       : in  sl := not(RST_POLARITY_G);
       config        : in  Pix2PgpStreamRxConfigType;
       monState      : out slv(STATE_MON_WIDTH_C-1 downto 0);
       -- Supervisor Interface
@@ -50,7 +50,7 @@ entity Pix2PgpLaneMerger is
       -- Lane AXI-Stream Input Interface
       laneRxMasters : in  AxiStreamMasterArray;
       laneRxSlaves  : out AxiStreamSlaveArray;
-      -- AXI-Stream Output Interface (on pgpRxClk domain)
+      -- AXI-Stream Output Interface (on coreClk domain)
       obAxiMaster   : out AxiStreamMasterType;
       obAxiSlave    : in  AxiStreamSlaveType);
 end Pix2PgpLaneMerger;
@@ -111,7 +111,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
+   comb : process (r, coreRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
                    reqPause, dumpData, laneRxMasters, obAxiSlave, config) is
       variable v : RegType;
 
@@ -371,7 +371,7 @@ begin
       monState <= r.monState;
 
       -- Reset
-      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and coreRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -380,11 +380,11 @@ begin
 
    end process comb;
 
-   seq : process (pgpRxClk, pgpRxRst) is
+   seq : process (coreClk, coreRst) is
    begin
-      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and coreRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(pgpRxClk) then
+      elsif rising_edge(coreClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
