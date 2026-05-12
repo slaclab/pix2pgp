@@ -70,7 +70,7 @@ architecture rtl of Pix2PgpLaneMerger is
 
    type RegType is record
       busy         : sl;
-      txData       : sl;
+      fwdData      : sl;
       reqDrop      : sl;
       reqNominal   : sl;
       reqPause     : sl;
@@ -88,7 +88,7 @@ architecture rtl of Pix2PgpLaneMerger is
 
    constant REG_INIT_C : RegType := (
       busy         => '0',
-      txData       => '1',
+      fwdData      => '1',
       reqDrop      => '0',
       reqNominal   => '0',
       reqPause     => '0',
@@ -140,7 +140,7 @@ begin
       v.reqDrop    := reqDrop;
       v.reqNominal := reqNominal;
       v.reqPause   := reqPause;
-      v.txData     := not(dumpData);
+      v.fwdData    := not(dumpData); -- bit applied to every AXI transaction
 
       if r.reqDrop = '1' then
          v.reqDrop := '1';
@@ -235,10 +235,10 @@ begin
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
             if v.obAxiMaster.tValid = '0' then
-               v.obAxiMaster.tValid := r.txData;
+               v.obAxiMaster.tValid := r.fwdData;
 
                v.obAxiMaster.tKeep := tKeepSet(FPGA_PREAMBLE_LEN_C);
-               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxiMaster, '1');
+               ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxiMaster, r.fwdData);
                v.obAxiMaster.tData(FPGA_PREAMBLE_LEN_C-1 downto 0) := preamble;
 
                v.state := TX_HEADER_S;
@@ -254,7 +254,7 @@ begin
          when TX_HEADER_S =>
             if v.obAxiMaster.tValid = '0' then
 
-               v.obAxiMaster.tValid := r.txData;
+               v.obAxiMaster.tValid := r.fwdData;
 
                v.obAxiMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
                v.obAxiMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
@@ -267,7 +267,7 @@ begin
          when TX_FRAME_SIZE_S =>
             if v.obAxiMaster.tValid = '0' then
 
-               v.obAxiMaster.tValid := r.txData;
+               v.obAxiMaster.tValid := r.fwdData;
                v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
                v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
 
@@ -300,7 +300,7 @@ begin
                v.obAxiMaster.tKeep := laneAxiStream.tKeep;
                v.obAxiMaster.tData := laneAxiStream.tData;
 
-               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid and r.txData;
+               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid and r.fwdData;
                v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
 
                if laneRxMasters(laneIdx).tLast = '1' and obAxiSlave.tReady = '1' then
@@ -340,8 +340,8 @@ begin
                v.obAxiMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
                v.obAxiMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
                   resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-               v.obAxiMaster.tValid := r.txData;
-               v.obAxiMaster.tLast  := '1';
+               v.obAxiMaster.tValid := r.fwdData;
+               v.obAxiMaster.tLast  := r.fwdData;
 
                v.state := IDLE_S;
             end if;
