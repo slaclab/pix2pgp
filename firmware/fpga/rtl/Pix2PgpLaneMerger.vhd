@@ -65,12 +65,12 @@ architecture rtl of Pix2PgpLaneMerger is
       TX_HEADER_S,
       TX_FRAME_SIZE_S,
       TX_LANE_DATA_S,
-      DUMP_S,
       DONE_S,
       TX_TRAILER_S);
 
    type RegType is record
       busy         : sl;
+      txData       : sl;
       reqDrop      : sl;
       reqNominal   : sl;
       reqPause     : sl;
@@ -78,7 +78,6 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
-      laneDumpAck  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       -- AXI-Stream
       obAxiMaster  : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -89,6 +88,7 @@ architecture rtl of Pix2PgpLaneMerger is
 
    constant REG_INIT_C : RegType := (
       busy         => '0',
+      txData       => '1',
       reqDrop      => '0',
       reqNominal   => '0',
       reqPause     => '0',
@@ -96,7 +96,6 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
-      laneDumpAck  => (others => '0'),
       -- AXI-Stream
       obAxiMaster  => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -141,6 +140,7 @@ begin
       v.reqDrop    := reqDrop;
       v.reqNominal := reqNominal;
       v.reqPause   := reqPause;
+      v.txData     := not(dumpData);
 
       if r.reqDrop = '1' then
          v.reqDrop := '1';
@@ -205,9 +205,8 @@ begin
       -------------------------------------------------------------------------
          -- wait for a request signal
          when IDLE_S =>
-            v.busy         := '0';
-            v.asicType     := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
-            v.laneDumpAck := (others => '0');
+            v.busy     := '0';
+            v.asicType := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
 
             if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
 
@@ -230,17 +229,13 @@ begin
                   v.state := TX_HEADER_S;
                end if;
 
-               if r.reqDrop = '0' and dumpData = '1' then
-                  v.state := DUMP_S;
-               end if;
-
             end if;
 
          ----------------------------------------------------------------------
          -- transmit the pix2pgp preamble via axi
          when TX_PREAMBLE_S =>
             if v.obAxiMaster.tValid = '0' then
-               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tValid := r.txData;
 
                v.obAxiMaster.tKeep := tKeepSet(FPGA_PREAMBLE_LEN_C);
                ssiSetUserSof(PIX2PGP_FPGA_AXI_CONFIG_C, v.obAxiMaster, '1');
@@ -259,7 +254,7 @@ begin
          when TX_HEADER_S =>
             if v.obAxiMaster.tValid = '0' then
 
-               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tValid := r.txData;
 
                v.obAxiMaster.tKeep := tKeepSet(FPGA_HEADER_LEN_C);
                v.obAxiMaster.tData(FPGA_HEADER_LEN_C-1 downto 0) := header;
@@ -272,7 +267,7 @@ begin
          when TX_FRAME_SIZE_S =>
             if v.obAxiMaster.tValid = '0' then
 
-               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tValid := r.txData;
                v.obAxiMaster.tKeep  := tKeepSet(STREAMRX_FRAME_SIZE_WIDTH_C);
                v.obAxiMaster.tData(STREAMRX_FRAME_SIZE_WIDTH_C-1 downto 0) := frameSize;
 
@@ -305,7 +300,7 @@ begin
                v.obAxiMaster.tKeep := laneAxiStream.tKeep;
                v.obAxiMaster.tData := laneAxiStream.tData;
 
-               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid;
+               v.obAxiMaster.tValid           := laneRxMasters(laneIdx).tValid and r.txData;
                v.laneRxSlaves(laneIdx).tReady := obAxiSlave.tReady;
 
                if laneRxMasters(laneIdx).tLast = '1' and obAxiSlave.tReady = '1' then
@@ -345,37 +340,9 @@ begin
                v.obAxiMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);
                v.obAxiMaster.tData(FPGA_TRAILER_LEN_C-1 downto 0) :=
                   resize(PIX2PGP_ID_C, FPGA_TRAILER_LEN_C);
-               v.obAxiMaster.tValid := '1';
+               v.obAxiMaster.tValid := r.txData;
                v.obAxiMaster.tLast  := '1';
 
-               v.state := IDLE_S;
-            end if;
-
-         ----------------------------------------------------------------------
-         -- empty the event from the axi-stream FIFO of all lanes
-         when DUMP_S =>
-            v.reqDrop    := '0';
-            v.reqNominal := '0';
-            v.reqPause   := '0';
-
-            for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
-
-               -- latch the ack on last or on not-valid
-               if laneRxMasters(lane).tLast = '1' or
-                  r.laneDumpAck(lane)       = '1' or
-                  laneValid(lane)           = '0' then
-
-                  v.laneDumpAck(lane) := '1';
-
-               end if;
-
-               -- drain if we still have data;
-               -- the tLast signal will halt this on the next cycle
-               v.laneRxSlaves(lane).tReady := laneValid(lane) and not(r.laneDumpAck(lane));
-
-            end loop;
-
-            if uAnd(r.laneDumpAck) = '1' then
                v.state := IDLE_S;
             end if;
 
@@ -383,7 +350,7 @@ begin
       -----------------------------------------------------------------------
 
       -- Outputs
-      mergerBusy   <= r.busy;
+      mergerBusy <= r.busy;
 
       -- AXI-Stream Outputs
       laneRxSlaves <= v.laneRxSlaves;
@@ -396,8 +363,7 @@ begin
       when TX_HEADER_S     => v.monState := toSlv(2, STATE_MON_WIDTH_C);
       when TX_FRAME_SIZE_S => v.monState := toSlv(3, STATE_MON_WIDTH_C);
       when TX_LANE_DATA_S  => v.monState := toSlv(4, STATE_MON_WIDTH_C);
-      when DUMP_S          => v.monState := toSlv(5, STATE_MON_WIDTH_C);
-      when DONE_S          => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when DONE_S          => v.monState := toSlv(5, STATE_MON_WIDTH_C);
       when TX_TRAILER_S    => v.monState := toSlv(6, STATE_MON_WIDTH_C);
       when others          => v.monState := toSlv(7, STATE_MON_WIDTH_C);
       end case;
