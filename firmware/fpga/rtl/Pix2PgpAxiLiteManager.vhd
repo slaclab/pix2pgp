@@ -36,15 +36,15 @@ entity Pix2PgpAxiLiteManager is
       LANE_MON_GEN_G : boolean := false);
    port(
       -- General Interface
-      pgpRxClk        : in  sl;
-      pgpRxRst        : in  sl;
+      coreClk         : in  sl;
+      coreRst         : in  sl;
       usrRst          : out sl;
       config          : out Pix2PgpStreamRxConfigType;
       pgp4RxLinkDown  : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       mergerState     : in  slv(STATE_MON_WIDTH_C-1 downto 0);
       superState      : in  slv(STATE_MON_WIDTH_C-1 downto 0);
       txDataReady     : in  sl;
-      -- AXI-Lite Interface (sync'd to pgpRxClk domain)
+      -- AXI-Lite Interface (sync'd to coreClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
       axilWriteMaster : in  AxiLiteWriteMasterType;
@@ -81,7 +81,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, txDataReady,
+   comb : process (axilReadMaster, coreRst, axilWriteMaster, txDataReady,
                    mergerState, superState,  pgp4RxLinkDown, r) is
 
       variable v : RegType;
@@ -143,7 +143,7 @@ begin
       usrRst <= r.usrRst;
 
       -- Reset
-      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and coreRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -152,11 +152,11 @@ begin
 
    end process comb;
 
-   seq : process (pgpRxClk, pgpRxRst) is
+   seq : process (coreClk, coreRst) is
    begin
-      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and coreRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(pgpRxClk) then
+      elsif rising_edge(coreClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
