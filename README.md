@@ -1,9 +1,8 @@
-# Pix2Pgp
+# Pix2PGP
 
 Pix2PGP is a generic readout core designed to support Detector/Front-End ASICs that feature a sparsified readout scheme.
 
 For more info:
-* [Google Doc Link](https://docs.google.com/document/d/1JWoombpoBZBulYuCbVD-M0LTDDdCfMX4FJ9Qwumctxg/edit?usp=sharing)
 
 * [Confluence Page](https://confluence.slac.stanford.edu/x/nIkaGg)
 
@@ -13,6 +12,16 @@ As of `v2.7.8`, Pix2PGP supports the following ASIC variants:
 * [SparkPix-T](https://confluence.slac.stanford.edu/x/yCczIg)
 * [Thriglav](https://confluence.slac.stanford.edu/spaces/ppareg/pages/401976050/Thriglav+-+Accelerate+3D-LGAD+SLAC+FNAL)
 * [SparkPix-Sv2](https://confluence.slac.stanford.edu/x/CZp8F)
+
+## Legal
+
+Copyright Notice:
+            
+COPYRIGHT © SLAC National Accelerator Laboratory. All rights reserved. This work is supported [in part] by the U.S. Department of Energy, Office of Basic Energy Sciences under contract DE-AC02-76SF00515.
+
+Usage Restrictions:
+
+Neither the name of the Leland Stanford Junior University, SLAC National Accelerator Laboratory, U.S. Department of Energy nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 ## Cloning
 
