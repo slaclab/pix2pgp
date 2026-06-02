@@ -86,6 +86,7 @@ architecture rtl of Pix2PgpLaneRx is
       inFull         : sl;
       laneFull       : sl;
       dummy          : sl;
+      validHeader    : sl;
       headerCnt      : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
       headerData     : slv(HEADER_DWIDTH_C-1 downto 0);
       waitCnt        : slv(2 downto 0);
@@ -114,6 +115,7 @@ architecture rtl of Pix2PgpLaneRx is
       inFull         => '0',
       laneFull       => '0',
       dummy          => '0',
+      validHeader    => '0',
       headerCnt      => (others => '0'),
       headerData     => (others => '0'),
       waitCnt        => (others => '0'),
@@ -342,15 +344,16 @@ begin
             elsif axiFifoSlave.tReady = '1' and rxFifoMaster.tValid = '1' then
                tReady := '1';  -- read rxFifo
 
-               if v.dummy = '0' then
+               -- SoF evaluation; needs to be high to parse any data
+               if v.dummy = '0' and r.headerCnt = 0 and sof = '1' then
+                  ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
+                  v.validHeader := '1';
+               end if;
+
+               if v.validHeader = '1' then
                   tValid         := '1';                -- write to axiFifo
                   v.frameSizeCnt := r.frameSizeCnt + 1; -- increment the frameSize counter
                   v.headerCnt    := r.headerCnt + 1;    -- increment header cnt
-
-                  -- forward the SoF
-                  if sof = '1' then
-                     ssiSetUserSof(ASIC_DATA_AXI_CONFIG_C, v.axiFifoMaster, sof);
-                  end if;
 
                   -- done parsing the header; grab the flags and proceed
                   if r.headerCnt = HEADER_WIDTH_MULT_C-1 then
@@ -378,6 +381,7 @@ begin
                v.inPauseError := pauseErr;
                v.trgCntHeader := trgCnt;
                v.eventHitmask := colHitmask;
+               v.validHeader  := '0'; -- reset the flag
 
                if uOr(colHitmask) = '0' then
                   v.state := CLOSE_FRAME_S;
@@ -479,6 +483,7 @@ begin
          -- don't write dummies to axiFifo;
          -- reset status FIFO fields if closed the frame
          when WAIT_DUMMY_S =>
+            v.validHeader := '0';
 
             -- lane full or decoding error detected
             if r.inFull = '1' or r.decError = '1' then
@@ -502,6 +507,7 @@ begin
          -- write the decoding error word into the FIFO
          when WR_ERROR_S =>
             v.frameMetaWr := '1';
+            v.validHeader := '0';
             v.state       := ERROR_S;
 
          ------------------------------------------------------------------------
