@@ -45,8 +45,6 @@ entity Pix2PgpAsicStreamRx is
       AXIL_BASE_ADDR_G       : slv(31 downto 0));
    port(
       -- General Interface
-      coreClk         : in  sl;
-      coreRst         : in  sl := not(RST_POLARITY_G);
       pgpRxClk        : in  sl;
       pgpRxRst        : in  sl := not(RST_POLARITY_G);
       -- ASIC Domain Interface
@@ -59,7 +57,7 @@ entity Pix2PgpAsicStreamRx is
       pgp4RxMaster    : in  AxiStreamMasterArray;
       pgp4RxSlave     : out AxiStreamSlaveArray;
       pgp4RxLinkUp    : in  slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      -- AXI-Stream Output Interface (on coreClk domain)
+      -- AXI-Stream Output Interface (on pgpRxClk domain)
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
       -- ASIC Monitoring Status Output
@@ -115,7 +113,7 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
    signal trgBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    signal fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
-   signal laneRxRst      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal laneRst        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal laneStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
    signal asicStatus     : Pix2PgpLaneStatusArray := (others => DEFAULT_PIX2PGP_LANESTATUS_C);
@@ -154,8 +152,8 @@ begin
       sAxiWriteMaster => axilWriteMaster,
       sAxiWriteSlave  => axilWriteSlave,
       -- Master Interface
-      mAxiClk         => coreClk,
-      mAxiClkRst      => coreRst,
+      mAxiClk         => pgpRxClk,
+      mAxiClkRst      => pgpRxRst,
       mAxiReadMaster  => axilReadMasterSync,
       mAxiReadSlave   => axilReadSlaveSync,
       mAxiWriteMaster => axilWriteMasterSync,
@@ -171,8 +169,8 @@ begin
          NUM_MASTER_SLOTS_G   => AXIL_SIZE_C,
          MASTERS_CONFIG_G     => AXIL_CONFIG_C)
       port map (
-         axiClk              => coreClk,
-         axiClkRst           => coreRst,
+         axiClk              => pgpRxClk,
+         axiClkRst           => pgpRxRst,
          sAxiWriteMasters(0) => axilWriteMasterSync,
          sAxiWriteSlaves(0)  => axilWriteSlaveSync,
          sAxiReadMasters(0)  => axilReadMasterSync,
@@ -194,15 +192,15 @@ begin
          LANE_MON_GEN_G => LANE_MON_GEN_G)
       port map(
          -- General Interface
-         coreClk         => coreClk,
-         coreRst         => coreRst,
+         pgpRxClk        => pgpRxClk,
+         pgpRxRst        => pgpRxRst,
          usrRst          => usrRst,
          config          => config,
          pgp4RxLinkDown  => pgp4RxLinkDown,
          mergerState     => mergerState,
          superState      => superState,
          txDataReady     => asicRxSlave.tReady,
-         -- AXI-Lite Interface (sync'd to coreClk domain)
+         -- AXI-Lite Interface (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMasters(AXI_LITE_MANAGER_INDEX_C),
          axilReadSlave   => axilReadSlaves(AXI_LITE_MANAGER_INDEX_C),
          axilWriteMaster => axilWriteMasters(AXI_LITE_MANAGER_INDEX_C),
@@ -226,11 +224,9 @@ begin
             LANE_MON_CNT_WIDTH_G   => LANE_MON_CNT_WIDTH_G)
          port map(
             -- General Interface
-            pgpRxClk        => pgpRxClk,
+            laneClk         => pgpRxClk,
+            laneRst         => laneRst(lane),
             pgpRxRst        => pgpRxRst,
-            laneRxRst       => laneRxRst(lane),
-            coreClk         => coreClk,
-            coreRst         => coreRst,
             config          => config,
             linkDown        => pgp4RxLinkDown(lane),
             -- ASIC Data Lane Interface
@@ -245,7 +241,7 @@ begin
             -- Merger Interface
             laneRxMaster    => laneRxMasters(lane),
             laneRxSlave     => laneRxSlaves(lane),
-            -- AXI-Lite Interface (sync'd to coreClk domain)
+            -- AXI-Lite Interface (sync'd to pgpRxClk domain)
             axilReadMaster  => axilReadMasters(LANE_MON_INDEX_C+lane),
             axilReadSlave   => axilReadSlaves(LANE_MON_INDEX_C+lane),
             axilWriteMaster => axilWriteMasters(LANE_MON_INDEX_C+lane),
@@ -263,14 +259,14 @@ begin
          RST_POLARITY_G => RST_POLARITY_G)
       port map(
          -- General Interface
-         coreClk        => coreClk,
-         coreRst        => glblRst,
+         pgpRxClk       => pgpRxClk,
+         pgpRxRst       => glblRst,
          config         => config,
          pgp4RxLinkUp   => pgp4RxLinkUp,
          pgp4RxLinkDown => pgp4RxLinkDown,
          monState       => superState,
          -- Lane Interface
-         laneRxRst      => laneRxRst,
+         laneRst        => laneRst,
          laneStatus     => laneStatus,
          laneMetaRd     => laneMetaRd,
          lanePostError  => lanePostError,
@@ -300,8 +296,8 @@ begin
          ASIC_ID_G      => ASIC_ID_G)
       port map(
          -- General Interface
-         coreClk       => coreClk,
-         coreRst       => glblRst,
+         pgpRxClk      => pgpRxClk,
+         pgpRxRst      => glblRst,
          config        => config,
          monState      => mergerState,
          -- Supervisor Interface
@@ -315,7 +311,7 @@ begin
          -- Lane AXI-Stream Input Interface
          laneRxMasters => laneRxMasters,
          laneRxSlaves  => laneRxSlaves,
-         -- AXI-Stream Output Interface (on coreClk domain)
+         -- AXI-Stream Output Interface (on pgpRxClk domain)
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
@@ -331,12 +327,12 @@ begin
          MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
       port map (
          -- Slave Port
-         sAxisClk    => coreClk,
+         sAxisClk    => pgpRxClk,
          sAxisRst    => glblRst,
          sAxisMaster => mergerAxiMaster,
          sAxisSlave  => mergerAxiSlave,
          -- Master Port
-         mAxisClk    => coreClk,
+         mAxisClk    => pgpRxClk,
          mAxisRst    => glblRst,
          mAxisMaster => gboxRxMaster,
          mAxisSlave  => gboxRxSlave);
@@ -350,7 +346,7 @@ begin
          SLAVE_AXI_CONFIG_G   => PIX2PGP_FPGA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G  => PIX2PGP_FPGA_AXI_CONFIG_C)
       port map (
-         axisClk     => coreClk,
+         axisClk     => pgpRxClk,
          axisRst     => glblRst,
          sAxisMaster => gboxRxMaster,
          sAxisSlave  => gboxRxSlave,
@@ -371,8 +367,8 @@ begin
          -- General Interface
          asicClk       => asicClk,
          asicRst       => asicRst,
-         coreClk       => coreClk,
-         coreRst       => glblRst,
+         pgpRxClk      => pgpRxClk,
+         pgpRxRst      => glblRst,
          config        => config,
          -- ASIC Control Interface
          asicSro       => asicSro,
@@ -387,7 +383,7 @@ begin
 
    asicMonStatus <= laneMon;
 
-   glblRst <= (coreRst or usrRst) when (RST_POLARITY_G = '1') else
-              (coreRst and not usrRst);
+   glblRst <= (pgpRxRst or usrRst) when (RST_POLARITY_G = '1') else
+              (pgpRxRst and not usrRst);
 
 end rtl;

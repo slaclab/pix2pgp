@@ -40,11 +40,9 @@ entity Pix2PgpLaneRxWrapper is
       LANE_MON_CNT_WIDTH_G   : positive := 16);
    port(
       -- General Interface
-      pgpRxClk        : in  sl;
+      laneClk         : in  sl;
+      laneRst         : in  sl := not(RST_POLARITY_G);
       pgpRxRst        : in  sl := not(RST_POLARITY_G);
-      laneRxRst       : in  sl := not(RST_POLARITY_G);
-      coreClk         : in  sl;
-      coreRst         : in  sl := not(RST_POLARITY_G);
       config          : in  Pix2PgpStreamRxConfigType;
       linkDown        : in  sl;
       -- ASIC Data Lane Interface
@@ -59,7 +57,7 @@ entity Pix2PgpLaneRxWrapper is
       -- Merger Interface
       laneRxMaster    : out AxiStreamMasterType;
       laneRxSlave     : in  AxiStreamSlaveType;
-      -- AXI-Lite Interface (sync'd to coreClk domain)
+      -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType  := AXI_LITE_READ_MASTER_INIT_C;
       axilReadSlave   : out AxiLiteReadSlaveType   := AXI_LITE_READ_SLAVE_INIT_C;
       axilWriteMaster : in  AxiLiteWriteMasterType := AXI_LITE_WRITE_MASTER_INIT_C;
@@ -72,7 +70,7 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal frameMetaDout  : slv(LANERX_META_DWIDTH_C-1 downto 0) := (others => '0');
    signal frameMetaValid : sl := '0';
    signal laneRxFull     : sl := '0';
-   signal laneRxRstDel   : sl := '0';
+   signal laneRxRst      : sl := '0';
    signal postError      : sl := '0';
    signal laneLinkDown   : sl := '0';
    signal monState       : slv(STATE_MON_WIDTH_C-1 downto 0)        := (others => '0');
@@ -93,10 +91,8 @@ begin
          LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G)
       port map(
          -- General Interface
-         pgpRxClk       => pgpRxClk,
-         pgpRxRst       => pgpRxRst,
-         laneRxRst      => laneRxRstDel,
-         coreClk        => coreClk,
+         laneClk        => laneClk,
+         laneRst        => laneRxRst,
          config         => configLane,
          monState       => monState,
          monDin         => monDin,
@@ -124,8 +120,8 @@ begin
             MON_CNT_WIDTH_G => LANE_MON_CNT_WIDTH_G)
          port map(
          -- General Interface
-         coreClk         => coreClk,
-         coreRst         => coreRst,
+         pgpRxClk        => laneClk, -- same as pgpRxClk
+         pgpRxRst        => pgpRxRst,
          -- Lane Interface
          laneDown        => laneLinkDown,
          laneStatus      => status,
@@ -134,7 +130,7 @@ begin
          monDin          => monDin,
          -- Monitoring Output
          laneMon         => laneMon,
-         -- AXI-Lite Interface  (sync'd to coreClk domain)
+         -- AXI-Lite Interface  (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMaster,
          axilReadSlave   => axilReadSlave,
          axilWriteMaster => axilWriteMaster,
@@ -148,7 +144,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => linkDown,
          dout(0) => laneLinkDown);
 
@@ -158,9 +154,9 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
-         din(0)  => laneRxRst,
-         dout(0) => laneRxRstDel);
+         clk     => laneClk,
+         din(0)  => laneRst,
+         dout(0) => laneRxRst);
 
    U_PipelineLanePostError : entity surf.SlvDelay
       generic map (
@@ -168,7 +164,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => lanePostError,
          dout(0) => postError);
 
@@ -178,7 +174,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => config.dropColMisalign,
          dout(0) => configLane.dropColMisalign);
 
@@ -188,7 +184,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => config.realignOnSof,
          dout(0) => configLane.realignOnSof);
 
@@ -198,7 +194,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => config.realignOnDummy,
          dout(0) => configLane.realignOnDummy);
 
@@ -209,7 +205,7 @@ begin
          WIDTH_G        => bitSize(EVAL_DUMMY_MAX_C),
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => coreClk,
+         clk  => laneClk,
          din  => config.dummyMax,
          dout => configLane.dummyMax);
 
@@ -219,7 +215,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => config.laneEnable(LANE_ID_G),
          dout(0) => configLane.laneEnable(LANE_ID_G));
 
@@ -229,7 +225,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => laneMetaRd,
          dout(0) => frameMetaRd);
 
@@ -239,7 +235,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => frameMetaValid,
          dout(0) => status.valid);
 
@@ -249,7 +245,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => laneRxFull,
          dout(0) => status.overflow);
 
@@ -259,7 +255,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => frameMetaDout(LANE_OVEROCC_POS_C),
          dout(0) => status.overOcc);
 
@@ -269,7 +265,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => frameMetaDout(LANE_PAUSE_POS_C),
          dout(0) => status.pause);
 
@@ -279,7 +275,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => frameMetaDout(LANE_PAUSE_ERROR_POS_C),
          dout(0) => status.pauseError);
 
@@ -289,7 +285,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk     => coreClk,
+         clk     => laneClk,
          din(0)  => frameMetaDout(LANE_DEC_ERROR_POS_C),
          dout(0) => status.decError);
 
@@ -300,7 +296,7 @@ begin
          WIDTH_G        => TRGCNT_WIDTH_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => coreClk,
+         clk  => laneClk,
          din  => frameMetaDout(LANE_TRGCNT_POS_C),
          dout => status.trgCnt);
 
@@ -311,7 +307,7 @@ begin
          WIDTH_G        => NUM_OF_COL_MANAGERS_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => coreClk,
+         clk  => laneClk,
          din  => frameMetaDout(LANE_HITMASK_POS_C),
          dout => status.eventHitmask);
 
@@ -322,7 +318,7 @@ begin
          WIDTH_G        => LANERX_FRAME_SIZE_WIDTH_C,
          DELAY_G        => PIPE_STAGES_G)
       port map (
-         clk  => coreClk,
+         clk  => laneClk,
          din  => frameMetaDout(LANE_SIZE_POS_C),
          dout => status.frameSize);
 
@@ -336,8 +332,8 @@ begin
             PIPE_STAGES_G  => PIPE_STAGES_G)
          port map (
             -- Clock and Reset
-            axisClk     => coreClk,
-            axisRst     => coreRst,
+            axisClk     => laneClk,
+            axisRst     => laneRst,
             -- Slave Port
             sAxisMaster => obAxiMaster,
             sAxisSlave  => obAxiSlave,

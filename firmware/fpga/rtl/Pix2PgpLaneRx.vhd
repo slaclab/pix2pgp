@@ -36,10 +36,8 @@ entity Pix2PgpLaneRx is
       LANE_FIFO_ADDR_WIDTH_G : positive := 8);
    port(
       -- General Interface
-      pgpRxClk       : in  sl;
-      pgpRxRst       : in  sl := not(RST_POLARITY_G);
-      laneRxRst      : in  sl := not(RST_POLARITY_G);
-      coreClk        : in  sl;
+      laneClk        : in  sl;
+      laneRst        : in  sl;
       config         : in  Pix2PgpStreamRxConfigType;
       monState       : out slv(STATE_MON_WIDTH_C-1 downto 0);
       monDin         : out slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
@@ -133,9 +131,7 @@ architecture rtl of Pix2PgpLaneRx is
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
 
-   signal axiFifoRst     : sl := not(RST_POLARITY_G);
-   signal axiFifoRstSync : sl := not(RST_POLARITY_G);
-   signal laneRxFifoRst  : sl := not(RST_POLARITY_G);
+   signal axiFifoRst    : sl := not(RST_POLARITY_G);
 
    signal axiFifoMaster : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal axiFifoSlave  : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
@@ -151,76 +147,41 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal laneFifoSlave : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal laneFifoAlmFull     : sl := '0';
-   signal laneFifoFullSync    : sl := '0';
-   signal laneFifoAlmFullSync : sl := '0';
-   signal axiFifoAlmFull      : sl := '0';
+   signal laneFifoAlmFull : sl := '0';
+   signal axiFifoAlmFull  : sl := '0';
 
 begin
 
    -----------------------------
    -- First Buffer Level
    -----------------------------
-   U_SyncRst : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
-      port map (
-         clk     => pgpRxClk,
-         dataIn  => axiFifoRst,
-         dataOut => axiFifoRstSync);
-
-   laneRxFifoRst <= axiFifoRstSync or pgpRxRst;
-
-   U_SyncLaneFifoFull : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
-      port map (
-         clk     => coreClk,
-         dataIn  => laneFifoFull,
-         dataOut => laneFifoFullSync);
-
-   U_SyncLaneFifoAlmFull : entity surf.Synchronizer
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         RST_ASYNC_G    => RST_ASYNC_G)
-      port map (
-         clk     => coreClk,
-         dataIn  => laneFifoAlmFull,
-         dataOut => laneFifoAlmFullSync);
-
    U_LaneRxFifo : entity surf.AxiStreamFifoV2
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,
          RST_ASYNC_G         => RST_ASYNC_G,
          -- FIFO configurations
-         GEN_SYNC_FIFO_G     => false,
          FIFO_ADDR_WIDTH_G   => LANERX_FIFO_ADDR_WIDTH_C,
          -- AXI Stream Port Configurations
          SLAVE_AXI_CONFIG_G  => ASIC_DATA_AXI_CONFIG_C,
          MASTER_AXI_CONFIG_G => ASIC_DATA_AXI_CONFIG_C)
       port map (
          -- Slave Port
-         sAxisClk    => pgpRxClk,
-         sAxisRst    => laneRxFifoRst,
+         sAxisClk    => laneClk,
+         sAxisRst    => axiFifoRst,
          sAxisMaster => pgp4RxMaster,
          sAxisSlave  => laneFifoSlave,
          -- Status Port
          fifoFull    => laneFifoFull,
          -- Master Port
-         mAxisClk    => coreClk,
+         mAxisClk    => laneClk,
          mAxisRst    => axiFifoRst,
          mAxisMaster => rxFifoMaster,
          mAxisSlave  => rxFifoSlave);
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, laneRxRst, rxFifoMaster, axiFifoSlave, config, laneFull, postError) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, config, laneFull, postError) is
 
       -- omnipresent
       variable v : RegType;
@@ -553,7 +514,7 @@ begin
       monDin   <= r.din;
 
       -- Reset
-      if (RST_ASYNC_G = false and laneRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and laneRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -562,11 +523,11 @@ begin
 
    end process comb;
 
-   seq : process (coreClk, laneRxRst) is
+   seq : process (laneClk, laneRst) is
    begin
-      if (RST_ASYNC_G and laneRxRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and laneRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(coreClk) then
+      elsif rising_edge(laneClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;
@@ -587,14 +548,14 @@ begin
          DATA_WIDTH_G    => LANERX_META_DWIDTH_C,
          ADDR_WIDTH_G    => META_FIFO_ADDR_WIDTH_G)
       port map (
-         rst      => laneRxRst,
+         rst      => laneRst,
          -- Write Ports
-         wr_clk   => coreClk,
+         wr_clk   => laneClk,
          wr_en    => r.frameMetaWr,
          din      => r.frameMetaDin,
          full     => frameMetaFull,
          -- Read Ports
-         rd_clk   => coreClk,
+         rd_clk   => laneClk,
          rd_en    => frameMetaRd,
          dout     => frameMetaDout,
          valid    => frameMetaValid);
@@ -614,27 +575,27 @@ begin
          MASTER_AXI_CONFIG_G => PIX2PGP_FPGA_AXI_CONFIG_C)
       port map (
          -- Slave Port
-         sAxisClk    => coreClk,
+         sAxisClk    => laneClk,
          sAxisRst    => axiFifoRst,
          sAxisMaster => axiFifoMaster,
          sAxisSlave  => axiFifoSlave,
          -- Status Port
          fifoFull    => axiFifoFull,
          -- Master Port
-         mAxisClk    => coreClk,
+         mAxisClk    => laneClk,
          mAxisRst    => axiFifoRst,
          mAxisMaster => obAxisMaster,
          mAxisSlave  => obAxisSlave);
 
    -- AXI-Stream FIFO does not have RST_POLARITY_G
-   axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRxRst, not(laneRxRst));
+   axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
    laneFifoAlmFull <= not(laneFifoSlave.tReady);
    axiFifoAlmFull  <= not(axiFifoSlave.tReady);
 
    -- all full and almost-full flags
-   laneFull <= laneFifoFullSync or laneFifoAlmFullSync or axiFifoFull or
-               frameMetaFull    or axiFifoAlmFull;
+   laneFull <= laneFifoFull  or laneFifoAlmFull or axiFifoFull or
+               frameMetaFull or axiFifoAlmFull;
 
    pgp4RxSlave <= laneFifoSlave;
 

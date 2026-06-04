@@ -37,8 +37,8 @@ entity Pix2PgpLaneMon is
       MON_CNT_WIDTH_G : positive := 16);
    port(
       -- General Interface
-      coreClk         : in  sl;
-      coreRst         : in  sl;
+      pgpRxClk        : in  sl;
+      pgpRxRst        : in  sl;
       -- Lane Interface
       laneDown        : in  sl;
       laneStatus      : in  Pix2PgpLaneStatusType;
@@ -47,7 +47,7 @@ entity Pix2PgpLaneMon is
       monDin          : in  slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       -- Monitoring Output
       laneMon         : out Pix2PgpLaneStatusType;
-      -- AXI-Lite Interface (sync'd to coreClk domain)
+      -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
       axilWriteMaster : in  AxiLiteWriteMasterType;
@@ -122,7 +122,7 @@ begin
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => 1)
       port map (
-         clk     => coreClk,
+         clk     => pgpRxClk,
          din(0)  => r.laneValid,
          dout(0) => laneValidDly);
 
@@ -131,13 +131,13 @@ begin
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G)
       port map (
-         clk     => coreClk,
+         clk     => pgpRxClk,
          dataIn  => laneValidDly,
          dataOut => laneMon.valid);
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (axilReadMaster, coreRst, axilWriteMaster, laneValidDly,
+   comb : process (axilReadMaster, pgpRxRst, axilWriteMaster, laneValidDly,
                    laneDown, config, laneStatus, monState, monDin, r) is
 
       variable v      : RegType;
@@ -302,7 +302,7 @@ begin
       laneMon.frameSize    <= r.laneFrameSize;
 
       -- Reset
-      if (RST_ASYNC_G = false and coreRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
          v := REG_INIT_C;
       end if;
 
@@ -311,11 +311,11 @@ begin
 
    end process comb;
 
-   seq : process (coreClk, coreRst) is
+   seq : process (pgpRxClk, pgpRxRst) is
    begin
-      if (RST_ASYNC_G and coreRst = RST_POLARITY_G) then
+      if (RST_ASYNC_G and pgpRxRst = RST_POLARITY_G) then
          r <= REG_INIT_C after TPD_G;
-      elsif rising_edge(coreClk) then
+      elsif rising_edge(pgpRxClk) then
          r <= rin after TPD_G;
       end if;
    end process seq;

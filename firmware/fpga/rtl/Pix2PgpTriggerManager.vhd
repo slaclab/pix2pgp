@@ -38,8 +38,8 @@ entity Pix2PgpTriggerManager is
       -- General Interface
       asicClk       : in  sl;
       asicRst       : in  sl := not(ASIC_RST_POLARITY_G);
-      coreClk       : in  sl;
-      coreRst       : in  sl := not(LOGIC_RST_POLARITY_G);
+      pgpRxClk      : in  sl;
+      pgpRxRst      : in  sl := not(LOGIC_RST_POLARITY_G);
       config        : in  Pix2PgpStreamRxConfigType;
       -- ASIC Control Interface
       asicSro       : in  sl;
@@ -162,7 +162,7 @@ begin
          TPD_G   => TPD_G)
       port map (
          clk     => asicClk,
-         dataIn  => coreRst,
+         dataIn  => pgpRxRst,
          dataOut => asicRxRst);
 
    U_SyncCfgRst : entity surf.Synchronizer
@@ -209,7 +209,7 @@ begin
          wr_en    => r.trgBuffWr,
          din      => trgBuffDin,
          -- Read Ports
-         rd_clk   => coreClk,
+         rd_clk   => pgpRxClk,
          rd_en    => trgBuffRd,
          dout     => trgBuffDout,
          valid    => trgBuffValid);
