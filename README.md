@@ -12,7 +12,7 @@ Neither the name of the Leland Stanford Junior University, SLAC National Acceler
 
 ## Introduction
 
-Pix2PGP is a generic readout core designed to support Detector/Front-End ASICs that feature a sparsified readout scheme.
+Pix2PGP is a configurable readout core for Detector/Front-End ASICs that feature a sparsified readout scheme. It features ASIC RTL for event building within the detection device, FPGA firmware for merging of the multiple ASIC data streams into a single AXI-Stream frame, and Python software for decoding/unpacking of the aforementioned FPGA-originating frame.
 
 For more info:
 
