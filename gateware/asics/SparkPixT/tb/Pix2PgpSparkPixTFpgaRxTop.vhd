@@ -158,8 +158,6 @@ begin
          AXIL_BASE_ADDR_G       => x"0800_0000")
       port map(
          -- General Interface
-         coreClk         => pgpRxClk,
-         coreRst         => rst,
          pgpRxClk        => pgpRxClk,
          pgpRxRst        => rst,
          -- ASIC Domain Interface
@@ -172,7 +170,7 @@ begin
          pgp4RxMaster    => pgp4RxMaster,
          pgp4RxSlave     => pgp4RxSlave,
          pgp4RxLinkUp    => pgp4RxLinkUp,
-         -- AXI-Stream Rx Interface (on coreClk domain)
+         -- AXI-Stream Rx Interface (on pgpRxClk domain)
          asicRxMaster    => asicRxMaster,
          asicRxSlave     => asicRxSlave,
          -- AXI-Lite Interface
