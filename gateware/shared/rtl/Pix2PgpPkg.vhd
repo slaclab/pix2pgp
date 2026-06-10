@@ -296,15 +296,12 @@ package Pix2PgpPkg is
    --
 
    type Pix2PgpStreamRxConfigType is record
-      dropColMisalign  : sl;
       dropLaneMisalign : sl;
-      realignOnSof     : sl;
-      realignOnDummy   : sl;
       autoRealign      : sl;
       rstFpgaTrgCnt    : sl;
       incrSroEnLow     : sl;
       triggerless      : sl;
-      dummyMax         : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
+      almostFullLaneRx : sl;
       fpgaId           : slv(15 downto 0);
       laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
@@ -312,15 +309,12 @@ package Pix2PgpPkg is
 
    constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
       -- flags begin
-      dropColMisalign  => '1',
       dropLaneMisalign => '1',
-      realignOnSof     => toSl(EVAL_SOF_C),
-      realignOnDummy   => '0',
       autoRealign      => '1',
       rstFpgaTrgCnt    => '0',
       incrSroEnLow     => '0',
       triggerless      => '0',
-      dummyMax         => toSlv(EVAL_DUMMY_MAX_C, bitSize(EVAL_DUMMY_MAX_C)),
+      almostFullLaneRx => '0',
       fpgaId           => FPGA_ID_DEFAULT_C,
       laneEnable       => (others => '1'),
       laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C, FPGA_TIMEOUT_LIMIT_WIDTH_C));

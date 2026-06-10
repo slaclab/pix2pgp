@@ -121,7 +121,6 @@ architecture rtl of Pix2PgpAsicStreamRx is
 
    signal mergerBusy     : sl := '0';
    signal laneMetaRd     : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
-   signal lanePostError  : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
    signal pgp4RxLinkDown : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal reqDrop        : sl := '0';
@@ -233,7 +232,6 @@ begin
             pgp4RxMaster    => pgp4RxMaster(lane),
             pgp4RxSlave     => pgp4RxSlave(lane),
             -- Supervisor Interface
-            lanePostError   => lanePostError(lane),
             laneStatus      => laneStatus(lane),
             laneMetaRd      => laneMetaRd(lane),
             -- Monitoring Output Interface
@@ -269,7 +267,6 @@ begin
          laneRst        => laneRst,
          laneStatus     => laneStatus,
          laneMetaRd     => laneMetaRd,
-         lanePostError  => lanePostError,
          -- Trigger Buffer Interface
          trgBuffTrgCnt  => trgBuffTrgCnt,
          trgBuffSroEn   => trgBuffSroEn,

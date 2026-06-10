@@ -109,15 +109,12 @@ begin
       axiSlaveRegister (axilEp, x"400", 0, v.config.fpgaId);
       axiSlaveRegister (axilEp, x"404", 0, v.config.laneTimeout);
       axiSlaveRegister (axilEp, x"408", 0, v.config.laneEnable);
-      axiSlaveRegister (axilEp, x"40C", 0, v.config.dropColMisalign);
-      axiSlaveRegister (axilEp, x"410", 0, v.config.dropLaneMisalign);
-      axiSlaveRegister (axilEp, x"414", 0, v.config.realignOnSof);
-      axiSlaveRegister (axilEp, x"418", 0, v.config.autoRealign);
-      axiSlaveRegister (axilEp, x"41C", 0, v.config.rstFpgaTrgCnt);
-      axiSlaveRegister (axilEp, x"420", 0, v.config.incrSroEnLow);
-      axiSlaveRegister (axilEp, x"424", 0, v.config.triggerless);
-      axiSlaveRegister (axilEp, x"428", 0, v.config.dummyMax);
-      axiSlaveRegister (axilEp, x"42C", 0, v.config.realignOnDummy);
+      axiSlaveRegister (axilEp, x"40C", 0, v.config.dropLaneMisalign);
+      axiSlaveRegister (axilEp, x"410", 0, v.config.autoRealign);
+      axiSlaveRegister (axilEp, x"414", 0, v.config.rstFpgaTrgCnt);
+      axiSlaveRegister (axilEp, x"418", 0, v.config.incrSroEnLow);
+      axiSlaveRegister (axilEp, x"41C", 0, v.config.triggerless);
+      axiSlaveRegister (axilEp, x"420", 0, v.config.almostFullLaneRx);
       --
       axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
       --
