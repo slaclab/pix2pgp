@@ -77,69 +77,73 @@ architecture rtl of Pix2PgpLaneSupervisor is
       DONE_S);
 
    type RegType is record
-      reqDrop     : sl;
-      reqNominal  : sl;
-      reqPause    : sl;
-      dumpData    : sl;
-      mergerBusy  : sl;
-      armTimeout  : sl;
-      popTrg      : sl;
-      evalLanes   : sl;
-      evalError   : sl;
-      trgBuffRd   : sl;
-      trgMisalign : sl;
-      postReset   : sl;
-      laneRst     : sl;
-      laneMetaRd  : sl;
-      laneValid   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneUpCnt   : LaneUpCntArray;
-      laneStatus  : Pix2PgpLaneStatusArray;
-      asicStatus  : Pix2PgpLaneStatusArray;
-      laneUp      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneReady   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneError   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneTimeout : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneEnable  : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      lanePause   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      refTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      fpgaTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0);
-      prvTrgCnt   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      waitCnt     : slv(7 downto 0);
-      monState    : slv(STATE_MON_WIDTH_C-1 downto 0);
-      state       : stateType;
+      reqDrop        : sl;
+      reqNominal     : sl;
+      reqPause       : sl;
+      dumpData       : sl;
+      mergerBusy     : sl;
+      armTimeout     : sl;
+      popTrg         : sl;
+      evalLanes      : sl;
+      evalError      : sl;
+      trgBuffRd      : sl;
+      trgMisalign    : sl;
+      postReset      : sl;
+      inPauseError   : sl;
+      laneRst        : sl;
+      laneMetaRd     : sl;
+      laneValid      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneUpCnt      : LaneUpCntArray;
+      laneStatus     : Pix2PgpLaneStatusArray;
+      asicStatus     : Pix2PgpLaneStatusArray;
+      laneUp         : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneReady      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneError      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneTimeout    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneEnable     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePause      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      lanePauseError : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      refTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
+      prvTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
+      waitCnt        : slv(7 downto 0);
+      monState       : slv(STATE_MON_WIDTH_C-1 downto 0);
+      state          : stateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      reqDrop     => '0',
-      reqNominal  => '0',
-      reqPause    => '0',
-      dumpData    => '0',
-      mergerBusy  => '0',
-      armTimeout  => '0',
-      popTrg      => '0',
-      evalLanes   => '0',
-      evalError   => '0',
-      trgBuffRd   => '0',
-      trgMisalign => '0',
-      postReset   => '0',
-      laneRst     => '1',
-      laneMetaRd  => '0',
-      laneValid   => (others => '0'),
-      laneUpCnt   => (others => (others => '0')),
-      laneStatus  => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
-      asicStatus  => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
-      laneUp      => (others => '0'),
-      laneReady   => (others => '0'),
-      laneError   => (others => '0'),
-      laneTimeout => (others => '0'),
-      laneEnable  => (others => '0'),
-      lanePause   => (others => '0'),
-      refTrgCnt   => (others => '0'),
-      fpgaTrgCnt  => (others => '0'),
-      prvTrgCnt   => (others => '0'),
-      waitCnt     => (others => '0'),
-      monState    => (others => '0'),
-      state       => IDLE_S);
+      reqDrop        => '0',
+      reqNominal     => '0',
+      reqPause       => '0',
+      dumpData       => '0',
+      mergerBusy     => '0',
+      armTimeout     => '0',
+      popTrg         => '0',
+      evalLanes      => '0',
+      evalError      => '0',
+      trgBuffRd      => '0',
+      trgMisalign    => '0',
+      postReset      => '0',
+      inPauseError   => '0',
+      laneRst        => '1',
+      laneMetaRd     => '0',
+      laneValid      => (others => '0'),
+      laneUpCnt      => (others => (others => '0')),
+      laneStatus     => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
+      asicStatus     => (others => DEFAULT_PIX2PGP_LANESTATUS_C),
+      laneUp         => (others => '0'),
+      laneReady      => (others => '0'),
+      laneError      => (others => '0'),
+      laneTimeout    => (others => '0'),
+      laneEnable     => (others => '0'),
+      lanePause      => (others => '0'),
+      lanePauseError => (others => '0'),
+      refTrgCnt      => (others => '0'),
+      fpgaTrgCnt     => (others => '0'),
+      prvTrgCnt      => (others => '0'),
+      waitCnt        => (others => '0'),
+      monState       => (others => '0'),
+      state          => IDLE_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -224,6 +228,9 @@ begin
          if r.evalLanes = '1' or r.evalError = '1' then
             -- determine if a lane is in error or not
             v.laneError(lane) := (r.laneStatus(lane).overflow or r.laneStatus(lane).decError);
+
+            -- map the pause-error bits
+            v.lanePauseError(lane) := r.laneStatus(lane).pauseError;
          end if;
 
          -- activate lane evaluation only in specific parts of the FSM
@@ -381,7 +388,7 @@ begin
                v.asicStatus(lane).decError     := r.laneStatus(lane).decError;
                v.asicStatus(lane).overOcc      := r.laneStatus(lane).overOcc;
                v.asicStatus(lane).pause        := r.laneStatus(lane).pause;
-               v.asicStatus(lane).pauseError   := r.laneStatus(lane).pauseError;
+               v.asicStatus(lane).pauseError   := r.lanePauseError(lane);
                v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
                v.asicStatus(lane).valid        := r.laneValid(lane);
                v.asicStatus(lane).down         := r.laneStatus(lane).down;
@@ -424,6 +431,16 @@ begin
                v.state := DONE_S;
 
                if uOr(r.laneError) = '1' or r.trgMisalign = '1' then
+                  v.state := RESET_S;
+               end if;
+
+               -- raise the in-pause-error flag;
+               -- keep it high until the ASIC gets out of the pause-error state;
+               -- when it gets out, force a reset to realign the receivers
+               if uOr(r.lanePauseError) = '1' and r.inPauseError = '0' then
+                  v.inPauseError := '1';
+               elsif uOr(r.lanePauseError) = '0' and r.inPauseError = '1' then
+                  v.inPauseError := '0';
                   v.state := RESET_S;
                end if;
 
