@@ -49,7 +49,6 @@ entity Pix2PgpLaneRxWrapper is
       pgp4RxMaster    : in  AxiStreamMasterType;
       pgp4RxSlave     : out AxiStreamSlaveType;
       -- Supervisor Interface
-      lanePostError   : in  sl;
       laneStatus      : out Pix2PgpLaneStatusType;
       laneMetaRd      : in  sl;
       -- Monitoring Output Interface
@@ -71,7 +70,6 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal frameMetaValid : sl := '0';
    signal laneRxFull     : sl := '0';
    signal laneRxRst      : sl := '0';
-   signal postError      : sl := '0';
    signal laneLinkDown   : sl := '0';
    signal monState       : slv(STATE_MON_WIDTH_C-1 downto 0)        := (others => '0');
    signal monDin         : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
@@ -100,7 +98,6 @@ begin
          pgp4RxMaster   => pgp4RxMaster,
          pgp4RxSlave    => pgp4RxSlave,
          -- StreamRx Interface
-         postError      => postError,
          frameMetaRd    => frameMetaRd,
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
@@ -158,56 +155,15 @@ begin
          din(0)  => laneRst,
          dout(0) => laneRxRst);
 
-   U_PipelineLanePostError : entity surf.SlvDelay
+   U_PipelineAlmostFullLaneRx : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,
          RST_POLARITY_G => RST_POLARITY_G,
          DELAY_G        => PIPE_STAGES_G)
       port map (
          clk     => laneClk,
-         din(0)  => lanePostError,
-         dout(0) => postError);
-
-   U_PipelineDrop : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => config.dropColMisalign,
-         dout(0) => configLane.dropColMisalign);
-
-   U_PipelineRealignSof : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => config.realignOnSof,
-         dout(0) => configLane.realignOnSof);
-
-   U_PipelineRealignDummy : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => config.realignOnDummy,
-         dout(0) => configLane.realignOnDummy);
-
-   U_PipelineDummyMax : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         WIDTH_G        => bitSize(EVAL_DUMMY_MAX_C),
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk  => laneClk,
-         din  => config.dummyMax,
-         dout => configLane.dummyMax);
+         din(0)  => config.almostFullLaneRx,
+         dout(0) => configLane.almostFullLaneRx);
 
    U_PipelineEnable : entity surf.SlvDelay
       generic map (

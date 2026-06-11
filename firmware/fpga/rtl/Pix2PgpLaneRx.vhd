@@ -45,7 +45,6 @@ entity Pix2PgpLaneRx is
       pgp4RxMaster   : in  AxiStreamMasterType;
       pgp4RxSlave    : out AxiStreamSlaveType;
       -- Supervisor Interface
-      postError      : in  sl;
       frameMetaRd    : in  sl;
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
@@ -67,66 +66,63 @@ architecture rtl of Pix2PgpLaneRx is
       PARSE_COL_METADATA_S,
       PARSE_DATA_S,
       CLOSE_FRAME_S,
-      WAIT_DUMMY_S,
       WR_ERROR_S,
       ERROR_S);
 
    type RegType is record
-      decError       : sl;
-      fifoRst        : sl;
-      frameMetaWr    : sl;
-      din            : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
-      frameMetaDin   : slv(LANERX_META_DWIDTH_C-1 downto 0);
-      inOverOcc      : sl;
-      inPause        : sl;
-      inPauseError   : sl;
-      rxError        : sl;
-      inFull         : sl;
-      laneFull       : sl;
-      dummy          : sl;
-      validHeader    : sl;
-      headerCnt      : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
-      headerData     : slv(HEADER_DWIDTH_C-1 downto 0);
-      waitCnt        : slv(2 downto 0);
-      trgCntHeader   : slv(TRGCNT_WIDTH_C-1 downto 0);
-      activeColCnt   : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
-      eventHitmask   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
-      dummyCnt       : slv(bitSize(EVAL_DUMMY_MAX_C)-1 downto 0);
-      frameSizeCnt   : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
-      dataLenCnt     : slv(7 downto 0);
-      axiFifoMaster  : AxiStreamMasterType;
-      rxFifoSlave    : AxiStreamSlaveType;
-      monState       : slv(STATE_MON_WIDTH_C-1 downto 0);
-      state          : StateType;
+      decError      : sl;
+      fifoRst       : sl;
+      frameMetaWr   : sl;
+      din           : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
+      frameMetaDin  : slv(LANERX_META_DWIDTH_C-1 downto 0);
+      inOverOcc     : sl;
+      inPause       : sl;
+      inPauseError  : sl;
+      rxError       : sl;
+      inFull        : sl;
+      laneFull      : sl;
+      dummy         : sl;
+      validHeader   : sl;
+      headerCnt     : slv(bitSize(HEADER_WIDTH_MULT_C)-1 downto 0);
+      headerData    : slv(HEADER_DWIDTH_C-1 downto 0);
+      waitCnt       : slv(2 downto 0);
+      trgCntHeader  : slv(TRGCNT_WIDTH_C-1 downto 0);
+      activeColCnt  : slv(BITMAX_COL_MANAGERS_C-1 downto 0);
+      eventHitmask  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      frameSizeCnt  : slv(LANERX_FRAME_SIZE_WIDTH_C-1 downto 0);
+      dataLenCnt    : slv(7 downto 0);
+      axiFifoMaster : AxiStreamMasterType;
+      rxFifoSlave   : AxiStreamSlaveType;
+      monState      : slv(STATE_MON_WIDTH_C-1 downto 0);
+      state         : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      decError       => '0',
-      din            => (others => '0'),
-      fifoRst        => not(RST_POLARITY_G),
-      frameMetaWr    => '0',
-      frameMetaDin   => (others => '0'),
-      inOverOcc      => '0',
-      inPause        => '0',
-      inPauseError   => '0',
-      rxError        => '0',
-      inFull         => '0',
-      laneFull       => '0',
-      dummy          => '0',
-      validHeader    => '0',
-      headerCnt      => (others => '0'),
-      headerData     => (others => '0'),
-      waitCnt        => (others => '0'),
-      trgCntHeader   => (others => '0'),
-      activeColCnt   => (others => '0'),
-      eventHitmask   => (others => '0'),
-      dummyCnt       => (others => '0'),
-      frameSizeCnt   => (others => '0'),
-      dataLenCnt     => (others => '0'),
-      axiFifoMaster  => AXI_STREAM_MASTER_INIT_C,
-      rxFifoSlave    => AXI_STREAM_SLAVE_INIT_C,
-      monState       => (others => '0'),
-      state          => WAIT_HEADER_S);
+      decError      => '0',
+      din           => (others => '0'),
+      fifoRst       => not(RST_POLARITY_G),
+      frameMetaWr   => '0',
+      frameMetaDin  => (others => '0'),
+      inOverOcc     => '0',
+      inPause       => '0',
+      inPauseError  => '0',
+      rxError       => '0',
+      inFull        => '0',
+      laneFull      => '0',
+      dummy         => '0',
+      validHeader   => '0',
+      headerCnt     => (others => '0'),
+      headerData    => (others => '0'),
+      waitCnt       => (others => '0'),
+      trgCntHeader  => (others => '0'),
+      activeColCnt  => (others => '0'),
+      eventHitmask  => (others => '0'),
+      frameSizeCnt  => (others => '0'),
+      dataLenCnt    => (others => '0'),
+      axiFifoMaster => AXI_STREAM_MASTER_INIT_C,
+      rxFifoSlave   => AXI_STREAM_SLAVE_INIT_C,
+      monState      => (others => '0'),
+      state         => WAIT_HEADER_S);
 
    signal r   : RegType := REG_INIT_C;
    signal rin : RegType;
@@ -181,7 +177,7 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, config, laneFull, postError) is
+   comb : process (r, laneRst, rxFifoMaster, axiFifoSlave, config, laneFull) is
 
       -- omnipresent
       variable v : RegType;
@@ -243,8 +239,7 @@ begin
       end if;
 
       -- flow control
-      sof := ite(toBoolean(config.realignOnSof), ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,
-                 rxFifoMaster), '1');
+      sof       := ite(EVAL_SOF_C,  ssiGetUserSof(ASIC_DATA_AXI_CONFIG_C,  rxFifoMaster), '1');
       v.rxError := ite(EVAL_EOFE_C, ssiGetUserEofe(ASIC_DATA_AXI_CONFIG_C, rxFifoMaster), '0');
 
       -- flow control check
@@ -291,14 +286,8 @@ begin
             v.headerData((conv_integer(unsigned(r.headerCnt))+1)*PIX2PGP_DATABUS_DWIDTH_C-1 downto
                           conv_integer(unsigned(r.headerCnt))*PIX2PGP_DATABUS_DWIDTH_C) := v.din;
 
-            -- post-error state takes precedence; go look for dummy headers
-            -- if realignOnSof is high though, just wait for an SoF;
-            -- the option exists because SparkPix-Sv1 does not feature conventional frame delimiters
-            if (postError = '1' and config.realignOnSof = '0') or config.realignOnDummy = '1' then
-               v.state := WAIT_DUMMY_S;
-
             -- lane full or decoding error detected
-            elsif r.inFull = '1' or r.decError = '1' then
+            if r.inFull = '1' or r.decError = '1' then
                v.state := WR_ERROR_S;
 
             -- nominal
@@ -380,8 +369,9 @@ begin
 
                -- data checks; inhibit data parsing if in error
                -- 1. check if this column has the same trigger number as the header
+               --    1a. ...and make sure it is not pause-error
                -- 2. check if the data length of this column is within the limits
-               if (metaTrgCnt /= r.trgCntHeader and config.dropColMisalign = '1') or
+               if (metaTrgCnt /= r.trgCntHeader and r.inPauseError = '0') or
                   (metaDataLen >= powerOfTwo(DATALEN_WIDTH_C)) then
                   v.decError := '1';
                   v.state    := WR_ERROR_S;
@@ -439,31 +429,6 @@ begin
 
             end if;
 
-         ----------------------------------------------------------------------
-         -- check for dummies; after a configurable amount, go-to header eval
-         -- don't write dummies to axiFifo;
-         -- reset status FIFO fields if closed the frame
-         when WAIT_DUMMY_S =>
-            v.validHeader := '0';
-
-            -- lane full or decoding error detected
-            if r.inFull = '1' or r.decError = '1' then
-               v.state := WR_ERROR_S;
-
-            elsif rxFifoMaster.tValid = '1' and postError = '0' then
-               tReady := '1';  -- read rxFifo
-
-               if v.dummy = '1' then
-                  v.dummyCnt := r.dummyCnt + 1;
-                  if r.dummyCnt = config.dummyMax then
-                     v.dummyCnt := (others => '0');
-                     v.state    := WAIT_HEADER_S;
-                  end if;
-               else
-                  v.dummyCnt := (others => '0');
-               end if;
-            end if;
-
          ------------------------------------------------------------------------
          -- write the decoding error word into the FIFO
          when WR_ERROR_S =>
@@ -503,9 +468,8 @@ begin
       when PARSE_COL_METADATA_S => v.monState := toSlv(1, STATE_MON_WIDTH_C);
       when PARSE_DATA_S         => v.monState := toSlv(2, STATE_MON_WIDTH_C);
       when CLOSE_FRAME_S        => v.monState := toSlv(3, STATE_MON_WIDTH_C);
-      when WAIT_DUMMY_S         => v.monState := toSlv(4, STATE_MON_WIDTH_C);
-      when WR_ERROR_S           => v.monState := toSlv(5, STATE_MON_WIDTH_C);
-      when ERROR_S              => v.monState := toSlv(6, STATE_MON_WIDTH_C);
+      when WR_ERROR_S           => v.monState := toSlv(4, STATE_MON_WIDTH_C);
+      when ERROR_S              => v.monState := toSlv(5, STATE_MON_WIDTH_C);
       when others               => v.monState := toSlv(7, STATE_MON_WIDTH_C);
       end case;
 
@@ -589,8 +553,8 @@ begin
    -- AXI-Stream FIFO does not have RST_POLARITY_G
    axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
-   laneFifoAlmFull <= not(laneFifoSlave.tReady);
-   axiFifoAlmFull  <= not(axiFifoSlave.tReady);
+   laneFifoAlmFull <= ite(toBoolean(config.almostFullLaneRx), not(laneFifoSlave.tReady), '0');
+   axiFifoAlmFull  <= ite(toBoolean(config.almostFullLaneRx), not(axiFifoSlave.tReady),  '0');
 
    -- all full and almost-full flags
    laneFull <= laneFifoFull  or laneFifoAlmFull or axiFifoFull or

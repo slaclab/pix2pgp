@@ -115,59 +115,39 @@ class Pix2PgpAsicStreamRx(pr.Device):
         ))
 
         addBool(
-            name        = 'DropColumnMisalign',
-            description = 'If True: Lane receiver will drop a frame with uneven trigger counter values from columns within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x40C,
-        )
-
-        addBool(
             name        = 'DropLaneMisalign',
             description = 'If True: Lane Supervisor will drop a frame with uneven trigger counter values from lanes within the frame, and will raise a decoding error. Default (and recommended) is True',
-            offset      = 0x410,
-        )
-
-        addBool(
-            name        = 'RealignOnSof',
-            description = 'Realign on Start-Of-Frame after recovering from Error',
-            offset      = 0x414,
+            offset      = 0x40C,
         )
 
         addBool(
             name        = 'AutoRealign',
             description = 'Only transmit a frame if FpgaTrgCnt = AsicTrgCnt',
-            offset      = 0x418,
+            offset      = 0x410,
         )
 
         addBool(
             name        = 'RstFpgaTrgCnt',
             description = 'Reset the FPGA Trigger Counter',
-            offset      = 0x41C,
+            offset      = 0x414,
         )
 
         addBool(
             name        = 'IncrSroEnLow',
             description = 'Increment the FPGA Trigger Counter even when SRO-enable is low',
-            offset      = 0x420,
+            offset      = 0x418,
         )
 
         addBool(
             name        = 'Triggerless',
             description = 'Ignore SRO/DAQ trigger input and forward data on LaneRx activity only',
-            offset      = 0x424,
+            offset      = 0x41C,
         )
 
-        self.add(pr.RemoteVariable(
-            name         = 'DummyMax',
-            description  = 'Maximum amount of dummy words to align on',
-            offset       = 0x428,
-            bitSize      = 3,
-            mode         = 'RW',
-        ))
-
         addBool(
-            name        = 'RealignOnDummy',
-            description = 'Realing on dummy words instead of SoF',
-            offset      = 0x42C,
+            name        = 'AlmostFullLaneRx',
+            description = 'LaneRx gets full when its FIFOs reach the almost-full threshold',
+            offset      = 0x420,
         )
 
         addBool(

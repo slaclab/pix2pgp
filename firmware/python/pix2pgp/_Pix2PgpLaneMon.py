@@ -33,9 +33,8 @@ class Pix2PgpLaneMon(pr.Device):
                                 1:'PARSE_COL_METADATA_S',
                                 2:'PARSE_DATA_S',
                                 3:'CLOSE_FRAME_S',
-                                4:'WAIT_DUMMY_S',
-                                5:'WR_ERROR_S',
-                                6:'ERROR_S',
+                                4:'WR_ERROR_S',
+                                5:'ERROR_S',
                                 7:'UNDEFINED'}
 
         ###################################################
