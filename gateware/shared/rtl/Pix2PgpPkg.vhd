@@ -70,6 +70,8 @@ package Pix2PgpPkg is
    function powerOfTwo(N: natural) return slv;
    --
    function getDummyFlushWords (wordCnt : slv(BITMAX_DUMMY_C-1 downto 0)) return slv;
+   -- function to generate base addressing for AsicStreamRx
+   function GenBaseBot (addr : slv(31 downto 0)) return integer;
    -- function stolen from numeric_std
    function rightShift (inSlv: slv; count: natural) return slv;
    --
@@ -378,6 +380,18 @@ package body Pix2PgpPkg is
       return result;
 
    end rightShift;
+
+   -- baseBot derived from the lowest set bit of AXIL_BASE_ADDR_G
+   function GenBaseBot(addr : slv(31 downto 0)) return integer is
+      constant defaultVal : integer := 26; -- defaulting to 26 as this used to be the legacy value
+   begin
+
+      for lowBit in 0 to 31 loop
+         if addr(lowBit) = '1' then return lowBit; end if;
+      end loop;
+
+      return defaultVal;
+  end GenBaseBot;
 
    -- ASIC-related
    function rangeToLen (high : integer; low : integer) return integer is
