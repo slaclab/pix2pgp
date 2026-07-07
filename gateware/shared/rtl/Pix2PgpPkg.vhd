@@ -323,9 +323,6 @@ package Pix2PgpPkg is
 
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
 
-   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
-
    -- AXI-Stream configuration
    constant ASIC_DATA_AXI_CONFIG_C : AxiStreamConfigType := (
       TSTRB_EN_C    => false,
