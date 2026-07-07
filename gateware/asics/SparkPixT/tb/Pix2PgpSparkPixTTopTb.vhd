@@ -44,6 +44,7 @@ entity Pix2PgpSparkPixTTopTb is
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
       BENCHMARKING_G            : boolean  := false;
+      BANDWIDTH_STRESS_TEST_G   : boolean  := false;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 16;
       COLMANAGER_DATA_DEPTH_G   : integer  := 8;
       COLMANAGER_STATUS_DEPTH_G : integer  := 8;
@@ -65,7 +66,7 @@ end entity Pix2PgpSparkPixTTopTb;
 
 architecture test of Pix2PgpSparkPixTTopTb is
 
-   constant CLK_PERIOD_SPARSE_C : time := 50.0   ns; -- matrix clock of ASIC
+   constant CLK_PERIOD_SPARSE_C : time := 25.0   ns; -- matrix clock of ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
    constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
    constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
@@ -150,7 +151,7 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
-   constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G;
+   constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
    type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
@@ -185,7 +186,11 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal testDone : boolean := false;
    signal testFail : boolean := false;
 
-   constant CNT_CHECK_TIMEOUT_C : positive := 1000;
+   constant CNT_CHECK_TIMEOUT_C : positive := 2000;
+
+   constant BANDWIDTH_STRESS_HITS_C : positive := 24;
+   constant BANDWIDTH_STRESS_TRG_C  : positive := 1000;
+   constant BANDWIDTH_STRESS_PER_C  : positive := 1000; -- 25us
 
 
 begin
@@ -431,7 +436,7 @@ begin
 ------------------------------------------------------
 ------------------------------------------------------
 ------------------------------------------------------
-GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
+GEN_REGULAR_PROC: if not(BENCHMARKING_G) and not(BANDWIDTH_STRESS_TEST_G) generate
 
   -- Generate the test stimulus
   regularStimulus: process begin
@@ -443,7 +448,7 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
     wait for CLK_PERIOD_SPARSE_C;
       rstCnt <= '1'; -- keep the benchmarking counters in reset
       rst    <= RST_POLARITY_G;
-    wait for CLK_PERIOD_SPARSE_C*25;
+    wait for CLK_PERIOD_SPARSE_C*50;
       rst  <= not(RST_POLARITY_G);
 
     -- Wait for the rst to be released before doing anything else
@@ -454,11 +459,11 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
        end loop;
     end loop;
 
-    wait for CLK_PERIOD_SPARSE_C*400; -- extend wait to align pgp protocol
+    wait for CLK_PERIOD_SPARSE_C*800; -- extend wait to align pgp protocol
       sro <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       sro <= '0';
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -470,19 +475,19 @@ GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
     ----------------------------------------------
     ----------------------------------------------
     ---------------------------------------
-      wait for CLK_PERIOD_SPARSE_C*2;
+      wait for CLK_PERIOD_SPARSE_C*4;
           sro <= '1';
       wait for CLK_PERIOD_SPARSE_C;
           sro <= '0';
     -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        wait for CLK_PERIOD_SPARSE_C*26;
+        wait for CLK_PERIOD_SPARSE_C*52;
           ero <= '1';
         wait for CLK_PERIOD_SPARSE_C;
           ero <= '0';
     -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
 for i in 0 to 12 loop
@@ -694,13 +699,13 @@ for i in 0 to 12 loop
    hitLen(7)(22) <= toSlv(3, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -708,7 +713,7 @@ for i in 0 to 12 loop
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -919,13 +924,13 @@ wait for CLK_PERIOD_SPARSE_C*2;
    hitLen(7)(23) <= toSlv(1, hitLen(0)(0)'length);
 ---------------------------------------
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -933,7 +938,7 @@ wait for CLK_PERIOD_SPARSE_C*2;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -1143,13 +1148,13 @@ wait for CLK_PERIOD_SPARSE_C*2;
    hitLen(7)(22) <= toSlv(2, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(4, hitLen(0)(0)'length);
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -1157,7 +1162,7 @@ wait for CLK_PERIOD_SPARSE_C*2;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(3, hitLen(0)(0)'length);
@@ -1367,13 +1372,13 @@ wait for CLK_PERIOD_SPARSE_C*2;
    hitLen(7)(22) <= toSlv(1, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -1381,7 +1386,7 @@ wait for CLK_PERIOD_SPARSE_C*2;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -1591,13 +1596,13 @@ wait for CLK_PERIOD_SPARSE_C*2;
    hitLen(7)(22) <= toSlv(4, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -1605,7 +1610,7 @@ wait for CLK_PERIOD_SPARSE_C*2;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -1815,13 +1820,13 @@ wait for CLK_PERIOD_SPARSE_C*2;
    hitLen(7)(22) <= toSlv(0, hitLen(0)(0)'length);
    hitLen(7)(23) <= toSlv(2, hitLen(0)(0)'length);
 ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    wait for CLK_PERIOD_SPARSE_C*26;
+    wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
     wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
@@ -1829,7 +1834,7 @@ wait for CLK_PERIOD_SPARSE_C*2;
 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-wait for CLK_PERIOD_SPARSE_C*2;
+wait for CLK_PERIOD_SPARSE_C*4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ---------------------------------------
    hitLen(0)(0) <= toSlv(4, hitLen(0)(0)'length);
@@ -2041,19 +2046,19 @@ wait for CLK_PERIOD_SPARSE_C*2;
    ---------------------------------------
    ---------------------------------------
    ---------------------------------------
-   wait for CLK_PERIOD_SPARSE_C*2;
+   wait for CLK_PERIOD_SPARSE_C*4;
       daqEnable <= '1';
       sro       <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       sro       <= '0';
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*26;
+   wait for CLK_PERIOD_SPARSE_C*52;
       ero <= '1';
    wait for CLK_PERIOD_SPARSE_C;
       ero <= '0';
 
    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   wait for CLK_PERIOD_SPARSE_C*140;
+   wait for CLK_PERIOD_SPARSE_C*280;
 end loop;
 
 
@@ -2094,20 +2099,20 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
 
    wait for CLK_PERIOD_SPARSE_C;
       rst <= RST_POLARITY_G;
-   wait for CLK_PERIOD_SPARSE_C*100;
+   wait for CLK_PERIOD_SPARSE_C*400;
       rst  <= not(RST_POLARITY_G);
 
    -- Wait for the rst to be released before doing anything else
    wait until (rst = not(RST_POLARITY_G));
 
-   wait for CLK_PERIOD_SPARSE_C*2100; -- extend wait to align pgp protocol
+   wait for CLK_PERIOD_SPARSE_C*4200; -- extend wait to align pgp protocol
 
    for i in 0 to OCC_BENCHMARK_COUNT-1 loop
 
-      wait for CLK_PERIOD_SPARSE_C*200;
+      wait for CLK_PERIOD_SPARSE_C*400;
          rstCnt <= '1';
 
-      wait for CLK_PERIOD_SPARSE_C*1;
+      wait for CLK_PERIOD_SPARSE_C*2;
          rstCnt <= '0';
 
          for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -2167,13 +2172,13 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
          report "[INFO]: Done with occ = " & real'image(occArray(i)) & "% !" severity note;
 
 
-      wait for CLK_PERIOD_SPARSE_C*20;
+      wait for CLK_PERIOD_SPARSE_C*40;
          colBusyArray(i)      <= conv_integer(unsigned(colBusyCnt));
          superBusyArray(i)    <= conv_integer(unsigned(superBusyCnt));
          totalLatencyArray(i) <= conv_integer(unsigned(totalLatencyCnt));
          frameSizeArray(i)    <= conv_integer(unsigned(frameSizeCnt));
 
-      wait for CLK_PERIOD_SPARSE_C*20;
+      wait for CLK_PERIOD_SPARSE_C*40;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% colBusyCnt = " & integer'image(colBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% superBusyCnt = " & integer'image(superBusyArray(i)) severity note;
          report "[INFO]: occ = " & real'image(occArray(i)) & "% totalLatencyCnt = " & integer'image(totalLatencyArray(i)) severity note;
@@ -2181,7 +2186,7 @@ GEN_BENCHMARK_PROC: if BENCHMARKING_G generate
 
    end loop;
 
-   wait for CLK_PERIOD_SPARSE_C*100;
+   wait for CLK_PERIOD_SPARSE_C*200;
       report "[INFO]: Done benchmarking! Final results below..." severity note;
 
       for i in 0 to OCC_BENCHMARK_COUNT-1 loop
@@ -2201,6 +2206,49 @@ end generate GEN_BENCHMARK_PROC;
  -------------------------------------------------------------
  -------------------------------------------------------------
  -------------------------------------------------------------
+
+ GEN_BANDWIDTH_STRESS_PROC: if BANDWIDTH_STRESS_TEST_G generate
+ bwidthStressStimulus: process begin
+
+   wait for CLK_PERIOD_SPARSE_C;
+      rst <= RST_POLARITY_G;
+   wait for CLK_PERIOD_SPARSE_C*200;
+      rst  <= not(RST_POLARITY_G);
+
+   -- Wait for the rst to be released before doing anything else
+   wait until (rst = not(RST_POLARITY_G));
+
+   wait for CLK_PERIOD_SPARSE_C*4200; -- extend wait to align pgp protocol
+
+      for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+            hitLen(ser)(col) <= toSlv(BANDWIDTH_STRESS_HITS_C, hitLen(ser)(col)'length);
+         end loop;
+      end loop;
+
+      for i in 0 to BANDWIDTH_STRESS_TRG_C-1 loop
+
+         wait for CLK_PERIOD_SPARSE_C*BANDWIDTH_STRESS_PER_C;
+            sro <= '1';
+
+         wait for CLK_PERIOD_SPARSE_C;
+            sro  <= '0';
+
+      end loop;
+
+      -- do not touch begin
+      wait;
+      -- do not touch end
+
+   end process bwidthStressStimulus;
+
+ end generate GEN_BANDWIDTH_STRESS_PROC;
+
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+
+
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcessAsic : process(sysClk)
