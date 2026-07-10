@@ -107,10 +107,13 @@ package Pix2PgpAsicPkg is
    subtype  META_DATALEN_POS_C is natural range   7 downto 0;
    ------------------------------------------------------------------------------
 
-   -- FPGA-specific
-   -- FPGA receiver needs to widen the data bus by the amount of serializers to cope with bandwidth
-   -- SparkPix-T sets this to a narrower bus for the time being
-   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C/2;
+   -- FPGA receiver needs to widen the data bus cope with bandwidth;
+   -- The default width (PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C) might be too wide;
+   -- too wide -> synthesis or timing closure issues;
+   -- user can choose to introduce a scaling factor here (e.g. *1/2 or *3/4) to make bus narrower;
+   -- user should use a clk for AsicStreamRx that is faster than the PHY clk at all times...
+   -- ...but a narrower FPGA_DATABUS_DWIDTH_C might need an even faster clk to not cause bottleneck
+   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C*(1/2);
 
 end Pix2PgpAsicPkg;
 

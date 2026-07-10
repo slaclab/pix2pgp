@@ -377,6 +377,7 @@ begin
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
+         phyRxClk        => pgpClk,
          sro             => sroFinal,
          daq             => daqEnable,
          rst             => revRst,

@@ -68,13 +68,13 @@ architecture test of Pix2PgpSparkPixTTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 25.0   ns; -- matrix clock of ASIC
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
-   constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
-   constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
+   constant CLK_PERIOD_PGP_RX_C : time := 5.0000 ns; -- internal-to-FPGA
+   constant CLK_PERIOD_SYS_C    : time := 5.3846 ns; -- sysClk (AXI-Stream)
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
-   --constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
+   constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
    --constant AXIS_CONFIG_C : AxiStreamConfigType := RSSI_AXIS_CONFIG_C;
-   constant AXIS_CONFIG_C : AxiStreamConfigType := ssiAxiStreamConfig(16);
+   --constant AXIS_CONFIG_C : AxiStreamConfigType := ssiAxiStreamConfig(16);
 
    signal sparseClk : sl := '0';
    signal pgpClk    : sl := '0';
@@ -152,6 +152,7 @@ architecture test of Pix2PgpSparkPixTTopTb is
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
    constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
+   constant DEFAULT_LANE_FIFO_ADDR_WIDTH_G : positive := ite(BANDWIDTH_STRESS_TEST_G, 8, 11);
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
    type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
@@ -188,9 +189,9 @@ architecture test of Pix2PgpSparkPixTTopTb is
 
    constant CNT_CHECK_TIMEOUT_C : positive := 2000;
 
-   constant BANDWIDTH_STRESS_HITS_C : positive := 24;
+   constant BANDWIDTH_STRESS_HITS_C : positive := 48;
    constant BANDWIDTH_STRESS_TRG_C  : positive := 1000;
-   constant BANDWIDTH_STRESS_PER_C  : positive := 1000; -- 25us
+   constant BANDWIDTH_STRESS_PER_C  : positive := 584; -- ~14.6us
 
 
 begin
@@ -395,12 +396,13 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          NUM_VC_G               => NUM_VC_G,
-         LANE_FIFO_ADDR_WIDTH_G => 11,
+         LANE_FIFO_ADDR_WIDTH_G => DEFAULT_LANE_FIFO_ADDR_WIDTH_G,
          -- IP Integrator AXI Stream Configuration
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
          -- General Interface
          pgpRxClk        => pgpRxClk,
+         phyRxClk        => pgpClk,
          sro             => sroFinal,
          daq             => daqEnable,
          rst             => revRst,

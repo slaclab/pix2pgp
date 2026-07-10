@@ -316,7 +316,7 @@ package Pix2PgpPkg is
       rstFpgaTrgCnt    => '0',
       incrSroEnLow     => '0',
       triggerless      => '0',
-      almostFullLaneRx => '0',
+      almostFullLaneRx => '1',
       fpgaId           => FPGA_ID_DEFAULT_C,
       laneEnable       => (others => '1'),
       laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C, FPGA_TIMEOUT_LIMIT_WIDTH_C));
