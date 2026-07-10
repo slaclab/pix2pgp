@@ -44,6 +44,7 @@ entity Pix2PgpSparkPixSTopTb is
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
       BENCHMARKING_G            : boolean  := false;
+      BANDWIDTH_STRESS_TEST_G   : boolean  := false;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 16;
       COLMANAGER_DATA_DEPTH_G   : integer  := 8;
       COLMANAGER_STATUS_DEPTH_G : integer  := 8;
@@ -67,8 +68,8 @@ architecture test of Pix2PgpSparkPixSTopTb is
 
    constant CLK_PERIOD_SPARSE_C : time := 7.143  ns; -- matrix clock of ASIC (~140 MHz)
    constant CLK_PERIOD_PGP_C    : time := 5.3846 ns; -- also the PHY clock that is sent to ASIC
-   constant CLK_PERIOD_PGP_RX_C : time := 5.3846 ns; -- internal-to-FPGA
-   constant CLK_PERIOD_SYS_C    : time := 6.25   ns; -- sysClk (AXI-Stream)
+   constant CLK_PERIOD_PGP_RX_C : time := 5.0000 ns; -- internal-to-FPGA
+   constant CLK_PERIOD_SYS_C    : time := 5.3846 ns; -- sysClk (AXI-Stream)
    constant REV_RST_POLARITY_C  : sl   := not(RST_POLARITY_G);
 
    --constant AXIS_CONFIG_C : AxiStreamConfigType := PIX2PGP_FPGA_AXI_CONFIG_C;
@@ -146,6 +147,7 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
+   constant DEFAULT_LANE_FIFO_ADDR_WIDTH_G : positive := ite(BANDWIDTH_STRESS_TEST_G, 8, 11);
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
    type IntArrayType  is array (0 to OCC_BENCHMARK_COUNT-1) of integer;
@@ -181,6 +183,10 @@ architecture test of Pix2PgpSparkPixSTopTb is
    signal testFail : boolean := false;
 
    constant CNT_CHECK_TIMEOUT_C : positive := 1000;
+
+   constant BANDWIDTH_STRESS_HITS_C : positive := 48;
+   constant BANDWIDTH_STRESS_TRG_C  : positive := 1000;
+   constant BANDWIDTH_STRESS_PER_C  : positive := 584; -- ~14.6us
 
 begin
 
@@ -371,7 +377,7 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => REV_RST_POLARITY_C,
          NUM_VC_G               => NUM_VC_G,
-         LANE_FIFO_ADDR_WIDTH_G => 11,
+         LANE_FIFO_ADDR_WIDTH_G => DEFAULT_LANE_FIFO_ADDR_WIDTH_G,
          -- IP Integrator AXI Stream Configuration
          AXIS_CONFIG_G          => AXIS_CONFIG_C)
       port map(
@@ -413,7 +419,7 @@ begin
 ------------------------------------------------------
 ------------------------------------------------------
 ------------------------------------------------------
-GEN_REGULAR_PROC: if not(BENCHMARKING_G) generate
+GEN_REGULAR_PROC: if not(BENCHMARKING_G) and not(BANDWIDTH_STRESS_TEST_G) generate
 
      -- Generate the test stimulus
      regularStimulus: process begin
@@ -2109,6 +2115,48 @@ end generate GEN_BENCHMARK_PROC;
  -------------------------------------------------------------
  -------------------------------------------------------------
  -------------------------------------------------------------
+
+ GEN_BANDWIDTH_STRESS_PROC: if BANDWIDTH_STRESS_TEST_G generate
+ bwidthStressStimulus: process begin
+
+   wait for CLK_PERIOD_SPARSE_C;
+      rst <= RST_POLARITY_G;
+   wait for CLK_PERIOD_SPARSE_C*200;
+      rst  <= not(RST_POLARITY_G);
+
+   -- Wait for the rst to be released before doing anything else
+   wait until (rst = not(RST_POLARITY_G));
+
+   wait for CLK_PERIOD_SPARSE_C*4200; -- extend wait to align pgp protocol
+
+      for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+         for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+            hitLen(ser)(col) <= toSlv(BANDWIDTH_STRESS_HITS_C, hitLen(ser)(col)'length);
+         end loop;
+      end loop;
+
+      for i in 0 to BANDWIDTH_STRESS_TRG_C-1 loop
+
+         wait for CLK_PERIOD_SPARSE_C*BANDWIDTH_STRESS_PER_C;
+            sro <= '1';
+
+         wait for CLK_PERIOD_SPARSE_C;
+            sro  <= '0';
+
+      end loop;
+
+      -- do not touch begin
+      wait;
+      -- do not touch end
+
+   end process bwidthStressStimulus;
+
+ end generate GEN_BANDWIDTH_STRESS_PROC;
+
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+ -------------------------------------------------------------
+
 
   -- Process to Monitor AXI Stream and Write to File
   FileWriteProcessAsic : process(sysClk)

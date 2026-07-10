@@ -17,6 +17,7 @@ entity Pix2PgpSparkPixSv2EmuTb is
       PIPELINE_DATA_G           : boolean  := false;
       PIPELINE_STATUS_G         : boolean  := true;
       BENCHMARKING_G            : boolean  := false;
+      BANDWIDTH_STRESS_TEST_G   : boolean  := false;
       COLMANAGER_DATA_DEPTH_G   : integer  := 8;
       COLMANAGER_STATUS_DEPTH_G : integer  := 8;
       TIMEOUT_LIMIT_WIDTH_G     : positive := 12;
@@ -59,6 +60,7 @@ architecture test of Pix2PgpSparkPixSv2EmuTb is
          PIPELINE_DATA_G           => PIPELINE_DATA_G,
          PIPELINE_STATUS_G         => PIPELINE_STATUS_G,
          BENCHMARKING_G            => BENCHMARKING_G,
+         BANDWIDTH_STRESS_TEST_G   => BANDWIDTH_STRESS_TEST_G,
          COLMANAGER_DATA_DEPTH_G   => COLMANAGER_DATA_DEPTH_G,
          COLMANAGER_STATUS_DEPTH_G => COLMANAGER_STATUS_DEPTH_G,
          TIMEOUT_LIMIT_WIDTH_G     => TIMEOUT_LIMIT_WIDTH_G,
