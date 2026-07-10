@@ -155,16 +155,6 @@ begin
          din(0)  => laneRst,
          dout(0) => laneRxRst);
 
-   U_PipelineAlmostFullLaneRx : entity surf.SlvDelay
-      generic map (
-         TPD_G          => TPD_G,
-         RST_POLARITY_G => RST_POLARITY_G,
-         DELAY_G        => PIPE_STAGES_G)
-      port map (
-         clk     => laneClk,
-         din(0)  => config.almostFullLaneRx,
-         dout(0) => configLane.almostFullLaneRx);
-
    U_PipelineEnable : entity surf.SlvDelay
       generic map (
          TPD_G          => TPD_G,

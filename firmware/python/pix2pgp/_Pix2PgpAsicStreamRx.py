@@ -145,12 +145,6 @@ class Pix2PgpAsicStreamRx(pr.Device):
         )
 
         addBool(
-            name        = 'AlmostFullLaneRx',
-            description = 'LaneRx gets full when its FIFOs reach the almost-full threshold',
-            offset      = 0x420,
-        )
-
-        addBool(
             name        = 'UsrRst',
             description = 'Reset Pix2PgpAsicStreamRx',
             offset      = 0x500,
