@@ -113,7 +113,7 @@ package Pix2PgpAsicPkg is
    -- user can choose to introduce a scaling factor here (e.g. *1/2 or *3/4) to make bus narrower;
    -- user should use a clk for AsicStreamRx that is faster than the PHY clk at all times...
    -- ...but a narrower FPGA_DATABUS_DWIDTH_C might need an even faster clk to not cause bottleneck
-   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C*(1/2);
+   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C/2;
 
 end Pix2PgpAsicPkg;
 
