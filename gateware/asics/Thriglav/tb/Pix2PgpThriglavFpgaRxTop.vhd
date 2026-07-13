@@ -60,6 +60,7 @@ entity Pix2PgpThriglavFpgaRxTop is
    port (
       -- General Interface
       pgpRxClk        : in  std_logic;
+      phyRxClk        : in  std_logic;
       sro             : in  std_logic;
       daq             : in  std_logic;
       rst             : in  std_logic := not RST_POLARITY_G;
@@ -125,7 +126,7 @@ begin
        port map(
           -- General Interface
           pgpRxClk     => pgpRxClk,
-          phyRxClk     => pgpRxClk,
+          phyRxClk     => phyRxClk,
           rst          => rst,
           linkReady    => pgp4RxLinkUp(lane),
           -- Pix2Pgp Interface

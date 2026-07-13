@@ -553,8 +553,8 @@ begin
    -- AXI-Stream FIFO does not have RST_POLARITY_G
    axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
 
-   laneFifoAlmFull <= ite(toBoolean(config.almostFullLaneRx), not(laneFifoSlave.tReady), '0');
-   axiFifoAlmFull  <= ite(toBoolean(config.almostFullLaneRx), not(axiFifoSlave.tReady),  '0');
+   laneFifoAlmFull <= not(laneFifoSlave.tReady);
+   axiFifoAlmFull  <= not(axiFifoSlave.tReady);
 
    -- all full and almost-full flags
    laneFull <= laneFifoFull  or laneFifoAlmFull or axiFifoFull or
