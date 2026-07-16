@@ -82,6 +82,7 @@ class AsicData(object):
         self.laneTimeout    = [None] * self.numOfLanes
         self.laneDecError   = [None] * self.numOfLanes
         self.lanePauseError = [None] * self.numOfLanes
+        self.laneFull       = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
         self.frameSize      = [0]    * self.numOfLanes
 
