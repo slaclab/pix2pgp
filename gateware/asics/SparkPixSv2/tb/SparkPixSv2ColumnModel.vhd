@@ -32,7 +32,7 @@ entity SparkPixSv2ColumnModel is
         RST_POLARITY_G  : sl       := '1';
         WAIT_WREN_G     : positive := 4;
         IGNORE_ERO_G    : boolean  := false;
-        MAX_ROW_G       : natural  := 384;
+        MAX_ROW_G       : natural  := 312;
         SER_ID_G        : natural  := 0;
         COL_ID_G        : natural  := 0);
     port (
