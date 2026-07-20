@@ -7,8 +7,8 @@ if { [info exists ::env(SYN_DIR)] } {
 }
 
 # Load the pix2pgp library for this ASIC
-loadSource -lib pix2pgp -dir           "$::DIR_PATH/rtl"
-loadSource -lib pix2pgp -sim_only -dir "$::DIR_PATH/tb"
+loadSource -lib pix2pgp -dir "$::DIR_PATH/rtl"
+loadSource -lib pix2pgp -dir "$::DIR_PATH/tb"
 
 # Load the shared source files
 loadRuckusTcl "$::DIR_PATH/../../shared"
