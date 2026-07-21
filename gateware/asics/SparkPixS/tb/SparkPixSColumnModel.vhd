@@ -139,7 +139,7 @@ comb : process (df_reset_n, r, hitLen, sro, pause) is
          v.hitCnt    := (others => '0');
          v.hitLenCnt := toSlv(1, 16);
 
-         if (r.sro = '1' and v.pause = '0') then
+         if (v.sro = '1' and r.sro = '0' and v.pause = '0') then
             v.sof   := '1';
             v.state := WAIT_WREN_S;
          end if;
