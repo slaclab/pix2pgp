@@ -271,7 +271,7 @@ begin
             if colHitmask(conv_integer(unsigned(r.colSel))) = '0' then
 
                -- check hitmask counter or check if last column in earlier versions
-               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C >= 3) or
+               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
                   (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
                else
@@ -327,7 +327,7 @@ begin
                v.state  := CHECK_HITMASK_S;
                --
                -- check hitmask counter or check if last column in earlier versions
-               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C >= 3) or
+               if (r.arbCnt = r.hitmaskCnt and ASIC_TYPE_C > 3) or
                   (conv_integer(unsigned(r.colSel)) = NUM_OF_COL_MANAGERS_C-1) then
                   v.state  := TX_DUMMY_S;
                else
@@ -358,7 +358,7 @@ begin
 
                   -- only need to transmit one dummy word;
                   -- also emulate behavior of some 64->64 ASICs that TX several dummies
-                  if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C and ASIC_TYPE_C >= 3 then
+                  if PIX2PGP_DATABUS_DWIDTH_C = PGP_DWIDTH_C and ASIC_TYPE_C > 3 then
                      v.sAxisMaster.tLast := '1';
                   end if;
 

@@ -60,14 +60,14 @@ If the VCS simulation runs without any errors, one can go ahead and decode the d
 
 ### firmware/python/pix2pgp/_AsicParameters.py
 
-First, add a new entry in the `asicTypeDict` and `asicParams`. The number must correspond to the value of the `ASIC_TYPE_C` constant that was chosen in `NewAsicPkg.vhd`. Note that `pix2pgpType == 0xFFFF` is reserved for FPGA-generated drop-frames, so `asicType` values are free to start from `0`. If, e.g. the new ASIC type number was `2`:
+First, add a new entry in the `asicTypeDict` and `asicParams`. The number must correspond to the value of the `ASIC_TYPE_C` constant that was chosen in `NewAsicPkg.vhd`. If, e.g. that number was `3`:
 
 ```Python
 
     asicTypeDict = {
-        0: "SparkPixS",
-        1: "SparkPixT",
-        2: "NewAsic"}
+        1: "SparkPixS",
+        2: "SparkPixT",
+        3: "NewAsic"}
 
     asicParams = {
         'SparkPixS': SparkPixSParameters,
