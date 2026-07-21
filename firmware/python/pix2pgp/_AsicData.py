@@ -211,7 +211,8 @@ class AsicData(object):
         # type-checking (both pix2pgp frame and asic-type)
         if _dict['pix2pgpType'] == 0:
             self.streamRxFrame = True
-        elif self.asicType == 0:
+
+        if self.asicType == 0:
             self.dropFrame = True
         elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
             self.typeMismatchErr = True
