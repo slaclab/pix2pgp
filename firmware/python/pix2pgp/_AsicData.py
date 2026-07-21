@@ -208,13 +208,16 @@ class AsicData(object):
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pixpgp":
             self.preambleErr = True
 
-        # type-checking (both pix2pgp frame and asic-type)
-        if _dict['pix2pgpType'] == 0:
+        # type-checking
+        if _dict['pix2pgpType'] == 0xFFFF:
             self.streamRxFrame = True
-        elif self.asicType == 0:
-            self.dropFrame = True
-        elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
-            self.typeMismatchErr = True
+            self.dropFrame     = True
+        elif _dict['pix2pgpType'] == 0:
+            self.streamRxFrame = True
+            self.dropFrame     = False
+
+            if self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
+                self.typeMismatchErr = True
 
         _errorPrint = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
 

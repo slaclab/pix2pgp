@@ -213,6 +213,13 @@ package Pix2PgpPkg is
    constant FPGA_ID_LEN_C      : natural := 16;
    constant FPGA_TRGCNT_LEN_C  : natural := TRGCNT_WIDTH_C;
    --
+   -- pix2pgpType codes
+   -- 0x0000 = AsicStreamRx nominal;
+   -- 0xFFFF = FPGA-generated drop-frame (no header or lane data follow the preamble);
+   --
+   constant PIX2PGP_STREAMRX_DEFAULT_TYPE_C : slv(PIX2PGP_TYPE_LEN_C-1 downto 0) := x"0000";
+   constant PIX2PGP_STREAMRX_DROP_TYPE_C    : slv(PIX2PGP_TYPE_LEN_C-1 downto 0) := x"FFFF";
+   --
    ------------------------------------------------------------------------------
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
