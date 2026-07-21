@@ -42,9 +42,12 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         Parameter dictionary;
         note that headerLen is equal to the number of lanes;
         this is because the header has 8 types of bitmasks/status bits;
-        and each of these types has a length equal to number of lanes
+        and each of these types has a length equal to number of lanes;
+        also contains the type code for different type identifiers
         '''
-        param_dict = {'preambleLen'  : 16,
+        param_dict = {'typeNominal'  : 0x0,
+                      'typeDrop'     : 0xFFFF,
+                      'preambleLen'  : 16,
                       'headerLen'    : self.numOfLanes,
                       'frameSizeLen' : 2,
                       'trailerLen'   : 6}
@@ -94,4 +97,3 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
         trailer_dict = {'pix2pgpId' : (_trailer >>  0) & 0xFFFFFFFFFFFF}
 
         return trailer_dict
-
