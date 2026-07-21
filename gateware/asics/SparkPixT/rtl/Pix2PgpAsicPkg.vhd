@@ -36,7 +36,7 @@ package Pix2PgpAsicPkg is
    constant ASIC_DATABUS_DWIDTH_C : natural := 32; -- data width
 
    -- every ASIC implementation has a specific decimal identifier
-   constant ASIC_TYPE_C : natural := 1; -- SparkPix-T = 1
+   constant ASIC_TYPE_C : natural := 2; -- SparkPix-T = 2
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment
