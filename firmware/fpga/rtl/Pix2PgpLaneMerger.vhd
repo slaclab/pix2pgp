@@ -57,8 +57,6 @@ end Pix2PgpLaneMerger;
 
 architecture rtl of Pix2PgpLaneMerger is
 
-   constant ASIC_STREAMRX_FRAME_TYPE_C : natural := 0;
-
    type StateType is (
       IDLE_S,
       TX_PREAMBLE_S,
@@ -78,6 +76,7 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
+      pix2pgpType  : slv(PIX2PGP_TYPE_LEN_C-1 downto 0);
       -- AXI-Stream
       obAxiMaster  : AxiStreamMasterType;
       laneRxSlaves : AxiStreamSlaveArray(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -96,6 +95,7 @@ architecture rtl of Pix2PgpLaneMerger is
       inPause      => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
+      pix2pgpType  => PIX2PGP_STREAMRX_DEFAULT_TYPE_C,
       -- AXI-Stream
       obAxiMaster  => AXI_STREAM_MASTER_INIT_C,
       laneRxSlaves => (others => AXI_STREAM_SLAVE_INIT_C),
@@ -186,8 +186,7 @@ begin
          laneValid(lane)      := asicStatus(lane).valid;
       end loop;
 
-      preamble := fpgaPreambleMap(PIX2PGP_ID_C,
-                                  toSlv(ASIC_STREAMRX_FRAME_TYPE_C, PIX2PGP_TYPE_LEN_C),
+      preamble := fpgaPreambleMap(PIX2PGP_ID_C, r.pix2pgpType,
                                   r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
                                   config.fpgaId, fpgaTrgCnt);
 
@@ -205,17 +204,18 @@ begin
       -------------------------------------------------------------------------
          -- wait for a request signal
          when IDLE_S =>
-            v.busy     := '0';
-            v.asicType := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.busy        := '0';
+            v.asicType    := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
+            v.pix2pgpType := PIX2PGP_STREAMRX_DEFAULT_TYPE_C;
 
             if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
 
                v.state := TX_PREAMBLE_S;
 
-               -- override designated asicType with the drop-trigger type identifier;
+               -- override designated pix2pgpType with the drop-frame type identifier;
                -- will transmit preamble and then trailer (in next state)
                if r.reqDrop = '1' and r.inPause = '0' then
-                  v.asicType := toSlv(0, ASIC_TYPE_LEN_C);
+                  v.pix2pgpType := PIX2PGP_STREAMRX_DROP_TYPE_C;
                end if;
 
                -- extreme corner-case; need to close the axi-frame;

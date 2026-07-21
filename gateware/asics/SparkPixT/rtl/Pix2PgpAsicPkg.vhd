@@ -35,8 +35,8 @@ package Pix2PgpAsicPkg is
    constant NUM_OF_SERIALIZERS_C  : natural :=  8; -- number of serializers per-ASIC
    constant ASIC_DATABUS_DWIDTH_C : natural := 32; -- data width
 
-   -- every ASIC implementation has a specific decimal identifier; no ASIC should be = 0
-   constant ASIC_TYPE_C : natural := 2; -- SparkPix-T = 2
+   -- every ASIC implementation has a specific decimal identifier
+   constant ASIC_TYPE_C : natural := 1; -- SparkPix-T = 1
 
    -- if set to True:
    -- overOcc signal causes trigger counter to increment

@@ -15,10 +15,10 @@ class AsicParameterBase:
     * a asicParamExtract() method, same as this base class
     '''
     asicTypeDict = {
-        1: "SparkPixS",
-        2: "SparkPixT",
-        3: "Thriglav",
-        4: "SparkPixSv2"}
+        0: "SparkPixS",
+        1: "SparkPixT",
+        2: "Thriglav",
+        3: "SparkPixSv2"}
 
     @classmethod
     def setParams(self):

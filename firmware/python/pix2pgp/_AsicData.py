@@ -204,17 +204,26 @@ class AsicData(object):
         self.fpgaId     = _dict['fpgaId']
         self.fpgaTrgCnt = _dict['fpgaTrgCnt']
 
-        # error-checking
+        self.streamRxFrame = False
+        self.dropFrame     = False
+        self.preambleErr   = False
+
+        # first check the preamble...
         if pix2pgp.Tools.toAscii(_dict['pix2pgpId']) != "pixpgp":
             self.preambleErr = True
 
-        # type-checking (both pix2pgp frame and asic-type)
-        if _dict['pix2pgpType'] == 0:
-            self.streamRxFrame = True
+        else:
 
-        if self.asicType == 0:
-            self.dropFrame = True
-        elif self.asicType != self.asicParams.asicParamExtract()['asicTypeId']:
+            # then the type...
+            if _dict['pix2pgpType'] == self.fpgaDataFormat.fpgaParamExtract()['typeDrop']:
+                self.streamRxFrame = True
+                self.dropFrame     = True
+            elif _dict['pix2pgpType'] == self.fpgaDataFormat.fpgaParamExtract()['typeNominal']:
+                self.streamRxFrame = True
+
+        if (self.streamRxFrame and not self.dropFrame and
+            self.asicType != self.asicParams.asicParamExtract()['asicTypeId']):
+
             self.typeMismatchErr = True
 
         _errorPrint = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
@@ -239,6 +248,9 @@ class AsicData(object):
 
             if self.dropFrame:
                 pix2pgp.Tools.printWarning('Dropped Frame')
+
+        if not(self.preambleErr) and not(self.streamRxFrame) and not(self.dropFrame):
+            pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
     #################################################################
 
     #################################################################
