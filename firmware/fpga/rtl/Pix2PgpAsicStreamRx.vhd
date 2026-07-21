@@ -38,7 +38,6 @@ entity Pix2PgpAsicStreamRx is
       ASIC_ID_G              : natural  := 0;
       LANE_MON_GEN_G         : boolean  := false;
       LANE_MON_CNT_WIDTH_G   : positive := 20;
-      LANE_PIPE_STAGES_G     : natural  := 1;
       TRG_FIFO_ADDR_WIDTH_G  : positive := 6;
       META_FIFO_ADDR_WIDTH_G : positive := 6;
       LANE_FIFO_ADDR_WIDTH_G : positive := 9;
@@ -216,7 +215,6 @@ begin
             RST_ASYNC_G            => RST_ASYNC_G,
             RST_POLARITY_G         => RST_POLARITY_G,
             LANE_ID_G              => lane,
-            PIPE_STAGES_G          => LANE_PIPE_STAGES_G,
             META_FIFO_ADDR_WIDTH_G => META_FIFO_ADDR_WIDTH_G,
             LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G,
             LANE_MON_GEN_G         => LANE_MON_GEN_G,

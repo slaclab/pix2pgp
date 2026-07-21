@@ -152,7 +152,6 @@ begin
          RST_ASYNC_G            => false,
          RST_POLARITY_G         => RST_POLARITY_G,
          ASIC_ID_G              => 0,
-         LANE_PIPE_STAGES_G     => 1,
          TRG_FIFO_ADDR_WIDTH_G  => 6,
          META_FIFO_ADDR_WIDTH_G => 6,
          LANE_FIFO_ADDR_WIDTH_G => LANE_FIFO_ADDR_WIDTH_G,
