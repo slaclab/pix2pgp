@@ -46,7 +46,7 @@ entity Pix2PgpLaneMon is
       monState        : in  slv(STATE_MON_WIDTH_C-1 downto 0);
       monDin          : in  slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       -- Monitoring Output
-      laneMon         : out Pix2PgpLaneStatusType;
+      laneMonOut      : out Pix2PgpLaneStatusType;
       -- AXI-Lite Interface (sync'd to pgpRxClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
@@ -58,13 +58,12 @@ architecture rtl of Pix2PgpLaneMon is
 
    type HitmaskCntArray is array (natural range NUM_OF_COL_MANAGERS_C-1 downto 0) of slv(MON_CNT_WIDTH_G-1 downto 0);
 
-   signal laneValidDly : sl := '0';
-
    type RegType is record
       cntRst          : sl;
       laneValid       : sl;
       laneDown        : sl;
       laneStatus      : Pix2PgpLaneStatusType;
+      laneMon         : Pix2PgpLaneStatusType;
       laneDecError    : sl;
       laneOverOcc     : sl;
       lanePause       : sl;
@@ -81,6 +80,8 @@ architecture rtl of Pix2PgpLaneMon is
       lanePauseCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
       laneEventCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
       colHitmaskCnt   : HitmaskCntArray;
+      monState        : slv(STATE_MON_WIDTH_C-1 downto 0);
+      monDin          : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0);
       -- AXI-Lite
       readSlave       : AxiLiteReadSlaveType;
       writeSlave      : AxiLiteWriteSlaveType;
@@ -91,6 +92,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneValid       => '0',
       laneDown        => '0',
       laneStatus      => DEFAULT_PIX2PGP_LANESTATUS_C,
+      laneMon         => DEFAULT_PIX2PGP_LANESTATUS_C,
       laneDecError    => '0',
       laneOverOcc     => '0',
       lanePause       => '0',
@@ -107,6 +109,8 @@ architecture rtl of Pix2PgpLaneMon is
       lanePauseCnt    => (others => '0'),
       laneEventCnt    => (others => '0'),
       colHitmaskCnt   => (others => (others => '0')),
+      monState        => (others => '0'),
+      monDin          => (others => '0'),
       -- AXI-Lite
       readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
       writeSlave      => AXI_LITE_WRITE_SLAVE_INIT_C);
@@ -159,6 +163,10 @@ begin
       -- Defaults
       v.cntRst    := '0';
       v.laneDown  := laneDown;
+
+      -- Register the status readback of the associated lane
+      v.monState := monState;
+      v.monDin   := monDin;
 
       -- Register the lane status bus
       v.laneStatus := laneStatus;
@@ -276,8 +284,8 @@ begin
       axiSlaveRegisterR(axilEp, x"B0C", 0, r.laneTrgCnt);
       axiSlaveRegisterR(axilEp, x"B10", 0, r.laneHitmask);
       axiSlaveRegisterR(axilEp, x"B14", 0, r.laneFrameSize);
-      axiSlaveRegisterR(axilEp, x"B18", 0, monDin);
-      axiSlaveRegisterR(axilEp, x"B20", 0, monState);
+      axiSlaveRegisterR(axilEp, x"B18", 0, r.monDin);
+      axiSlaveRegisterR(axilEp, x"B20", 0, r.monState);
       --
       axiSlaveRegisterR(axilEp, x"C00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
@@ -301,6 +309,8 @@ begin
       laneMon.eventHitmask <= r.laneHitmask;
       laneMon.frameSize    <= r.laneFrameSize;
 
+      laneMonOut <= laneMon;
+
       -- Reset
       if (RST_ASYNC_G = false and pgpRxRst = RST_POLARITY_G) then
          v := REG_INIT_C;
@@ -321,5 +331,7 @@ begin
    end process seq;
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
+
+   -- placeholder for trigger throttling instance
 
 end rtl;

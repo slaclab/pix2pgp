@@ -120,7 +120,7 @@ begin
          monState        => monState,
          monDin          => monDin,
          -- Monitoring Output
-         laneMon         => laneMon,
+         laneMonOut      => laneMon,
          -- AXI-Lite Interface  (sync'd to pgpRxClk domain)
          axilReadMaster  => axilReadMaster,
          axilReadSlave   => axilReadSlave,
