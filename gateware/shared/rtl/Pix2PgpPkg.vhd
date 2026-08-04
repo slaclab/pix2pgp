@@ -226,33 +226,33 @@ package Pix2PgpPkg is
    -- 8 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
    --           laneFull,     laneTimeout, laneDown,  laneValid
    ------------------------------------------------------------------------------
-   constant FPGA_HEADER_FIELDS_C   : natural := 8;
-   constant FPGA_HEADER_LEN_C      : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
-   constant FPGA_HEADER_STRADDLE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
+   constant FPGA_HEADER_FIELDS_C : natural := 8;
+   constant FPGA_HEADER_LEN_C    : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
+   constant FPGA_HEADER_STRIDE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
                                                                    NUM_OF_SERIALIZERS_C);
    ------------------------------------------------------------------------------
    subtype FPGA_LANERX_DEC_ERROR_POS_C   is natural range  FPGA_HEADER_LEN_C-1 downto
-                                             FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRADDLE_C;
+                                             FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRIDE_C;
 
-   subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*7-1 downto
-                                             FPGA_HEADER_STRADDLE_C*6;
+   subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRIDE_C*7-1 downto
+                                             FPGA_HEADER_STRIDE_C*6;
 
-   subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*6-1 downto
-                                             FPGA_HEADER_STRADDLE_C*5;
+   subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRIDE_C*6-1 downto
+                                             FPGA_HEADER_STRIDE_C*5;
 
-   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRADDLE_C*5-1 downto
-                                             FPGA_HEADER_STRADDLE_C*4;
+   subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRIDE_C*5-1 downto
+                                             FPGA_HEADER_STRIDE_C*4;
 
-   subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*4-1 downto
-                                             FPGA_HEADER_STRADDLE_C*3;
+   subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRIDE_C*4-1 downto
+                                             FPGA_HEADER_STRIDE_C*3;
 
-   subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRADDLE_C*3-1 downto
-                                             FPGA_HEADER_STRADDLE_C*2;
+   subtype FPGA_LANERX_TIMEOUT_POS_C     is natural range  FPGA_HEADER_STRIDE_C*3-1 downto
+                                             FPGA_HEADER_STRIDE_C*2;
 
-   subtype FPGA_LANERX_DOWN_POS_C        is natural range  FPGA_HEADER_STRADDLE_C*2-1 downto
-                                             FPGA_HEADER_STRADDLE_C;
+   subtype FPGA_LANERX_DOWN_POS_C        is natural range  FPGA_HEADER_STRIDE_C*2-1 downto
+                                             FPGA_HEADER_STRIDE_C;
 
-   subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRADDLE_C*1-1 downto 0;
+   subtype FPGA_LANERX_VALID_POS_C       is natural range  FPGA_HEADER_STRIDE_C*1-1 downto 0;
    ------------------------------------------------------------------------------
 
    -- trailer is fixed; contains the pix2pgp identifier string
