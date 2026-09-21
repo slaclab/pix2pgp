@@ -1,0 +1,257 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPGA Receiver Architecture &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Frame Format" href="frame_format.html" />
+    <link rel="prev" title="Data-Flow and Corner Cases" href="flow_control.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="top_level.html">Top-Level Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_core.html">ASIC Core Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">FPGA Receiver Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lane-receiver-lanerx">Lane Receiver (LaneRx)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lane-monitoring">Lane Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#trigger-buffering">Trigger Buffering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lane-supervision">Lane Supervision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lane-merger">Lane Merger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="frame_format.html">Data Frame Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_implementations.html">ASIC Implementations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture</a></li>
+      <li class="breadcrumb-item active">FPGA Receiver Architecture</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Architecture/fpga_receiver.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fpga-receiver-architecture">
+<span id="architecture-fpga-receiver"></span><h1>FPGA Receiver Architecture<a class="headerlink" href="#fpga-receiver-architecture" title="Link to this heading"></a></h1>
+<p>The Pix2PGP FPGA receiver takes the per-lane frames coming off the
+ASIC’s serial links, checks each of them for integrity, and merges
+them into one consolidated frame per trigger. Its internal structure
+deliberately mirrors the ASIC core:</p>
+<ul class="simple">
+<li><p>Per-lane receivers (<code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>) sit where the Column Managers sat on
+the ASIC side</p></li>
+<li><p>A Lane Supervisor sits where the Column Supervisor sat</p></li>
+<li><p>A Lane Merger sits where the Arbiter sat</p></li>
+</ul>
+<p>Unlike the ASIC core, the FPGA receiver is <strong>not trigger-agnostic</strong>:
+it also buffers the <code class="docutils literal notranslate"><span class="pre">SRO</span></code> triggers forwarded to the front-end, so it
+can maintain the one-to-one trigger-to-frame mapping that the LCLS-II
+DAQ infrastructure expects. The receiver additionally exposes an
+<strong>AXI-Lite</strong> interface for configuration and status read-back.</p>
+<p>The main source files live under <code class="docutils literal notranslate"><span class="pre">firmware/fpga/rtl/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicStreamRx.vhd</span></code>    — top level of the FPGA receiver for
+one ASIC</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneRxWrapper.vhd</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneRx.vhd</span></code>          — see <a class="reference internal" href="#architecture-fpga-lane-rx"><span class="std std-ref">Lane Receiver (LaneRx)</span></a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMon.vhd</span></code>         — per-lane statistics for online
+monitoring / calibration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneSupervisor.vhd</span></code>  — cross-lane orchestration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMerger.vhd</span></code>      — final frame assembly</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpTriggerManager.vhd</span></code>  — SRO / DAQ trigger buffering</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpAxiLiteManager.vhd</span></code>  — AXI-Lite register access</p></li>
+</ul>
+<section id="lane-receiver-lanerx">
+<span id="architecture-fpga-lane-rx"></span><h2>Lane Receiver (LaneRx)<a class="headerlink" href="#lane-receiver-lanerx" title="Link to this heading"></a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> instance is tied to one PGP4 receiver core. It parses
+the AXI-Stream from the decoder, buffers the frame, and checks its
+integrity.</p>
+<p>Like the Column Manager on the ASIC side, <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> uses a <strong>dual-FIFO
+architecture</strong> plus a small FSM that inspects every field of the
+inbound frame:</p>
+<ul class="simple">
+<li><p>The <strong>header</strong> is registered first. The header carries:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">OverOcc</span></code>, <code class="docutils literal notranslate"><span class="pre">Pause</span></code>, <code class="docutils literal notranslate"><span class="pre">Pause-Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Timeout</span></code>, <code class="docutils literal notranslate"><span class="pre">Column</span>
+<span class="pre">FIFO</span> <span class="pre">Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Dummy</span> <span class="pre">Header</span></code> flags</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Column</span> <span class="pre">Hitmask</span></code> — one bit per Column Manager in the source ASIC
+core; high if that Column recorded hits</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> — for the current event</p></li>
+</ul>
+</li>
+<li><p>The <strong>payload</strong> is then streamed into the <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> Data FIFO</p></li>
+<li><p>On successful decoding, the header metadata plus the
+internally-computed frame length are written into the <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>
+Status FIFO, indicating event close-out for that lane</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> instance is tied to a <strong>GT (GigaBit Transceiver)</strong>
+receiver, which is a hard block physically fixed to a specific area
+of the FPGA die. It is therefore important to <strong>pipeline</strong> the
+AXI-Stream output of each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> as it is driven to the shared
+Lane Merger. Relevant generics: <code class="docutils literal notranslate"><span class="pre">PIPELINE_DATA_G</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PIPELINE_STATUS_G</span></code>, <code class="docutils literal notranslate"><span class="pre">ARB_DOUT_PIPE_G</span></code>, <code class="docutils literal notranslate"><span class="pre">DATAFIFO_PIPE_G</span></code>,
+<code class="docutils literal notranslate"><span class="pre">STATUSFIFO_PIPE_G</span></code>.</p>
+</div>
+</section>
+<section id="lane-monitoring">
+<h2>Lane Monitoring<a class="headerlink" href="#lane-monitoring" title="Link to this heading"></a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> is accompanied by a <code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMon</span></code> instance that
+gathers per-lane statistics based on the received frame metadata.
+These statistics are exposed via AXI-Lite and serve two main
+use-cases:</p>
+<ul class="simple">
+<li><p><strong>Fast pixel calibration (trimming)</strong> — the user can activate a
+single pixel per column and read back the per-column hit counts
+(accumulated from the Column Hitmask) directly from registers,
+avoiding a full frame decode round-trip through the back-end
+software. Register-based read-back is much faster than routing
+every frame through the decoder just for calibration</p></li>
+<li><p><strong>Real-time data-flow management</strong> — an external logic monitors
+occupancy trends and implements <strong>trigger throttling</strong> if excessive
+per-event hit volumes are detected, so as to prevent Pause-Error
+conditions before they happen</p></li>
+</ul>
+</section>
+<section id="trigger-buffering">
+<h2>Trigger Buffering<a class="headerlink" href="#trigger-buffering" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpTriggerManager</span></code> maintains a buffer of trigger information
+tied to each event. Two trigger types are tracked, following the
+established LCLS data-management scheme:</p>
+<ul class="simple">
+<li><p><strong>Run trigger</strong> — translates into <code class="docutils literal notranslate"><span class="pre">SRO</span></code> mediated to the
+front-end, initiating pixel readout</p></li>
+<li><p><strong>DAQ trigger</strong> — indicates that the LCLS back-end expects a data
+frame for that event. If absent, frames are discarded at the FPGA
+receiver level and not transmitted downstream</p></li>
+</ul>
+<p>For flexibility, the receiver can also be configured to run
+<strong>trigger-less</strong>, initiating readout solely on lane activity — useful
+for standalone testing and calibration.</p>
+</section>
+<section id="lane-supervision">
+<h2>Lane Supervision<a class="headerlink" href="#lane-supervision" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneSupervisor</span></code> monitors metadata from every <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>. Its
+job is to keep exactly one consolidated Pix2PGP frame going out per
+trigger under all conditions:</p>
+<ul class="simple">
+<li><p><strong>Nominal operation</strong> — merges one frame from each lane into the
+final Pix2PGP frame, one event per merger cycle</p></li>
+<li><p><strong>Pause fragments</strong> — when a lane frame arrives with the <code class="docutils literal notranslate"><span class="pre">Pause</span></code>
+bit set, the Supervisor knows more fragments from that lane are
+still to come and keeps the event open until a frame with the
+<code class="docutils literal notranslate"><span class="pre">Pause</span></code> bit cleared arrives, then closes and transmits the
+consolidated event</p></li>
+<li><p><strong>Error conditions</strong> — on ASIC frame decoding failures, <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>
+FIFO overflow, or unstable physical links, the Supervisor takes
+protective actions:</p>
+<ul>
+<li><p>Disabling individual lanes</p></li>
+<li><p>Resetting the entire receiver core</p></li>
+<li><p>Transmitting <strong>drop-frames</strong> to the back-end until the receiver
+returns to an idle state (see <a class="reference internal" href="frame_format.html#architecture-frame-format"><span class="std std-ref">Data Frame Format</span></a>)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="lane-merger">
+<h2>Lane Merger<a class="headerlink" href="#lane-merger" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMerger</span></code> performs the final frame assembly. Driven by
+the Lane Supervisor, it emits the outbound Pix2PGP frame (preamble,
+header, per-lane lengths, lane data, trailer — see
+<a class="reference internal" href="frame_format.html#architecture-frame-format"><span class="std std-ref">Data Frame Format</span></a>) over AXI-Stream to the back-end.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="flow_control.html" class="btn btn-neutral float-left" title="Data-Flow and Corner Cases" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="frame_format.html" class="btn btn-neutral float-right" title="Data Frame Format" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,300 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASIC Core Architecture &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data-Flow and Corner Cases" href="flow_control.html" />
+    <link rel="prev" title="Top-Level Overview" href="top_level.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="top_level.html">Top-Level Overview</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ASIC Core Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#handshaking-interface">Handshaking Interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#column-manager">Column Manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#column-supervisor">Column Supervisor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#arbiter">Arbiter</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpga_receiver.html">FPGA Receiver Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frame_format.html">Data Frame Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_implementations.html">ASIC Implementations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture</a></li>
+      <li class="breadcrumb-item active">ASIC Core Architecture</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Architecture/asic_core.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="asic-core-architecture">
+<span id="architecture-asic-core"></span><h1>ASIC Core Architecture<a class="headerlink" href="#asic-core-architecture" title="Link to this heading"></a></h1>
+<p>The Pix2PGP ASIC core is comprised of three main module types:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#architecture-column-manager"><span class="std std-ref">Column Manager</span></a> — one instance per data source
+(typically per pixel column); accepts data words and event delimiters
+from the ASIC User Logic and buffers them until the event closes</p></li>
+<li><p><a class="reference internal" href="#architecture-column-supervisor"><span class="std std-ref">Column Supervisor</span></a> — one instance per core;
+orchestrates readout by monitoring the Status Bus of every Column
+Manager</p></li>
+<li><p><a class="reference internal" href="#architecture-arbiter"><span class="std std-ref">Arbiter</span></a> — one instance per core; drains the Data
+FIFOs and assembles the outbound AXI-Stream frame</p></li>
+</ul>
+<p>The core operates across two clock domains (see
+<a class="reference internal" href="top_level.html#architecture-top-level"><span class="std std-ref">Top-Level Overview</span></a>). Most logic lives on the PGP / Serializer
+clock; only the write-side of each Column Manager FIFO runs on the User
+Logic clock.</p>
+<section id="handshaking-interface">
+<h2>Handshaking Interface<a class="headerlink" href="#handshaking-interface" title="Link to this heading"></a></h2>
+<p>Between the User Logic (data source) and each Column Manager, four
+groups of signals are exchanged:</p>
+<ul class="simple">
+<li><p><strong>Data Bus / wrEn</strong> — data flow into Pix2PGP. <code class="docutils literal notranslate"><span class="pre">wrEn</span></code> is the
+write-enable strobe issued alongside a valid data word on the Data
+Bus. Data widths are ASIC-specific; see
+<a class="reference internal" href="asic_implementations.html#architecture-asic-implementations"><span class="std std-ref">ASIC Implementations</span></a></p></li>
+<li><p><strong>SoF / EoF / OverOcc</strong> — event delimiters driven by the User Logic:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">SoF</span></code> (Start-of-Frame) opens a new event</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EoF</span></code> (End-of-Frame) closes the current event nominally</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OverOcc</span></code> (Over-Occupancy) closes the current event and opens the
+next one on the same cycle. See <a class="reference internal" href="flow_control.html#flow-over-occupancy"><span class="std std-ref">Over-Occupancy</span></a></p></li>
+</ul>
+</li>
+<li><p><strong>Pause</strong> — back-pressure driven from Pix2PGP to the User Logic.
+Asserted when either the Data FIFO or the Status FIFO of the Column
+Manager reaches its almost-full capacity threshold. See <a class="reference internal" href="flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a></p></li>
+<li><p><strong>busy</strong> — output from Pix2PGP indicating that the Column Manager is
+currently mid-event</p></li>
+</ul>
+</section>
+<section id="column-manager">
+<span id="architecture-column-manager"></span><h2>Column Manager<a class="headerlink" href="#column-manager" title="Link to this heading"></a></h2>
+<p>Each Column Manager interfaces one data-generating User Logic instance
+with the rest of the Pix2PGP core. It contains:</p>
+<ul class="simple">
+<li><p>A <strong>Data FIFO</strong> (dual-clock) that buffers the <code class="docutils literal notranslate"><span class="pre">wrEn</span></code>-strobed data
+words. Its output drives the Column’s Data Bus</p></li>
+<li><p>A <strong>Status FIFO</strong> (dual-clock) that buffers a single per-event
+metadata word. Its output drives the Column’s Status Bus</p></li>
+<li><p>A <strong>monitoring FSM</strong> on the User Logic clock domain that reacts to
+<code class="docutils literal notranslate"><span class="pre">SoF</span></code> / <code class="docutils literal notranslate"><span class="pre">EoF</span></code> / <code class="docutils literal notranslate"><span class="pre">OverOcc</span></code> and maintains two counters:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> — incremented on every <code class="docutils literal notranslate"><span class="pre">SoF</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> — incremented on every <code class="docutils literal notranslate"><span class="pre">wrEn</span></code></p></li>
+</ul>
+</li>
+</ul>
+<p>On <code class="docutils literal notranslate"><span class="pre">SoF</span></code>, the monitoring FSM enters a <strong>busy</strong> state (also exposed as
+an output) and the Data FIFO becomes writable. Any of <code class="docutils literal notranslate"><span class="pre">EoF</span></code>,
+<code class="docutils literal notranslate"><span class="pre">OverOcc</span></code>, or an internal Pause assertion closes the event within the
+Column Manager’s local scope. Event closure means: one <strong>Status Word</strong>
+is written into the Status FIFO, made up of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">OverOcc</span></code> flag — high if the event closed because of an OverOcc
+reception</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pause</span></code> flag — high if the event closed because a FIFO reached its
+almost-full threshold</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> value — how many hits were recorded for this
+event</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> value — which trigger this event belongs to</p></li>
+</ul>
+<p>The Data-Length Counter’s role in the drain sequence is described under
+<a class="reference internal" href="#architecture-arbiter"><span class="std std-ref">Arbiter</span></a>.</p>
+<p>The Column Manager exposes two outputs:</p>
+<ul class="simple">
+<li><p><strong>Data Bus</strong> — the Data FIFO output</p></li>
+<li><p><strong>Status Bus</strong> — the Status FIFO output, plus its empty / dataValid
+flag and an overflow / underflow error signal</p></li>
+</ul>
+<p>These buses are bundled together across every Column Manager and driven
+into the Arbiter and the Column Supervisor.</p>
+</section>
+<section id="column-supervisor">
+<span id="architecture-column-supervisor"></span><h2>Column Supervisor<a class="headerlink" href="#column-supervisor" title="Link to this heading"></a></h2>
+<p>The Column Supervisor is a single-instance FSM. It ignores <code class="docutils literal notranslate"><span class="pre">SoF</span></code> /
+<code class="docutils literal notranslate"><span class="pre">EoF</span></code> timing entirely and reacts only to the Status Buses. While
+<code class="docutils literal notranslate"><span class="pre">IDLE</span></code>, it monitors the empty / dataValid flag of every Column
+Manager’s Status FIFO. Depending on the observed pattern, one of the
+following <strong>Readout Sequences</strong> is initiated:</p>
+<ul class="simple">
+<li><p><strong>Nominal</strong> — every Status FIFO yields a word, and no lane reports
+Pause. The Column Hitmask is assembled: one bit per Column Manager,
+high if that Column recorded at least one hit for this event (i.e. if
+its Data-Length Counter is non-zero). The Arbiter then drains the
+Data FIFOs of the columns whose bit is high</p></li>
+<li><p><strong>Pause</strong> — every Status FIFO yields a word, and some/all report
+Pause. Only the paused columns have their bit set in the Column
+Hitmask; the Arbiter drains only their Data FIFOs. The remaining
+columns will be read on a subsequent cycle when the event closes
+normally</p>
+<ul>
+<li><p>For ASICs featuring an ERO signal (see
+<a class="reference internal" href="asic_implementations.html#architecture-asic-impl-timing"><span class="std std-ref">Timing Detectors: SparkPix-T and Thriglav</span></a>), the Supervisor cannot wait
+for every Status FIFO to be non-empty before starting a Pause
+sequence, because event closure is externally triggered. Instead,
+it enters a short configurable <strong>pause-timeout</strong> on the first
+Pause, to group any other paused columns from the same event, and
+then reads them out</p></li>
+</ul>
+</li>
+<li><p><strong>Pause-Error / Digital Over-Occupancy</strong> — one or more Status FIFOs
+report both Pause and OverOcc high (a new <code class="docutils literal notranslate"><span class="pre">SoF</span></code> arrived while the
+column was still paused). The Supervisor starts the Arbiter
+immediately without waiting for the other columns to close, so as to
+drain FIFOs as fast as possible. The <code class="docutils literal notranslate"><span class="pre">Pause-Error</span></code> bit is set in
+the outbound frame’s header. See <a class="reference internal" href="flow_control.html#flow-pause-error"><span class="std std-ref">Pause-Error (Digital Over-Occupancy)</span></a></p></li>
+<li><p><strong>Timeout</strong> — a subset (but not all) of the Status FIFOs are
+non-empty. A watchdog counter is armed, and if the state persists
+for a configurable number of PGP-clock cycles, the event is closed
+with the Timeout flag raised, and only the non-empty columns are
+drained. If all Status FIFOs go non-empty before the watchdog
+expires, one of the other three sequences is initiated instead.
+This feature is <strong>not</strong> activated on ASICs that rely on an ERO
+signal to close events</p></li>
+</ul>
+<p>Once a sequence is chosen, the Supervisor registers the aggregate
+metadata (Column Hitmask, Trigger Counter, status flags) and signals
+the Arbiter to begin.</p>
+</section>
+<section id="arbiter">
+<span id="architecture-arbiter"></span><h2>Arbiter<a class="headerlink" href="#arbiter" title="Link to this heading"></a></h2>
+<p>The Arbiter is a single-instance FSM that produces the outbound
+AXI-Stream forwarded to the PGP4 encoder. Its data-output width equals
+the internal Pix2PGP bus width
+(<code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span> <span class="pre">=</span> <span class="pre">ASIC_DATABUS_DWIDTH_C</span> <span class="pre">*</span> <span class="pre">2</span></code>), which is
+application-specific. A <strong>Gearbox</strong> between the Arbiter’s AXI-Stream
+output and the 64-bit AXI-Stream input of the PGP4 transmitter adapts
+the width.</p>
+<p>Once the Column Supervisor issues its <code class="docutils literal notranslate"><span class="pre">Start</span></code> signal, the Arbiter:</p>
+<ol class="arabic simple">
+<li><p><strong>Opens the outbound frame</strong> and transmits the header (see
+<a class="reference internal" href="frame_format.html#architecture-frame-format"><span class="std std-ref">Data Frame Format</span></a>). The header carries the Column
+Hitmask, the Trigger Counter, and the aggregate status flags</p></li>
+<li><p><strong>Scans the Column Hitmask</strong> for high bits:</p>
+<ul class="simple">
+<li><p>A low bit means the Column has no data for this event — skip it</p></li>
+<li><p>A high bit means the Column has data for this event. The Arbiter:</p>
+<ol class="loweralpha simple">
+<li><p>Switches a <strong>Column Metadata Multiplexer</strong> onto the Status
+FIFO output of the current Column, and transmits the Column
+Metadata word (per-column Pause / OverOcc / Timeout / Trigger
+Counter / Data-Length values)</p></li>
+<li><p>Switches a <strong>Data Bus Multiplexer</strong> onto the Data FIFO output
+of the current Column</p></li>
+<li><p><strong>Reads exactly</strong> <code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> <strong>words</strong> from that
+Data FIFO and transmits them. Not one more, not one less</p></li>
+</ol>
+</li>
+</ul>
+</li>
+<li><p><strong>Closes the frame</strong> after every Hitmask bit has been evaluated</p></li>
+</ol>
+<p>The precise draining in step 2c is why each Column Manager needs its
+Status FIFO. Without an exact hit count, the Arbiter would either have
+to drain until the FIFO went empty (risking picking up hits from a
+later event that was already being written) or transmit padding — both
+options ruin per-event ordering. Keeping the exact count decouples the
+User Logic side from the drain side: the User Logic can keep writing
+into the next event while the Arbiter is still shipping out the
+previous one.</p>
+<p>If no Columns recorded hits (Column Hitmask == 0), only the header is
+transmitted and the frame closes immediately. This preserves the
+one-frame-per-trigger invariant even for zero-hit events.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="top_level.html" class="btn btn-neutral float-left" title="Top-Level Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="flow_control.html" class="btn btn-neutral float-right" title="Data-Flow and Corner Cases" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

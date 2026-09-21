@@ -1,0 +1,144 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vivado and VCS Setup &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Rogue Software Setup" href="rogue_setup.html" />
+    <link rel="prev" title="GHDL Setup" href="ghdl_setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Setup</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="supported_os.html">Supported Operating Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dependencies.html">External Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clone.html">How to Clone the pix2pgp Repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_setup.html">GHDL Setup</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Vivado and VCS Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#if-you-are-on-the-slac-sdf-network">If you are on the SLAC SDF network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#if-you-are-not-on-the-slac-sdf-network">If you are NOT on the SLAC SDF network</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_setup.html">Rogue Software Setup</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Setup</a></li>
+      <li class="breadcrumb-item active">Vivado and VCS Setup</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Setup/vivado_setup.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="vivado-and-vcs-setup">
+<span id="setup-vivado-setup"></span><h1>Vivado and VCS Setup<a class="headerlink" href="#vivado-and-vcs-setup" title="Link to this heading"></a></h1>
+<section id="if-you-are-on-the-slac-sdf-network">
+<h2>If you are on the SLAC SDF network<a class="headerlink" href="#if-you-are-on-the-slac-sdf-network" title="Link to this heading"></a></h2>
+<p>Source the SLAC-provided Vivado and VCS environment setup script:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/sdf/group/faders/tools/xilinx/2025.2/settings.sh
+</pre></div>
+</div>
+<p>Note: this path may change with the toolchain version. Refer to the
+current SDF administration for the up-to-date path.</p>
+</section>
+<section id="if-you-are-not-on-the-slac-sdf-network">
+<h2>If you are NOT on the SLAC SDF network<a class="headerlink" href="#if-you-are-not-on-the-slac-sdf-network" title="Link to this heading"></a></h2>
+<p>You will need to install and license Vivado (2025.2 or newer is recommended)
+and, for VCS-based simulation, install Synopsys VCS.</p>
+<ul class="simple">
+<li><p>Xilinx Vivado download: <a class="reference external" href="https://www.xilinx.com/support/download.html">https://www.xilinx.com/support/download.html</a></p></li>
+<li><p>Xilinx Licensing:       <a class="reference external" href="https://www.xilinx.com/support/licensing_solution_center.html">https://www.xilinx.com/support/licensing_solution_center.html</a></p></li>
+<li><p>Synopsys VCS:           <a class="reference external" href="https://www.synopsys.com/verification/simulation/vcs.html">https://www.synopsys.com/verification/simulation/vcs.html</a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ghdl_setup.html" class="btn btn-neutral float-left" title="GHDL Setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rogue_setup.html" class="btn btn-neutral float-right" title="Rogue Software Setup" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Simulate Using VCS &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to Decode Pix2PGP Data with the Parser" href="decode_data.html" />
+    <link rel="prev" title="How to Simulate Using GHDL" href="ghdl_simulation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Simulate Using VCS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#steps">Steps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuring-the-testbench">Configuring the Testbench</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Simulate Using VCS</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/vcs_simulation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-simulate-using-vcs">
+<span id="how-to-vcs-simulation"></span><h1>How to Simulate Using VCS<a class="headerlink" href="#how-to-simulate-using-vcs" title="Link to this heading"></a></h1>
+<p>Full-scale behavioral verification of Pix2PGP is done with Synopsys VCS
+under the ruckus flow. Each supported ASIC has its own target directory
+under <code class="docutils literal notranslate"><span class="pre">firmware/targets/</span></code>.</p>
+<section id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>Setup Xilinx / Synopsys tooling (refer to <a class="reference internal" href="../Setup/vivado_setup.html#setup-vivado-setup"><span class="std std-ref">Vivado and VCS Setup</span></a>).
+As of <code class="docutils literal notranslate"><span class="pre">v2.5.2</span></code>, simulation is done with <strong>Vivado 2025.2</strong> and
+<strong>VCS X-2025.06</strong></p></li>
+<li><p>Navigate to the ASIC target directory. For example, for SparkPix-S:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>pix2pgp/firmware/targets/Pix2PgpSparkPixSEmu
+</pre></div>
+</div>
+<p>Available targets:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpSparkPixSEmu</span></code>   — SparkPix-S</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpSparkPixSv2Emu</span></code> — SparkPix-Sv2</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpSparkPixTEmu</span></code>   — SparkPix-T</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpThriglavEmu</span></code>    — Thriglav</p></li>
+</ul>
+</li>
+<li><p>Clean and build the VCS simulator:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>vcs
+</pre></div>
+</div>
+<p>Follow the terminal prompts to invoke the simulator once elaboration
+completes</p>
+</li>
+<li><p>Observe the VCS console. Depending on the testbench configuration, one
+of two things happens:</p>
+<ul class="simple">
+<li><p>With <code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span> <span class="pre">=</span> <span class="pre">false</span></code>, a fixed hit pattern is issued and
+the testbench prints a per-event summary</p></li>
+<li><p>With <code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span> <span class="pre">=</span> <span class="pre">true</span></code>, the testbench sweeps occupancy
+percentages and prints running counters. When the sweep completes, a
+table of <code class="docutils literal notranslate"><span class="pre">colBusyCnt</span></code>, <code class="docutils literal notranslate"><span class="pre">superBusyCnt</span></code>, and <code class="docutils literal notranslate"><span class="pre">totalLatencyCnt</span></code> is
+printed for every occupancy point (see <a class="reference internal" href="benchmarking.html#how-to-run-benchmarking"><span class="std std-ref">How to Benchmark Throughput and Latency</span></a>)</p></li>
+</ul>
+</li>
+<li><p>Decode the AXI-Stream data dump generated by the testbench:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python<span class="w"> </span>software/scripts/axiDataParser.py<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--asicType<span class="w"> </span>SparkPixS<span class="w"> </span>--verbose<span class="w"> </span>--input<span class="w"> </span>&lt;path/to/data.txt&gt;
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="configuring-the-testbench">
+<h2>Configuring the Testbench<a class="headerlink" href="#configuring-the-testbench" title="Link to this heading"></a></h2>
+<p>The testbench top-level generics are declared in
+<code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2Pgp&lt;Asic&gt;Emu/tb/Pix2Pgp&lt;Asic&gt;EmuTb.vhd</span></code>. The main
+knobs are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span></code>            — sweep occupancy percentages for
+benchmarking rather than a single fixed pattern</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BANDWIDTH_STRESS_TEST_G</span></code>   — bandwidth-stress mode</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span></code>   — Data FIFO depth per Column Manager</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_STATUS_DEPTH_G</span></code> — Status FIFO depth per Column Manager</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_G</span></code>     — width of the Column Supervisor timeout
+watchdog counter</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_DATA_G</span></code> /
+<code class="docutils literal notranslate"><span class="pre">PIPELINE_STATUS_G</span></code> /
+<code class="docutils literal notranslate"><span class="pre">ARB_DOUT_PIPE_G</span></code> /
+<code class="docutils literal notranslate"><span class="pre">DATAFIFO_PIPE_G</span></code> /
+<code class="docutils literal notranslate"><span class="pre">STATUSFIFO_PIPE_G</span></code>         — pipeline stages on the FPGA-side buses
+(relevant when the FPGA receiver is placed near a GT hard block)</p></li>
+</ul>
+<p>Per-column and per-event hit patterns are set via the <code class="docutils literal notranslate"><span class="pre">hitLen</span></code> array
+inside the testbench body. See <a class="reference internal" href="benchmarking.html#how-to-run-benchmarking"><span class="std std-ref">How to Benchmark Throughput and Latency</span></a> for how the
+<code class="docutils literal notranslate"><span class="pre">hitsToVhd.py</span></code> helper can be used to generate random patterns.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ghdl_simulation.html" class="btn btn-neutral float-left" title="How to Simulate Using GHDL" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="decode_data.html" class="btn btn-neutral float-right" title="How to Decode Pix2PGP Data with the Parser" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

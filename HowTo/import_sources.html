@@ -1,0 +1,202 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Import Pix2PGP Sources in Your Project &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to Integrate the Pix2PGP Core in Your ASIC" href="integrate_asic_core.html" />
+    <link rel="prev" title="HowTos" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Import Pix2PGP Sources in Your Project</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#automatic-import-via-ruckus">Automatic Import via Ruckus</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cadence-genus">Cadence Genus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#synopsys-dc-fusion-compiler">Synopsys DC / Fusion Compiler</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#manual-import">Manual Import</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Import Pix2PGP Sources in Your Project</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/import_sources.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-import-pix2pgp-sources-in-your-project">
+<span id="how-to-import-sources"></span><h1>How to Import Pix2PGP Sources in Your Project<a class="headerlink" href="#how-to-import-pix2pgp-sources-in-your-project" title="Link to this heading"></a></h1>
+<p>Pix2PGP is normally consumed as a git submodule of a larger project. First,
+clone your parent project and add Pix2PGP as a submodule:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>add<span class="w"> </span>https://github.com/slaclab/pix2pgp.git<span class="w"> </span>submodules/pix2pgp
+$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive<span class="w"> </span>submodules/pix2pgp
+</pre></div>
+</div>
+<section id="automatic-import-via-ruckus">
+<h2>Automatic Import via Ruckus<a class="headerlink" href="#automatic-import-via-ruckus" title="Link to this heading"></a></h2>
+<section id="cadence-genus">
+<h3>Cadence Genus<a class="headerlink" href="#cadence-genus" title="Link to this heading"></a></h3>
+<p>To pull the ASIC RTL into Cadence Genus, invoke the per-ASIC <code class="docutils literal notranslate"><span class="pre">ruckus.tcl</span></code>
+from a TCL script of your own. Example for SparkPix-S:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="c"># Load RUCKUS environment and library</span>
+<span class="nb">source</span><span class="w"> </span><span class="o">-</span>quiet<span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">RUCKUS_DIR</span><span class="k">)</span><span class="o">/</span>vivado_proc.tcl
+
+<span class="c"># Load surf source code</span>
+<span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">TOP_DIR</span><span class="k">)</span><span class="o">/</span>submodules<span class="o">/</span>surf
+
+<span class="c"># Load SparkPix-S source code</span>
+<span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">TOP_DIR</span><span class="k">)</span><span class="o">/</span>submodules<span class="o">/</span>pix2pgp<span class="o">/</span>gateware<span class="o">/</span>asics<span class="o">/</span>SparkPixS
+
+<span class="c"># Analyze source code loaded into ruckus for Cadence Genus</span>
+<span class="nv">AnalyzeSrcFileLists</span>
+</pre></div>
+</div>
+</section>
+<section id="synopsys-dc-fusion-compiler">
+<h3>Synopsys DC / Fusion Compiler<a class="headerlink" href="#synopsys-dc-fusion-compiler" title="Link to this heading"></a></h3>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="c"># Load RUCKUS environment and library</span>
+<span class="nb">source</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">RUCKUS_QUIET_FLAG</span><span class="k">)</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">RUCKUS_PROC_TCL</span><span class="k">)</span>
+
+<span class="c"># Load the surf library</span>
+<span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="s2">"$::env(TOP_DIR)/submodules/surf"</span>
+<span class="nv">AnalyzeSrcFileLists</span><span class="w"> </span><span class="o">-</span>vhdlLib<span class="w"> </span><span class="s2">"surf"</span>
+
+<span class="c"># Load ruckus library (ruckus.BuildInfoPkg.vhd only)</span>
+<span class="nv">GenBuildString</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">SYN_DIR</span><span class="k">)</span>
+<span class="nv">AnalyzeSrcFileLists</span><span class="w"> </span><span class="o">-</span>vhdlLib<span class="w"> </span><span class="s2">"ruckus"</span>
+
+<span class="c"># Load SparkPix-S source code</span>
+<span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">TOP_DIR</span><span class="k">)</span><span class="o">/</span>submodules<span class="o">/</span>pix2pgp<span class="o">/</span>gateware<span class="o">/</span>asics<span class="o">/</span>SparkPixS
+<span class="nv">AnalyzeSrcFileLists</span><span class="w"> </span><span class="o">-</span>vhdlLib<span class="w"> </span><span class="s2">"pix2pgp"</span><span class="w"> </span><span class="o">-</span>vhdlTop<span class="w"> </span><span class="nv">$::env</span><span class="k">(</span><span class="nv">PROJECT</span><span class="k">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="manual-import">
+<h2>Manual Import<a class="headerlink" href="#manual-import" title="Link to this heading"></a></h2>
+<p>If you do not use ruckus, run the GHDL Makefile in list-only mode to
+print out the full set of source files needed for your ASIC. From the
+top of pix2pgp:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>firmware/ghdl
+$<span class="w"> </span>make<span class="w"> </span><span class="nv">ASIC</span><span class="o">=</span>SparkPixS<span class="w"> </span>build
+</pre></div>
+</div>
+<p>Follow the warning messages printed on the terminal:</p>
+<ul class="simple">
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">surfFifo/</span></code> with <code class="docutils literal notranslate"><span class="pre">synopsysFifo/</span></code> if you are using a
+proprietary simulator or synthesis tool</p></li>
+<li><p>For <strong>ASIC + FPGA behavioral simulation</strong>, use every listed file</p></li>
+<li><p>For <strong>ASIC RTL synthesis only</strong>, omit:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pix2pgp-fpga</span></code> (the FPGA receiver)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pix2pgp-tb</span></code> (testbench files)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">surf-fifo</span></code> (use <code class="docutils literal notranslate"><span class="pre">synopsysFifo/</span></code> instead)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="HowTos" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="integrate_asic_core.html" class="btn btn-neutral float-right" title="How to Integrate the Pix2PGP Core in Your ASIC" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

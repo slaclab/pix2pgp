@@ -1,0 +1,177 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to pix2pgp’s documentation! &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=e72e1331"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Introduction" href="introduction.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to pix2pgp’s documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-pix2pgp-s-documentation">
+<h1>Welcome to pix2pgp’s documentation!<a class="headerlink" href="#welcome-to-pix2pgp-s-documentation" title="Link to this heading"></a></h1>
+<p>This is currently a work in progress.
+New documentation is being added incrementally over time.</p>
+<p><strong>Pix2PGP</strong> is a full-stack, highly-configurable data acquisition framework
+designed to support front-end detector Application-Specific Integrated
+Circuits (ASICs) that operate on a sparse readout scheme. It provides:</p>
+<ul class="simple">
+<li><p>An <strong>ASIC RTL</strong> core that receives sparse hit data from multiple sources
+and performs event building given externally-driven frame delimiters</p></li>
+<li><p>An <strong>FPGA firmware</strong> receiver that aggregates the ASIC-generated data lanes
+into a single consolidated event frame</p></li>
+<li><p>A <strong>Python software</strong> decoding suite for parsing the aggregated frames into
+an easily-accessible format</p></li>
+</ul>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#application-scope">Application Scope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#framework-components">Framework Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#system-overview">System Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#supported-asics">Supported ASICs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#repository-layout">Repository Layout</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Setup/index.html">Setup</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Setup/supported_os.html">Supported Operating Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Setup/dependencies.html">External Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Setup/clone.html">How to Clone the pix2pgp Repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Setup/ghdl_setup.html">GHDL Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Setup/vivado_setup.html">Vivado and VCS Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Setup/rogue_setup.html">Rogue Software Setup</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Architecture/index.html">Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/top_level.html">Top-Level Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/asic_core.html">ASIC Core Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/fpga_receiver.html">FPGA Receiver Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/frame_format.html">Data Frame Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Architecture/asic_implementations.html">ASIC Implementations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="HowTo/index.html">HowTos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="HowTo/benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Please email <a class="reference external" href="mailto:cbakalis&#37;&#52;&#48;slac&#46;stanford&#46;edu">cbakalis<span>&#64;</span>slac<span>&#46;</span>stanford<span>&#46;</span>edu</a> if you see any errors or have any
+questions about anything in the current documentation.</p>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="introduction.html" class="btn btn-neutral float-right" title="Introduction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

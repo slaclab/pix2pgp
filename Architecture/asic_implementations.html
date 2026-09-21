@@ -1,0 +1,329 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASIC Implementations &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="HowTos" href="../HowTo/index.html" />
+    <link rel="prev" title="Data Frame Format" href="frame_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="top_level.html">Top-Level Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_core.html">ASIC Core Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpga_receiver.html">FPGA Receiver Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frame_format.html">Data Frame Format</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ASIC Implementations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sparkpix-s">SparkPix-S</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#readout-procedure">Readout Procedure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sources">Sources</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#timing-detectors-sparkpix-t-and-thriglav">Timing Detectors: SparkPix-T and Thriglav</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#sparkpix-t">SparkPix-T</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#thriglav">Thriglav</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#sparkpix-sv2">SparkPix-Sv2</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture</a></li>
+      <li class="breadcrumb-item active">ASIC Implementations</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Architecture/asic_implementations.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="asic-implementations">
+<span id="architecture-asic-implementations"></span><h1>ASIC Implementations<a class="headerlink" href="#asic-implementations" title="Link to this heading"></a></h1>
+<p>At the time of writing, Pix2PGP is integrated into four ASICs. Every
+port was performed <strong>solely</strong> by editing the per-ASIC package file
+(<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>), the ASIC top-level VHDL wrapper, and the
+Python decoder parameter classes — no changes to the shared RTL core
+or the FPGA receiver were needed. See <a class="reference internal" href="../HowTo/add_new_asic.html#how-to-add-new-asic"><span class="std std-ref">How to Add Support for a New ASIC</span></a> for
+the step-by-step porting procedure.</p>
+<p>The structural parameters below are read directly from the per-ASIC
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code> files in the repository. For measured trigger
+rates, latencies and bandwidth as a function of occupancy, run the
+benchmarking suite against the target’s VCS testbench — see
+<a class="reference internal" href="../HowTo/benchmarking.html#how-to-run-benchmarking"><span class="std std-ref">How to Benchmark Throughput and Latency</span></a>.</p>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Structural parameters of Pix2PGP-bearing ASICs</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 16.7%" />
+<col style="width: 16.7%" />
+<col style="width: 16.7%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>SparkPix-S</p></th>
+<th class="head"><p>SparkPix-T</p></th>
+<th class="head"><p>Thriglav</p></th>
+<th class="head"><p>SparkPix-Sv2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Technology</p></td>
+<td><p>130 nm</p></td>
+<td><p>130 nm</p></td>
+<td><p>28 nm</p></td>
+<td><p>130 nm</p></td>
+</tr>
+<tr class="row-odd"><td><p>Matrix Pixel Count</p></td>
+<td><p>119808</p></td>
+<td><p>32256</p></td>
+<td><p>10000</p></td>
+<td><p>TBD</p></td>
+</tr>
+<tr class="row-even"><td><p>Digital Core Count (lanes)</p></td>
+<td><p>8</p></td>
+<td><p>8</p></td>
+<td><p>2</p></td>
+<td><p>TBD</p></td>
+</tr>
+<tr class="row-odd"><td><p>Column Managers / Core</p></td>
+<td><p>24</p></td>
+<td><p>24</p></td>
+<td><p>50</p></td>
+<td><p>TBD</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code></p></td>
+<td><p>20-bit</p></td>
+<td><p>32-bit</p></td>
+<td><p>32-bit</p></td>
+<td><p>TBD</p></td>
+</tr>
+<tr class="row-odd"><td><p>Event closure</p></td>
+<td><p>Self (EoF)</p></td>
+<td><p>External (ERO)</p></td>
+<td><p>External (ERO)</p></td>
+<td><p>TBD</p></td>
+</tr>
+<tr class="row-even"><td><p>Pix2PGP Core Clock</p></td>
+<td><p>~186 MHz</p></td>
+<td><p>~186 MHz</p></td>
+<td><p>~186 MHz</p></td>
+<td><p>~186 MHz</p></td>
+</tr>
+<tr class="row-odd"><td><p>User Logic Clock</p></td>
+<td><p>~140 MHz</p></td>
+<td><p>~40 MHz</p></td>
+<td><p>~20 MHz</p></td>
+<td><p>TBD</p></td>
+</tr>
+</tbody>
+</table>
+<p>Two families of event closure are supported:</p>
+<ul class="simple">
+<li><p><strong>Self-closure</strong> — the ASIC User Logic determines when to issue the
+<code class="docutils literal notranslate"><span class="pre">EoF</span></code> internally. Template: SparkPix-S</p></li>
+<li><p><strong>External-trigger-closure (ERO)</strong> — an End-Of-Readout trigger
+external to the ASIC closes the event. Template: SparkPix-T</p></li>
+</ul>
+<section id="sparkpix-s">
+<span id="architecture-asic-impl-sparkpix-s"></span><h2>SparkPix-S<a class="headerlink" href="#sparkpix-s" title="Link to this heading"></a></h2>
+<p>SparkPix-S is a sparse-readout X-Ray detector.</p>
+<ul class="simple">
+<li><p>Pixel matrix: 312 rows × 384 columns, laid out as 312 × 192
+<strong>double-columns</strong> (adjacent columns share resources). 50 µm pitch,
+total 119808 pixels</p></li>
+<li><p>Each pixel collects charge, digitized by a 10-bit ADC</p></li>
+<li><p>Each double-column shares an analog token circuit and a 10-bit ADC.
+The digital core sees 192 / 8 = 24 double-columns per Pix2PGP
+instance</p></li>
+<li><p>8 Pix2PGP cores per ASIC, each with an integrated PGP4 encoder and
+a 32-bit serializer</p></li>
+<li><p>Data word per hit: 20-bit (10-bit ADC value + 10-bit row address)</p></li>
+<li><p>Internal Pix2PGP data-bus width: 40-bit</p></li>
+</ul>
+<section id="readout-procedure">
+<h3>Readout Procedure<a class="headerlink" href="#readout-procedure" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>External trigger (<code class="docutils literal notranslate"><span class="pre">SRO</span></code>) arrives</p></li>
+<li><p>The User Logic asserts <code class="docutils literal notranslate"><span class="pre">SoF</span></code> and injects a <strong>token</strong> at the
+bottom of the double-column. A <strong>tokFb</strong> (token feedback) signal
+goes to its active state as the token enters the matrix</p></li>
+<li><p>The token walks up through the rows:</p>
+<ul class="simple">
+<li><p>If the pixel has no hit, the token passes to the next row</p></li>
+<li><p>If the pixel has a hit, the token freezes and the analog side
+issues a request (<code class="docutils literal notranslate"><span class="pre">req</span></code>) to the ADC. After conversion, the ADC
+issues <code class="docutils literal notranslate"><span class="pre">ack</span></code>, the token is released, and the User Logic writes
+a 20-bit data word to Pix2PGP via <code class="docutils literal notranslate"><span class="pre">wrEn</span></code>
+(10-bit ADC value + 10-bit row address)</p></li>
+</ul>
+</li>
+<li><p>Once the token exits the matrix, <code class="docutils literal notranslate"><span class="pre">tokFb</span></code> transitions back. The
+User Logic issues <code class="docutils literal notranslate"><span class="pre">EoF</span></code> to close the Pix2PGP event</p></li>
+</ol>
+<p>Over-Occupancy is asserted (as an <code class="docutils literal notranslate"><span class="pre">EoF</span></code> + <code class="docutils literal notranslate"><span class="pre">SoF</span></code>) if a new <code class="docutils literal notranslate"><span class="pre">SRO</span></code>
+arrives while the token has not fully propagated.</p>
+</section>
+<section id="sources">
+<h3>Sources<a class="headerlink" href="#sources" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Package: <code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixS/rtl/Pix2PgpAsicPkg.vhd</span></code></p></li>
+<li><p>Top:     <code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixS/rtl/Pix2PgpSparkPixSTop.vhd</span></code></p></li>
+<li><p>Model:   <code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixS/tb/SparkPixSColumnModel.vhd</span></code></p></li>
+<li><p>TB:      <code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixS/tb/Pix2PgpSparkPixSTopTb.vhd</span></code></p></li>
+<li><p>VCS TB target: <code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2PgpSparkPixSEmu</span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="timing-detectors-sparkpix-t-and-thriglav">
+<span id="architecture-asic-impl-timing"></span><h2>Timing Detectors: SparkPix-T and Thriglav<a class="headerlink" href="#timing-detectors-sparkpix-t-and-thriglav" title="Link to this heading"></a></h2>
+<p>SparkPix-T and Thriglav are timing detector ASICs — Time-to-Digital
+Converters (TDCs). Both measure Time-Over-Threshold (ToT) as an
+energy indicator and Time-of-Arrival (ToA) with picosecond-level
+resolution.</p>
+<p>Unlike SparkPix-S, these ASICs <strong>do not use a token-injecting</strong>
+readout. Instead, on <code class="docutils literal notranslate"><span class="pre">SRO</span></code> reception, each pixel of a column is
+granted access to a shared bus tied to the column’s digital converter
+and Pix2PGP User Logic. When a pixel records a hit, the measurement
+is converted and encoded into a 32-bit word (16-bit ToA + 8-bit ToT
++ 8-bit row address for SparkPix-T; 11-bit ToA + 8-bit ToT + 8-bit
+row address + reserved bits for Thriglav) and forwarded to Pix2PGP.</p>
+<p>The event does <strong>not</strong> close on token exit — it stays open
+indefinitely until an <strong>End-Of-Readout (ERO)</strong> trigger external to
+the ASIC arrives. This defines an <em>exposure window</em> within which
+hits can be recorded. On <code class="docutils literal notranslate"><span class="pre">ERO</span></code>, the User Logic issues <code class="docutils literal notranslate"><span class="pre">EoF</span></code> to
+Pix2PGP and resets the pixel logic.</p>
+<p>Over-Occupancy semantics differ from SparkPix-S: for timing
+detectors, Over-Occupancy only <strong>closes</strong> the current event; a
+subsequent conventional <code class="docutils literal notranslate"><span class="pre">SRO</span></code> opens the next one.</p>
+<p><strong>Column Supervisor Pause handling</strong> is also different for ASICs
+featuring ERO. Rather than waiting for every Status FIFO to be
+non-empty before starting a Pause sequence, the Supervisor enters a
+short configurable <strong>pause-timeout</strong> on the first Pause, then reads
+out only the paused columns.</p>
+<p><strong>Timeout</strong> watchdog is disabled for ASICs featuring ERO, since
+event closure is externally-driven.</p>
+<section id="sparkpix-t">
+<h3>SparkPix-T<a class="headerlink" href="#sparkpix-t" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>168 rows × 192 columns = 32256 pixels</p></li>
+<li><p>24 columns per Pix2PGP instance, 8 instances per ASIC</p></li>
+<li><p>Data word: 32-bit (16-bit ToA + 8-bit ToT + 8-bit row address)</p></li>
+<li><p>User Logic clock: ~40 MHz</p></li>
+<li><p>Sources: <code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixT/</span></code>,
+<code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2PgpSparkPixTEmu</span></code></p></li>
+</ul>
+</section>
+<section id="thriglav">
+<h3>Thriglav<a class="headerlink" href="#thriglav" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>100 rows × 100 columns = 10000 pixels</p></li>
+<li><p>50 columns per Pix2PGP instance, 2 instances per ASIC</p></li>
+<li><p>Data word: 32-bit (11-bit ToA + 8-bit ToT + 8-bit row address +
+reserved bits)</p></li>
+<li><p>User Logic clock: ~20 MHz</p></li>
+<li><p>Fabricated in 28 nm</p></li>
+<li><p>Sources: <code class="docutils literal notranslate"><span class="pre">gateware/asics/Thriglav/</span></code>,
+<code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2PgpThriglavEmu</span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="sparkpix-sv2">
+<h2>SparkPix-Sv2<a class="headerlink" href="#sparkpix-sv2" title="Link to this heading"></a></h2>
+<p>Second-generation SparkPix-S. Structural parameters live in
+<code class="docutils literal notranslate"><span class="pre">gateware/asics/SparkPixSv2/rtl/Pix2PgpAsicPkg.vhd</span></code>. VCS TB target:
+<code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2PgpSparkPixSv2Emu</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="frame_format.html" class="btn btn-neutral float-left" title="Data Frame Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../HowTo/index.html" class="btn btn-neutral float-right" title="HowTos" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,198 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Use Pix2PgpSparseProcessor with Rogue &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to Add Support for a New ASIC" href="add_new_asic.html" />
+    <link rel="prev" title="How to Decode Pix2PGP Data with the Parser" href="decode_data.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Use Pix2PgpSparseProcessor with Rogue</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#constructor-arguments">Constructor Arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Use Pix2PgpSparseProcessor with Rogue</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/rogue_stream.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-use-pix2pgpsparseprocessor-with-rogue">
+<span id="how-to-rogue-stream"></span><h1>How to Use Pix2PgpSparseProcessor with Rogue<a class="headerlink" href="#how-to-use-pix2pgpsparseprocessor-with-rogue" title="Link to this heading"></a></h1>
+<p>For real hardware runs, data are usually captured via
+<a class="reference external" href="https://slaclab.github.io/rogue/">ROGUE</a>. The Pix2PGP Python suite
+provides a rogue stream processor class,
+<code class="docutils literal notranslate"><span class="pre">pix2pgp.Pix2PgpSparseProcessor</span></code>, that consumes a live rogue AXI-Stream
+and yields decoded data through the same containers as the offline parser.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Rogue environment set up (see <a class="reference internal" href="../Setup/rogue_setup.html#setup-rogue-setup"><span class="std std-ref">Rogue Software Setup</span></a>)</p></li>
+<li><p>Pix2PGP Python package on <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code> (add
+<code class="docutils literal notranslate"><span class="pre">firmware/python/</span></code> — or install the package into the rogue environment)</p></li>
+</ul>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
+<p>The following example replays a captured stream dump through
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpSparseProcessor</span></code> and pickles the resulting event containers to
+disk for offline analysis:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rogue</span>
+<span class="n">rogue</span><span class="o">.</span><span class="n">Version</span><span class="o">.</span><span class="n">minVersion</span><span class="p">(</span><span class="s1">'6.1.0'</span><span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyrogue</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyrogue.utilities.fileio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pix2pgp</span>
+
+<span class="n">dataFilePath</span> <span class="o">=</span> <span class="s1">'data.dat'</span>
+
+<span class="n">dataReader</span> <span class="o">=</span> <span class="n">rogue</span><span class="o">.</span><span class="n">utilities</span><span class="o">.</span><span class="n">fileio</span><span class="o">.</span><span class="n">StreamReader</span><span class="p">()</span>
+
+<span class="n">dataProcessor</span> <span class="o">=</span> <span class="n">pix2pgp</span><span class="o">.</span><span class="n">Pix2PgpSparseProcessor</span><span class="p">(</span>
+    <span class="n">rawData</span>  <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">maxAsics</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">verbose</span>  <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">asicType</span> <span class="o">=</span> <span class="s1">'SparkPixS'</span>
+<span class="p">)</span>
+
+<span class="n">dataProcessor</span> <span class="o">&lt;&lt;</span> <span class="n">dataReader</span>
+
+<span class="n">dataReader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dataFilePath</span><span class="p">)</span>
+<span class="n">dataReader</span><span class="o">.</span><span class="n">closeWait</span><span class="p">()</span>
+
+<span class="n">dataDict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'asicId'</span>        <span class="p">:</span> <span class="n">dataProcessor</span><span class="o">.</span><span class="n">asicId</span><span class="p">,</span>
+    <span class="s1">'asicLaneValid'</span> <span class="p">:</span> <span class="n">dataProcessor</span><span class="o">.</span><span class="n">asicLaneValid</span><span class="p">,</span>
+    <span class="s1">'asicHits'</span>      <span class="p">:</span> <span class="n">dataProcessor</span><span class="o">.</span><span class="n">asicHits</span><span class="p">,</span>
+    <span class="s1">'asicTrgCnt'</span>    <span class="p">:</span> <span class="n">dataProcessor</span><span class="o">.</span><span class="n">asicTrgCnt</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'pickleData.pkl'</span><span class="p">,</span> <span class="s1">'wb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">dataDict</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="constructor-arguments">
+<h2>Constructor Arguments<a class="headerlink" href="#constructor-arguments" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rawData</span></code>  — pass through un-decoded hit words (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or fully
+unpack into <code class="docutils literal notranslate"><span class="pre">{col,</span> <span class="pre">row,</span> <span class="pre">adc,</span> <span class="pre">...}</span></code> dicts (<code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">maxAsics</span></code> — maximum number of ASICs to buffer in parallel (relevant
+for multi-ASIC FPGA receivers)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">verbose</span></code> — verbosity level (0 = silent, higher = more diagnostics)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">asicType</span></code> — must match the ASIC that produced the stream</p></li>
+</ul>
+<p>For online use, connect <code class="docutils literal notranslate"><span class="pre">Pix2PgpSparseProcessor</span></code> directly to a rogue
+stream tap (e.g. a PGP RX channel), rather than to a <code class="docutils literal notranslate"><span class="pre">StreamReader</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="decode_data.html" class="btn btn-neutral float-left" title="How to Decode Pix2PGP Data with the Parser" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="add_new_asic.html" class="btn btn-neutral float-right" title="How to Add Support for a New ASIC" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Frame Format &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ASIC Implementations" href="asic_implementations.html" />
+    <link rel="prev" title="FPGA Receiver Architecture" href="fpga_receiver.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="top_level.html">Top-Level Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_core.html">ASIC Core Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpga_receiver.html">FPGA Receiver Architecture</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Data Frame Format</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pix2pgp-lane-frame">Pix2PGP Lane Frame</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#header-sizing-and-scaling">Header Sizing and Scaling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supported-data-bus-widths">Supported Data-Bus Widths</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#consolidated-pix2pgp-frame">Consolidated Pix2PGP Frame</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#drop-frames">Drop Frames</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="asic_implementations.html">ASIC Implementations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture</a></li>
+      <li class="breadcrumb-item active">Data Frame Format</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Architecture/frame_format.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="data-frame-format">
+<span id="architecture-frame-format"></span><h1>Data Frame Format<a class="headerlink" href="#data-frame-format" title="Link to this heading"></a></h1>
+<p>Pix2PGP defines two nested frame formats:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#frame-lane-frame"><span class="std std-ref">Pix2PGP Lane Frame</span></a>  — the per-lane frame transmitted by each Pix2PGP
+ASIC core over its PGP4 physical link, and consumed by one <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>
+instance in the FPGA receiver</p></li>
+<li><p><a class="reference internal" href="#frame-pix2pgp-frame"><span class="std std-ref">Consolidated Pix2PGP Frame</span></a> — the consolidated event frame produced by the
+FPGA receiver by merging every lane’s frame together, and transmitted to
+the back-end</p></li>
+</ul>
+<section id="pix2pgp-lane-frame">
+<span id="frame-lane-frame"></span><h2>Pix2PGP Lane Frame<a class="headerlink" href="#pix2pgp-lane-frame" title="Link to this heading"></a></h2>
+<p>Every Pix2PGP ASIC core transmits <strong>one PGP frame per event</strong> for the group
+of Columns it serves. Under back-pressure conditions (see
+<a class="reference internal" href="flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a>), a single trigger may produce more than one such frame:
+each Pause fragment is a self-contained Lane Frame with the <code class="docutils literal notranslate"><span class="pre">Pause</span></code> bit
+set in its header, and the FPGA receiver reassembles the fragments into
+one consolidated event.</p>
+<p>The Lane Frame is comprised of:</p>
+<ul class="simple">
+<li><p><strong>Header</strong> (always present)</p>
+<ul>
+<li><p>Status flags: lane-wide <code class="docutils literal notranslate"><span class="pre">Pause</span></code>, <code class="docutils literal notranslate"><span class="pre">Over-Occupancy</span></code>, <code class="docutils literal notranslate"><span class="pre">Pause-Error</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Timeout</span></code>, <code class="docutils literal notranslate"><span class="pre">Column</span> <span class="pre">FIFO</span> <span class="pre">Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Dummy</span> <span class="pre">Header</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Column</span> <span class="pre">Hitmask</span></code> — one bit per Column Manager. If a bit is high,
+that Column recorded at least one hit for this event</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> — the event’s trigger identifier</p></li>
+</ul>
+</li>
+<li><p><strong>Column Metadata + Column Data</strong> — repeated per Column with a high bit
+in the Hitmask:</p>
+<ul>
+<li><p>Column Metadata word: per-column <code class="docutils literal notranslate"><span class="pre">Pause</span></code>, <code class="docutils literal notranslate"><span class="pre">Over-Occupancy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Timeout</span></code> flags; the Column’s <code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> value; and
+the Column’s <code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> value (should match the header’s)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> data words (i.e. the hits)</p></li>
+</ul>
+</li>
+</ul>
+<p>The width of each field is application-specific: it depends on
+<code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> (defined in each ASIC’s <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>)
+and its associated internal doubled bus width
+(<code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span> <span class="pre">=</span> <span class="pre">ASIC_DATABUS_DWIDTH_C</span> <span class="pre">*</span> <span class="pre">2</span></code>).</p>
+<section id="header-sizing-and-scaling">
+<h3>Header Sizing and Scaling<a class="headerlink" href="#header-sizing-and-scaling" title="Link to this heading"></a></h3>
+<p>The Header must fit in a single <code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span></code>-wide word. If
+the number of Column Managers is large enough that the Column Hitmask +
+status flags + Trigger Counter exceed the native internal data-bus width,
+the header can be scaled up via the <code class="docutils literal notranslate"><span class="pre">HEADER_WIDTH_MULT_C</span></code> constant in
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>, which doubles/triples/etc. the header size.</p>
+<p>For example, for a core managing 24 Column Managers on a 20-bit data bus
+(40-bit internal), the header fits natively: 6-bit flags + 24-bit Hitmask
++ 8-bit Trigger Counter = 38 bits ≤ 40. For a core managing 64 Column
+Managers on the same data bus, the header requires at least 78 bits, so
+<code class="docutils literal notranslate"><span class="pre">HEADER_WIDTH_MULT_C</span> <span class="pre">=</span> <span class="pre">2</span></code> is set (yielding a doubled 80-bit header).</p>
+<p>The <strong>Column Metadata word does not have a scaling factor</strong> — it must fit
+in the native <code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span></code>.</p>
+</section>
+<section id="supported-data-bus-widths">
+<h3>Supported Data-Bus Widths<a class="headerlink" href="#supported-data-bus-widths" title="Link to this heading"></a></h3>
+<p>Pix2PGP supports the following <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> values:</p>
+<ul class="simple">
+<li><p>4, 8, 12, 16, 20, 24, 28, 32 bits</p></li>
+</ul>
+<p>It is strongly advised to use 16 bits or more. Padding can be added to the
+input if the data width is smaller than 16 bits, at the expense of
+bandwidth. If wider than 32 bits, the data must be driven in multiple
+cycles at one of the supported widths.</p>
+</section>
+</section>
+<section id="consolidated-pix2pgp-frame">
+<span id="frame-pix2pgp-frame"></span><h2>Consolidated Pix2PGP Frame<a class="headerlink" href="#consolidated-pix2pgp-frame" title="Link to this heading"></a></h2>
+<p>Upon receiving valid frames from every enabled lane for a given trigger,
+the FPGA receiver’s Lane Merger produces the consolidated Pix2PGP Frame.
+It consists of:</p>
+<ul class="simple">
+<li><p><strong>Preamble</strong> (fixed 128-bit)</p>
+<ul>
+<li><p>48-bit identifier — <code class="docutils literal notranslate"><span class="pre">'PixPGP'</span></code> in ASCII =
+<code class="docutils literal notranslate"><span class="pre">0x00706978706770</span></code></p></li>
+<li><p>16-bit <code class="docutils literal notranslate"><span class="pre">Frame</span> <span class="pre">Type</span> <span class="pre">ID</span></code> — 0 = Nominal, 1 = Drop-Frame, … to-be-extended</p></li>
+<li><p>16-bit <code class="docutils literal notranslate"><span class="pre">ASIC</span> <span class="pre">Type</span></code> — 1 = SparkPix-S, 2 = SparkPix-T, 3 = Thriglav,
+etc. (0 = Reserved)</p></li>
+<li><p>16-bit <code class="docutils literal notranslate"><span class="pre">ASIC</span> <span class="pre">ID</span></code> — for systems hosting multiple ASICs per FPGA</p></li>
+<li><p>16-bit <code class="docutils literal notranslate"><span class="pre">FPGA</span> <span class="pre">ID</span></code> — for multi-FPGA DAQ systems</p></li>
+<li><p>16-bit <code class="docutils literal notranslate"><span class="pre">FPGA</span> <span class="pre">Trigger</span> <span class="pre">Counter</span></code> — should match every lane’s Trigger
+Counter</p></li>
+</ul>
+</li>
+<li><p><strong>Header</strong> (variable, per-lane bitmasks). Each bitmask is <code class="docutils literal notranslate"><span class="pre">NUM_OF_</span>
+<span class="pre">SERIALIZERS_C</span></code> bits wide (8 for SparkPix-S/T, 2 for Thriglav):</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Decoding</span> <span class="pre">Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Over-Occupancy</span></code>, <code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Pause</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Pause-Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Full</span></code>, <code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Timeout</span></code>, <code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Down</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Valid</span></code> — a frame was received for that lane for that trigger.
+Nominal readout has every bit high. If a lane is in Decoding Error,
+Full, Timed-Out, or Down, its Valid bit is never set</p></li>
+</ul>
+</li>
+<li><p><strong>Lane-Frame-Length field</strong> — one 16-bit length subfield per lane whose
+<code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Valid</span></code> bit was high. The value is the number of data words for
+that lane for that trigger</p></li>
+<li><p><strong>Lane Frames</strong> — the concatenation of every valid lane’s frame</p></li>
+<li><p><strong>Trailer</strong> — fixed 48-bit identifier (<code class="docutils literal notranslate"><span class="pre">'PixPGP'</span></code> in ASCII =
+<code class="docutils literal notranslate"><span class="pre">0x00706978706770</span></code>)</p></li>
+</ul>
+<section id="drop-frames">
+<h3>Drop Frames<a class="headerlink" href="#drop-frames" title="Link to this heading"></a></h3>
+<p>If the receiver drops a frame (e.g. lane down, decoding failure, receiver
+overflow), a <strong>drop-frame</strong> is transmitted in place of the actual frame,
+carrying a distinct <code class="docutils literal notranslate"><span class="pre">Frame</span> <span class="pre">Type</span> <span class="pre">Type</span></code> code so the back-end can detect the
+miss and take corrective action.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="fpga_receiver.html" class="btn btn-neutral float-left" title="FPGA Receiver Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="asic_implementations.html" class="btn btn-neutral float-right" title="ASIC Implementations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

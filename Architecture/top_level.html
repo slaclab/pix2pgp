@@ -1,0 +1,219 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top-Level Overview &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ASIC Core Architecture" href="asic_core.html" />
+    <link rel="prev" title="Architecture" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Top-Level Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#design-philosophy">Design Philosophy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clock-domains">Clock Domains</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#repository-mapping">Repository Mapping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="asic_core.html">ASIC Core Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control.html">Data-Flow and Corner Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpga_receiver.html">FPGA Receiver Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frame_format.html">Data Frame Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asic_implementations.html">ASIC Implementations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture</a></li>
+      <li class="breadcrumb-item active">Top-Level Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/Architecture/top_level.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="top-level-overview">
+<span id="architecture-top-level"></span><h1>Top-Level Overview<a class="headerlink" href="#top-level-overview" title="Link to this heading"></a></h1>
+<p>A Pix2PGP-based readout chain has three tiers. Inside the ASIC, one or
+more Pix2PGP cores take sparse data from their assigned slice of the
+pixel matrix and hand off a per-trigger event frame to a dedicated PGP4
+transmitter. Off-chip, one FPGA hosts one PGP4 receiver per link plus
+the Pix2PGP receiver logic; the receiver merges the per-lane frames into
+a single per-trigger frame that goes on to the back-end.</p>
+<section id="design-philosophy">
+<h2>Design Philosophy<a class="headerlink" href="#design-philosophy" title="Link to this heading"></a></h2>
+<p>Pix2PGP is an <strong>event builder</strong>: it waits for every source it manages to
+close the current event, then transmits a single AXI-Stream frame per
+trigger under nominal operation. Under back-pressure
+(also referred to as <code class="docutils literal notranslate"><span class="pre">Pause</span></code>) conditions (see <a class="reference internal" href="flow_control.html#architecture-flow-control"><span class="std std-ref">Data-Flow and Corner Cases</span></a>),
+the ASIC transmits the event data in multiple fragment frames per
+trigger, and the FPGA receiver reassembles them into one
+consolidated frame downstream. Either way, the back-end
+sees a single frame per trigger.</p>
+<p>This is different from a streaming design where individual hits are
+pushed out as they arrive on a per-trigger basis; the streaming
+approach shifts event assembly onto the back-end and becomes hard to
+scale at high trigger rates with variable per-event occupancy.</p>
+<p>Two design ideas underpin the framework:</p>
+<ul class="simple">
+<li><p><strong>Segmentation</strong> — each Pix2PGP core owns a fixed set of data sources
+(typically pixel columns - also referred to as macro-pixels).
+Multiple cores are instantiated per ASIC to
+spread the data load. Cores are independent of each other, and each
+emits one AXI-Stream frame per trigger under nominal operation (or a
+sequence of fragment frames under back-pressure/<code class="docutils literal notranslate"><span class="pre">Pause</span></code> conditions)</p></li>
+<li><p><strong>Handshaking</strong> — the interface between the data-generating logic
+(referred to in this documentation as <strong>User Logic</strong>) and Pix2PGP is
+intentionally minimal: a data bus with a write-enable strobe, two
+event delimiters (Start-of-Frame / End-of-Frame), an Over-Occupancy
+flag, and a bidirectional back-pressure signal (Pause). See
+<a class="reference internal" href="flow_control.html#architecture-flow-control"><span class="std std-ref">Data-Flow and Corner Cases</span></a> for the details</p></li>
+</ul>
+</section>
+<section id="clock-domains">
+<h2>Clock Domains<a class="headerlink" href="#clock-domains" title="Link to this heading"></a></h2>
+<p>Pix2PGP is a dual-clock-domain design:</p>
+<ul class="simple">
+<li><p><strong>PGP / Serializer clock</strong> (~185.714 MHz on current deployments — the
+LCLS clock). Most of the core operates here, including the AXI-Stream
+output toward the PGP4 transmitter</p></li>
+<li><p><strong>User Logic / Matrix / Sparse clock</strong> (application-specific — see
+<a class="reference internal" href="asic_implementations.html#architecture-asic-implementations"><span class="std std-ref">ASIC Implementations</span></a>). This is the domain of the
+data-generating logic that feeds Pix2PGP. Only the write-side of each
+Column Manager’s FIFO lives in this domain</p></li>
+</ul>
+<p>The Column Manager uses dual-clock FIFOs to bridge the two domains.</p>
+</section>
+<section id="repository-mapping">
+<h2>Repository Mapping<a class="headerlink" href="#repository-mapping" title="Link to this heading"></a></h2>
+<p>The RTL source is organized as follows:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gateware/shared/rtl/</span></code>      — the ASIC-side core, common across every
+supported ASIC:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpTop.vhd</span></code>          — top-level of the shared core</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpColumnManager.vhd</span></code> — see <a class="reference internal" href="asic_core.html#architecture-asic-core"><span class="std std-ref">ASIC Core Architecture</span></a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpColumnSupervisor.vhd</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpArbiter.vhd</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpWatchdog.vhd</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpPkg.vhd</span></code>          — global constants and types</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2Pgp4TxLiteWrapper.vhd</span></code> — SURF PGP4 TX wrapper</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">surfFifo/</span></code> and <code class="docutils literal notranslate"><span class="pre">synopsysFifo/</span></code> — dual-clock FIFO variants</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gateware/asics/&lt;AsicName&gt;/</span></code> — per-ASIC top-level and package. Every
+ASIC integrates the shared core through:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">rtl/Pix2PgpAsicPkg.vhd</span></code>  — ASIC-specific constants
+(<code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code>, <code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code>, header/metadata bit-mapping)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rtl/Pix2Pgp&lt;AsicName&gt;Top.vhd</span></code> — ASIC-specific top wrapper</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tb/</span></code> — behavioral models of the ASIC’s pixel and per-column
+User-Logic, plus a standalone RTL testbench</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">firmware/fpga/rtl/</span></code>        — the FPGA receiver, common across ASICs:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicStreamRx.vhd</span></code> — top of the FPGA receiver for one ASIC</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneRxWrapper.vhd</span></code> / <code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneRx.vhd</span></code> — per-lane
+receiver + integrity checker</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMon.vhd</span></code>      — per-lane statistics for calibration /
+monitoring</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneSupervisor.vhd</span></code> — cross-lane orchestration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMerger.vhd</span></code>   — final frame assembler</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpTriggerManager.vhd</span></code> — SRO/DAQ trigger buffering</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpAxiLiteManager.vhd</span></code> — AXI-Lite register interface</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="asic_core.html" class="btn btn-neutral float-right" title="ASIC Core Architecture" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,573 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Integrate the Pix2PGP Core in Your ASIC &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to Integrate the Pix2PGP FPGA Receiver in Your FPGA" href="integrate_fpga_receiver.html" />
+    <link rel="prev" title="How to Import Pix2PGP Sources in Your Project" href="import_sources.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Integrate the Pix2PGP Core in Your ASIC</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generics">Generics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ports">Ports</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#general-interface">General Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#column-manager-interface">Column Manager Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pgp4-tx-interface">PGP4 TX Interface</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#config-record">Config record</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#readback-record">Readback record</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#instantiation-template">Instantiation Template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#instantiation-checklist">Instantiation Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Integrate the Pix2PGP Core in Your ASIC</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/integrate_asic_core.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-integrate-the-pix2pgp-core-in-your-asic">
+<span id="how-to-integrate-asic-core"></span><h1>How to Integrate the Pix2PGP Core in Your ASIC<a class="headerlink" href="#how-to-integrate-the-pix2pgp-core-in-your-asic" title="Link to this heading"></a></h1>
+<p>This page describes how to drop the Pix2PGP core into an ASIC design.
+The core is a <strong>VHDL</strong> design that is expected to be instantiated inside
+the digital section of the ASIC, one instance per data lane (typically
+one per PGP4 transmitter / serializer).</p>
+<p>The top-level entity is <code class="docutils literal notranslate"><span class="pre">Pix2PgpTop</span></code>, defined in
+<code class="docutils literal notranslate"><span class="pre">gateware/shared/rtl/Pix2PgpTop.vhd</span></code>. It is intentionally kept
+<strong>simple-port</strong> (<code class="docutils literal notranslate"><span class="pre">std_logic</span></code> / <code class="docutils literal notranslate"><span class="pre">std_logic_vector</span></code> only on the
+data-facing side) so it can be instantiated from a SystemVerilog /
+Verilog wrapper without record-type friction. The only VHDL records
+appearing on its interface are the small <code class="docutils literal notranslate"><span class="pre">config</span></code> / <code class="docutils literal notranslate"><span class="pre">readback</span></code> and
+<code class="docutils literal notranslate"><span class="pre">AxiStreamMaster</span></code> / <code class="docutils literal notranslate"><span class="pre">Slave</span></code> records — see the port table below.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A per-ASIC package file (<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>) that defines the
+ASIC-scoped constants Pix2PGP reads (see <a class="reference internal" href="../Architecture/asic_core.html#architecture-asic-core"><span class="std std-ref">ASIC Core Architecture</span></a>
+and <a class="reference internal" href="add_new_asic.html#how-to-add-new-asic"><span class="std std-ref">How to Add Support for a New ASIC</span></a>). The main knobs are:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> — how many columns each Pix2PGP instance
+serves</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code>  — how many Pix2PGP instances / lanes exist
+on the whole ASIC (used by the FPGA receiver — the ASIC core itself
+only cares about <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> — the width of the data bus driven <strong>into</strong>
+Pix2PGP. Supported: 4, 8, 12, 16, 20, 24, 28, 32 bits</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ASIC_TYPE_C</span></code>           — a numeric identifier, propagated into the
+consolidated FPGA-side frame preamble</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INCR_TRGCNT_OVEROCC_C</span></code> — whether the Trigger Counter should be
+incremented on an Over-Occupancy event</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATALEN_WIDTH_C</span></code> / <code class="docutils literal notranslate"><span class="pre">TRGCNT_WIDTH_C</span></code> / <code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code>
+— bit widths of the counters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EVAL_SOF_C</span></code> / <code class="docutils literal notranslate"><span class="pre">EVAL_EOFE_C</span></code> — enable strict SoF / EoFE checking
+on the outbound AXI-Stream</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">HEADER_WIDTH_MULT_C</span></code> — header scaling factor if the natural
+doubled-bus width cannot fit the header bitfields</p></li>
+<li><p>The <strong>header and column-metadata bitfield</strong> definitions</p></li>
+</ul>
+</li>
+<li><p>Two clocks: <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> (User Logic domain) and <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>
+(Serializer / PGP domain) with their matching active-high resets</p></li>
+<li><p>An AXI-Stream slave downstream (a PGP4 transmitter for the standard
+use-case, or any other consumer if you want to wire Pix2PGP into a
+non-PGP transport)</p></li>
+</ul>
+</section>
+<section id="generics">
+<h2>Generics<a class="headerlink" href="#generics" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text"><code class="docutils literal notranslate"><span class="pre">Pix2PgpTop</span></code> generics</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 15.0%" />
+<col style="width: 15.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TPD_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">ns</span></code></p></td>
+<td><p>Simulation-only propagation delay applied to registers. Ignored
+by synthesis</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RST_ASYNC_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code> → use asynchronous reset; <code class="docutils literal notranslate"><span class="pre">false</span></code> → synchronous reset</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">std_logic</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+<td><p>Reset active-high (<code class="docutils literal notranslate"><span class="pre">'1'</span></code>) or active-low (<code class="docutils literal notranslate"><span class="pre">'0'</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_DATA_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Insert an extra pipeline stage on the Arbiter → PGP TX data path.
+Enable when timing on the AXI-Stream to the PGP4 transmitter is
+tight</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_STATUS_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p>Insert an extra pipeline stage on the Column Supervisor /
+Arbiter status buses. Usually leave enabled</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">7</span></code></p></td>
+<td><p>Data FIFO depth per Column Manager, as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. E.g. <code class="docutils literal notranslate"><span class="pre">7</span></code> → 128
+entries. Bounded by the silicon area budget of the digital core
+(see <a class="reference internal" href="../Architecture/flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a> for the buffer-sizing trade-off)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_STATUS_DEPTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">6</span></code></p></td>
+<td><p>Status FIFO depth per Column Manager, as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. E.g. <code class="docutils literal notranslate"><span class="pre">6</span></code> → 64
+entries. Typically smaller than the Data FIFO</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATAFIFO_PIPE_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Number of pipeline registers on the Data FIFO output. Zero-latency
+reads are supported, but adding a pipeline stage helps timing
+closure inside the core</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">STATUSFIFO_PIPE_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Number of pipeline registers on the Status FIFO output</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="ports">
+<h2>Ports<a class="headerlink" href="#ports" title="Link to this heading"></a></h2>
+<section id="general-interface">
+<h3>General Interface<a class="headerlink" href="#general-interface" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 15.0%" />
+<col style="width: 65.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Direction</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sparseClk</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p>User Logic clock (matrix / sparse-logic domain). Drives the
+write-side of each Column Manager FIFO</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpClk</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p>PGP / Serializer clock. Drives the Column Supervisor, the
+Arbiter, and the read-side of every FIFO</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sparseRst</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p>Reset on the <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> domain, polarity per
+<code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpRst</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p>Reset on the <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain, polarity per
+<code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">config</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpCfgConfigType</span></code> record. Carries the run-time configurable
+fields (see the <em>Config record</em> subsection below)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">readback</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">out</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpCfgReadbackType</span></code> record. Aggregated status flags used
+for register read-back (see <em>Readback record</em> below)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="column-manager-interface">
+<h3>Column Manager Interface<a class="headerlink" href="#column-manager-interface" title="Link to this heading"></a></h3>
+<p>All of these ports are <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> bits wide and share the
+User Logic clock domain. They are the interface between Pix2PGP and the
+per-column User Logic instances.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 12.0%" />
+<col style="width: 15.0%" />
+<col style="width: 58.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Direction</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">din</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpSparseDinArray</span></code></p></td>
+<td><p>Data bus. One
+<code class="docutils literal notranslate"><span class="pre">std_logic_vector(ASIC_DATABUS_DWIDTH_C-1</span> <span class="pre">downto</span> <span class="pre">0)</span></code> per Column
+Manager. Values latched into the Column Manager Data FIFO on
+every high <code class="docutils literal notranslate"><span class="pre">wrEn</span></code> strobe</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wrEn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column write-enable. Strobes a valid data word on <code class="docutils literal notranslate"><span class="pre">din</span></code>
+into the corresponding Column Manager Data FIFO</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sof</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column Start-of-Frame. Opens a new event in that Column
+Manager and increments its Trigger Counter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column End-of-Frame. Closes the event nominally</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">overOcc</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column Over-Occupancy. Closes the current event and (for
+self-closure ASICs) opens the next one on the same cycle. See
+<a class="reference internal" href="../Architecture/flow_control.html#flow-over-occupancy"><span class="std std-ref">Over-Occupancy</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pauseAck</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column Pause acknowledgement from the User Logic. Confirms
+to the Column Manager that the User Logic has seen the <code class="docutils literal notranslate"><span class="pre">pause</span></code>
+assertion and stopped forwarding new hits</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">busy</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">out</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column busy status. High while the Column Manager is
+actively processing an event</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pause</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">out</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
+<td><p>Per-column Pause request driven back to the User Logic. Asserted
+when the Column Manager’s Data FIFO or Status FIFO reaches its
+almost-full threshold. See <a class="reference internal" href="../Architecture/flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pgp4-tx-interface">
+<h3>PGP4 TX Interface<a class="headerlink" href="#pgp4-tx-interface" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 15.0%" />
+<col style="width: 65.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Direction</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgpTxMaster</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">out</span></code></p></td>
+<td><p>AXI-Stream master carrying the outbound Pix2PGP Lane Frame. Its
+width is <code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span> <span class="pre">=</span> <span class="pre">ASIC_DATABUS_DWIDTH_C</span> <span class="pre">*</span> <span class="pre">2</span></code>.
+Wire this directly to the <code class="docutils literal notranslate"><span class="pre">pgpTxMaster</span></code> input of the PGP4
+transmitter (a Gearbox inside the core adapts the width to 64-bit
+PGP4 before this port). See <a class="reference internal" href="../Architecture/frame_format.html#architecture-frame-format"><span class="std std-ref">Data Frame Format</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpTxSlave</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
+<td><p>AXI-Stream slave handshake from the PGP4 transmitter</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="config-record">
+<h2>Config record<a class="headerlink" href="#config-record" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpCfgConfigType</span></code> (defined in
+<code class="docutils literal notranslate"><span class="pre">gateware/shared/rtl/Pix2PgpPkg.vhd</span></code>) is the run-time configuration
+record driven into <code class="docutils literal notranslate"><span class="pre">Pix2PgpTop.config</span></code>:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Width</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">colEnaSparse</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></td>
+<td><p>Per-column enable on the sparse / User-Logic side. Low disables
+writes into that Column Manager’s Data FIFO</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">colEnaPgp</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></td>
+<td><p>Per-column enable on the PGP / drain side. Low keeps the
+Arbiter from draining that Column Manager</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timeoutLimit</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code></p></td>
+<td><p>Watchdog limit (in PGP-clock cycles) used by the Column
+Supervisor in the Timeout Readout Sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pauseLimit</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code></p></td>
+<td><p>Pause-timeout limit (in PGP-clock cycles) used by the Column
+Supervisor to group paused columns together on ERO-closure
+ASICs</p></td>
+</tr>
+</tbody>
+</table>
+<p>A ready-made default value, <code class="docutils literal notranslate"><span class="pre">DEFAULT_PIX2PGP_CONFIG_C</span></code>, is exported
+by the package. If you have no register-file infrastructure yet, wire
+<code class="docutils literal notranslate"><span class="pre">config</span> <span class="pre">&lt;=</span> <span class="pre">DEFAULT_PIX2PGP_CONFIG_C</span></code> to bring the core up.</p>
+</section>
+<section id="readback-record">
+<h2>Readback record<a class="headerlink" href="#readback-record" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpCfgReadbackType</span></code> — aggregated status returned on
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpTop.readback</span></code>:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColBusy</span></code></p></td>
+<td><p>Logical-OR of the per-column <code class="docutils literal notranslate"><span class="pre">busy</span></code> signals</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColDataEmpty</span></code></p></td>
+<td><p>Logical-AND of the empty flags of every Column Manager Data FIFO</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColStatusEmpty</span></code></p></td>
+<td><p>Logical-AND of the empty flags of every Column Manager Status
+FIFO</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgSuperBusy</span></code></p></td>
+<td><p>Column Supervisor busy flag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgArbBusy</span></code></p></td>
+<td><p>Arbiter busy flag</p></td>
+</tr>
+</tbody>
+</table>
+<p>Wire these up to your ASIC’s slow-control read-back path if you want the
+core’s live state to be observable off-chip.</p>
+</section>
+<section id="instantiation-template">
+<h2>Instantiation Template<a class="headerlink" href="#instantiation-template" title="Link to this heading"></a></h2>
+<p>For an ASIC with 24 columns per Pix2PGP instance, 20-bit data words,
+and 8 lanes (SparkPix-S-style):</p>
+<div class="highlight-vhdl notranslate"><div class="highlight"><pre><span></span><span class="k">library</span><span class="w"> </span><span class="nn">ieee</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="nn">ieee.std_logic_1164.</span><span class="k">all</span><span class="p">;</span>
+
+<span class="k">library</span><span class="w"> </span><span class="nn">surf</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="nn">surf.StdRtlPkg.</span><span class="k">all</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="nn">surf.AxiStreamPkg.</span><span class="k">all</span><span class="p">;</span>
+
+<span class="k">library</span><span class="w"> </span><span class="nn">pix2pgp</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="nn">pix2pgp.Pix2PgpAsicPkg.</span><span class="k">all</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="nn">pix2pgp.Pix2PgpPkg.</span><span class="k">all</span><span class="p">;</span>
+
+<span class="c1">-- ...</span>
+
+<span class="n">U_Pix2PgpLane</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">entity</span><span class="w"> </span><span class="nc">pix2pgp</span><span class="p">.</span><span class="n">Pix2PgpTop</span>
+<span class="w">   </span><span class="k">generic</span><span class="w"> </span><span class="k">map</span><span class="w"> </span><span class="p">(</span>
+<span class="w">      </span><span class="n">TPD_G</span><span class="w">                     </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">ns</span><span class="p">,</span>
+<span class="w">      </span><span class="n">RST_ASYNC_G</span><span class="w">               </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">true</span><span class="p">,</span>
+<span class="w">      </span><span class="n">RST_POLARITY_G</span><span class="w">            </span><span class="o">=&gt;</span><span class="w"> </span><span class="sc">'1'</span><span class="p">,</span>
+<span class="w">      </span><span class="n">PIPELINE_DATA_G</span><span class="w">           </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">false</span><span class="p">,</span>
+<span class="w">      </span><span class="n">PIPELINE_STATUS_G</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">true</span><span class="p">,</span>
+<span class="w">      </span><span class="n">COLMANAGER_DATA_DEPTH_G</span><span class="w">   </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 128 entries per column</span>
+<span class="w">      </span><span class="n">COLMANAGER_STATUS_DEPTH_G</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 64 entries per column</span>
+<span class="w">      </span><span class="n">DATAFIFO_PIPE_G</span><span class="w">           </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="n">STATUSFIFO_PIPE_G</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">   </span><span class="k">port</span><span class="w"> </span><span class="k">map</span><span class="w"> </span><span class="p">(</span>
+<span class="w">      </span><span class="c1">-- Clocks / resets</span>
+<span class="w">      </span><span class="n">sparseClk</span><span class="w">   </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">sparseClk</span><span class="p">,</span>
+<span class="w">      </span><span class="n">pgpClk</span><span class="w">      </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pgpClk</span><span class="p">,</span>
+<span class="w">      </span><span class="n">sparseRst</span><span class="w">   </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">sparseRst</span><span class="p">,</span>
+<span class="w">      </span><span class="n">pgpRst</span><span class="w">      </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pgpRst</span><span class="p">,</span>
+<span class="w">      </span><span class="c1">-- Config / readback</span>
+<span class="w">      </span><span class="n">config</span><span class="w">      </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pix2pgpConfig</span><span class="p">,</span>
+<span class="w">      </span><span class="n">readback</span><span class="w">    </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pix2pgpReadback</span><span class="p">,</span>
+<span class="w">      </span><span class="c1">-- Column Manager Interface (all NUM_OF_COL_MANAGERS_C-wide)</span>
+<span class="w">      </span><span class="n">din</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colDin</span><span class="p">,</span>
+<span class="w">      </span><span class="n">wrEn</span><span class="w">        </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colWrEn</span><span class="p">,</span>
+<span class="w">      </span><span class="n">sof</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colSof</span><span class="p">,</span>
+<span class="w">      </span><span class="n">eof</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colEof</span><span class="p">,</span>
+<span class="w">      </span><span class="n">overOcc</span><span class="w">     </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colOverOcc</span><span class="p">,</span>
+<span class="w">      </span><span class="n">pauseAck</span><span class="w">    </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colPauseAck</span><span class="p">,</span>
+<span class="w">      </span><span class="n">busy</span><span class="w">        </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colBusy</span><span class="p">,</span>
+<span class="w">      </span><span class="n">pause</span><span class="w">       </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">colPause</span><span class="p">,</span>
+<span class="w">      </span><span class="c1">-- PGP4 TX</span>
+<span class="w">      </span><span class="n">pgpTxMaster</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pgpTxMaster</span><span class="p">,</span>
+<span class="w">      </span><span class="n">pgpTxSlave</span><span class="w">  </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">pgpTxSlave</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Replicate this instantiation <code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code> times inside your
+ASIC top-level, each connected to a distinct group of columns and to a
+distinct PGP4 transmitter / serializer pair.</p>
+</section>
+<section id="instantiation-checklist">
+<h2>Instantiation Checklist<a class="headerlink" href="#instantiation-checklist" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Both <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> and <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> are physically driven and their
+frequencies match those declared in <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code> matches the polarity of the resets you feed in</p></li>
+<li><p>Every element of <code class="docutils literal notranslate"><span class="pre">din(i)</span></code> is exactly <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> bits
+wide (VHDL synthesis will error out otherwise, but Verilog wrappers
+often silently truncate)</p></li>
+<li><p>The User Logic honours <code class="docutils literal notranslate"><span class="pre">pause</span></code> — no <code class="docutils literal notranslate"><span class="pre">wrEn</span></code> may be issued while
+<code class="docutils literal notranslate"><span class="pre">pause</span></code> is high; <code class="docutils literal notranslate"><span class="pre">pauseAck</span></code> should mirror this. Failure to honour
+Pause causes Data / Status FIFO overflows and undefined behaviour</p></li>
+<li><p>The AXI-Stream between <code class="docutils literal notranslate"><span class="pre">pgpTxMaster</span></code>/<code class="docutils literal notranslate"><span class="pre">pgpTxSlave</span></code> and the PGP4
+transmitter carries the correct <code class="docutils literal notranslate"><span class="pre">tKeep</span></code> / <code class="docutils literal notranslate"><span class="pre">tLast</span></code> conventions.
+If you use SURF’s <code class="docutils literal notranslate"><span class="pre">Pgp4TxLite</span></code>, wire directly; if you use a
+proprietary PGP transmitter, verify the AXI-Stream config record
+matches</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code> is stable during operation. If register writes are allowed
+at runtime, ensure the <code class="docutils literal notranslate"><span class="pre">config</span></code> fields are captured on <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>
+before being applied</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="import_sources.html" class="btn btn-neutral float-left" title="How to Import Pix2PGP Sources in Your Project" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="integrate_fpga_receiver.html" class="btn btn-neutral float-right" title="How to Integrate the Pix2PGP FPGA Receiver in Your FPGA" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

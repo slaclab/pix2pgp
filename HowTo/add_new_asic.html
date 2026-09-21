@@ -1,0 +1,364 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Add Support for a New ASIC &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to Benchmark Throughput and Latency" href="benchmarking.html" />
+    <link rel="prev" title="How to Use Pix2PgpSparseProcessor with Rogue" href="rogue_stream.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Add Support for a New ASIC</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pick-a-template">Pick a Template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#edit-the-rtl-package">Edit the RTL Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#edit-the-rtl-top">Edit the RTL Top</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#edit-the-testbench-files">Edit the Testbench Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quick-syntax-check">Quick Syntax Check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#create-a-vcs-simulation-target">Create a VCS Simulation Target</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#extend-the-python-decoder">Extend the Python Decoder</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#asicparameters-py"><code class="docutils literal notranslate"><span class="pre">_AsicParameters.py</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pix2pgpheaderformat-py"><code class="docutils literal notranslate"><span class="pre">_Pix2PgpHeaderFormat.py</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pix2pgpcolmetadataformat-py"><code class="docutils literal notranslate"><span class="pre">_Pix2PgpColMetadataFormat.py</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pix2pgpsparsedataformat-py"><code class="docutils literal notranslate"><span class="pre">_Pix2PgpSparseDataFormat.py</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#housekeeping">Housekeeping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Add Support for a New ASIC</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/add_new_asic.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-add-support-for-a-new-asic">
+<span id="how-to-add-new-asic"></span><h1>How to Add Support for a New ASIC<a class="headerlink" href="#how-to-add-support-for-a-new-asic" title="Link to this heading"></a></h1>
+<p>Pix2PGP is designed to be adapted to a new detection ASIC through
+<strong>parameterization only</strong> — no changes to the shared RTL core
+(<code class="docutils literal notranslate"><span class="pre">gateware/shared/rtl</span></code>) or the FPGA receiver
+(<code class="docutils literal notranslate"><span class="pre">firmware/fpga/rtl</span></code>) are required.</p>
+<p>Throughout this guide, <code class="docutils literal notranslate"><span class="pre">NewAsic</span></code> refers to the ASIC being added. Rename
+it accordingly in every step.</p>
+<section id="pick-a-template">
+<h2>Pick a Template<a class="headerlink" href="#pick-a-template" title="Link to this heading"></a></h2>
+<p>Two event-closure families are supported:</p>
+<ul class="simple">
+<li><p><strong>Self-Closure</strong> — the ASIC User Logic determines when to issue <code class="docutils literal notranslate"><span class="pre">EoF</span></code>
+internally (no external ERO signal). Template: <strong>SparkPixS</strong></p></li>
+<li><p><strong>External-Trigger-Closure (ERO)</strong> — an external End-Of-Readout trigger
+closes the event. Template: <strong>SparkPixT</strong></p></li>
+</ul>
+<p>Copy the closest template as the starting point for <code class="docutils literal notranslate"><span class="pre">NewAsic</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>pix2pgp/gateware/asics
+$<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>SparkPixT<span class="w"> </span>NewAsic<span class="w">          </span><span class="c1"># or SparkPixS</span>
+</pre></div>
+</div>
+</section>
+<section id="edit-the-rtl-package">
+<h2>Edit the RTL Package<a class="headerlink" href="#edit-the-rtl-package" title="Link to this heading"></a></h2>
+<p>Inside <code class="docutils literal notranslate"><span class="pre">NewAsic/rtl/Pix2PgpAsicPkg.vhd</span></code>, adjust the following constants:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code>  — how many columns each Pix2PGP instance serves</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code>   — how many serializers / Pix2PGP instances /
+lanes exist on the whole ASIC</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code>  — the width of the data bus driven <strong>into</strong>
+Pix2PGP (see the widths supported below)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">HEADER_WIDTH_MULT_C</span></code>    — if the doubled internal bus width
+(<code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span> <span class="pre">=</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">ASIC_DATABUS_DWIDTH_C</span></code>) is not large
+enough to fit the header bitfield, scale it up here. See
+<a class="reference internal" href="../Architecture/frame_format.html#architecture-frame-format"><span class="std std-ref">Data Frame Format</span></a></p></li>
+<li><p>The <strong>header bitfield</strong> and <strong>column metadata bitfield</strong> definitions —
+the layout of Pause / OverOcc / Pause-Error / Timeout / Column Hitmask /
+Trigger Counter fields inside the frame header</p></li>
+</ul>
+<p>Supported <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> values: <strong>4, 8, 12, 16, 20, 24, 28,
+32 bits</strong>. Using widths below 16 bits requires padding — bandwidth is
+wasted. Widths above 32 bits should be split across multiple cycles.</p>
+</section>
+<section id="edit-the-rtl-top">
+<h2>Edit the RTL Top<a class="headerlink" href="#edit-the-rtl-top" title="Link to this heading"></a></h2>
+<p>Rename and edit <code class="docutils literal notranslate"><span class="pre">NewAsic/rtl/Pix2PgpNewAsicTop.vhd</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>NewAsic/rtl
+$<span class="w"> </span>mv<span class="w"> </span>Pix2PgpSparkPixTTop.vhd<span class="w"> </span>Pix2PgpNewAsicTop.vhd
+</pre></div>
+</div>
+<p>Update:</p>
+<ul class="simple">
+<li><p>Change the VHDL entity name to <code class="docutils literal notranslate"><span class="pre">Pix2PgpNewAsicTop</span></code></p></li>
+<li><p>Set the width of the <code class="docutils literal notranslate"><span class="pre">sof</span></code>, <code class="docutils literal notranslate"><span class="pre">eof</span></code>, <code class="docutils literal notranslate"><span class="pre">overOcc</span></code> (etc.) signals to
+<code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></li>
+<li><p>Set the number of <code class="docutils literal notranslate"><span class="pre">dinXX</span></code> ports to match <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></li>
+<li><p>Set the width of each <code class="docutils literal notranslate"><span class="pre">dinXX</span></code> port to <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code></p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The top-level intentionally uses <strong>simple std_logic / std_logic_vector</strong>
+ports rather than complex VHDL types. This is because the top-level is
+often instantiated within a SystemVerilog / Verilog context (many
+ASIC-integration flows still cannot handle VHDL records across
+language boundaries).</p>
+</div>
+</section>
+<section id="edit-the-testbench-files">
+<h2>Edit the Testbench Files<a class="headerlink" href="#edit-the-testbench-files" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>../tb
+$<span class="w"> </span>mv<span class="w"> </span>DummySparkPixTPixel.vhd<span class="w"> </span>DummyNewAsicPixel.vhd
+$<span class="w"> </span>mv<span class="w"> </span>Pix2PgpSparkPixTFpgaRxTop.vhd<span class="w"> </span>Pix2PgpNewAsicFpgaRxTop.vhd
+$<span class="w"> </span>mv<span class="w"> </span>Pix2PgpSparkPixTTopTb.vhd<span class="w"> </span>Pix2PgpNewAsicTopTb.vhd
+</pre></div>
+</div>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">DummyNewAsicPixel.vhd</span></code> — behavioral model of a single pixel of the
+new ASIC. Adjust the pixel model’s timing (delay between <code class="docutils literal notranslate"><span class="pre">wrEn</span></code>
+strobes, delay between <code class="docutils literal notranslate"><span class="pre">SRO</span></code> assertion and the first <code class="docutils literal notranslate"><span class="pre">wrEn</span></code>) to
+match the intended in-silicon behavior. The <code class="docutils literal notranslate"><span class="pre">hitLen</span></code> port is set from
+the top-level testbench and controls how many hits each pixel injects
+per event</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpNewAsicFpgaRxTop.vhd</span></code> — wrapper for the FPGA receiver logic.
+Expand or collapse the number of input data ports to match
+<code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpNewAsicTopTb.vhd</span></code> — full behavioral testbench. Update all
+entity and instance names; adjust bus widths as needed. The testbench
+instantiates every lane of the ASIC and routes them into
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpNewAsicFpgaRxTop</span></code></p>
+<ul>
+<li><p>Per-column hit patterns are set via lines like
+<code class="docutils literal notranslate"><span class="pre">hitLen(0)(3)</span> <span class="pre">&lt;=</span> <span class="pre">toSlv(3,</span> <span class="pre">hitLen(0)(0)'length);</span></code> — three hits for a
+pixel in column 3 of lane 0</p></li>
+<li><p>For random stimuli, use the helper script:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python<span class="w"> </span>software/scripts/hitsToVhd.py<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--numOfLanes<span class="o">=</span><span class="m">4</span><span class="w"> </span>--numOfCols<span class="o">=</span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--minRange<span class="o">=</span><span class="m">0</span><span class="w"> </span>--maxRange<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--laneEnable<span class="o">=</span><span class="m">1</span>,1,1,1
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="quick-syntax-check">
+<h2>Quick Syntax Check<a class="headerlink" href="#quick-syntax-check" title="Link to this heading"></a></h2>
+<p>From <code class="docutils literal notranslate"><span class="pre">firmware/ghdl</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>build<span class="w"> </span><span class="nv">ASIC</span><span class="o">=</span>NewAsic
+</pre></div>
+</div>
+<p>If the command exits without errors, the VHDL is well-formed.</p>
+</section>
+<section id="create-a-vcs-simulation-target">
+<h2>Create a VCS Simulation Target<a class="headerlink" href="#create-a-vcs-simulation-target" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>pix2pgp/firmware/targets
+$<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>Pix2PgpSparkPixTEmu<span class="w"> </span>Pix2PgpNewAsicEmu
+</pre></div>
+</div>
+<p>Update:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">hdl/</span></code> — rename <code class="docutils literal notranslate"><span class="pre">Pix2PgpEmuSparkPixT.vhd</span></code> /
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpEmuSparkPixT.xdc</span></code> to <code class="docutils literal notranslate"><span class="pre">Pix2PgpEmuNewAsic.*</span></code> and edit entity
+names inside. These are dummy files not actually used by the testbench</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tb/</span></code> — rename <code class="docutils literal notranslate"><span class="pre">Pix2PgpSparkPixTEmuTb.vhd</span></code> to
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpNewAsicEmuTb.vhd</span></code>; update entity names inside. In particular,
+change <code class="docutils literal notranslate"><span class="pre">U_Uut</span> <span class="pre">:</span> <span class="pre">entity</span> <span class="pre">pix2pgp.Pix2PgpSparkPixTTopTb</span></code> to
+<code class="docutils literal notranslate"><span class="pre">U_Uut</span> <span class="pre">:</span> <span class="pre">entity</span> <span class="pre">pix2pgp.Pix2PgpNewAsicTopTb</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ruckus.tcl</span></code> — change:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="nv">$::DIR_PATH</span><span class="o">/</span>..<span class="o">/</span>..<span class="o">/</span>..<span class="o">/</span>gateware<span class="o">/</span>asics<span class="o">/</span>SparkPixT
+</pre></div>
+</div>
+<p>to:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">loadRuckusTcl</span><span class="w"> </span><span class="nv">$::DIR_PATH</span><span class="o">/</span>..<span class="o">/</span>..<span class="o">/</span>..<span class="o">/</span>gateware<span class="o">/</span>asics<span class="o">/</span>NewAsic
+</pre></div>
+</div>
+<p>and</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">set_property</span><span class="w"> </span>top<span class="w"> </span><span class="k">{</span><span class="nv">Pix2PgpSparkPixTEmuTb</span><span class="k">}</span><span class="w"> </span><span class="k">[</span><span class="nv">get_filesets</span><span class="w"> </span>sim_1<span class="k">]</span>
+</pre></div>
+</div>
+<p>to:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">set_property</span><span class="w"> </span>top<span class="w"> </span><span class="k">{</span><span class="nv">Pix2PgpNewAsicEmuTb</span><span class="k">}</span><span class="w"> </span><span class="k">[</span><span class="nv">get_filesets</span><span class="w"> </span>sim_1<span class="k">]</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Run the VCS testbench following <a class="reference internal" href="vcs_simulation.html#how-to-vcs-simulation"><span class="std std-ref">How to Simulate Using VCS</span></a>, substituting
+<code class="docutils literal notranslate"><span class="pre">NewAsic</span></code> for <code class="docutils literal notranslate"><span class="pre">SparkPixS</span></code>.</p>
+</section>
+<section id="extend-the-python-decoder">
+<h2>Extend the Python Decoder<a class="headerlink" href="#extend-the-python-decoder" title="Link to this heading"></a></h2>
+<p>Once the VCS run produces a data dump, extend the Python decoder to parse
+it. Four files must be edited under <code class="docutils literal notranslate"><span class="pre">firmware/python/pix2pgp/</span></code>:</p>
+<section id="asicparameters-py">
+<h3><code class="docutils literal notranslate"><span class="pre">_AsicParameters.py</span></code><a class="headerlink" href="#asicparameters-py" title="Link to this heading"></a></h3>
+<p>Add <code class="docutils literal notranslate"><span class="pre">NewAsic</span></code> to <code class="docutils literal notranslate"><span class="pre">asicTypeDict</span></code> and <code class="docutils literal notranslate"><span class="pre">asicParams</span></code>, then add a
+parameter class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">asicTypeDict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">1</span><span class="p">:</span> <span class="s2">"SparkPixS"</span><span class="p">,</span>
+    <span class="mi">2</span><span class="p">:</span> <span class="s2">"SparkPixT"</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">:</span> <span class="s2">"NewAsic"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">asicParams</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'SparkPixS'</span><span class="p">:</span> <span class="n">SparkPixSParameters</span><span class="p">,</span>
+    <span class="s1">'SparkPixT'</span><span class="p">:</span> <span class="n">SparkPixTParameters</span><span class="p">,</span>
+    <span class="s1">'NewAsic'</span>  <span class="p">:</span> <span class="n">NewAsicParameters</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">NewAsicParameters</span><span class="p">(</span><span class="n">AsicParameterBase</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">asicTypeId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">AsicParameterBase</span><span class="o">.</span><span class="n">asicTypeDict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">"NewAsic"</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">key</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ASIC type not found in asicTypeDict!"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">asicParamExtract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">param_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'asicTypeId'</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">asicTypeId</span><span class="p">,</span>
+            <span class="s1">'asicType'</span>   <span class="p">:</span> <span class="n">AsicParameterBase</span><span class="o">.</span><span class="n">asicTypeDict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">asicTypeId</span><span class="p">],</span>
+            <span class="s1">'numOfLanes'</span> <span class="p">:</span> <span class="mi">4</span><span class="p">,</span>     <span class="c1"># NUM_OF_SERIALIZERS_C</span>
+            <span class="s1">'numOfCols'</span>  <span class="p">:</span> <span class="mi">40</span><span class="p">,</span>    <span class="c1"># NUM_OF_COL_MANAGERS_C</span>
+            <span class="s1">'wordLen'</span>    <span class="p">:</span> <span class="mi">10</span><span class="p">,</span>    <span class="c1"># PIX2PGP_DATABUS_DWIDTH_C in bytes</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">param_dict</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">asicTypeId</span></code> value <strong>must</strong> equal the <code class="docutils literal notranslate"><span class="pre">ASIC_TYPE_C</span></code> constant
+set in <code class="docutils literal notranslate"><span class="pre">NewAsicPkg.vhd</span></code>. <code class="docutils literal notranslate"><span class="pre">wordLen</span></code> is expressed in bytes (the VHDL
+constant is in bits).</p>
+</div>
+</section>
+<section id="pix2pgpheaderformat-py">
+<h3><code class="docutils literal notranslate"><span class="pre">_Pix2PgpHeaderFormat.py</span></code><a class="headerlink" href="#pix2pgpheaderformat-py" title="Link to this heading"></a></h3>
+<p>Register a <code class="docutils literal notranslate"><span class="pre">NewAsicHeaderFormat</span></code> class and decode the header bit-mapping
+in accordance with the header bitfield in <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>. The
+upper bit of the header must be at position <code class="docutils literal notranslate"><span class="pre">(wordLen</span> <span class="pre">*</span> <span class="pre">8)</span> <span class="pre">-</span> <span class="pre">1</span></code>; the
+Column Hitmask width must be <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> bits.</p>
+</section>
+<section id="pix2pgpcolmetadataformat-py">
+<h3><code class="docutils literal notranslate"><span class="pre">_Pix2PgpColMetadataFormat.py</span></code><a class="headerlink" href="#pix2pgpcolmetadataformat-py" title="Link to this heading"></a></h3>
+<p>Register a <code class="docutils literal notranslate"><span class="pre">NewAsicColMetadataFormat</span></code> class and decode the column
+metadata bit-mapping according to the corresponding fields in
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>.</p>
+</section>
+<section id="pix2pgpsparsedataformat-py">
+<h3><code class="docutils literal notranslate"><span class="pre">_Pix2PgpSparseDataFormat.py</span></code><a class="headerlink" href="#pix2pgpsparsedataformat-py" title="Link to this heading"></a></h3>
+<p>Register a <code class="docutils literal notranslate"><span class="pre">NewAsicDataFormat</span></code> class and decode the individual hit data
+words according to the ASIC’s sparse-data layout (ADC + row, ToA + ToT +
+row, etc.). Update both <code class="docutils literal notranslate"><span class="pre">dataDecoder</span></code> and <code class="docutils literal notranslate"><span class="pre">dataPrinter</span></code>.</p>
+</section>
+</section>
+<section id="housekeeping">
+<h2>Housekeeping<a class="headerlink" href="#housekeeping" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Update the top-level <code class="docutils literal notranslate"><span class="pre">README.md</span></code> and the <em>Supported ASICs</em> list in
+this documentation (<code class="docutils literal notranslate"><span class="pre">docs/src/introduction.rst</span></code>)</p></li>
+<li><p>Run benchmarking for <code class="docutils literal notranslate"><span class="pre">NewAsic</span></code> (see <a class="reference internal" href="benchmarking.html#how-to-run-benchmarking"><span class="std std-ref">How to Benchmark Throughput and Latency</span></a>)</p></li>
+<li><p>Update the Pix2PGP Confluence page</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rogue_stream.html" class="btn btn-neutral float-left" title="How to Use Pix2PgpSparseProcessor with Rogue" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="benchmarking.html" class="btn btn-neutral float-right" title="How to Benchmark Throughput and Latency" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

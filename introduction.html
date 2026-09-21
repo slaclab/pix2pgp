@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=e72e1331"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Setup" href="Setup/index.html" />
+    <link rel="prev" title="Welcome to pix2pgp’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#application-scope">Application Scope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#framework-components">Framework Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#system-overview">System Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supported-asics">Supported ASICs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#repository-layout">Repository Layout</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="HowTo/index.html">HowTos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Introduction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/introduction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="introduction">
+<span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h1>
+<p>Pix2PGP is a configurable readout framework for detector front-end ASICs
+that operate with a sparse readout scheme. It stitches together three
+layers that would otherwise have to be re-implemented for each new ASIC:
+the in-ASIC digital core that groups sparse hits into per-trigger event
+frames, the FPGA logic that receives frames from every serial link of the
+ASIC and merges them into one consolidated frame, and the Python library
+that unpacks the aggregated frame for offline analysis.</p>
+<section id="application-scope">
+<h2>Application Scope<a class="headerlink" href="#application-scope" title="Link to this heading"></a></h2>
+<p>At high trigger rates, transmitting the full pixel matrix on every trigger
+is not always practical. A sparse readout scheme instead forwards only the
+pixels/channels that recorded a signal above threshold, which drops the
+per-trigger bandwidth significantly and allows the detector to operate at
+higher repetition rates without a corresponding blow-up in the amount of
+data pushed off-chip.</p>
+<p>Pix2PGP was written with the LCLS-II readout model in mind: one data frame
+per accelerator pulse, per detection device. That constraint drove the
+choice to place event building <strong>inside the ASIC</strong> rather than delegating
+it to the back-end — the ASIC waits until every data source it manages has
+closed the current event, then emits a single AXI-Stream frame for that
+trigger <a class="footnote-reference brackets" href="#one-frame-per-trigger" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="one-frame-per-trigger" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
+<p>This is the nominal readout case. Under
+back-pressure situations (see <a class="reference internal" href="Architecture/flow_control.html#architecture-flow-control"><span class="std std-ref">Data-Flow and Corner Cases</span></a>), the
+ASIC emits multiple AXI-Stream frames for a single trigger — i.e.
+the event data are transmitted in fragments — and the FPGA receiver
+reassembles them before finally transmitting a single AXI-Stream frame
+to the back-end.</p>
+</aside>
+</aside>
+</section>
+<section id="framework-components">
+<h2>Framework Components<a class="headerlink" href="#framework-components" title="Link to this heading"></a></h2>
+<p>The framework is comprised of:</p>
+<ul class="simple">
+<li><p>An <strong>ASIC digital core</strong> (VHDL) that receives sparse data words and
+externally-driven event delimiters from a configurable number of data
+sources, buffers them, and assembles the per-trigger AXI-Stream frame
+(or frames, under back-pressure — see the footnote above)</p></li>
+<li><p>An <strong>FPGA data aggregation firmware</strong> (VHDL) that takes the frames from
+each of the ASIC’s serial links, checks them for integrity, and merges
+them into a single consolidated frame that is forwarded to the back-end</p></li>
+<li><p>A <strong>Python decoding library</strong> that turns the aggregated frame into a
+dictionary of hits and per-event metadata, suitable for offline
+analysis or for wrapping into a live rogue stream processor</p></li>
+</ul>
+<p>The AXI-Stream protocol is used throughout for data transport; AXI-Lite is
+used for configuring and monitoring the FPGA receiver at runtime. Data
+between the ASIC and the FPGA travels over the SLAC-developed PGP4
+protocol on a per-link basis, though the framework’s event-building layer
+is independent of the physical protocol.</p>
+</section>
+<section id="system-overview">
+<h2>System Overview<a class="headerlink" href="#system-overview" title="Link to this heading"></a></h2>
+<p>Pix2PGP builds on <a class="reference external" href="https://github.com/slaclab/surf">SURF</a> (the SLAC RTL
+building-block library) and integrates with the
+<a class="reference external" href="https://github.com/slaclab/rogue">ROGUE</a> software framework on the
+software side.</p>
+<p>A typical detector ASIC deploys several Pix2PGP core instances (also referred
+to as <strong>lanes</strong>), each responsible for a distinct slice of the pixel
+matrix. Each lane implements its own PGP4 transmitter and serial link, so the
+ASIC ships multiple parallel streams off-chip. On the FPGA side, one PGP4
+receiver per lane feeds the Pix2PGP receiver logic, which reassembles the
+per-lane frames from the detector ASIC into a single consolidated
+per-trigger frame associated with that event.</p>
+</section>
+<section id="supported-asics">
+<h2>Supported ASICs<a class="headerlink" href="#supported-asics" title="Link to this heading"></a></h2>
+<p>At the time of writing, Pix2PGP has been integrated into:</p>
+<ul class="simple">
+<li><p><strong>SparkPix-S</strong>   — X-Ray detection, 130 nm, 119808 pixels, 8 lanes</p></li>
+<li><p><strong>SparkPix-T</strong>   — timing detector, 130 nm, 32256 pixels, 8 lanes</p></li>
+<li><p><strong>Thriglav</strong>     — timing detector, 28 nm, 10000 pixels, 2 lanes</p></li>
+<li><p><strong>SparkPix-Sv2</strong> — X-Ray detection, second-generation SparkPix-S</p></li>
+</ul>
+<p>See <a class="reference internal" href="Architecture/asic_implementations.html#architecture-asic-implementations"><span class="std std-ref">ASIC Implementations</span></a> for a per-ASIC description
+and configuration summary.</p>
+</section>
+<section id="repository-layout">
+<h2>Repository Layout<a class="headerlink" href="#repository-layout" title="Link to this heading"></a></h2>
+<p>The pix2pgp repository is structured as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>pix2pgp/
+├── gateware/            # ASIC-side source code
+│   ├── shared/          #   Reusable RTL core (Column Manager, Supervisor,
+│   │                    #   Arbiter, ASIC Pkg, top-level, watchdog, FIFOs)
+│   └── asics/           #   Per-ASIC top-levels and package files
+│       ├── SparkPixS/
+│       ├── SparkPixSv2/
+│       ├── SparkPixT/
+│       └── Thriglav/
+├── firmware/            # FPGA receiver + Python decoding
+│   ├── fpga/            #   FPGA receiver RTL (LaneRx, Merger, Supervisor,
+│   │                    #   AxiLite Manager, Trigger Manager)
+│   ├── python/pix2pgp/  #   Python data decoding library
+│   ├── targets/         #   VCS behavioral-simulation targets per ASIC
+│   └── submodules/      #   surf, ruckus
+├── ghdl/                # GHDL-based syntax check + behavioral simulation
+├── software/            # Auxiliary scripts (data parser, hits generator,
+│                        #   benchmarking suite)
+└── docs/                # This documentation
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="Architecture/top_level.html#architecture-top-level"><span class="std std-ref">Top-Level Overview</span></a> for a block-level view of the framework.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to pix2pgp’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Setup/index.html" class="btn btn-neutral float-right" title="Setup" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

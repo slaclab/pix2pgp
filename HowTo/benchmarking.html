@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Benchmark Throughput and Latency &mdash; pix2pgp v2.7.4-178-ge9fda64 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e72e1331"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="How to Add Support for a New ASIC" href="add_new_asic.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">HowTos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="import_sources.html">How to Import Pix2PGP Sources in Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_asic_core.html">How to Integrate the Pix2PGP Core in Your ASIC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrate_fpga_receiver.html">How to Integrate the Pix2PGP FPGA Receiver in Your FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_syntax.html">How to Perform VHDL Syntax Checks with GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ghdl_simulation.html">How to Simulate Using GHDL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcs_simulation.html">How to Simulate Using VCS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decode_data.html">How to Decode Pix2PGP Data with the Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rogue_stream.html">How to Use Pix2PgpSparseProcessor with Rogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="add_new_asic.html">How to Add Support for a New ASIC</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to Benchmark Throughput and Latency</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#json-file-format">JSON File Format</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-populate-colhits-and-allhits">Step 1 — Populate colHits and allHits</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-run-the-vhdl-testbench">Step 2 — Run the VHDL Testbench</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-produce-plots-and-tables">Step 3 — Produce Plots and Tables</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#outputs">Outputs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">HowTos</a></li>
+      <li class="breadcrumb-item active">How to Benchmark Throughput and Latency</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/HowTo/benchmarking.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-benchmark-throughput-and-latency">
+<span id="how-to-run-benchmarking"></span><h1>How to Benchmark Throughput and Latency<a class="headerlink" href="#how-to-benchmark-throughput-and-latency" title="Link to this heading"></a></h1>
+<p>Pix2PGP includes a benchmarking suite under <code class="docutils literal notranslate"><span class="pre">software/scripts/benchmarking</span></code>
+that measures the maximum trigger rate an ASIC’s Pix2PGP implementation can
+sustain as a function of hit occupancy, and the total time it takes for a
+consolidated frame to be transmitted by the FPGA receiver (measured from
+the <code class="docutils literal notranslate"><span class="pre">SRO</span></code> trigger).</p>
+<p>The suite is driven by a per-ASIC JSON file (<code class="docutils literal notranslate"><span class="pre">asics/&lt;AsicName&gt;.json</span></code>) and
+a top-level VHDL testbench with the <code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span></code> generic set to
+<code class="docutils literal notranslate"><span class="pre">true</span></code>.</p>
+<section id="json-file-format">
+<h2>JSON File Format<a class="headerlink" href="#json-file-format" title="Link to this heading"></a></h2>
+<p>Each entry in <code class="docutils literal notranslate"><span class="pre">asics/&lt;AsicName&gt;.json</span></code> has the following structure:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"occ"</span><span class="p">:</span><span class="w"> </span><span class="mf">80.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"colHits"</span><span class="p">:</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"allHits"</span><span class="p">:</span><span class="w"> </span><span class="mi">12288</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"colBusy"</span><span class="p">:</span><span class="w"> </span><span class="mi">25367</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"superBusy"</span><span class="p">:</span><span class="w"> </span><span class="mi">11459</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"totalLatency"</span><span class="p">:</span><span class="w"> </span><span class="mi">25796</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Field meanings:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">occ</span></code>          — occupancy percentage</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">colHits</span></code>      — hits per column at this occupancy (populated by
+<code class="docutils literal notranslate"><span class="pre">benchmarking.py</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">allHits</span></code>      — total hits per lane (populated by <code class="docutils literal notranslate"><span class="pre">benchmarking.py</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">colBusy</span></code>      — clock ticks the Column Manager is busy for
+(measured by the testbench)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">superBusy</span></code>    — clock ticks the Column Supervisor is busy for
+(measured by the testbench)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">totalLatency</span></code> — clock ticks between <code class="docutils literal notranslate"><span class="pre">SRO</span></code> and the <code class="docutils literal notranslate"><span class="pre">tLast</span></code> of the
+final FPGA-side AXI frame (measured by the testbench)</p></li>
+</ul>
+<p>Clock-tick values are measured against the PGP clock — the period must be
+provided as a command-line argument when producing plots (default:
+5.384 ns).</p>
+</section>
+<section id="step-1-populate-colhits-and-allhits">
+<h2>Step 1 — Populate colHits and allHits<a class="headerlink" href="#step-1-populate-colhits-and-allhits" title="Link to this heading"></a></h2>
+<p>From <code class="docutils literal notranslate"><span class="pre">software/scripts/benchmarking</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python<span class="w"> </span>benchmarking.py<span class="w"> </span>--getHitArray<span class="w"> </span>--updateJson<span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--cols<span class="o">=</span><span class="m">24</span><span class="w"> </span>--rows<span class="o">=</span><span class="m">640</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--asicType<span class="o">=</span>SparkPixS
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--cols</span></code>     — columns per Pix2PGP lane (<code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--rows</span></code>     — total rows per column</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--asicType</span></code> — ASIC name (must match <code class="docutils literal notranslate"><span class="pre">asics/&lt;AsicName&gt;.json</span></code>)</p></li>
+</ul>
+<p>The script prints two arrays:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_colHitArray</span></code> — the number of hits per column corresponding to each
+<code class="docutils literal notranslate"><span class="pre">occ</span></code> entry in the JSON. E.g. for 224 rows and 1 % occupancy:
+<code class="docutils literal notranslate"><span class="pre">224</span> <span class="pre">*</span> <span class="pre">0.01</span> <span class="pre">=</span> <span class="pre">2.24</span></code> → the entry becomes <code class="docutils literal notranslate"><span class="pre">2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_allHitArray</span></code> — total hits across the entire lane. This is stored in
+the JSON as metadata and shown in the resulting plot</p></li>
+</ul>
+</section>
+<section id="step-2-run-the-vhdl-testbench">
+<h2>Step 2 — Run the VHDL Testbench<a class="headerlink" href="#step-2-run-the-vhdl-testbench" title="Link to this heading"></a></h2>
+<p>In <code class="docutils literal notranslate"><span class="pre">firmware/targets/Pix2Pgp&lt;Asic&gt;Emu/tb/Pix2Pgp&lt;Asic&gt;EmuTb.vhd</span></code>:</p>
+<ol class="arabic">
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span> <span class="pre">=</span> <span class="pre">true</span></code> (change <code class="docutils literal notranslate"><span class="pre">&lt;Asic&gt;</span></code> accordingly)</p></li>
+<li><p>Locate the <code class="docutils literal notranslate"><span class="pre">colHitsArray</span></code> definition at the top-level testbench.
+Its entries must match the <code class="docutils literal notranslate"><span class="pre">colHits</span></code> values in the JSON</p></li>
+<li><p>Note <code class="docutils literal notranslate"><span class="pre">CLK_PERIOD_PGP_C</span></code> — the Pix2PGP core clock period</p></li>
+<li><p>Note <code class="docutils literal notranslate"><span class="pre">CLK_PERIOD_SPARSE_C</span></code> — the User Logic / matrix clock period</p></li>
+<li><p>Optionally, first run with <code class="docutils literal notranslate"><span class="pre">BENCHMARKING_G</span> <span class="pre">=</span> <span class="pre">false</span></code> and inspect the
+timing between <code class="docutils literal notranslate"><span class="pre">sof</span></code>/<code class="docutils literal notranslate"><span class="pre">eof</span></code>/<code class="docutils literal notranslate"><span class="pre">wrEn</span></code> strobes. Adjust the
+<code class="docutils literal notranslate"><span class="pre">U_DummyPixel</span></code> model if the simulated behavior does not match the
+in-silicon reality</p></li>
+<li><p>If the frames grow very large at high occupancy, increase
+<code class="docutils literal notranslate"><span class="pre">AXIS_FIFO_ADDR_WIDTH_G</span></code> in the FPGA receiver logic
+(<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicStreamRx</span></code>)</p></li>
+<li><p>Run the testbench (VCS recommended). Watch for messages such as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">INFO</span><span class="p">]:</span> <span class="n">occ</span> <span class="o">=</span> <span class="mf">1.500000</span><span class="o">%</span>  <span class="n">superBusyCnt</span> <span class="o">=</span> <span class="mi">253</span>
+</pre></div>
+</div>
+<p>After the sweep, a summary of <code class="docutils literal notranslate"><span class="pre">colBusyCnt</span></code>, <code class="docutils literal notranslate"><span class="pre">superBusyCnt</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">totalLatencyCnt</span></code> is printed. Copy the last counter values into the
+matching positions of <code class="docutils literal notranslate"><span class="pre">asics/&lt;AsicName&gt;.json</span></code></p>
+</li>
+</ol>
+</section>
+<section id="step-3-produce-plots-and-tables">
+<h2>Step 3 — Produce Plots and Tables<a class="headerlink" href="#step-3-produce-plots-and-tables" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python<span class="w"> </span>benchmarking.py<span class="w"> </span>--verbose<span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--pgpClkPeriod<span class="o">=</span><span class="m">5</span>.384<span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--matrixClkPeriod<span class="o">=</span><span class="m">10</span>.768<span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--cols<span class="o">=</span><span class="m">24</span><span class="w"> </span>--rows<span class="o">=</span><span class="m">640</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--asicType<span class="o">=</span>SparkPixS
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--pgpClkPeriod</span></code>    — PGP clock period in ns (default 5.384). Must
+match <code class="docutils literal notranslate"><span class="pre">CLK_PERIOD_PGP_C</span></code> in the testbench</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--matrixClkPeriod</span></code> — matrix / User Logic clock period. Only affects
+the plot title</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--cols</span></code> / <code class="docutils literal notranslate"><span class="pre">--rows</span></code> / <code class="docutils literal notranslate"><span class="pre">--asicType</span></code> — same as Step 1</p></li>
+</ul>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Occupancy-vs-max-trigger-rate plot</p></li>
+<li><p>A tabular Markdown file (<code class="docutils literal notranslate"><span class="pre">table.md</span></code> under
+<code class="docutils literal notranslate"><span class="pre">software/scripts/benchmarking/</span></code>) summarizing the same numbers</p></li>
+</ul>
+<p>For a full comparison of measured performance across every deployed ASIC,
+see <a class="reference internal" href="../Architecture/asic_implementations.html#architecture-asic-implementations"><span class="std std-ref">ASIC Implementations</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="add_new_asic.html" class="btn btn-neutral float-left" title="How to Add Support for a New ASIC" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
