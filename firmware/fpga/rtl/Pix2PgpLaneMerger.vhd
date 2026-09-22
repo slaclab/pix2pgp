@@ -129,6 +129,7 @@ begin
       variable laneFull       : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneDown       : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable lanePauseError : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
+      variable laneMisalign   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneTimeout    : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneValid      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
    begin
@@ -182,6 +183,7 @@ begin
          laneFull(lane)       := asicStatus(lane).overflow;
          laneDown(lane)       := asicStatus(lane).down;
          lanePauseError(lane) := asicStatus(lane).pauseError;
+         laneMisalign(lane)   := asicStatus(lane).misalign;
          laneTimeout(lane)    := asicStatus(lane).timeout;
          laneValid(lane)      := asicStatus(lane).valid;
       end loop;
@@ -191,7 +193,7 @@ begin
                                   config.fpgaId, fpgaTrgCnt);
 
       header := fpgaHeaderMap(laneDecError, laneOverOcc, lanePause, lanePauseError,
-                              laneFull, laneTimeout, laneDown, laneValid);
+                              laneMisalign, laneFull, laneTimeout, laneDown, laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
 

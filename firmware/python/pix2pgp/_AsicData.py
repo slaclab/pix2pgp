@@ -77,13 +77,17 @@ class AsicData(object):
 
         # call after self.asicParamSet
         # fpga header
-        self.headerErr      = False
-        self.laneValid      = [None] * self.numOfLanes
-        self.laneTimeout    = [None] * self.numOfLanes
         self.laneDecError   = [None] * self.numOfLanes
+        self.laneOverOcc    = [None] * self.numOfLanes
+        self.lanePause      = [None] * self.numOfLanes
         self.lanePauseError = [None] * self.numOfLanes
+        self.laneMisalign   = [None] * self.numOfLanes
         self.laneFull       = [None] * self.numOfLanes
+        self.laneTimeout    = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
+        self.laneValid      = [None] * self.numOfLanes
+        #
+        self.headerErr      = False
         self.frameSize      = [0]    * self.numOfLanes
 
         # asic-global data (from headers of each lane)
@@ -262,7 +266,13 @@ class AsicData(object):
 
         self.laneDecError   = [(_dict['laneDecError'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
+        self.laneOverOcc    = [(_dict['laneOverOcc'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.lanePause      = [(_dict['lanePause'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
         self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
+                                                                                self.numOfLanes)]
+        self.laneMisalign   = [(_dict['laneMisalign'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
         self.laneFull       = [(_dict['laneFull'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
@@ -279,12 +289,12 @@ class AsicData(object):
         _errorPrint = self.headerErr and self._verbose > 0
 
         if _errorPrint or self._headerPrint:
-            _format = 'Lane: DecError, Full, Timeout, Down, Valid       =     0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X} 0x{4:<01X}'
+            _format = 'Lane: DecError, OverOcc, Pause, PauseErr, Misalign, Full, Timeout, Down, Valid = 0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}, 0x{5:<01X}, 0x{6:<01X}, 0x{7:<01X}, 0x{8:<01X}'
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
             print(_format.format(
-                _dict['laneDecError'], _dict['laneFull'],
-                _dict['laneTimeout'], _dict['laneDown'],
-                _dict['laneValid']
+                _dict['laneDecError'], _dict['laneOverOcc'],  _dict['lanePause'],
+                _dict['lanePauseError'], _dict['laneMisalign'], _dict['laneFull'],
+                _dict['laneTimeout'], _dict['laneDown'], _dict['laneValid']
             ))
             print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
 

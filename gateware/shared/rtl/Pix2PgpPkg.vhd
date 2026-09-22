@@ -223,10 +223,10 @@ package Pix2PgpPkg is
    ------------------------------------------------------------------------------
    -- FPGA Header Mapping
    ------------------------------------------------------------------------------
-   -- 8 fields; laneDecError, laneOverOcc, lanePause, lanePauseError,
-   --           laneFull,     laneTimeout, laneDown,  laneValid
+   -- 9 fields; laneDecError, laneOverOcc, lanePause,   lanePauseError,
+   --           laneMisalign, laneFull,    laneTimeout, laneDown, laneValid
    ------------------------------------------------------------------------------
-   constant FPGA_HEADER_FIELDS_C : natural := 8;
+   constant FPGA_HEADER_FIELDS_C : natural := 9;
    constant FPGA_HEADER_LEN_C    : natural := FPGA_HEADER_FIELDS_C*NUM_OF_SERIALIZERS_C;
    constant FPGA_HEADER_STRIDE_C : natural := FPGA_HEADER_LEN_C-((FPGA_HEADER_FIELDS_C-1)*
                                                                    NUM_OF_SERIALIZERS_C);
@@ -235,12 +235,15 @@ package Pix2PgpPkg is
                                              FPGA_HEADER_LEN_C-1*FPGA_HEADER_STRIDE_C;
 
    subtype FPGA_LANERX_OVEROCC_POS_C     is natural range  FPGA_HEADER_STRIDE_C*7-1 downto
-                                             FPGA_HEADER_STRIDE_C*6;
+                                             FPGA_HEADER_STRIDE_C*7;
 
    subtype FPGA_LANERX_PAUSE_POS_C       is natural range  FPGA_HEADER_STRIDE_C*6-1 downto
-                                             FPGA_HEADER_STRIDE_C*5;
+                                             FPGA_HEADER_STRIDE_C*6;
 
    subtype FPGA_LANERX_PAUSE_ERROR_POS_C is natural range  FPGA_HEADER_STRIDE_C*5-1 downto
+                                             FPGA_HEADER_STRIDE_C*5;
+
+   subtype FPGA_LANERX_MISALIGN_POS_C    is natural range  FPGA_HEADER_STRIDE_C*5-1 downto
                                              FPGA_HEADER_STRIDE_C*4;
 
    subtype FPGA_LANERX_FULL_POS_C        is natural range  FPGA_HEADER_STRIDE_C*4-1 downto
@@ -273,6 +276,7 @@ package Pix2PgpPkg is
       pause        : sl;
       pauseError   : sl;
       overflow     : sl;
+      misalign     : sl;
       valid        : sl;
       down         : sl;
       timeout      : sl;
@@ -289,6 +293,7 @@ package Pix2PgpPkg is
       pause        => '0',
       pauseError   => '0',
       overflow     => '0',
+      misalign     => '0',
       valid        => '0',
       down         => '0',
       timeout      => '0',
@@ -506,8 +511,8 @@ package body Pix2PgpPkg is
 
    end tKeepSet;
 
-   function fpgaHeaderMap (laneDecError: slv; laneOverOcc: slv; lanePause: slv;
-                           lanePauseError: slv; laneFull: slv; laneTimeout: slv;
+   function fpgaHeaderMap (laneDecError: slv; laneOverOcc: slv; lanePause: slv; lanePauseError: slv;
+                           laneMisalign: slv; laneFull: slv; laneTimeout: slv;
                            laneDown: slv; laneValid: slv) return slv is
       variable retHeader: slv(FPGA_HEADER_LEN_C-1 downto 0) := (others => '0');
    begin
@@ -516,6 +521,7 @@ package body Pix2PgpPkg is
       retHeader(FPGA_LANERX_OVEROCC_POS_C)     := resize(laneOverOcc, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_PAUSE_POS_C)       := resize(lanePause, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_PAUSE_ERROR_POS_C) := resize(lanePauseError, NUM_OF_SERIALIZERS_C);
+      retHeader(FPGA_LANERX_MISALIGN_POS_C)    := resize(laneMisalign, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_FULL_POS_C)        := resize(laneFull, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_TIMEOUT_POS_C)     := resize(laneTimeout, NUM_OF_SERIALIZERS_C);
       retHeader(FPGA_LANERX_DOWN_POS_C)        := resize(laneDown, NUM_OF_SERIALIZERS_C);

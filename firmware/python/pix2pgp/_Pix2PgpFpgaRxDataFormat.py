@@ -71,16 +71,17 @@ class FpgaRxDataFormat(Pix2PgpFpgaRxDataFormatBase):
 
     def fpgaHeaderDecoder(self, header):
         '''
-        FPGA Header Decoder (default is 8xlanes)
+        FPGA Header Decoder (default is 9xlanes)
         '''
         _header = header if isinstance(header, int) else int(header, 16)
 
         _bitmask = (1 << self.numOfLanes) - 1
 
-        header_dict = {'laneDecError'   : (_header >> self.numOfLanes*7) & _bitmask,
-                       'laneOverOcc'    : (_header >> self.numOfLanes*6) & _bitmask,
-                       'lanePause'      : (_header >> self.numOfLanes*5) & _bitmask,
-                       'lanePauseError' : (_header >> self.numOfLanes*4) & _bitmask,
+        header_dict = {'laneDecError'   : (_header >> self.numOfLanes*8) & _bitmask,
+                       'laneOverOcc'    : (_header >> self.numOfLanes*7) & _bitmask,
+                       'lanePause'      : (_header >> self.numOfLanes*6) & _bitmask,
+                       'lanePauseError' : (_header >> self.numOfLanes*5) & _bitmask,
+                       'laneMisalign'   : (_header >> self.numOfLanes*4) & _bitmask,
                        'laneFull'       : (_header >> self.numOfLanes*3) & _bitmask,
                        'laneTimeout'    : (_header >> self.numOfLanes*2) & _bitmask,
                        'laneDown'       : (_header >> self.numOfLanes*1) & _bitmask,
