@@ -234,13 +234,11 @@ class AsicData(object):
         if (_errorPrint or self._headerPrint) and self.streamRxFrame:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp AsicStreamRx Frame Begin =+=+=+=+=+=+=+=+=+=+=+")
-            print(f"")
             _format = 'AsicType={0:<20} AsicId={1:<8} FpgaId={2:<11x} FpgaTrgCnt={3:<8}'
             print(_format.format(self.asicParams.asicParamExtract()['asicType'],
                   self.asicId,
                   self.fpgaId,
                   self.fpgaTrgCnt))
-            print(f"")
 
             if self.preambleErr:
                 pix2pgp.Tools.printError('Preamble')
@@ -286,14 +284,34 @@ class AsicData(object):
         _errorPrint = self.headerErr and self._verbose > 0
 
         if _errorPrint or self._headerPrint:
-            _format = 'Lane: DecError, Pause, PauseErr, Misalign, Full, Timeout, Down, Valid = 0x{0:<01X}, 0x{1:<01X}, 0x{2:<01X}, 0x{3:<01X}, 0x{4:<01X}, 0x{5:<01X}, 0x{6:<01X}, 0x{7:<01X}'
-            print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
-            print(_format.format(
-                _dict['laneDecError'], _dict['lanePause'], _dict['lanePauseError'],
-                _dict['laneMisalign'], _dict['laneFull'],  _dict['laneTimeout'],
-                _dict['laneDown'],     _dict['laneValid']
-            ))
-            print(f"~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=")
+            _sep = "~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
+            _width = len(_sep)
+
+            # (label, value) pairs; Valid is always shown, others only if nonzero
+            _fields = [
+                ('DecError',  _dict['laneDecError']),
+                ('Pause',     _dict['lanePause']),
+                ('PauseErr',  _dict['lanePauseError']),
+                ('Misalign',  _dict['laneMisalign']),
+                ('Full',      _dict['laneFull']),
+                ('Timeout',   _dict['laneTimeout']),
+                ('Down',      _dict['laneDown']),
+            ]
+
+            _parts = [f"{label} = 0x{value:X}" for label, value in _fields if value > 0]
+            _parts.append(f"Valid = 0x{_dict['laneValid']:X}")   # always shown
+
+            _line = "Lane Status: " + ", ".join(_parts)
+
+            # pad or truncate to match separator length
+            if len(_line) > _width:
+                _line = _line[:_width]
+            else:
+                _line = _line.ljust(_width)
+
+            print(_sep)
+            print(_line)
+            print(_sep)
 
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
@@ -315,7 +333,6 @@ class AsicData(object):
         _errorPrint = self.trailerErr and self._verbose > 0
 
         if _errorPrint or self._headerPrint:
-            print(f"")
             print(f"-=-=-=-=-=-=-=-=-=-=-=- Pix2Pgp AsicStreamRx Frame End -=-=-=-=-=-=-=-=-=-=-=-")
             print(f"")
 

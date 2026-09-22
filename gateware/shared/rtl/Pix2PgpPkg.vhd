@@ -270,6 +270,7 @@ package Pix2PgpPkg is
    type Pix2PgpLaneStatusType is record
       -- flags begin
       decError     : sl;
+      overOcc      : sl;
       pause        : sl;
       pauseError   : sl;
       overflow     : sl;
@@ -286,6 +287,7 @@ package Pix2PgpPkg is
    constant DEFAULT_PIX2PGP_LANESTATUS_C : Pix2PgpLaneStatusType := (
       -- flags begin
       decError     => '0',
+      overOcc      => '0',
       pause        => '0',
       pauseError   => '0',
       overflow     => '0',
