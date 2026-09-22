@@ -213,7 +213,6 @@ begin
          -- lane status signals are all masked against the valid
          v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneEnable(lane);
          v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
-         v.laneStatus(lane).overOcc    := laneStatus(lane).overOcc    and r.laneStatus(lane).valid;
          v.laneStatus(lane).pause      := laneStatus(lane).pause      and r.laneStatus(lane).valid;
          v.laneStatus(lane).pauseError := laneStatus(lane).pauseError and r.laneStatus(lane).valid;
          v.lanePause(lane)             := r.laneStatus(lane).pause;
@@ -404,7 +403,6 @@ begin
             -- v.laneStatus is determined earlier in this proc
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
                v.asicStatus(lane).decError     := r.laneStatus(lane).decError;
-               v.asicStatus(lane).overOcc      := r.laneStatus(lane).overOcc;
                v.asicStatus(lane).pause        := r.laneStatus(lane).pause;
                v.asicStatus(lane).pauseError   := r.lanePauseError(lane);
                v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
