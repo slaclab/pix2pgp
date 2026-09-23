@@ -198,6 +198,7 @@ class Pix2PgpLaneMon(pr.Device):
             mode         = 'RO',
             pollInterval = 1,
             base         = pr.Bool,
+        ))
 
         self.add(pr.RemoteVariable(
             name         = 'LaneOverOcc',
