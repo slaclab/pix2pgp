@@ -80,6 +80,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneOverOccCnt  : slv(MON_CNT_WIDTH_G-1 downto 0);
       lanePauseCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
       laneEventCnt    : slv(MON_CNT_WIDTH_G-1 downto 0);
+      laneDownCnt     : slv(MON_CNT_WIDTH_G-1 downto 0);
       colHitmaskCnt   : HitmaskCntArray;
       -- AXI-Lite
       readSlave       : AxiLiteReadSlaveType;
@@ -106,6 +107,7 @@ architecture rtl of Pix2PgpLaneMon is
       laneOverOccCnt  => (others => '0'),
       lanePauseCnt    => (others => '0'),
       laneEventCnt    => (others => '0'),
+      laneDownCnt     => (others => '0'),
       colHitmaskCnt   => (others => (others => '0')),
       -- AXI-Lite
       readSlave       => AXI_LITE_READ_SLAVE_INIT_C,
@@ -149,6 +151,7 @@ begin
       variable laneOverOccCntOverflow  : sl := '0';
       variable lanePauseCntOverflow    : sl := '0';
       variable laneEventCntOverflow    : sl := '0';
+      variable laneDownCntOverflow     : sl := '0';
       variable colHitmaskCntOverflow   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
 
    begin
@@ -172,10 +175,20 @@ begin
       laneOverOccCntOverflow  := uAnd(r.laneOverOccCnt);
       lanePauseCntOverflow    := uAnd(r.lanePauseCnt);
       laneEventCntOverflow    := uAnd(r.laneEventCnt);
+      laneDownCntOverflow     := uAnd(r.laneDownCnt);
 
       for i in NUM_OF_COL_MANAGERS_C-1 downto 0 loop
          colHitmaskCntOverflow(i) := uAnd(r.colHitmaskCnt(i));
       end loop;
+
+      -- laneDown counter control
+      if config.laneEnable(LANE_ID_G) = '1' and r.cntRst = '0' then
+         if laneDown = '1' and r.laneDown = '0' and uAnd(r.laneDownCnt) = '0' then
+            v.laneDownCnt := r.laneDownCnt + 1;
+         end if;
+      else
+         v.laneDownCnt := (others => '0');
+      end if;
 
       ----------------------------------------------------------------------------------------------
       if config.laneEnable(LANE_ID_G) = '1' and r.cntRst = '0' and r.laneDown = '0' then
@@ -260,7 +273,7 @@ begin
       axiSlaveRegisterR(axilEp, x"A0C", 0, r.lanePauseErrCnt);
       axiSlaveRegisterR(axilEp, x"A10", 0, r.laneFullCnt);
       axiSlaveRegisterR(axilEp, x"A14", 0, r.laneEventCnt);
-      axiSlaveRegisterR(axilEp, x"A18", 0, r.laneDown);
+      axiSlaveRegisterR(axilEp, x"A18", 0, r.laneDownCnt);
       --
       axiSlaveRegisterR(axilEp, x"A1C", 0, laneDecErrCntOverflow);
       axiSlaveRegisterR(axilEp, x"A20", 0, lanePauseErrCntOverflow);
@@ -269,6 +282,7 @@ begin
       axiSlaveRegisterR(axilEp, x"A2C", 0, lanePauseCntOverflow);
       axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
       axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
+      axiSlaveRegisterR(axilEp, x"A38", 0, laneDownCntOverflow);
       --
       axiSlaveRegisterR(axilEp, x"B00", 0, r.laneOverOcc);
       axiSlaveRegisterR(axilEp, x"B04", 0, r.lanePause);
