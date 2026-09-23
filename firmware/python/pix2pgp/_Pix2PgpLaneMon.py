@@ -278,6 +278,27 @@ class Pix2PgpLaneMon(pr.Device):
             enum        = self.laneRxStateEnum))
 
         self.add(pr.RemoteVariable(
+            name         = 'RxDataEmpty',
+            description  = 'Lane Data FIFO is empty',
+            offset       = 0xB24,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+
+        self.add(pr.RemoteVariable(
+            name         = 'RxMetaEmpty',
+            description  = 'Lane Metadata FIFO is empty',
+            offset       = 0xB28,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+        self.add(pr.RemoteVariable(
             name        = 'LaneID',
             description = 'Lane ID',
             offset       = 0xC00,

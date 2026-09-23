@@ -72,6 +72,9 @@ architecture rtl of Pix2PgpLaneRxWrapper is
    signal monDin         : slv(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := (others => '0');
    signal status         : Pix2PgpLaneStatusType     := DEFAULT_PIX2PGP_LANESTATUS_C;
 
+   signal rxDataEmpty    : sl := '0';
+   signal rxMetaEmpty    : sl := '0';
+
 begin
 
    U_Lane: entity pix2pgp.Pix2PgpLaneRx
@@ -96,6 +99,8 @@ begin
          frameMetaDout  => frameMetaDout,
          frameMetaValid => frameMetaValid,
          laneRxFull     => laneRxFull,
+         rxDataEmpty    => rxDataEmpty,
+         rxMetaEmpty    => rxMetaEmpty,
          -- AXI-Stream to StreamRx
          obAxisMaster   => laneRxMaster,
          obAxisSlave    => laneRxSlave);
@@ -119,6 +124,8 @@ begin
          config          => config,
          monState        => monState,
          monDin          => monDin,
+         rxDataEmpty     => rxDataEmpty,
+         rxMetaEmpty     => rxMetaEmpty,
          -- Monitoring Output
          laneMon         => laneMon,
          -- AXI-Lite Interface  (sync'd to pgpRxClk domain)

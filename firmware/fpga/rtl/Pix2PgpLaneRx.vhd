@@ -49,6 +49,8 @@ entity Pix2PgpLaneRx is
       frameMetaDout  : out slv(LANERX_META_DWIDTH_C-1 downto 0);
       frameMetaValid : out sl;
       laneRxFull     : out sl;
+      rxDataEmpty    : out sl;
+      rxMetaEmpty    : out sl;
       -- AXI-Stream to StreamRx
       obAxisMaster   : out AxiStreamMasterType;
       obAxisSlave    : in  AxiStreamSlaveType
@@ -145,6 +147,8 @@ architecture rtl of Pix2PgpLaneRx is
 
    signal laneFifoAlmFull : sl := '0';
    signal axiFifoAlmFull  : sl := '0';
+
+   signal fifoWrCnt       : slv(LANE_FIFO_ADDR_WIDTH_G-1 downto 0) := (others => '0');
 
 begin
 
@@ -517,6 +521,7 @@ begin
          wr_en    => r.frameMetaWr,
          din      => r.frameMetaDin,
          full     => frameMetaFull,
+         empty    => rxMetaEmpty,
          -- Read Ports
          rd_clk   => laneClk,
          rd_en    => frameMetaRd,
@@ -544,11 +549,14 @@ begin
          sAxisSlave  => axiFifoSlave,
          -- Status Port
          fifoFull    => axiFifoFull,
+         fifoWrCnt   => fifoWrCnt,
          -- Master Port
          mAxisClk    => laneClk,
          mAxisRst    => axiFifoRst,
          mAxisMaster => obAxisMaster,
          mAxisSlave  => obAxisSlave);
+
+   rxDataEmpty <= not(uOr(fifoWrCnt));
 
    -- AXI-Stream FIFO does not have RST_POLARITY_G
    axiFifoRst <= ite(toBoolean(RST_POLARITY_G), laneRst, not(laneRst));
