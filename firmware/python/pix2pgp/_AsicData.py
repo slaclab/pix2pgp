@@ -316,6 +316,9 @@ class AsicData(object):
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
 
+            if any(self.laneMisalign) and self._verbose > 2:
+                pix2pgp.Tools.printWarning('FPGA Rx: Lane Trigger Misalignment')
+
             if any(self.laneTimeout) and self._verbose > 2:
                 pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
     #################################################################

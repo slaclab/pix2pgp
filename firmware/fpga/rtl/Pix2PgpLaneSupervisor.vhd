@@ -211,9 +211,6 @@ begin
                                      r.laneEnable(lane)     and
                                      r.laneUp(lane);
          --
-
-         v.laneStatus(lane).misalign := r.laneMisalign(lane) and r.laneEnable(lane) and r.laneUp(lane);
-
          -- lane status signals are all masked against the valid
          v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneEnable(lane);
          v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
@@ -371,6 +368,7 @@ begin
             -- nominal case; reset the misalignment bits
             elsif v.trgMisalign = '0' and r.postReset = '0' then
                v.laneMisalign := (others => '0');
+
             end if;
 
             v.state := START_MERGER_S;
@@ -380,12 +378,11 @@ begin
                if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and
                   v.refTrgCnt /= r.fpgaTrgCnt then
                   --
-                  v.popTrg       := '1';
-                  v.reqDrop      := '1';
-                  v.laneError    := (others => '0');
-                  v.laneValid    := (others => '0');
-                  v.laneMisalign := (others => '1');
-                  v.state        := WAIT_MERGER_S;
+                  v.popTrg    := '1';
+                  v.reqDrop   := '1';
+                  v.laneError := (others => '0');
+                  v.laneValid := (others => '0');
+                  v.state     := WAIT_MERGER_S;
                end if;
 
             end if;
@@ -407,12 +404,14 @@ begin
                v.asicStatus(lane).eventHitmask := r.laneStatus(lane).eventHitmask;
                v.asicStatus(lane).trgCnt       := r.laneStatus(lane).trgCnt;
                v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
-               v.asicStatus(lane).misalign     := r.laneStatus(lane).misalign;
+               v.asicStatus(lane).misalign     := r.laneMisalign(lane);
 
                -- override the valid signal if triggers are misaligned
                if r.trgMisalign = '1' and config.dropLaneMisalign = '1' then
-                  v.laneError(lane)        := '1';
-                  v.asicStatus(lane).valid := '0';
+                  v.asicStatus(lane).decError := '1';
+                  v.asicStatus(lane).misalign := '1';
+                  v.laneError(lane)           := '1';
+                  v.asicStatus(lane).valid    := '0';
                end if;
 
             end loop;
