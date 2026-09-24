@@ -3,6 +3,17 @@
 -------------------------------------------------------------------------------
 -- Description: Model for SparkPix-T column
 --
+-- Event close-out in WAIT_TRG_S is governed by SELF_GEN_ERO_G:
+--   * SELF_GEN_ERO_G = false: model closes on the external 'ero' rising edge
+--     (legacy testbench stimulus path).
+--   * SELF_GEN_ERO_G = true:  model ignores 'ero' and closes internally after
+--     ERO_DELAY_G cycles. Useful for benchmarking / bandwidth-stress runs
+--     where the TB does not drive ero.
+--
+-- Either path pulses 'eroOut' for one clock on close. The testbench OR's
+-- 'eroOut' across all ColumnModels and drives Pix2PgpAsicStreamRx.asicEro
+-- with the result, so the ASIC-level ERO seen by the FPGA receiver always
+-- reflects the model's actual close-out.
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -31,7 +42,8 @@ entity SparkPixTColumnModel is
         RST_ASYNC_G     : boolean  := true;
         RST_POLARITY_G  : sl       := '1';
         WAIT_WREN_G     : positive := 4;
-        IGNORE_ERO_G    : boolean  := false;
+        SELF_GEN_ERO_G  : boolean  := false; -- true: ignore ero input, generate ERO internally
+        ERO_DELAY_G     : natural  := 4;     -- cycles in WAIT_TRG_S before self-generated ERO fires
         MAX_ROW_G       : natural  := 168;
         SER_ID_G        : natural  := 0;
         COL_ID_G        : natural  := 0);
@@ -39,7 +51,7 @@ entity SparkPixTColumnModel is
         clk        : in  sl;
         df_reset_n : in  sl := not RST_POLARITY_G;
         sro        : in  sl; -- acts as a SOF
-        ero        : in  sl; -- acts as an EOF
+        ero        : in  sl; -- external ERO; consumed only when SELF_GEN_ERO_G = false
         hitLen     : in  slv(15 downto 0);
         pause      : in  sl;
         pauseAck   : out sl;
@@ -47,6 +59,7 @@ entity SparkPixTColumnModel is
         eof        : out sl;
         overOcc    : out sl;
         wrEn       : out sl;
+        eroOut     : out sl; -- ERO strobe (one clk wide) on every event close
         dout       : out slv(31 downto 0));
 end entity;
 
@@ -60,41 +73,45 @@ architecture tb of SparkPixTColumnModel is
    );
 
    type RegType is record
-      sof      : sl;
-      eof      : sl;
-      sro      : sl;
-      ero      : sl;
-      hitLen   : slv(15 downto 0);
-      wrEn     : sl;
-      pause    : sl;
-      pauseAck : sl;
-      overOcc  : sl;
-      dout     : slv(31 downto 0);
+      sof       : sl;
+      eof       : sl;
+      sro       : sl;
+      ero       : sl;
+      hitLen    : slv(15 downto 0);
+      wrEn      : sl;
+      pause     : sl;
+      pauseAck  : sl;
+      overOcc   : sl;
+      eroOut    : sl;
+      dout      : slv(31 downto 0);
       --
-      waitCnt  : natural range 0 to 1023;
-      hitCnt   : slv(7 downto 0);
-      hitLenCnt: slv(15 downto 0);
-      trgCnt   : slv(7 downto 0);
-      state    : StateType;
+      waitCnt   : natural range 0 to 1023;
+      eroCnt    : natural range 0 to 1023;
+      hitCnt    : slv(7 downto 0);
+      hitLenCnt : slv(15 downto 0);
+      trgCnt    : slv(7 downto 0);
+      state     : StateType;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      sof      => '0',
-      eof      => '0',
-      sro      => '0',
-      ero      => '0',
-      hitLen   => (others => '0'),
-      wrEn     => '0',
-      pause    => '0',
-      pauseAck => '0',
-      overOcc  => '0',
-      dout     => (others => '0'),
+      sof       => '0',
+      eof       => '0',
+      sro       => '0',
+      ero       => '0',
+      hitLen    => (others => '0'),
+      wrEn      => '0',
+      pause     => '0',
+      pauseAck  => '0',
+      overOcc   => '0',
+      eroOut    => '0',
+      dout      => (others => '0'),
       --
-      waitCnt  => 0,
-      hitCnt   => (others => '0'),
-      hitLenCnt=> toSlv(1, 16),
-      trgCnt   => (others => '0'),
-      state    => IDLE_S
+      waitCnt   => 0,
+      eroCnt    => 0,
+      hitCnt    => (others => '0'),
+      hitLenCnt => toSlv(1, 16),
+      trgCnt    => (others => '0'),
+      state     => IDLE_S
    );
 
    signal r   : RegType := REG_INIT_C;
@@ -104,8 +121,9 @@ begin
 
 comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
 
-      variable v       : RegType;
-      variable rowAddr : slv(7 downto 0);
+      variable v         : RegType;
+      variable rowAddr   : slv(7 downto 0);
+      variable eroRising : boolean;
 
    begin
       -- Latch the current value
@@ -122,22 +140,29 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
       v.eof     := '0';
       v.overOcc := '0';
       v.wrEn    := '0';
+      v.eroOut  := '0';
       rowAddr   := resize((r.trgCnt + r.hitCnt), 8);
       v.dout(31 downto 24) := rowAddr;
       v.dout(23 downto 16) := toSlv((COL_ID_G+1)*10, 8); -- 25 x 10 = 250 < 255
       v.dout(15 downto  8) := toSlv((COL_ID_G+1)*1,  8); -- 25 x 10 = 250 < 255
       v.dout(7  downto  0) := toSlv((COL_ID_G+1)*10, 8); -- 25 x 10 = 250 < 255
 
+      -- external ero rising-edge detector (only meaningful when SELF_GEN_ERO_G = false)
+      eroRising := (v.ero = '1' and r.ero = '0') and (SELF_GEN_ERO_G = false);
+
       if (v.sro = '1' and r.sro = '0') then -- reset everything
          v.trgCnt := r.trgCnt + 1;
          v.state  := IDLE_S;
+         v.eroCnt := 0;
          if r.state /= IDLE_S or r.pause = '1' then
             v.overOcc := '1';
          end if;
       end if;
 
-      if (v.ero = '1' and r.ero = '0' and r.state /= WAIT_TRG_S) then
-         v.state  := IDLE_S;
+      -- ero arriving mid-processing (before WAIT_TRG_S) closes the current
+      -- state early and flags an over-occupancy event
+      if eroRising and r.state /= WAIT_TRG_S then
+         v.state := IDLE_S;
          if r.state /= IDLE_S or r.pause = '1' then
             v.overOcc := '1';
          end if;
@@ -150,6 +175,7 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
          -- only register the hitLen if idle
          v.hitLen    := hitLen;
          v.waitCnt   := 0;
+         v.eroCnt    := 0;
          v.hitCnt    := (others => '0');
          v.hitLenCnt := toSlv(1, 16);
 
@@ -196,15 +222,27 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
             end if;
 
          ----------------------------------------------------------------------
+         -- Event close-out. Which path fires is dictated by SELF_GEN_ERO_G.
+         -- Either path asserts eof and pulses eroOut for one clock.
          when WAIT_TRG_S =>
             if (v.pause = '0') then
-               if (v.ero = '1' and r.ero = '0' and IGNORE_ERO_G = false) then
-                  v.eof   := '1';
-                  v.state := IDLE_S;
-               elsif (IGNORE_ERO_G = true) then
-                  v.eof   := '1';
-                  v.state := IDLE_S;
+
+               if SELF_GEN_ERO_G then
+                  v.eroCnt := r.eroCnt + 1;
+                  if (v.eroCnt = ERO_DELAY_G) then
+                     v.eof    := '1';
+                     v.eroOut := '1';
+                     v.eroCnt := 0;
+                     v.state  := IDLE_S;
+                  end if;
+               else
+                  if eroRising then
+                     v.eof    := '1';
+                     v.eroOut := '1';
+                     v.state  := IDLE_S;
+                  end if;
                end if;
+
             end if;
          end case;
 
@@ -215,6 +253,7 @@ comb : process (df_reset_n, r, hitLen, ero, sro, pause) is
       sof      <= r.sof;
       eof      <= r.eof;
       overOcc  <= r.overOcc;
+      eroOut   <= r.eroOut;
 
       ----------------------------------------------------------------------
 

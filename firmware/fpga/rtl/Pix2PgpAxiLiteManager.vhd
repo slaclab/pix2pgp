@@ -114,6 +114,7 @@ begin
       axiSlaveRegister (axilEp, x"414", 0, v.config.rstFpgaTrgCnt);
       axiSlaveRegister (axilEp, x"418", 0, v.config.incrSroEnLow);
       axiSlaveRegister (axilEp, x"41C", 0, v.config.triggerless);
+      axiSlaveRegister (axilEp, x"420", 0, v.config.eroTimeout);
       --
       axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
       --
@@ -122,6 +123,7 @@ begin
       axiSlaveRegisterR(axilEp, x"608", 0, mergerState);
       axiSlaveRegisterR(axilEp, x"60C", 0, superState);
       axiSlaveRegisterR(axilEp, x"610", 0, r.fullCnt);
+      axiSlaveRegisterR(axilEp, x"614", 0, toSl(EN_ERO_C));
       --
 
       -- Closeout the transaction

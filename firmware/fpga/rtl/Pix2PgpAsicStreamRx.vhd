@@ -51,6 +51,7 @@ entity Pix2PgpAsicStreamRx is
       asicRst         : in  sl; -- active-low always
       asicSro         : in  sl;
       asicSroEn       : in  sl;
+      asicEro         : in  sl := '0'; -- unused unless EN_ERO_C = True
       sysDaq          : in  sl; -- set to high to always forward data downstream
       -- PGP4Rx Input Interface (on pgpRxClk domain)
       pgp4RxMaster    : in  AxiStreamMasterArray;
@@ -105,12 +106,15 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal gboxRxMaster    : AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
    signal gboxRxSlave     : AxiStreamSlaveType  := AXI_STREAM_SLAVE_INIT_C;
 
-   signal trgBuffRd      : sl := '0';
-   signal trgBuffSroEn   : sl := '0';
-   signal trgBuffValid   : sl := '0';
-   signal trgBuffSysDaq  : sl := '0';
+   signal sroBuffRd      : sl := '0';
+   signal sroBuffSroEn   : sl := '0';
+   signal sroBuffValid   : sl := '0';
+   signal sroBuffSysDaq  : sl := '0';
+   signal eroBuffRd      : sl := '0';
+   signal eroBuffValid   : sl := '0';
    signal config         : Pix2PgpStreamRxConfigType := DEFAULT_PIX2PGP_STREAMRX_CONFIG_C;
-   signal trgBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
+   signal sroBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
+   signal eroBuffTrgCnt  : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    signal fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0)       := (others => '0');
    signal laneRst        : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
@@ -265,12 +269,16 @@ begin
          laneRst        => laneRst,
          laneStatus     => laneStatus,
          laneMetaRd     => laneMetaRd,
-         -- Trigger Buffer Interface
-         trgBuffTrgCnt  => trgBuffTrgCnt,
-         trgBuffSroEn   => trgBuffSroEn,
-         trgBuffSysDaq  => trgBuffSysDaq,
-         trgBuffValid   => trgBuffValid,
-         trgBuffRd      => trgBuffRd,
+         -- SRO Trigger Buffer Interface
+         sroBuffTrgCnt  => sroBuffTrgCnt,
+         sroBuffSroEn   => sroBuffSroEn,
+         sroBuffSysDaq  => sroBuffSysDaq,
+         sroBuffValid   => sroBuffValid,
+         sroBuffRd      => sroBuffRd,
+         -- ERO Trigger Buffer Interface
+         eroBuffTrgCnt  => eroBuffTrgCnt,
+         eroBuffValid   => eroBuffValid,
+         eroBuffRd      => eroBuffRd,
          -- Lane Merger Interface
          mergerBusy     => mergerBusy,
          asicStatus     => asicStatus,
@@ -368,13 +376,18 @@ begin
          -- ASIC Control Interface
          asicSro       => asicSro,
          asicSroEn     => asicSroEn,
+         asicEro       => asicEro,
          sysDaq        => sysDaq,
-         -- Lane Supervisor Interface
-         trgBuffRd     => trgBuffRd,
-         trgBuffTrgCnt => trgBuffTrgCnt,
-         trgBuffSroEn  => trgBuffSroEn,
-         trgBuffSysDaq => trgBuffSysDaq,
-         trgBuffValid  => trgBuffValid);
+         -- Lane Supervisor Interface (SRO)
+         sroBuffRd     => sroBuffRd,
+         sroBuffTrgCnt => sroBuffTrgCnt,
+         sroBuffSroEn  => sroBuffSroEn,
+         sroBuffSysDaq => sroBuffSysDaq,
+         sroBuffValid  => sroBuffValid,
+         -- Lane Supervisor Interface (ERO)
+         eroBuffRd     => eroBuffRd,
+         eroBuffTrgCnt => eroBuffTrgCnt,
+         eroBuffValid  => eroBuffValid);
 
    asicMonStatus <= laneMon;
 

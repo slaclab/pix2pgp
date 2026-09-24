@@ -84,20 +84,22 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal sroFinal  : sl := '0';
    signal daqEnable : sl := '1';
    signal ero       : sl := '0';
-   signal eroFinal  : sl := '0';
+   signal eroReg    : sl := '0';
    signal eroDly    : sl := '0';
+   signal eroAll    : sl := '0';
    signal revRst    : sl := '0';
    signal sysClk    : sl := '0';
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
-   signal sof       : asicArray := (others => (others => '1'));
-   signal eof       : asicArray := (others => (others => '0'));
-   signal overOcc   : asicArray := (others => (others => '0'));
-   signal busy      : asicArray := (others => (others => '0'));
-   signal wrEn      : asicArray := (others => (others => '0'));
-   signal pause     : asicArray := (others => (others => '0'));
-   signal pauseAck  : asicArray := (others => (others => '0'));
+   signal sof      : asicArray := (others => (others => '1'));
+   signal eof      : asicArray := (others => (others => '0'));
+   signal overOcc  : asicArray := (others => (others => '0'));
+   signal busy     : asicArray := (others => (others => '0'));
+   signal eroOut   : asicArray := (others => (others => '0'));
+   signal wrEn     : asicArray := (others => (others => '0'));
+   signal pause    : asicArray := (others => (others => '0'));
+   signal pauseAck : asicArray := (others => (others => '0'));
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -151,7 +153,9 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
-   constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
+   -- benchmarking / bandwidth-stress runs do not drive ero from the TB, so the
+   -- ColumnModels self-generate ERO after ERO_DELAY_G cycles in WAIT_TRG_S.
+   constant SELF_GEN_ERO_C      : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
    constant DEFAULT_LANE_FIFO_ADDR_WIDTH_G : positive := ite(BANDWIDTH_STRESS_TEST_G, 8, 11);
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
@@ -265,9 +269,9 @@ begin
     if (rising_edge(sparseClk)) then
       eroDly <= ero;
       if ero = '1' and eroDly = '0' then
-        eroFinal <= ero;
+        eroReg <= ero;
       else
-        eroFinal <= '0';
+        eroReg <= '0';
       end if;
     end if;
   end process;
@@ -297,15 +301,15 @@ begin
               TPD_G           => TPD_G,
               RST_ASYNC_G     => RST_ASYNC_G,
               RST_POLARITY_G  => RST_POLARITY_G,
-              IGNORE_ERO_G    => IGNORE_ERO_C,
               WAIT_WREN_G     => 3,
+              SELF_GEN_ERO_G  => SELF_GEN_ERO_C,
               SER_ID_G        => ser,
               COL_ID_G        => col)
             port map(
               clk        => sparseClk,
               df_reset_n => rst,
               sro        => sroFinal,
-              ero        => eroFinal,
+              ero        => eroReg,
               hitLen     => hitLen(ser)(col),
               pause      => pause(ser)(col),
               pauseAck   => pauseAck(ser)(col),
@@ -313,6 +317,7 @@ begin
               eof        => eof(ser)(col),
               overOcc    => overOcc(ser)(col),
               wrEn       => wrEn(ser)(col),
+              eroOut     => eroOut(ser)(col),
               dout       => din(ser)(col));
 
       end generate GEN_COLUMN;
@@ -383,6 +388,43 @@ begin
 
    end generate GEN_SERIALIZER;
 
+   eroSyncProcess: process(sparseClk, rst)
+
+      variable eroLatched : slv(NUM_OF_SERIALIZERS_C*NUM_OF_COL_MANAGERS_C-1 downto 0);
+
+   begin
+      if (RST_ASYNC_G and rst = RST_POLARITY_G) then
+
+         eroLatched := (others => '0');
+         eroAll     <= '0';
+
+      elsif rising_edge(sparseClk) then
+
+         if (RST_ASYNC_G = false and rst = RST_POLARITY_G) then
+            eroLatched := (others => '0');
+            eroAll     <= '0';
+         else
+
+         -- set the per-column latch on eroOut rising edge
+         for ser in 0 to NUM_OF_SERIALIZERS_C-1 loop
+            for col in 0 to NUM_OF_COL_MANAGERS_C-1 loop
+               if eroOut(ser)(col) = '1' then
+                  eroLatched(ser*NUM_OF_COL_MANAGERS_C + col) := '1';
+               end if;
+            end loop;
+         end loop;
+
+         if uAnd(eroLatched) = '1' then
+            eroAll <= '1';
+            eroLatched := (others => '0');
+         else
+            eroAll <= '0';
+         end if;
+
+         end if;
+      end if;
+   end process;
+
    -------
    -- FPGA
    -------
@@ -404,6 +446,7 @@ begin
          pgpRxClk        => pgpRxClk,
          phyRxClk        => pgpClk,
          sro             => sroFinal,
+         ero             => eroAll,
          daq             => daqEnable,
          rst             => revRst,
          asicRstL        => rst,

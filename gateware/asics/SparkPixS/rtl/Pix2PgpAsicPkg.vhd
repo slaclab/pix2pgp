@@ -38,8 +38,20 @@ package Pix2PgpAsicPkg is
    -- every ASIC implementation has a specific decimal identifier
    constant ASIC_TYPE_C : natural := 1; -- SparkPix-S = 1
 
-   -- if set to True:
-   -- overOcc signal causes trigger counter to increment
+   --
+   -- if set to True: ASIC relies on an external End-Of-Readout (ERO) trigger
+   -- to close-out an event. The FPGA receiver will instantiate a dedicated ERO
+   -- buffer, and the Lane Supervisor will gate event close-out on the ERO
+   -- reception (see Pix2PgpTriggerManager and Pix2PgpLaneSupervisor);
+   -- Set False for ASICs that close-out events internally (e.g. SparkPix-S).
+   constant EN_ERO_C : boolean := False;
+
+   --
+   -- if set to True: overOcc signal causes trigger counter to increment;
+   -- overOcc increments the trigger counter when it is coupled with an SRO;
+   -- if overOcc is coupled with an ERO, then this needs to be set to False.
+   -- This is the case for ASICs that rely on an ERO strobe.
+   -- So usually EN_ERO_C and INCR_TRGCNT_OVEROCC_C are mutually exclusive
    constant INCR_TRGCNT_OVEROCC_C : boolean := True;
 
    -- **************************************************************************
