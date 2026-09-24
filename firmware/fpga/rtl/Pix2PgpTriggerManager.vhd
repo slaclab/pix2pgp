@@ -146,7 +146,6 @@ begin
       -- SRO negedge detection
       if v.asicSro = '0' and r.asicSro = '1' then
          v.sroBuffWr := '1';
-         v.eroTrgCnt := r.fpgaTrgCnt;
 
          -- daq should be high while sro is toggling;
          -- otherwise no data are forwarded downstream
@@ -159,21 +158,17 @@ begin
       -----------------
       -- ERO management
       -----------------
-      GEN_ERO : if EN_ERO_C generate
+      -- ERO posedge detection;
+      -- note that it is assumed that the sequence SRO->ERO->SRO->... is never broken
+      -- (it is the external trigger logic's responsibility to retain this)
+      if v.asicEro = '1' and r.asicEro = '0' and EN_ERO_C then
+         v.eroTrgCnt := r.fpgaTrgCnt;
+      end if;
 
-         -- ERO posedge detection;
-         -- note that it is assumed that the sequence SRO->ERO->SRO->... is never broken
-         -- (it is the external trigger logic's responsibility to retain this)
-         if v.asicEro = '1' and r.asicEro = '0' then
-            v.eroTrgCnt := r.fpgaTrgCnt;
-         end if;
-
-         -- ERO negedge detection
-         if v.asicEro = '0' and r.asicEro = '1' then
-            v.eroBuffWr := '1';
-         end if;
-
-      end generate GEN_ERO;
+      -- ERO negedge detection
+      if v.asicEro = '0' and r.asicEro = '1' and EN_ERO_C then
+         v.eroBuffWr := '1';
+      end if;
 
       -- Trigger Counter-only reset
       if rstFpgaTrgCnt = '1' then
