@@ -112,13 +112,13 @@ class Pix2PgpLaneMon(pr.Device):
         ))
 
         self.add(pr.RemoteVariable(
-            name         = 'LaneDown',
-            description  = 'Lane is Down',
+            name         = 'LaneDownCnt',
+            description  = 'Increments by one each time the lane drops its PGP link',
             offset       = 0xA18,
-            bitSize      = 1,
+            bitSize      = self.monCntWidth,
             mode         = 'RO',
+            disp         = '{:d}',
             pollInterval = 1,
-            base         = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -188,6 +188,16 @@ class Pix2PgpLaneMon(pr.Device):
             bitSize      = self.numColPerLane,
             mode         = 'RO',
             pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name        = 'LaneDownCntOverflow',
+            description = 'The LaneDownCnt has overflowed; reset is needed if True',
+            offset       = 0xA38,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
         ))
 
         self.add(pr.RemoteVariable(
@@ -266,6 +276,27 @@ class Pix2PgpLaneMon(pr.Device):
             bitSize     = 4,
             mode        = 'RO',
             enum        = self.laneRxStateEnum))
+
+        self.add(pr.RemoteVariable(
+            name         = 'RxDataEmpty',
+            description  = 'Lane Data FIFO is empty',
+            offset       = 0xB24,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
+
+
+        self.add(pr.RemoteVariable(
+            name         = 'RxMetaEmpty',
+            description  = 'Lane Metadata FIFO is empty',
+            offset       = 0xB28,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
+        ))
 
         self.add(pr.RemoteVariable(
             name        = 'LaneID',

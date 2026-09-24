@@ -103,6 +103,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneEnable     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePause      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseError : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneMisalign   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       refTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
       fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
       prvTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -138,6 +139,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneEnable     => (others => '0'),
       lanePause      => (others => '0'),
       lanePauseError => (others => '0'),
+      laneMisalign   => (others => '0'),
       refTrgCnt      => (others => '0'),
       fpgaTrgCnt     => (others => '0'),
       prvTrgCnt      => (others => '0'),
@@ -209,11 +211,9 @@ begin
                                      r.laneEnable(lane)     and
                                      r.laneUp(lane);
          --
-
          -- lane status signals are all masked against the valid
          v.laneStatus(lane).overflow   := laneStatus(lane).overflow   and r.laneEnable(lane);
          v.laneStatus(lane).decError   := laneStatus(lane).decError   and r.laneStatus(lane).valid;
-         v.laneStatus(lane).overOcc    := laneStatus(lane).overOcc    and r.laneStatus(lane).valid;
          v.laneStatus(lane).pause      := laneStatus(lane).pause      and r.laneStatus(lane).valid;
          v.laneStatus(lane).pauseError := laneStatus(lane).pauseError and r.laneStatus(lane).valid;
          v.lanePause(lane)             := r.laneStatus(lane).pause;
@@ -276,13 +276,14 @@ begin
       -------------------------------------------------------------------------
          -- wait for the trigger buffer to have a word
          when IDLE_S =>
-            v.laneTimeout := (others => '0');
-            v.laneReady   := (others => '0');
-            v.laneValid   := (others => '0');
-            v.waitCnt     := (others => '0');
-            v.evalError   := '1';
-            v.laneRst     := '0';
-            v.popTrg      := '0';
+            v.laneTimeout  := (others => '0');
+            v.laneMisalign := (others => '0');
+            v.laneReady    := (others => '0');
+            v.laneValid    := (others => '0');
+            v.waitCnt      := (others => '0');
+            v.evalError    := '1';
+            v.laneRst      := '0';
+            v.popTrg       := '0';
 
             if trgBuffValid = '1' and config.triggerless = '0' then
 
@@ -332,7 +333,7 @@ begin
             v.waitCnt     := (others => '0');
             v.trgMisalign := '0';
 
-            -- first grab the first valid trigger counter...
+            -- ...then grab the first valid trigger counter
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
 
                if r.laneValid(lane) = '1' then
@@ -347,6 +348,7 @@ begin
 
                if r.laneValid(lane) = '1' and r.laneStatus(lane).trgCnt /= v.refTrgCnt then
                   v.trgMisalign := '1';
+                  v.laneMisalign(lane) := '1';
                   exit;
                end if;
 
@@ -357,9 +359,16 @@ begin
                v.trgMisalign := '1';
             end if;
 
-            -- can continue readout of lanes since we moved on to the next event
+            -- can continue readout of lanes since we moved on to the next event;
+            -- can also reset the trigger misalignment bits
             if v.trgMisalign = '0' and r.postReset = '1' and v.refTrgCnt /= r.prvTrgCnt then
                v.postReset := '0';
+               v.laneMisalign := (others => '0');
+
+            -- nominal case; reset the misalignment bits
+            elsif v.trgMisalign = '0' and r.postReset = '0' then
+               v.laneMisalign := (others => '0');
+
             end if;
 
             v.state := START_MERGER_S;
@@ -368,7 +377,7 @@ begin
 
                if v.trgMisalign = '0' and uOr(r.laneValid) = '1' and
                   v.refTrgCnt /= r.fpgaTrgCnt then
-
+                  --
                   v.popTrg    := '1';
                   v.reqDrop   := '1';
                   v.laneError := (others => '0');
@@ -386,7 +395,6 @@ begin
             -- v.laneStatus is determined earlier in this proc
             for lane in NUM_OF_SERIALIZERS_C-1 downto 0 loop
                v.asicStatus(lane).decError     := r.laneStatus(lane).decError;
-               v.asicStatus(lane).overOcc      := r.laneStatus(lane).overOcc;
                v.asicStatus(lane).pause        := r.laneStatus(lane).pause;
                v.asicStatus(lane).pauseError   := r.lanePauseError(lane);
                v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
@@ -396,10 +404,12 @@ begin
                v.asicStatus(lane).eventHitmask := r.laneStatus(lane).eventHitmask;
                v.asicStatus(lane).trgCnt       := r.laneStatus(lane).trgCnt;
                v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
+               v.asicStatus(lane).misalign     := r.laneMisalign(lane);
 
-               -- override if triggers are misaligned
+               -- override the valid signal if triggers are misaligned
                if r.trgMisalign = '1' and config.dropLaneMisalign = '1' then
                   v.asicStatus(lane).decError := '1';
+                  v.asicStatus(lane).misalign := '1';
                   v.laneError(lane)           := '1';
                   v.asicStatus(lane).valid    := '0';
                end if;
