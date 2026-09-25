@@ -471,10 +471,16 @@ begin
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
                v.laneMetaRd := '1';
-               v.sroBuffRd  := r.popTrg;
-               v.eroBuffRd  := r.popTrg;
+               v.sroBuffRd  := '0';
+               v.eroBuffRd  := '0';
+               v.state      := IDLE_S;
 
-               v.state := ite(toBoolean(r.popTrg), DONE_S, IDLE_S);
+               -- pop the trigger words and wait for trigger buffers;
+               if r.popTrg = '1' then
+                  v.sroBuffRd  := '1';
+                  v.eroBuffRd  := '1';
+                  v.state      := DONE_S;
+               end if;
 
                if uOr(r.laneError) = '1' or r.trgMisalign = '1' then
                   v.state := RESET_S;
@@ -511,7 +517,7 @@ begin
 
          ----------------------------------------------------------------------
          -- perform the reset sequence if needed;
-         -- mostly used to wait between buffer reading and buffer re-evaluation
+         -- or just wait between buffer reading and buffer re-evaluation
          when DONE_S =>
             v.waitCnt     := r.waitCnt + 1;
             v.eroCloseout := '0';
