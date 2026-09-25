@@ -3,6 +3,20 @@
 -------------------------------------------------------------------------------
 -- Description: Pix2Pgp Lane Supervising Module
 --
+-- Coordinates event close-out across LaneRx instances and drives the merger.
+--
+-- In default mode (EN_ERO_C = False), the supervisor closes an event once all
+-- enabled lanes have delivered a nominal (pause=0) frame for the current SRO
+--
+-- In ERO mode the ASIC relies on an external End-Of-Readout (ERO) trigger
+-- to close-out its event. Multiple ASIC frames can be emitted for a single SRO
+-- (either as Pause fragments, or as sequential nominal frames);
+-- The FPGA receiver implements an ERO trigger buffer that stores the ERO
+-- strobe. Once the ERO is registered, the receiver waits for a configurable
+-- window (config.eroTimeout) to absord any residual frames.
+--
+-- The behavior defaults to non-ERO behavior when EN_ERO_C = False.
+--
 -------------------------------------------------------------------------------
 -- This file is part of 'Pix2Pgp'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
@@ -44,26 +58,31 @@ entity Pix2PgpLaneSupervisor is
       laneStatus     : in  Pix2PgpLaneStatusArray;
       laneRst        : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneMetaRd     : out slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      -- Trigger Buffer Interface
-      trgBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0);
-      trgBuffSroEn   : in  sl;
-      trgBuffSysDaq  : in  sl;
-      trgBuffValid   : in  sl;
-      trgBuffRd      : out sl;
+      -- Trigger Buffer Interface (SRO)
+      sroBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0);
+      sroBuffSroEn   : in  sl;
+      sroBuffSysDaq  : in  sl;
+      sroBuffValid   : in  sl;
+      sroBuffRd      : out sl;
+      -- Trigger Buffer Interface (ERO; only used when EN_ERO_C = True)
+      eroBuffTrgCnt  : in  slv(TRGCNT_WIDTH_C-1 downto 0) := (others => '0');
+      eroBuffValid   : in  sl := '0';
+      eroBuffRd      : out sl;
       -- Lane Merger Interface
       mergerBusy     : in  sl;
       asicStatus     : out Pix2PgpLaneStatusArray;
       fpgaTrgCnt     : out slv(TRGCNT_WIDTH_C-1 downto 0);
       reqDrop        : out sl;
-      reqNominal     : out sl;
-      reqPause       : out sl;
+      reqCloseout    : out sl;
+      reqFragment    : out sl;
       dumpData       : out sl);
 end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
 
-   signal timeout    : sl := '0';
-   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal wdogLaneTimeout : sl := '0';
+   signal wdogEroTimeout  : sl := '0';
+   signal linkUpSync      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
@@ -78,18 +97,21 @@ architecture rtl of Pix2PgpLaneSupervisor is
 
    type RegType is record
       reqDrop        : sl;
-      reqNominal     : sl;
-      reqPause       : sl;
+      reqCloseout    : sl;
+      reqFragment    : sl;
       dumpData       : sl;
       mergerBusy     : sl;
-      armTimeout     : sl;
+      armLaneTimeout : sl;
+      armEroTimeout  : sl;
       popTrg         : sl;
       evalLanes      : sl;
       evalError      : sl;
-      trgBuffRd      : sl;
+      sroBuffRd      : sl;
+      eroBuffRd      : sl;
       trgMisalign    : sl;
       postReset      : sl;
       inPauseError   : sl;
+      eroCloseout    : sl;
       laneRst        : sl;
       laneMetaRd     : sl;
       laneValid      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
@@ -103,7 +125,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneEnable     : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePause      : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       lanePauseError : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
-      laneMisalign   : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
+      laneEro        : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       refTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
       fpgaTrgCnt     : slv(TRGCNT_WIDTH_C-1 downto 0);
       prvTrgCnt      : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -114,18 +136,21 @@ architecture rtl of Pix2PgpLaneSupervisor is
 
    constant REG_INIT_C : RegType := (
       reqDrop        => '0',
-      reqNominal     => '0',
-      reqPause       => '0',
+      reqCloseout    => '0',
+      reqFragment    => '0',
       dumpData       => '0',
       mergerBusy     => '0',
-      armTimeout     => '0',
+      armLaneTimeout => '0',
+      armEroTimeout  => '0',
       popTrg         => '0',
       evalLanes      => '0',
       evalError      => '0',
-      trgBuffRd      => '0',
+      sroBuffRd      => '0',
+      eroBuffRd      => '0',
       trgMisalign    => '0',
       postReset      => '0',
       inPauseError   => '0',
+      eroCloseout    => '0',
       laneRst        => '1',
       laneMetaRd     => '0',
       laneValid      => (others => '0'),
@@ -139,7 +164,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       laneEnable     => (others => '0'),
       lanePause      => (others => '0'),
       lanePauseError => (others => '0'),
-      laneMisalign   => (others => '0'),
+      laneEro        => (others => '0'),
       refTrgCnt      => (others => '0'),
       fpgaTrgCnt     => (others => '0'),
       prvTrgCnt      => (others => '0'),
@@ -163,8 +188,9 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, trgBuffValid, trgBuffSroEn, mergerBusy, trgBuffSysDaq,
-                   timeout, config, linkUpSync, laneStatus, trgBuffTrgCnt) is
+   comb : process (r, pgpRxRst, sroBuffValid, sroBuffSroEn, mergerBusy, sroBuffSysDaq,
+                   wdogLaneTimeout, wdogEroTimeout, config, linkUpSync, laneStatus,
+                   sroBuffTrgCnt, eroBuffTrgCnt, eroBuffValid) is
       variable v : RegType;
    begin
 
@@ -173,18 +199,20 @@ begin
 
       -- Register Inputs
       v.mergerBusy := mergerBusy;
-      v.fpgaTrgCnt := ite(toBoolean(config.triggerless), toSlv(0, TRGCNT_WIDTH_C), trgBuffTrgCnt);
+      v.fpgaTrgCnt := ite(toBoolean(config.triggerless), toSlv(0, TRGCNT_WIDTH_C), sroBuffTrgCnt);
 
       -- Default values
-      v.reqDrop    := '0';
-      v.reqNominal := '0';
-      v.reqPause   := '0';
-      v.dumpData   := not(trgBuffSysDaq);
-      v.armTimeout := '0';
-      v.trgBuffRd  := '0';
-      v.laneMetaRd := '0';
-      v.evalLanes  := '0';
-      v.evalError  := '0';
+      v.reqDrop        := '0';
+      v.reqCloseout    := '0';
+      v.reqFragment    := '0';
+      v.dumpData       := not(sroBuffSysDaq);
+      v.armLaneTimeout := '0';
+      v.armEroTimeout  := '0';
+      v.sroBuffRd      := '0';
+      v.eroBuffRd      := '0';
+      v.laneMetaRd     := '0';
+      v.evalLanes      := '0';
+      v.evalError      := '0';
 
       -- global status loop
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -236,7 +264,7 @@ begin
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
 
-            if timeout = '1' then
+            if wdogLaneTimeout = '1' then
                v.laneTimeout(lane) := not(r.laneStatus(lane).valid) and
                                       not(r.laneError(lane))        and
                                       not(r.laneStatus(lane).down);
@@ -277,7 +305,6 @@ begin
          -- wait for the trigger buffer to have a word
          when IDLE_S =>
             v.laneTimeout  := (others => '0');
-            v.laneMisalign := (others => '0');
             v.laneReady    := (others => '0');
             v.laneValid    := (others => '0');
             v.waitCnt      := (others => '0');
@@ -285,13 +312,13 @@ begin
             v.laneRst      := '0';
             v.popTrg       := '0';
 
-            if trgBuffValid = '1' and config.triggerless = '0' then
+            if sroBuffValid = '1' and config.triggerless = '0' then
 
                v.state := EVAL_LANES_S;
 
                -- if this trigger never reached the ASIC, send a 'drop' frame
                -- same if no receiver lane is enabled/stable
-               if trgBuffSroEn = '0' or uOr(r.laneUp) = '0' or uOr(r.laneEnable) = '0' then
+               if sroBuffSroEn = '0' or uOr(r.laneUp) = '0' or uOr(r.laneEnable) = '0' then
                   v.popTrg    := '1';
                   v.reqDrop   := '1';
                   v.laneError := (others => '0');
@@ -313,11 +340,26 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
          when EVAL_LANES_S =>
-            v.armTimeout := '1';
-            v.evalLanes  := '1';
+            v.armLaneTimeout := not(toSl(EN_ERO_C));
+            v.armEroTimeout  := toSl(EN_ERO_C) and eroBuffValid;
+            v.evalLanes      := '1';
 
-            if (r.laneReady and r.laneEnable) = r.laneEnable then
-               v.state := EVAL_TRG_CNT_S;
+            -- all lanes ready; if this an ERO-enabled ASIC, there are more data to come
+            if eroBuffValid = '0' then
+
+               if (r.laneReady and r.laneEnable) = r.laneEnable then
+                  v.eroCloseout := '0';
+                  v.state := EVAL_TRG_CNT_S;
+               end if;
+
+            elsif eroBuffValid = '1' and wdogEroTimeout = '1' then
+               v.armLaneTimeout := '1'; -- override; arm the lane-timeout
+
+               if (r.laneReady and r.laneEnable) = r.laneEnable then
+                  v.eroCloseout := '1';
+                  v.state := EVAL_TRG_CNT_S;
+               end if;
+
             end if;
 
          -------------------------------------------------------------------------
@@ -348,7 +390,6 @@ begin
 
                if r.laneValid(lane) = '1' and r.laneStatus(lane).trgCnt /= v.refTrgCnt then
                   v.trgMisalign := '1';
-                  v.laneMisalign(lane) := '1';
                   exit;
                end if;
 
@@ -359,16 +400,9 @@ begin
                v.trgMisalign := '1';
             end if;
 
-            -- can continue readout of lanes since we moved on to the next event;
-            -- can also reset the trigger misalignment bits
+            -- can continue readout of lanes since we moved on to the next event
             if v.trgMisalign = '0' and r.postReset = '1' and v.refTrgCnt /= r.prvTrgCnt then
                v.postReset := '0';
-               v.laneMisalign := (others => '0');
-
-            -- nominal case; reset the misalignment bits
-            elsif v.trgMisalign = '0' and r.postReset = '0' then
-               v.laneMisalign := (others => '0');
-
             end if;
 
             v.state := START_MERGER_S;
@@ -400,31 +434,32 @@ begin
                v.asicStatus(lane).overflow     := r.laneStatus(lane).overflow;
                v.asicStatus(lane).valid        := r.laneValid(lane);
                v.asicStatus(lane).down         := r.laneStatus(lane).down;
+               v.asicStatus(lane).ero          := r.eroCloseout;
                v.asicStatus(lane).timeout      := r.laneTimeout(lane);
                v.asicStatus(lane).eventHitmask := r.laneStatus(lane).eventHitmask;
                v.asicStatus(lane).trgCnt       := r.laneStatus(lane).trgCnt;
                v.asicStatus(lane).frameSize    := r.laneStatus(lane).frameSize;
-               v.asicStatus(lane).misalign     := r.laneMisalign(lane);
 
-               -- override the valid signal if triggers are misaligned
+               -- override the valid signal if triggers are misaligned across
+               -- lanes: flag a decoding error and drop this lane's frame
                if r.trgMisalign = '1' and config.dropLaneMisalign = '1' then
                   v.asicStatus(lane).decError := '1';
-                  v.asicStatus(lane).misalign := '1';
                   v.laneError(lane)           := '1';
                   v.asicStatus(lane).valid    := '0';
                end if;
 
             end loop;
 
-            -- request pause frame (i.e. don't close) only if not in error
-            if uOr(r.lanePause) = '1' and uOr(v.laneError) = '0' then
-               v.popTrg     := '0';
-               v.reqPause   := '1';
-               v.reqNominal := '0';
+            -- event close-out determining
+            if uOr(v.laneError) = '0' and
+               ((uOr(r.lanePause) = '1') or (EN_ERO_C and r.eroCloseout = '0')) then
+               v.popTrg      := '0';
+               v.reqCloseout := '0';
+               v.reqFragment := '1';
             else
-               v.popTrg     := '1';
-               v.reqPause   := '0';
-               v.reqNominal := '1';
+               v.popTrg      := '1';
+               v.reqCloseout := '1';
+               v.reqFragment := '0';
             end if;
 
             v.state := WAIT_MERGER_S;
@@ -436,9 +471,10 @@ begin
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
                v.laneMetaRd := '1';
-               v.trgBuffRd  := r.popTrg;
+               v.sroBuffRd  := r.popTrg;
+               v.eroBuffRd  := r.popTrg;
 
-               v.state := DONE_S;
+               v.state := ite(toBoolean(r.popTrg), DONE_S, IDLE_S);
 
                if uOr(r.laneError) = '1' or r.trgMisalign = '1' then
                   v.state := RESET_S;
@@ -463,6 +499,7 @@ begin
          when RESET_S =>
             v.prvTrgCnt   := r.refTrgCnt;
             v.popTrg      := '0';
+            v.eroCloseout := '0';
             v.laneRst     := '1';
             v.postReset   := '1';
             v.laneTimeout := (others => '0');
@@ -476,7 +513,8 @@ begin
          -- perform the reset sequence if needed;
          -- mostly used to wait between buffer reading and buffer re-evaluation
          when DONE_S =>
-            v.waitCnt := r.waitCnt + 1;
+            v.waitCnt     := r.waitCnt + 1;
+            v.eroCloseout := '0';
 
             -- don't pop the trigger buffer word if in pause;
             -- if in pause, will go back to idle and straight to lane evaluation
@@ -495,11 +533,11 @@ begin
       -- Outputs
       asicStatus     <= r.asicStatus;
       reqDrop        <= r.reqDrop;
-      reqNominal     <= r.reqNominal;
-      reqPause       <= r.reqPause;
+      reqCloseout    <= r.reqCloseout;
+      reqFragment    <= r.reqFragment;
       dumpData       <= r.dumpData;
       fpgaTrgCnt     <= r.fpgaTrgCnt;
-      trgBuffRd      <= r.trgBuffRd;
+      sroBuffRd      <= r.sroBuffRd;
       pgp4RxLinkDown <= not(r.laneUp);
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
@@ -565,7 +603,26 @@ begin
          rst     => pgpRxRst,
          limit   => config.laneTimeout,
          -- Control Interface
-         set     => r.armTimeout,
-         timeout => timeout);
+         set     => r.armLaneTimeout,
+         timeout => wdogLaneTimeout);
+
+   GEN_ERO_WDOG: if EN_ERO_C generate
+
+      U_EroWatchdog : entity pix2pgp.Pix2PgpWatchdog
+         generic map(
+            TPD_G          => TPD_G,
+            RST_ASYNC_G    => RST_ASYNC_G,
+            RST_POLARITY_G => RST_POLARITY_G,
+            CNT_WIDTH_G    => ERO_POST_TIMEOUT_WIDTH_C)
+         port map(
+            -- General Interface
+            clk     => pgpRxClk,
+            rst     => pgpRxRst,
+            limit   => config.eroTimeout,
+            -- Control Interface
+            set     => r.armEroTimeout,
+            timeout => wdogEroTimeout);
+
+   end generate GEN_ERO_WDOG;
 
 end rtl;

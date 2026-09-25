@@ -52,6 +52,7 @@ class AsicData(object):
         self.numOfLanes   = None
         self.numOfCols    = None
         self.wordLen      = None
+        self.eroMode      = None
         self.preambleLen  = None
         self.headerLen    = None
         self.trailerLen   = None
@@ -80,7 +81,7 @@ class AsicData(object):
         self.laneDecError   = [None] * self.numOfLanes
         self.lanePause      = [None] * self.numOfLanes
         self.lanePauseError = [None] * self.numOfLanes
-        self.laneMisalign   = [None] * self.numOfLanes
+        self.laneEro        = [None] * self.numOfLanes
         self.laneFull       = [None] * self.numOfLanes
         self.laneTimeout    = [None] * self.numOfLanes
         self.laneDown       = [None] * self.numOfLanes
@@ -185,6 +186,7 @@ class AsicData(object):
         self.numOfLanes   = self.asicParams.asicParamExtract()['numOfLanes']
         self.numOfCols    = self.asicParams.asicParamExtract()['numOfCols']
         self.wordLen      = self.asicParams.asicParamExtract()['wordLen']
+        self.eroMode      = self.asicParams.asicParamExtract()['eroMode']
 
         self.fpgaDataFormat.asicNumOfLanesSet(numOfLanes=self.numOfLanes)
 
@@ -267,7 +269,7 @@ class AsicData(object):
                                                                                 self.numOfLanes)]
         self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
-        self.laneMisalign   = [(_dict['laneMisalign'] >> i) & 1 == 1 for i in range(
+        self.laneEro        = [(_dict['laneEro'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
         self.laneFull       = [(_dict['laneFull'] >> i) & 1 == 1 for i in range(
                                                                                 self.numOfLanes)]
@@ -292,11 +294,12 @@ class AsicData(object):
                 ('DecError',  _dict['laneDecError']),
                 ('Pause',     _dict['lanePause']),
                 ('PauseErr',  _dict['lanePauseError']),
-                ('Misalign',  _dict['laneMisalign']),
+                ('Ero',       _dict['laneEro']),
                 ('Full',      _dict['laneFull']),
                 ('Timeout',   _dict['laneTimeout']),
                 ('Down',      _dict['laneDown']),
             ]
+            # Ero is a normal status bit and appears in the line above like the rest.
 
             _parts = [f"{label} = 0x{value:X}" for label, value in _fields if value > 0]
             _parts.append(f"Valid = 0x{_dict['laneValid']:X}")   # always shown
@@ -315,9 +318,6 @@ class AsicData(object):
 
             if self.headerErr:
                 pix2pgp.Tools.printError('FPGA Rx: Lane')
-
-            if any(self.laneMisalign) and self._verbose > 2:
-                pix2pgp.Tools.printWarning('FPGA Rx: Lane Trigger Misalignment')
 
             if any(self.laneTimeout) and self._verbose > 2:
                 pix2pgp.Tools.printWarning('FPGA Rx: Lane Timeout')
@@ -397,7 +397,7 @@ class AsicData(object):
         index      = self.currentIndex
         _frameSize = [0] * self.numOfLanes
         laneSel    = 0
-        inPause    = False
+        inFragment = False
         rawPrint   = True if self._verbose == 7 else False
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -493,7 +493,8 @@ class AsicData(object):
                 # update the index
                 index += self.laneDecoder.dataIndexEnd
 
-                inPause = self.laneDecoder.pause or inPause
+                if not self.eroMode:
+                    inFragment = self.laneDecoder.pause or inFragment
 
                 self.laneDecoder.reset()
 
@@ -503,7 +504,10 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                if not(inPause) or self.headerErr:
+                if self.eroMode:
+                    inFragment = not any(self.laneEro)
+
+                if not(inFragment) or self.headerErr:
                     _slice = frame[index:index + self.trailerLen]
 
                     if rawPrint:
@@ -517,14 +521,14 @@ class AsicData(object):
                     # reset and parse in another frame for this event
                     laneSel    = 0
                     _frameSize = [0] * self.numOfLanes
-                    inPause    = False
+                    inFragment = False
                     state      = "header_s"
 
             # --------------------------------------------------------------------------------------
             elif state == "end_s":
                 _frameSize = [0] * self.numOfLanes
                 laneSel    = 0
-                inPause    = False
+                inFragment = False
                 self.done  = True
                 index      += self.trailerLen
 

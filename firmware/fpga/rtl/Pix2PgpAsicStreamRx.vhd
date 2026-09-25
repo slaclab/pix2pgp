@@ -127,8 +127,8 @@ architecture rtl of Pix2PgpAsicStreamRx is
    signal pgp4RxLinkDown : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    signal reqDrop        : sl := '0';
-   signal reqNominal     : sl := '0';
-   signal reqPause       : sl := '0';
+   signal reqCloseout    : sl := '0';
+   signal reqFragment    : sl := '0';
    signal dumpData       : sl := '0';
 
    signal mergerState    : slv(STATE_MON_WIDTH_C-1 downto 0) := (others => '0');
@@ -284,8 +284,8 @@ begin
          asicStatus     => asicStatus,
          fpgaTrgCnt     => fpgaTrgCnt,
          reqDrop        => reqDrop,
-         reqNominal     => reqNominal,
-         reqPause       => reqPause,
+         reqCloseout    => reqCloseout,
+         reqFragment    => reqFragment,
          dumpData       => dumpData);
 
    ---------------------------------------------
@@ -308,8 +308,8 @@ begin
          asicStatus    => asicStatus,
          fpgaTrgCnt    => fpgaTrgCnt,
          reqDrop       => reqDrop,
-         reqNominal    => reqNominal,
-         reqPause      => reqPause,
+         reqCloseout   => reqCloseout,
+         reqFragment   => reqFragment,
          dumpData      => dumpData,
          -- Lane AXI-Stream Input Interface
          laneRxMasters => laneRxMasters,
