@@ -308,13 +308,6 @@ package Pix2PgpPkg is
    --
    constant STATE_MON_WIDTH_C            : positive := 4;
    --
-   -- ERO post-reception wait (in pgpRxClk cycles) before the supervisor closes
-   -- an event. Only used when EN_ERO_C = True. Gives the ASIC time to send any
-   -- residual frames that were being processed and sent when the ERO was registered.
-   constant ERO_POST_TIMEOUT_WIDTH_C     : positive := 16;
-   -- default corresponds to ~5.5 us at 186 MHz (1024 cycles); adjustable at run-time
-   constant ERO_POST_TIMEOUT_DEFAULT_C   : positive := 1024;
-   --
 
    type Pix2PgpStreamRxConfigType is record
       dropLaneMisalign : sl;
@@ -325,7 +318,6 @@ package Pix2PgpPkg is
       fpgaId           : slv(15 downto 0);
       laneEnable       : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       laneTimeout      : slv(FPGA_TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
-      eroTimeout       : slv(ERO_POST_TIMEOUT_WIDTH_C-1 downto 0);
    end record;
 
    constant DEFAULT_PIX2PGP_STREAMRX_CONFIG_C : Pix2PgpStreamRxConfigType := (
@@ -337,8 +329,7 @@ package Pix2PgpPkg is
       triggerless      => '0',
       fpgaId           => FPGA_ID_DEFAULT_C,
       laneEnable       => (others => '1'),
-      laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C, FPGA_TIMEOUT_LIMIT_WIDTH_C),
-      eroTimeout       => toSlv(ERO_POST_TIMEOUT_DEFAULT_C, ERO_POST_TIMEOUT_WIDTH_C));
+      laneTimeout      => toSlv(FPGA_TIMEOUT_LIMIT_DEFAULT_C, FPGA_TIMEOUT_LIMIT_WIDTH_C));
 
    type Pix2PgpLaneStatusArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of Pix2PgpLaneStatusType;
 

@@ -144,15 +144,6 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset      = 0x41C,
         )
 
-        self.add(pr.RemoteVariable(
-            name         = 'EroPostTimeout',
-            description  = 'ERO post-reception wait (in pgpRxClk cycles) before event close-out. Absorbs residual ASIC frames after ERO. Only used when EroModeEnabled=True.',
-            offset       = 0x420,
-            bitSize      = 16,
-            mode         = 'RW',
-            disp         = '{:d}',
-        ))
-
         addBool(
             name        = 'UsrRst',
             description = 'Reset Pix2PgpAsicStreamRx',

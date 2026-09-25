@@ -9,11 +9,10 @@
 -- enabled lanes have delivered a nominal (pause=0) frame for the current SRO
 --
 -- In ERO mode the ASIC relies on an external End-Of-Readout (ERO) trigger
--- to close-out its event. Multiple ASIC frames can be emitted for a single SRO
--- (either as Pause fragments, or as sequential nominal frames);
--- The FPGA receiver implements an ERO trigger buffer that stores the ERO
--- strobe. Once the ERO is registered, the receiver waits for a configurable
--- window (config.eroTimeout) to absord any residual frames.
+-- to close-out its event. The FPGA receiver implements an ERO trigger buffer
+-- that stores the ERO strobe. Event close-out is gated on the ERO buffer
+-- having a valid entry — this assumes the trigger sequence is always
+-- SRO -> ERO -> SRO -> ERO -> ...
 --
 -- The behavior defaults to non-ERO behavior when EN_ERO_C = False.
 --
@@ -80,9 +79,8 @@ end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
 
-   signal wdogLaneTimeout : sl := '0';
-   signal wdogEroTimeout  : sl := '0';
-   signal linkUpSync      : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal timeout    : sl := '0';
+   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
@@ -101,8 +99,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqFragment    : sl;
       dumpData       : sl;
       mergerBusy     : sl;
-      armLaneTimeout : sl;
-      armEroTimeout  : sl;
+      armTimeout     : sl;
       popTrg         : sl;
       evalLanes      : sl;
       evalError      : sl;
@@ -140,8 +137,7 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqFragment    => '0',
       dumpData       => '0',
       mergerBusy     => '0',
-      armLaneTimeout => '0',
-      armEroTimeout  => '0',
+      armTimeout     => '0',
       popTrg         => '0',
       evalLanes      => '0',
       evalError      => '0',
@@ -189,7 +185,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, sroBuffValid, sroBuffSroEn, mergerBusy, sroBuffSysDaq,
-                   wdogLaneTimeout, wdogEroTimeout, config, linkUpSync, laneStatus,
+                   timeout, config, linkUpSync, laneStatus,
                    sroBuffTrgCnt, eroBuffTrgCnt, eroBuffValid) is
       variable v : RegType;
    begin
@@ -206,8 +202,7 @@ begin
       v.reqCloseout    := '0';
       v.reqFragment    := '0';
       v.dumpData       := not(sroBuffSysDaq);
-      v.armLaneTimeout := '0';
-      v.armEroTimeout  := '0';
+      v.armTimeout     := '0';
       v.sroBuffRd      := '0';
       v.eroBuffRd      := '0';
       v.laneMetaRd     := '0';
@@ -264,7 +259,7 @@ begin
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
 
-            if wdogLaneTimeout = '1' then
+            if timeout = '1' then
                v.laneTimeout(lane) := not(r.laneStatus(lane).valid) and
                                       not(r.laneError(lane))        and
                                       not(r.laneStatus(lane).down);
@@ -340,26 +335,16 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
          when EVAL_LANES_S =>
-            v.armLaneTimeout := not(toSl(EN_ERO_C));
-            v.armEroTimeout  := toSl(EN_ERO_C) and eroBuffValid;
-            v.evalLanes      := '1';
+            v.armTimeout := '1';
+            v.evalLanes  := '1';
 
-            -- all lanes ready; if this an ERO-enabled ASIC, there are more data to come
-            if eroBuffValid = '0' then
+            if EN_ERO_C then
+               v.armTimeout := eroBuffValid;
+            end if;
 
-               if (r.laneReady and r.laneEnable) = r.laneEnable then
-                  v.eroCloseout := '0';
-                  v.state := EVAL_TRG_CNT_S;
-               end if;
-
-            elsif eroBuffValid = '1' and wdogEroTimeout = '1' then
-               v.armLaneTimeout := '1'; -- override; arm the lane-timeout
-
-               if (r.laneReady and r.laneEnable) = r.laneEnable then
-                  v.eroCloseout := '1';
-                  v.state := EVAL_TRG_CNT_S;
-               end if;
-
+            if (r.laneReady and r.laneEnable) = r.laneEnable then
+               v.eroCloseout := eroBuffValid;
+               v.state := EVAL_TRG_CNT_S;
             end if;
 
          -------------------------------------------------------------------------
@@ -609,26 +594,7 @@ begin
          rst     => pgpRxRst,
          limit   => config.laneTimeout,
          -- Control Interface
-         set     => r.armLaneTimeout,
-         timeout => wdogLaneTimeout);
-
-   GEN_ERO_WDOG: if EN_ERO_C generate
-
-      U_EroWatchdog : entity pix2pgp.Pix2PgpWatchdog
-         generic map(
-            TPD_G          => TPD_G,
-            RST_ASYNC_G    => RST_ASYNC_G,
-            RST_POLARITY_G => RST_POLARITY_G,
-            CNT_WIDTH_G    => ERO_POST_TIMEOUT_WIDTH_C)
-         port map(
-            -- General Interface
-            clk     => pgpRxClk,
-            rst     => pgpRxRst,
-            limit   => config.eroTimeout,
-            -- Control Interface
-            set     => r.armEroTimeout,
-            timeout => wdogEroTimeout);
-
-   end generate GEN_ERO_WDOG;
+         set     => r.armTimeout,
+         timeout => timeout);
 
 end rtl;
