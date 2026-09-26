@@ -294,12 +294,11 @@ class AsicData(object):
                 ('DecError',  _dict['laneDecError']),
                 ('Pause',     _dict['lanePause']),
                 ('PauseErr',  _dict['lanePauseError']),
-                ('Ero',       _dict['laneEro']),
+                ('ERO',       _dict['laneEro']),
                 ('Full',      _dict['laneFull']),
                 ('Timeout',   _dict['laneTimeout']),
                 ('Down',      _dict['laneDown']),
             ]
-            # Ero is a normal status bit and appears in the line above like the rest.
 
             _parts = [f"{label} = 0x{value:X}" for label, value in _fields if value > 0]
             _parts.append(f"Valid = 0x{_dict['laneValid']:X}")   # always shown
