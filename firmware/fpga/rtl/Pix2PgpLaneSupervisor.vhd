@@ -343,7 +343,7 @@ begin
             end if;
 
             if (r.laneReady and r.laneEnable) = r.laneEnable then
-               v.eroCloseout := eroBuffValid;
+               v.eroCloseout := eroBuffValid and not(uOr(r.lanePause));
                v.state := EVAL_TRG_CNT_S;
             end if;
 
@@ -456,16 +456,9 @@ begin
          when WAIT_MERGER_S =>
             if v.mergerBusy = '0' and r.mergerBusy = '1' then
                v.laneMetaRd := '1';
-               v.sroBuffRd  := '0';
-               v.eroBuffRd  := '0';
-               v.state      := IDLE_S;
-
-               -- pop the trigger words and wait for trigger buffers;
-               if r.popTrg = '1' then
-                  v.sroBuffRd  := '1';
-                  v.eroBuffRd  := '1';
-                  v.state      := DONE_S;
-               end if;
+               v.sroBuffRd  := r.popTrg;
+               v.eroBuffRd  := r.popTrg;
+               v.state      := DONE_S;
 
                if uOr(r.laneError) = '1' or r.trgMisalign = '1' then
                   v.state := RESET_S;
@@ -529,6 +522,7 @@ begin
       dumpData       <= r.dumpData;
       fpgaTrgCnt     <= r.fpgaTrgCnt;
       sroBuffRd      <= r.sroBuffRd;
+      eroBuffRd      <= r.sroBuffRd;
       pgp4RxLinkDown <= not(r.laneUp);
 
       for lane in 0 to NUM_OF_SERIALIZERS_C-1 loop
