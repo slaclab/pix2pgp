@@ -79,8 +79,9 @@ end Pix2PgpLaneSupervisor;
 
 architecture rtl of Pix2PgpLaneSupervisor is
 
-   signal timeout    : sl := '0';
-   signal linkUpSync : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
+   signal wdogValidTmo : sl := '0';
+   signal wdogPauseTmo : sl := '0';
+   signal linkUpSync       : slv(NUM_OF_SERIALIZERS_C-1 downto 0) := (others => '0');
 
    type LaneUpCntArray is array (NUM_OF_SERIALIZERS_C-1 downto 0) of slv(7 downto 0);
 
@@ -99,7 +100,8 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqFragment    : sl;
       dumpData       : sl;
       mergerBusy     : sl;
-      armTimeout     : sl;
+      armValidTmo    : sl;
+      armPauseTmo    : sl;
       popTrg         : sl;
       evalLanes      : sl;
       evalError      : sl;
@@ -137,7 +139,8 @@ architecture rtl of Pix2PgpLaneSupervisor is
       reqFragment    => '0',
       dumpData       => '0',
       mergerBusy     => '0',
-      armTimeout     => '0',
+      armValidTmo    => '0',
+      armPauseTmo    => '0',
       popTrg         => '0',
       evalLanes      => '0',
       evalError      => '0',
@@ -185,7 +188,7 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
    comb : process (r, pgpRxRst, sroBuffValid, sroBuffSroEn, mergerBusy, sroBuffSysDaq,
-                   timeout, config, linkUpSync, laneStatus,
+                   wdogValidTmo, wdogPauseTmo, config, linkUpSync, laneStatus,
                    sroBuffTrgCnt, eroBuffTrgCnt, eroBuffValid) is
       variable v : RegType;
    begin
@@ -201,9 +204,10 @@ begin
       v.reqDrop        := '0';
       v.reqCloseout    := '0';
       v.reqFragment    := '0';
-      v.dumpData       := not(sroBuffSysDaq);
-      v.armTimeout     := '0';
-      v.sroBuffRd      := '0';
+      v.dumpData        := not(sroBuffSysDaq);
+      v.armValidTmo := '0';
+      v.armPauseTmo := '0';
+      v.sroBuffRd       := '0';
       v.eroBuffRd      := '0';
       v.laneMetaRd     := '0';
       v.evalLanes      := '0';
@@ -259,7 +263,7 @@ begin
          -- activate lane evaluation only in specific parts of the FSM
          if r.evalLanes = '1' then
 
-            if timeout = '1' then
+            if wdogValidTmo = '1' then
                v.laneTimeout(lane) := not(r.laneStatus(lane).valid) and
                                       not(r.laneError(lane))        and
                                       not(r.laneStatus(lane).down);
@@ -335,11 +339,19 @@ begin
          -- 'ready' might mean that the lane has a valid frame;
          -- or, that the lane is in some error state
          when EVAL_LANES_S =>
-            v.armTimeout := '1';
-            v.evalLanes  := '1';
+            v.armValidTmo := '1';
+            v.evalLanes   := '1';
 
             if EN_ERO_C then
-               v.armTimeout := eroBuffValid;
+               v.armValidTmo := eroBuffValid;
+            end if;
+
+            -- pause-priority shortcut
+            v.armPauseTmo := uOr(r.lanePause);
+
+            if wdogPauseTmo = '1' then
+               v.eroCloseout := '0';
+               v.state       := EVAL_TRG_CNT_S;
             end if;
 
             if (r.laneReady and r.laneEnable) = r.laneEnable then
@@ -575,20 +587,41 @@ begin
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
 
-   -- Watchdog
-   U_LaneWatchdog : entity pix2pgp.Pix2PgpWatchdog
+   -- Lane-valid watchdog: fires when EVAL_LANES_S has been waiting too long
+   -- for at least one lane to produce a valid frame. Marks non-yielding lanes
+   -- as timed-out so the FSM can advance
+   U_LaneValidWatchdog : entity pix2pgp.Pix2PgpWatchdog
       generic map(
          TPD_G          => TPD_G,
          RST_ASYNC_G    => RST_ASYNC_G,
          RST_POLARITY_G => RST_POLARITY_G,
-         CNT_WIDTH_G    => FPGA_TIMEOUT_LIMIT_WIDTH_C)
+         CNT_WIDTH_G    => LANE_VALID_TIMEOUT_WIDTH_C)
       port map(
          -- General Interface
          clk     => pgpRxClk,
          rst     => pgpRxRst,
-         limit   => config.laneTimeout,
+         limit   => config.laneValidTimeout,
          -- Control Interface
-         set     => r.armTimeout,
-         timeout => timeout);
+         set     => r.armValidTmo,
+         timeout => wdogValidTmo);
+
+   -- Lane-pause watchdog: fires when at least one lane has been reporting
+   -- pause for lanePauseTimeout cycles in EVAL_LANES_S without the rest of
+   -- the lanes joining. Triggers a shortcut advance so the paused lane's
+   -- FIFOs get drained as a fragment
+   U_LanePauseWatchdog : entity pix2pgp.Pix2PgpWatchdog
+      generic map(
+         TPD_G          => TPD_G,
+         RST_ASYNC_G    => RST_ASYNC_G,
+         RST_POLARITY_G => RST_POLARITY_G,
+         CNT_WIDTH_G    => LANE_PAUSE_TIMEOUT_WIDTH_C)
+      port map(
+         -- General Interface
+         clk     => pgpRxClk,
+         rst     => pgpRxRst,
+         limit   => config.lanePauseTimeout,
+         -- Control Interface
+         set     => r.armPauseTmo,
+         timeout => wdogPauseTmo);
 
 end rtl;
