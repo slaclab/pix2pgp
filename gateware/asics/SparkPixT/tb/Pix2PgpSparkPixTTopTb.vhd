@@ -85,19 +85,20 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal daqEnable : sl := '1';
    signal ero       : sl := '0';
    signal eroFinal  : sl := '0';
+   signal eroFpga   : sl := '0';
    signal eroDly    : sl := '0';
    signal revRst    : sl := '0';
    signal sysClk    : sl := '0';
 
    type asicArray is array (0 to NUM_OF_SERIALIZERS_C-1) of slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
 
-   signal sof       : asicArray := (others => (others => '1'));
-   signal eof       : asicArray := (others => (others => '0'));
-   signal overOcc   : asicArray := (others => (others => '0'));
-   signal busy      : asicArray := (others => (others => '0'));
-   signal wrEn      : asicArray := (others => (others => '0'));
-   signal pause     : asicArray := (others => (others => '0'));
-   signal pauseAck  : asicArray := (others => (others => '0'));
+   signal sof      : asicArray := (others => (others => '1'));
+   signal eof      : asicArray := (others => (others => '0'));
+   signal overOcc  : asicArray := (others => (others => '0'));
+   signal busy     : asicArray := (others => (others => '0'));
+   signal wrEn     : asicArray := (others => (others => '0'));
+   signal pause    : asicArray := (others => (others => '0'));
+   signal pauseAck : asicArray := (others => (others => '0'));
 
    type asicDinArray is array (0 to NUM_OF_SERIALIZERS_C-1) of Pix2PgpSparseDinArray;
    signal din : asicDinArray := (others => (others =>  (others => '0')));
@@ -151,7 +152,9 @@ architecture test of Pix2PgpSparkPixTTopTb is
    signal frameSizeCnt      : slv(31 downto 0) := (others => '0');
 
    constant OCC_BENCHMARK_COUNT : positive := 38;
-   constant IGNORE_ERO_C        : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
+   -- benchmarking / bandwidth-stress runs do not drive ero from the TB, so the
+   -- ColumnModels self-generate EoF after EOF_DELAY_G cycles
+   constant SELF_GEN_EOF_C      : boolean  := BENCHMARKING_G or BANDWIDTH_STRESS_TEST_G;
    constant DEFAULT_LANE_FIFO_ADDR_WIDTH_G : positive := ite(BANDWIDTH_STRESS_TEST_G, 8, 11);
 
    type RealArrayType is array (0 to OCC_BENCHMARK_COUNT-1) of real;
@@ -272,6 +275,17 @@ begin
     end if;
   end process;
 
+  issueEroFpgaProcess: process(sparseClk)
+  begin
+    if (rising_edge(sparseClk)) then
+      if not(SELF_GEN_EOF_C) then
+         eroFpga <= eroFinal;
+      else
+         eroFpga <= eof(0)(0);
+      end if;
+    end if;
+  end process;
+
   cntTLastProcess: process(sysClk)
   begin
    if (rising_edge(sysClk)) then
@@ -297,8 +311,8 @@ begin
               TPD_G           => TPD_G,
               RST_ASYNC_G     => RST_ASYNC_G,
               RST_POLARITY_G  => RST_POLARITY_G,
-              IGNORE_ERO_G    => IGNORE_ERO_C,
               WAIT_WREN_G     => 3,
+              SELF_GEN_EOF_G  => SELF_GEN_EOF_C,
               SER_ID_G        => ser,
               COL_ID_G        => col)
             port map(
@@ -404,6 +418,7 @@ begin
          pgpRxClk        => pgpRxClk,
          phyRxClk        => pgpClk,
          sro             => sroFinal,
+         ero             => eroFpga,
          daq             => daqEnable,
          rst             => revRst,
          asicRstL        => rst,

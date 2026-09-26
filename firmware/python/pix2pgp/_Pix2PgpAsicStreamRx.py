@@ -101,8 +101,8 @@ class Pix2PgpAsicStreamRx(pr.Device):
         ))
 
         addTimePair(
-            name        = 'LaneTimeout',
-            description = 'Upon reception of a trigger, an internal watchdog starts counting. if the LaneTimeout is reached, the lanes that do not have data will be masked as timed-out and the rest will be read (if any)',
+            name        = 'LaneValidTimeout',
+            description = 'Upon reception of a trigger, an internal watchdog starts counting. If LaneValidTimeout is reached, the lanes that do not have a valid frame will be masked as timed-out and the rest will be read (if any).',
             offset      = 0x404,
         )
 
@@ -142,6 +142,12 @@ class Pix2PgpAsicStreamRx(pr.Device):
             name        = 'Triggerless',
             description = 'Ignore SRO/DAQ trigger input and forward data on LaneRx activity only',
             offset      = 0x41C,
+        )
+
+        addTimePair(
+            name        = 'LanePauseTimeout',
+            description = 'Grouping window for lane pauses. Once any lane raises pause in EVAL_LANES_S, the supervisor waits this many cycles for other lanes to also pause; when the counter expires the paused-lane FIFOs are drained as a fragment. Mirrors the ASIC pauseLimit.',
+            offset      = 0x420,
         )
 
         addBool(
@@ -193,6 +199,16 @@ class Pix2PgpAsicStreamRx(pr.Device):
             mode         = 'RO',
             disp         = '{:d}',
             pollInterval = 1,
+        ))
+
+        self.add(pr.RemoteVariable(
+            name         = 'EroModeEnabled',
+            description  = 'ERO-based event close-out enabled at compile time (EN_ERO_C in Pix2PgpAsicPkg)',
+            offset       = 0x614,
+            bitSize      = 1,
+            mode         = 'RO',
+            pollInterval = 1,
+            base         = pr.Bool,
         ))
 
     def FpgaCntReset(self):

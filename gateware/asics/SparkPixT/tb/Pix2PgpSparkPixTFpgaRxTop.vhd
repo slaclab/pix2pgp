@@ -62,6 +62,7 @@ entity Pix2PgpSparkPixTFpgaRxTop is
       pgpRxClk        : in  std_logic;
       phyRxClk        : in  std_logic;
       sro             : in  std_logic;
+      ero             : in  std_logic := '0';
       daq             : in  std_logic;
       rst             : in  std_logic := not RST_POLARITY_G;
       asicRstL        : in  std_logic;
@@ -165,6 +166,7 @@ begin
          asicRst         => asicRstL,
          asicSro         => sro,
          asicSroEn       => '1',
+         asicEro         => ero,
          sysDaq          => daq,
          -- PGP4Rx Interface (on pgpRxClk domain)
          pgp4RxMaster    => pgp4RxMaster,

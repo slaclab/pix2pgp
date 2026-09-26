@@ -44,8 +44,8 @@ entity Pix2PgpLaneMerger is
       asicStatus    : in  Pix2PgpLaneStatusArray;
       fpgaTrgCnt    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       reqDrop       : in  sl;
-      reqNominal    : in  sl;
-      reqPause      : in  sl;
+      reqCloseout   : in  sl;
+      reqFragment   : in  sl;
       dumpData      : in  sl;
       -- Lane AXI-Stream Input Interface
       laneRxMasters : in  AxiStreamMasterArray;
@@ -70,10 +70,10 @@ architecture rtl of Pix2PgpLaneMerger is
       busy         : sl;
       fwdData      : sl;
       reqDrop      : sl;
-      reqNominal   : sl;
-      reqPause     : sl;
+      reqCloseout  : sl;
+      reqFragment  : sl;
       dumpData     : sl;
-      inPause      : sl;
+      inFragment   : sl;
       laneSel      : slv(BITMAX_SERIALIZERS_C-1 downto 0);
       asicType     : slv(ASIC_TYPE_LEN_C-1 downto 0);
       pix2pgpType  : slv(PIX2PGP_TYPE_LEN_C-1 downto 0);
@@ -89,10 +89,10 @@ architecture rtl of Pix2PgpLaneMerger is
       busy         => '0',
       fwdData      => '1',
       reqDrop      => '0',
-      reqNominal   => '0',
-      reqPause     => '0',
+      reqCloseout  => '0',
+      reqFragment  => '0',
       dumpData     => '0',
-      inPause      => '0',
+      inFragment   => '0',
       laneSel      => (others => '0'),
       asicType     => toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C),
       pix2pgpType  => PIX2PGP_STREAMRX_DEFAULT_TYPE_C,
@@ -111,8 +111,8 @@ begin
 
    -------------------------------------------------------------------------------------------------
    -------------------------------------------------------------------------------------------------
-   comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqNominal,
-                   reqPause, dumpData, laneRxMasters, obAxiSlave, config) is
+   comb : process (r, pgpRxRst, asicStatus, fpgaTrgCnt, reqDrop, reqCloseout,
+                   reqFragment, dumpData, laneRxMasters, obAxiSlave, config) is
       variable v : RegType;
 
       -- internal variables
@@ -128,7 +128,7 @@ begin
       variable laneFull       : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneDown       : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable lanePauseError : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
-      variable laneMisalign   : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
+      variable laneEro        : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneTimeout    : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
       variable laneValid      : slv(NUM_OF_SERIALIZERS_C-1 downto 0)        := (others => '0');
    begin
@@ -137,10 +137,10 @@ begin
       v := r;
 
       -- Register inputs (trigger on rising edges)
-      v.reqDrop    := reqDrop;
-      v.reqNominal := reqNominal;
-      v.reqPause   := reqPause;
-      v.fwdData    := not(dumpData); -- bit applied to every AXI transaction
+      v.reqDrop     := reqDrop;
+      v.reqCloseout := reqCloseout;
+      v.reqFragment := reqFragment;
+      v.fwdData     := not(dumpData); -- bit applied to every AXI transaction
 
       if r.reqDrop = '1' then
          v.reqDrop := '1';
@@ -148,16 +148,16 @@ begin
          v.reqDrop := (v.reqDrop and not(r.reqDrop));
       end if;
 
-      if r.reqNominal = '1' then
-         v.reqNominal := '1';
+      if r.reqCloseout = '1' then
+         v.reqCloseout := '1';
       else
-         v.reqNominal := (v.reqNominal and not(r.reqNominal));
+         v.reqCloseout := (v.reqCloseout and not(r.reqCloseout));
       end if;
 
-      if r.reqPause = '1' then
-         v.reqPause := '1';
+      if r.reqFragment = '1' then
+         v.reqFragment := '1';
       else
-         v.reqPause := (v.reqPause and not(r.reqPause));
+         v.reqFragment := (v.reqFragment and not(r.reqFragment));
       end if;
 
       -- Default values
@@ -181,7 +181,7 @@ begin
          laneFull(lane)       := asicStatus(lane).overflow;
          laneDown(lane)       := asicStatus(lane).down;
          lanePauseError(lane) := asicStatus(lane).pauseError;
-         laneMisalign(lane)   := asicStatus(lane).misalign;
+         laneEro(lane)        := asicStatus(lane).ero;
          laneTimeout(lane)    := asicStatus(lane).timeout;
          laneValid(lane)      := asicStatus(lane).valid;
       end loop;
@@ -190,7 +190,7 @@ begin
                                   r.asicType, toSlv(ASIC_ID_G, ASIC_ID_LEN_C),
                                   config.fpgaId, fpgaTrgCnt);
 
-      header := fpgaHeaderMap(laneDecError, lanePause,   lanePauseError, laneMisalign,
+      header := fpgaHeaderMap(laneDecError, lanePause,   lanePauseError, laneEro,
                               laneFull,     laneTimeout, laneDown,       laneValid);
 
       laneIdx := conv_integer(unsigned(r.laneSel));
@@ -208,24 +208,24 @@ begin
             v.asicType    := toSlv(ASIC_TYPE_C, ASIC_TYPE_LEN_C);
             v.pix2pgpType := PIX2PGP_STREAMRX_DEFAULT_TYPE_C;
 
-            if (r.reqDrop or r.reqNominal or r.reqPause) = '1' then
+            if (r.reqDrop or r.reqCloseout or r.reqFragment) = '1' then
 
                v.state := TX_PREAMBLE_S;
 
                -- override designated pix2pgpType with the drop-frame type identifier;
                -- will transmit preamble and then trailer (in next state)
-               if r.reqDrop = '1' and r.inPause = '0' then
+               if r.reqDrop = '1' and r.inFragment = '0' then
                   v.pix2pgpType := PIX2PGP_STREAMRX_DROP_TYPE_C;
                end if;
 
                -- extreme corner-case; need to close the axi-frame;
-               -- will then come back here and transmit the drop-frame (inPause is gnd'd later)
-               if r.reqDrop = '1' and r.inPause = '1' then
+               -- will then come back here and transmit the drop-frame (inFragment is gnd'd later)
+               if r.reqDrop = '1' and r.inFragment = '1' then
                   v.state := TX_TRAILER_S;
                end if;
 
-               -- regular pause-continuation request; skip preamble
-               if r.reqDrop = '0' and r.inPause = '1' then
+               -- regular fragment-continuation request; skip preamble
+               if r.reqDrop = '0' and r.inFragment = '1' then
                   v.state := TX_HEADER_S;
                end if;
 
@@ -316,25 +316,25 @@ begin
             end if;
 
          ----------------------------------------------------------------------
-         -- determine what to do in case this was a pause event
+         -- determine what to do in case this was a fragment event
          when DONE_S =>
-            v.laneSel    := (others => '0');
-            v.reqDrop    := '0';
-            v.reqNominal := '0';
-            v.reqPause   := '0';
-            v.state      := TX_TRAILER_S;
+            v.laneSel     := (others => '0');
+            v.reqDrop     := '0';
+            v.reqCloseout := '0';
+            v.reqFragment := '0';
+            v.state       := TX_TRAILER_S;
 
-            -- if this was a pause event, do not transmit the trailer;
-            -- raise the in-pause flag, which determines if a preamble is tx'd
-            if r.reqPause = '1' then
-               v.inPause := '1';
-               v.state   := IDLE_S;
+            -- if this was a fragment event, do not transmit the trailer;
+            -- raise the in-fragment flag, which determines if a preamble is tx'd
+            if r.reqFragment = '1' then
+               v.inFragment := '1';
+               v.state      := IDLE_S;
             end if;
 
          ----------------------------------------------------------------------
          -- transmit trailer; clear all request flags
          when TX_TRAILER_S =>
-            v.inPause := '0';
+            v.inFragment := '0';
 
             if v.obAxiMaster.tValid = '0' then
                v.obAxiMaster.tKeep  := tKeepSet(FPGA_TRAILER_LEN_C);

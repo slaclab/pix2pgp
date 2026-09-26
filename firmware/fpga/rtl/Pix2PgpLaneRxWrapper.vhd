@@ -136,16 +136,17 @@ begin
 
    end generate GEN_MON;
 
-   frameMetaRd        <= laneMetaRd;
-   status.valid       <= frameMetaValid;
-   status.overflow    <= laneRxFull;
-   status.overOcc     <= frameMetaDout(LANE_OVEROCC_POS_C);
-   status.pause       <= frameMetaDout(LANE_PAUSE_POS_C);
-   status.pauseError  <= frameMetaDout(LANE_PAUSE_ERROR_POS_C);
-   status.decError    <= frameMetaDout(LANE_DEC_ERROR_POS_C);
-   status.trgCnt      <= frameMetaDout(LANE_TRGCNT_POS_C);
+   frameMetaRd         <= laneMetaRd;
+   status.valid        <= frameMetaValid;
+   status.overflow     <= laneRxFull;
+   status.overOcc      <= frameMetaDout(LANE_OVEROCC_POS_C);
+   status.pause        <= frameMetaDout(LANE_PAUSE_POS_C);
+   status.pauseError   <= frameMetaDout(LANE_PAUSE_ERROR_POS_C);
+   status.decError     <= frameMetaDout(LANE_DEC_ERROR_POS_C);
+   status.trgCnt       <= frameMetaDout(LANE_TRGCNT_POS_C);
    status.eventHitmask <= frameMetaDout(LANE_HITMASK_POS_C);
-   status.frameSize   <= frameMetaDout(LANE_SIZE_POS_C);
+   status.frameSize    <= frameMetaDout(LANE_SIZE_POS_C);
+   status.ero          <= '0'; -- assigned downstream by Lane Supervisor
 
    laneStatus <= status;
 

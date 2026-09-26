@@ -52,7 +52,8 @@ class SparkPixSParameters(AsicParameterBase):
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
                       'wordLen'    : 5,
-                      'headerLen'  : 5}
+                      'headerLen'  : 5,
+                      'eroMode'    : False}
 
         return param_dict
 
@@ -77,7 +78,8 @@ class SparkPixSv2Parameters(AsicParameterBase):
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
                       'wordLen'    : 5,
-                      'headerLen'  : 5}
+                      'headerLen'  : 5,
+                      'eroMode'    : False}
 
         return param_dict
 
@@ -103,7 +105,8 @@ class SparkPixTParameters(AsicParameterBase):
                       'numOfLanes' : 8,
                       'numOfCols'  : 24,
                       'wordLen'    : 8,
-                      'headerLen'  : 8}
+                      'headerLen'  : 8,
+                      'eroMode'    : True}
 
         return param_dict
 
@@ -129,7 +132,8 @@ class ThriglavParameters(AsicParameterBase):
                       'numOfLanes' : 2,
                       'numOfCols'  : 50,
                       'wordLen'    : 8,
-                      'headerLen'  : 8}
+                      'headerLen'  : 8,
+                      'eroMode'    : True}
 
         return param_dict
 
