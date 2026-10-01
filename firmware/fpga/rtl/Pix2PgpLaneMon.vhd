@@ -269,37 +269,37 @@ begin
          axiSlaveRegisterR(axilEp, toSlv(4*i, 12), 0, r.colHitmaskCnt(i));   -- StartAddr=0x000
       end loop;
       --
-      axiSlaveRegisterR(axilEp, x"A00", 0, r.laneDecErrCnt);
-      axiSlaveRegisterR(axilEp, x"A04", 0, r.laneOverOccCnt);
-      axiSlaveRegisterR(axilEp, x"A08", 0, r.lanePauseCnt);
-      axiSlaveRegisterR(axilEp, x"A0C", 0, r.lanePauseErrCnt);
-      axiSlaveRegisterR(axilEp, x"A10", 0, r.laneFullCnt);
-      axiSlaveRegisterR(axilEp, x"A14", 0, r.laneEventCnt);
-      axiSlaveRegisterR(axilEp, x"A18", 0, r.laneDownCnt);
+      axiSlaveRegisterR(axilEp, x"B00", 0, r.laneDecErrCnt);
+      axiSlaveRegisterR(axilEp, x"B04", 0, r.laneOverOccCnt);
+      axiSlaveRegisterR(axilEp, x"B08", 0, r.lanePauseCnt);
+      axiSlaveRegisterR(axilEp, x"B0C", 0, r.lanePauseErrCnt);
+      axiSlaveRegisterR(axilEp, x"B10", 0, r.laneFullCnt);
+      axiSlaveRegisterR(axilEp, x"B14", 0, r.laneEventCnt);
+      axiSlaveRegisterR(axilEp, x"B18", 0, r.laneDownCnt);
       --
-      axiSlaveRegisterR(axilEp, x"A1C", 0, laneDecErrCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A20", 0, lanePauseErrCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A24", 0, laneFullCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A28", 0, laneOverOccCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A2C", 0, lanePauseCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A30", 0, laneEventCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A34", 0, colHitmaskCntOverflow);
-      axiSlaveRegisterR(axilEp, x"A38", 0, laneDownCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C00", 0, laneDecErrCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C04", 0, lanePauseErrCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C08", 0, laneFullCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C0C", 0, laneOverOccCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C10", 0, lanePauseCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C14", 0, laneEventCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C18", 0, laneDownCntOverflow);
+      axiSlaveRegisterR(axilEp, x"C1C", 0, colHitmaskCntOverflow);
       --
-      axiSlaveRegisterR(axilEp, x"B00", 0, r.laneOverOcc);
-      axiSlaveRegisterR(axilEp, x"B04", 0, r.lanePause);
-      axiSlaveRegisterR(axilEp, x"B08", 0, r.lanePauseError);
-      axiSlaveRegisterR(axilEp, x"B0C", 0, r.laneTrgCnt);
-      axiSlaveRegisterR(axilEp, x"B10", 0, r.laneHitmask);
-      axiSlaveRegisterR(axilEp, x"B14", 0, r.laneFrameSize);
-      axiSlaveRegisterR(axilEp, x"B18", 0, monDin);
-      axiSlaveRegisterR(axilEp, x"B20", 0, monState);
-      axiSlaveRegisterR(axilEp, x"B24", 0, rxDataEmpty);
-      axiSlaveRegisterR(axilEp, x"B28", 0, rxMetaEmpty);
+      axiSlaveRegisterR(axilEp, x"D00", 0, r.laneOverOcc);
+      axiSlaveRegisterR(axilEp, x"D04", 0, r.lanePause);
+      axiSlaveRegisterR(axilEp, x"D08", 0, r.lanePauseError);
+      axiSlaveRegisterR(axilEp, x"D0C", 0, r.laneTrgCnt);
+      axiSlaveRegisterR(axilEp, x"D10", 0, r.laneHitmask);
+      axiSlaveRegisterR(axilEp, x"D30", 0, r.laneFrameSize);
+      axiSlaveRegisterR(axilEp, x"D34", 0, monState);
+      axiSlaveRegisterR(axilEp, x"D38", 0, rxDataEmpty);
+      axiSlaveRegisterR(axilEp, x"D3C", 0, rxMetaEmpty);
+      axiSlaveRegisterR(axilEp, x"D40", 0, monDin);
       --
-      axiSlaveRegisterR(axilEp, x"C00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
+      axiSlaveRegisterR(axilEp, x"E00", 0, toSlv(LANE_ID_G, MON_CNT_WIDTH_G));
       --
-      axiSlaveRegister (axilEp, x"D00", 0, v.cntRst);
+      axiSlaveRegister (axilEp, x"F00", 0, v.cntRst);
       --
 
       -- Closeout the transaction
