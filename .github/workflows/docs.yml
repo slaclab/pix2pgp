@@ -3,13 +3,16 @@ name: Build and Publish Documentation
 on:
   push:
     branches:
-      - doc-dev
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
   # Allow manual re-runs from the Actions tab
   workflow_dispatch:
 
 # Only one deploy at a time; cancel any in-flight run on new pushes
 concurrency:
-  group: pages-doc-dev
+  group: pages-main
   cancel-in-progress: true
 
 permissions:
@@ -20,7 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Check out doc-dev
+      - name: Check out main
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.2.2
         with:
           submodules: recursive
@@ -61,6 +64,6 @@ jobs:
           publish_dir: docs/build/html
           publish_branch: gh-pages
           # Track the branch that produced this build in the commit message
-          commit_message: "docs: publish from doc-dev @ ${{ github.sha }}"
+          commit_message: "docs: publish from main @ ${{ github.sha }}"
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
