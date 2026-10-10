@@ -58,7 +58,8 @@ architecture rtl of Pix2PgpAxiLiteManager is
       usrRst      : sl;
       linkDown    : slv(NUM_OF_SERIALIZERS_C-1 downto 0);
       txDataReady : sl;
-      fullCnt     : slv(7 downto 0);
+      fullCnt     : slv(15 downto 0);
+      cntRst      : sl;
       -- AXI-Lite
       readSlave   : AxiLiteReadSlaveType;
       writeSlave  : AxiLiteWriteSlaveType;
@@ -70,6 +71,7 @@ architecture rtl of Pix2PgpAxiLiteManager is
       linkDown    => (others => '0'),
       txDataReady => '0',
       fullCnt     => (others => '0'),
+      cntRst      => '1',
       -- AXI-Lite
       readSlave   => AXI_LITE_READ_SLAVE_INIT_C,
       writeSlave  => AXI_LITE_WRITE_SLAVE_INIT_C);
@@ -94,9 +96,14 @@ begin
 
       v.linkDown    := pgp4RxLinkDown;
       v.txDataReady := txDataReady;
+      v.cntRst      := '0';
 
       if v.txDataReady = '0' and r.txDataReady = '1' and uAnd(r.fullCnt) = '0' then
          v.fullCnt := r.fullCnt + 1;
+      end if;
+
+      if r.cntRst = '1' then
+         v.fullCnt := (others => '0');
       end if;
 
       ----------------------------------------------------------------------------------------------
@@ -117,6 +124,7 @@ begin
       axiSlaveRegister (axilEp, x"420", 0, v.config.lanePauseTimeout);
       --
       axiSlaveRegister (axilEp, x"500", 0, v.usrRst);
+      axiSlaveRegister (axilEp, x"504", 0, v.cntRst);
       --
       axiSlaveRegisterR(axilEp, x"600", 0, toSl(LANE_MON_GEN_G));
       axiSlaveRegisterR(axilEp, x"604", 0, r.linkDown);

@@ -156,6 +156,15 @@ class Pix2PgpAsicStreamRx(pr.Device):
             offset      = 0x500,
         )
 
+        self.add(pr.RemoteCommand(
+            name         = 'CntRst',
+            description  = 'Counter Reset',
+            offset       = 0x504,
+            bitSize      = 1,
+            function     = lambda cmd: cmd.post(1),
+            hidden       = False,
+        ))
+
         self.add(pr.RemoteVariable(
             name         = 'LaneMonEnabled',
             description  = 'Lane monitoring module is present',
@@ -220,3 +229,8 @@ class Pix2PgpAsicStreamRx(pr.Device):
         self.UsrRst.set(True)
         time.sleep(0.2)
         self.UsrRst.set(False)
+
+    def CountReset(self):
+        self.CntRst.set(True)
+        time.sleep(0.2)
+        self.CntRst.set(False)
