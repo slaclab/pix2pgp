@@ -61,8 +61,8 @@ entity Pix2PgpAsicStreamRx is
       asicRxMaster    : out AxiStreamMasterType;
       asicRxSlave     : in  AxiStreamSlaveType;
       -- AXI-Stream Rx Raw Output (for debugging)
-      rawObAxiMaster  : out AxiStreamMasterType;
-      rawObAxiSlave   : out AxiStreamSlaveType;
+      dbgRxAxiMaster  : out AxiStreamMasterType;
+      dbgRxAxiSlave   : out AxiStreamSlaveType;
       -- ASIC Monitoring Status Output
       asicMonStatus   : out Pix2PgpLaneStatusArray;
       -- AXI-Lite Interface
@@ -321,8 +321,8 @@ begin
          obAxiMaster   => mergerAxiMaster,
          obAxiSlave    => mergerAxiSlave);
 
-      rawObAxiMaster <= mergerAxiMaster;
-      rawObAxiSlave  <= mergerAxiSlave;
+      dbgRxAxiMaster <= mergerAxiMaster;
+      dbgRxAxiSlave  <= mergerAxiSlave;
 
    U_tKeepFifo : entity surf.AxiStreamFifoV2
       generic map (
