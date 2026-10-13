@@ -233,7 +233,19 @@ class AsicData(object):
 
         _errorPrint = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
 
-        if (_errorPrint or self._headerPrint) and self.streamRxFrame:
+        if self.preambleErr:
+            if self._verbose > 0:
+                pix2pgp.Tools.printError('Preamble')
+                print(f"pix2pgpId = 0x{_dict['pix2pgpId']:X}")
+
+        elif not self.streamRxFrame:
+            if self._verbose > 0:
+                pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
+                print(f"pix2pgpType = 0x{_dict['pix2pgpType']:X} "
+                      f"(nominal = 0x{self.fpgaDataFormat.fpgaParamExtract()['typeNominal']:X}, "
+                      f"drop = 0x{self.fpgaDataFormat.fpgaParamExtract()['typeDrop']:X})")
+
+        elif _errorPrint or self._headerPrint:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp AsicStreamRx Frame Begin =+=+=+=+=+=+=+=+=+=+=+")
             _format = 'AsicType={0:<20} AsicId={1:<8} FpgaId={2:<11x} FpgaTrgCnt={3:<8}'
@@ -242,21 +254,14 @@ class AsicData(object):
                   self.fpgaId,
                   self.fpgaTrgCnt))
 
-            if self.preambleErr:
-                pix2pgp.Tools.printError('Preamble')
-                print(_dict['pix2pgpId'])
-
             if self.typeMismatchErr:
                 pix2pgp.Tools.printError('ASIC Type Mismatch')
 
             if self.dropFrame:
                 pix2pgp.Tools.printWarning('Dropped Frame')
-
-        if not(self.preambleErr) and not(self.streamRxFrame) and not(self.dropFrame):
-            pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
     #################################################################
 
-#################################################################
+    #################################################################
     def headerEval(self, header):
         """
         Parses in the FPGA header, and returns the status of the lanes.
@@ -502,7 +507,7 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                if self.eroMode:
+                if self.eroMode and not self.dropFrame:
                     inFragment = not any(self.laneEro)
 
                 if not(inFragment) or self.headerErr:

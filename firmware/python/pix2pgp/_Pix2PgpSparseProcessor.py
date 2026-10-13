@@ -116,8 +116,7 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
 
                 if not dec.streamRxFrame:
                     self.nonPix2pgpFrameCnt += 1
-                    _startIndex = _nextIndex
-                    continue
+                    break
 
                 if dec.dropFrame:
                     self.pix2pgpDropFrameCnt += 1
