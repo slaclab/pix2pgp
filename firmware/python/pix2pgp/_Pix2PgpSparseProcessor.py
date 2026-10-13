@@ -73,7 +73,6 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
         # ASIC lane-header flags
         self.asicGlblOverOcc  = [[] for _ in range(n)]
         self.asicGlblPause    = [[] for _ in range(n)]
-        self.asicGlblPauseErr = [[] for _ in range(n)]
         self.asicTrgCnt       = [[] for _ in range(n)]
 
         # hits (empty list for rejected frames, see asicEventValid)
@@ -145,7 +144,6 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                 # ASIC lane-header flags
                 self.asicGlblOverOcc[_id].append(list(dec.asicGlblOverOcc))
                 self.asicGlblPause[_id].append(list(dec.asicGlblPause))
-                self.asicGlblPauseErr[_id].append(list(dec.asicGlblPauseErr))
                 self.asicTrgCnt[_id].append(list(dec.asicGlblTrgCnt))
 
                 # hits only for error-free frames
@@ -165,6 +163,9 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
         pix2pgp.Tools.printStatistics()
         """
         frameCnts = {
+            'Total frames'             : (self.pix2pgpFrameCnt +
+                                          self.pix2pgpDropFrameCnt +
+                                          self.nonPix2pgpFrameCnt),
             'Pix2PGP Frames'           : self.pix2pgpFrameCnt,
             'Pix2PGP Drop-frames'      : self.pix2pgpDropFrameCnt,
             'Non-Pix2PGP frames'       : self.nonPix2pgpFrameCnt,
@@ -183,7 +184,6 @@ class Pix2PgpSparseProcessor(pr.DataReceiver):
                 'laneDown'       : self.asicLaneDown[_id],
                 'overOcc'        : self.asicGlblOverOcc[_id],
                 'pause'          : self.asicGlblPause[_id],
-                'pauseErr'       : self.asicGlblPauseErr[_id],
                 'trgCnt'         : self.asicTrgCnt[_id],
             }
             for _id in self.asicId

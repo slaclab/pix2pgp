@@ -110,26 +110,35 @@ class Tools:
         '''
         Print the frame counters, and for each ASIC, the number of
         events in which each flag was set, per lane.
+        Frame counter percentages are relative to the first entry of frameCnts.
+        All other percentages are relative to the number of events of that ASIC.
         '''
         flags = ('laneValid', 'laneDecError', 'lanePauseError', 'laneFull',
-                 'laneTimeout', 'laneDown', 'overOcc', 'pause', 'pauseErr')
+                 'laneTimeout', 'laneDown', 'overOcc', 'pause')
+
+        pct = lambda n, d: 100.0 * n / d if d else 0.0
 
         print("=" * 60)
+        ref = next(iter(frameCnts.values()), 0)
         for label, cnt in frameCnts.items():
-            print(f"{label:<26}: {cnt}")
+            print(f"{label:<26}: {cnt} ({pct(cnt, ref):.2f}%)")
 
         for asicId, s in sorted(asicStats.items()):
             nEvents = len(s['eventValid'])
             nValid  = sum(s['eventValid'])
+            nRej    = nEvents - nValid
             nHits   = sum(len(h) for h in s['hits'])
 
             print("-" * 60)
-            print(f"ASIC {asicId}: events = {nEvents}, valid = {nValid}, "
-                  f"rejected = {nEvents - nValid}, hits = {nHits}")
+            print(f"ASIC {asicId}: events = {nEvents}, hits = {nHits}, "
+                  f"hits/valid event = {nHits / nValid if nValid else 0:.2f}")
+            print(f"  {'valid':<15}: {nValid} ({pct(nValid, nEvents):.2f}%)")
+            print(f"  {'rejected':<15}: {nRej} ({pct(nRej, nEvents):.2f}%)")
 
             for flag in flags:
                 perLane = [sum(lane) for lane in zip(*s[flag])]
-                print(f"  {flag:<15}: {perLane}")
+                txt = ", ".join(f"{n} ({pct(n, nEvents):.2f}%)" for n in perLane)
+                print(f"  {flag:<15}: [{txt}]")
 
         print("=" * 60)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
