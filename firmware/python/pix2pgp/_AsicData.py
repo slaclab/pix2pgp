@@ -256,29 +256,28 @@ class AsicData(object):
             pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
     #################################################################
 
-    #################################################################
+#################################################################
     def headerEval(self, header):
         """
-        Parses in the FPGA header, and returns the status of the lanes
+        Parses in the FPGA header, and returns the status of the lanes.
+        Called once per fragment; error flags are OR-accumulated across
+        fragments of the same event, the rest reflect the current fragment.
         """
-        _dict = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
+        _dict  = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
+        _bits  = lambda field: pix2pgp.Tools.intToBits(_dict[field], self.numOfLanes)
+        _acc   = pix2pgp.Tools.orAccumulate
 
-        self.laneDecError   = [(_dict['laneDecError'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.lanePause      = [(_dict['lanePause'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneEro        = [(_dict['laneEro'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneFull       = [(_dict['laneFull'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneTimeout    = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneDown       = [(_dict['laneDown'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneValid      = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
+        # error flags: accumulate across fragments
+        self.laneDecError   = _acc(self.laneDecError,   _bits('laneDecError'))
+        self.lanePauseError = _acc(self.lanePauseError, _bits('lanePauseError'))
+        self.laneFull       = _acc(self.laneFull,       _bits('laneFull'))
+        self.laneTimeout    = _acc(self.laneTimeout,    _bits('laneTimeout'))
+        self.laneDown       = _acc(self.laneDown,       _bits('laneDown'))
+
+        # per-fragment flags: used by the parsing FSM, must not accumulate
+        self.lanePause = _bits('lanePause')
+        self.laneEro   = _bits('laneEro')
+        self.laneValid = _bits('laneValid')
 
         self.headerErr = ( _dict['laneDecError'] > 0 or
                            _dict['laneFull'] > 0)

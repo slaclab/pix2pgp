@@ -185,7 +185,7 @@ class LaneData(object):
         _colHitmask   = _dict['colHitmask']
         self.trgCnt   = _dict['trgCnt']
 
-        self.colHitmask = [(_colHitmask >> i) & 1 == 1 for i in range(self.numOfCols)]
+        self.colHitmask = pix2pgp.Tools.intToBits(_colHitmask, self.numOfCols)
 
         if _colHitmask != 0:
             self.hasData = True

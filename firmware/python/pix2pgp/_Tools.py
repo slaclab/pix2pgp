@@ -103,3 +103,53 @@ class Tools:
         click.secho(f"{label}: {_toPrint}")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def printStatistics(frameCnts, asicStats):
+        '''
+        Print the frame counters, and for each ASIC, the number of
+        events in which each flag was set, per lane.
+        '''
+        flags = ('laneValid', 'laneDecError', 'lanePauseError', 'laneFull',
+                 'laneTimeout', 'laneDown', 'overOcc', 'pause', 'pauseErr')
+
+        print("=" * 60)
+        for label, cnt in frameCnts.items():
+            print(f"{label:<26}: {cnt}")
+
+        for asicId, s in sorted(asicStats.items()):
+            nEvents = len(s['eventValid'])
+            nValid  = sum(s['eventValid'])
+            nHits   = sum(len(h) for h in s['hits'])
+
+            print("-" * 60)
+            print(f"ASIC {asicId}: events = {nEvents}, valid = {nValid}, "
+                  f"rejected = {nEvents - nValid}, hits = {nHits}")
+
+            for flag in flags:
+                perLane = [sum(lane) for lane in zip(*s[flag])]
+                print(f"  {flag:<15}: {perLane}")
+
+        print("=" * 60)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def intToBits(value, width):
+        '''
+        Convert an integer bitmask to a list of bools, LSB first;
+        i.e. intToBits(0b0101, 4) = [True, False, True, False]
+        '''
+        return [(value >> i) & 1 == 1 for i in range(width)]
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def orAccumulate(prev, new):
+        '''
+        Element-wise OR of two lists; None in prev is treated as False;
+        i.e. orAccumulate([None, True, False], [False, False, True]) = [False, True, True]
+        '''
+        return [bool(p) or bool(n) for p, n in zip(prev, new)]
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
