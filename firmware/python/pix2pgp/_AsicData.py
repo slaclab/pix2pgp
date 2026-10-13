@@ -233,7 +233,19 @@ class AsicData(object):
 
         _errorPrint = (self.preambleErr or self.typeMismatchErr) and self._verbose > 0
 
-        if (_errorPrint or self._headerPrint) and self.streamRxFrame:
+        if self.preambleErr:
+            if self._verbose > 0:
+                pix2pgp.Tools.printError('Preamble')
+                print(f"pix2pgpId = 0x{_dict['pix2pgpId']:X}")
+
+        elif not self.streamRxFrame:
+            if self._verbose > 0:
+                pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
+                print(f"pix2pgpType = 0x{_dict['pix2pgpType']:X} "
+                      f"(nominal = 0x{self.fpgaDataFormat.fpgaParamExtract()['typeNominal']:X}, "
+                      f"drop = 0x{self.fpgaDataFormat.fpgaParamExtract()['typeDrop']:X})")
+
+        elif _errorPrint or self._headerPrint:
             print(f"")
             print(f"+=+=+=+=+=+=+=+=+=+=+= Pix2Pgp AsicStreamRx Frame Begin =+=+=+=+=+=+=+=+=+=+=+")
             _format = 'AsicType={0:<20} AsicId={1:<8} FpgaId={2:<11x} FpgaTrgCnt={3:<8}'
@@ -242,43 +254,35 @@ class AsicData(object):
                   self.fpgaId,
                   self.fpgaTrgCnt))
 
-            if self.preambleErr:
-                pix2pgp.Tools.printError('Preamble')
-                print(_dict['pix2pgpId'])
-
             if self.typeMismatchErr:
                 pix2pgp.Tools.printError('ASIC Type Mismatch')
 
             if self.dropFrame:
                 pix2pgp.Tools.printWarning('Dropped Frame')
-
-        if not(self.preambleErr) and not(self.streamRxFrame) and not(self.dropFrame):
-            pix2pgp.Tools.printWarning('Not a Standard Pix2PgpAsicStreamRx Frame')
     #################################################################
 
     #################################################################
     def headerEval(self, header):
         """
-        Parses in the FPGA header, and returns the status of the lanes
+        Parses in the FPGA header, and returns the status of the lanes.
+        Called once per fragment; error flags are OR-accumulated across
+        fragments of the same event, the rest reflect the current fragment.
         """
-        _dict = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
+        _dict  = self.fpgaDataFormat.fpgaHeaderDecoder(header=header)
+        _bits  = lambda field: pix2pgp.Tools.intToBits(_dict[field], self.numOfLanes)
+        _acc   = pix2pgp.Tools.orAccumulate
 
-        self.laneDecError   = [(_dict['laneDecError'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.lanePause      = [(_dict['lanePause'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.lanePauseError = [(_dict['lanePauseError'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneEro        = [(_dict['laneEro'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneFull       = [(_dict['laneFull'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneTimeout    = [(_dict['laneTimeout'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneDown       = [(_dict['laneDown'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
-        self.laneValid      = [(_dict['laneValid'] >> i) & 1 == 1 for i in range(
-                                                                                self.numOfLanes)]
+        # error flags: accumulate across fragments
+        self.laneDecError   = _acc(self.laneDecError,   _bits('laneDecError'))
+        self.lanePauseError = _acc(self.lanePauseError, _bits('lanePauseError'))
+        self.laneFull       = _acc(self.laneFull,       _bits('laneFull'))
+        self.laneTimeout    = _acc(self.laneTimeout,    _bits('laneTimeout'))
+        self.laneDown       = _acc(self.laneDown,       _bits('laneDown'))
+
+        # per-fragment flags: used by the parsing FSM, must not accumulate
+        self.lanePause = _bits('lanePause')
+        self.laneEro   = _bits('laneEro')
+        self.laneValid = _bits('laneValid')
 
         self.headerErr = ( _dict['laneDecError'] > 0 or
                            _dict['laneFull'] > 0)
@@ -503,7 +507,7 @@ class AsicData(object):
             # --------------------------------------------------------------------------------------
             elif state == "trailer_s":
 
-                if self.eroMode:
+                if self.eroMode and not self.dropFrame:
                     inFragment = not any(self.laneEro)
 
                 if not(inFragment) or self.headerErr:
