@@ -264,6 +264,7 @@ begin
             v.pause        := '0';
             v.timeoutError := '0';
             v.pauseError   := '0';
+            v.colEof       := '0';
             v.superBusy    := '0';
 
             -- pause flag and (short) timeout if needed
@@ -296,8 +297,10 @@ begin
                   v.colHitmask   := v.columnPause;
                end if;
 
-               -- set the asic-header EoF flag if present
-               v.colEof := (v.columnEof = v.columnEnable) and uOr(v.columnEnable);
+               -- set the asic-header EoF flag if all columns closed with an EoF;
+               -- not on pause read-outs (only the paused columns are read)
+               v.colEof := toSl(v.columnEof = v.columnEnable) and uOr(v.columnEnable) and
+                           not(v.pause);
 
                v.state := ARB_START_S;
             end if;
