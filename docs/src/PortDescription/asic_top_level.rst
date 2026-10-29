@@ -56,7 +56,7 @@ In the tables below, ``N`` = ``NUM_OF_COL_MANAGERS_C`` and
      - —
      - —
      - if ``EN_ERO_C``
-     - yes (see :ref:`port_description_asic_eof`)
+     - yes
 
 Generics
 ========
@@ -209,7 +209,12 @@ clock domain where it is used, then captures it into the internal
    * - ``cfgMaskEofPause``
      - in
      - 1
-     - **New ASICs only.** See :ref:`port_description_asic_eof`
+     - **New ASICs only.** Synchronized to ``pgpClk`` →
+       ``config.maskEofPause``. ``'0'``: the header EoF flag is not
+       raised on Pause readouts. ``'1'``: Pause is ignored when the
+       flag is evaluated. On existing ASICs the port does not exist and
+       ``config.maskEofPause`` is tied to ``'0'``. See
+       :ref:`frame_eof_flag`
    * - ``cfgColBusy``
      - out
      - 1
@@ -268,9 +273,7 @@ belongs to Column Manager ``i``.
    * - ``eof``
      - in
      - ``N``
-     - End-of-Frame. Closes the event nominally and releases ``busy``.
-       On ASICs with ``EN_EOF_FLAG_C = True``, also sets the EoF bit
-       in the column's Status Word
+     - End-of-Frame. Closes the event nominally and releases ``busy``
    * - ``overOcc``
      - in
      - ``N``

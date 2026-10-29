@@ -74,7 +74,7 @@ Update:
 * Set the width of each ``dinXX`` port to ``ASIC_DATABUS_DWIDTH_C``
 * Add a ``cfgMaskEofPause`` port, synchronize it to ``pgpClk``, and
   capture it into ``config.maskEofPause`` under ``cfgSel`` (see
-  :ref:`port_description_asic_eof`)
+  :ref:`frame_eof_flag`)
 
 .. note::
 
