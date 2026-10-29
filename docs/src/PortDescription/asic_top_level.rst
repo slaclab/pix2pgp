@@ -56,7 +56,7 @@ In the tables below, ``N`` = ``NUM_OF_COL_MANAGERS_C`` and
      - —
      - —
      - if ``EN_ERO_C``
-     - yes (see :ref:`port_description_asic_eof`)
+     - yes
 
 Generics
 ========
@@ -209,7 +209,12 @@ clock domain where it is used, then captures it into the internal
    * - ``cfgMaskEofPause``
      - in
      - 1
-     - **New ASICs only.** See :ref:`port_description_asic_eof`
+     - **New ASICs only.** Synchronized to ``pgpClk`` →
+       ``config.maskEofPause``. ``'0'``: the header EoF flag is not
+       raised on Pause readouts. ``'1'``: Pause is ignored when the
+       flag is evaluated. On existing ASICs the port does not exist and
+       ``config.maskEofPause`` is tied to ``'0'``. See
+       :ref:`frame_eof_flag`
    * - ``cfgColBusy``
      - out
      - 1
@@ -268,9 +273,7 @@ belongs to Column Manager ``i``.
    * - ``eof``
      - in
      - ``N``
-     - End-of-Frame. Closes the event nominally and releases ``busy``.
-       On ASICs with ``EN_EOF_FLAG_C = True``, also sets the EoF bit
-       in the column's Status Word
+     - End-of-Frame. Closes the event nominally and releases ``busy``
    * - ``overOcc``
      - in
      - ``N``
@@ -319,35 +322,3 @@ Serializer Interface
      - in
      - 1
      - Serializer is ready to accept ``pgpDout``
-
-.. _port_description_asic_eof:
-
-EoF Flag Support (New ASICs)
-============================
-
-New ASICs should set ``EN_EOF_FLAG_C = True`` in
-``Pix2PgpAsicPkg.vhd`` (see :ref:`frame_eof_flag`). Their wrapper
-should then add:
-
-* a ``cfgMaskEofPause : in std_logic`` port
-* a ``surf.Synchronizer`` that brings it into the ``pgpClk`` domain,
-  in the same way ``cfgColumnEnable`` becomes ``cfgColumnEnablePgp``
-* a capture of the synchronized value into ``config.maskEofPause``
-  under ``cfgSel``, in the ``pgpClk`` configuration process
-
-.. list-table::
-   :header-rows: 1
-   :widths: 20 80
-
-   * - ``maskEofPause``
-     - Header EoF flag
-   * - ``'0'`` (default)
-     - High only on non-Pause readouts in which every enabled column
-       closed with ``eof``
-   * - ``'1'``
-     - Pause is ignored: high whenever every enabled column's Status
-       Word carries the EoF bit, including Pause readouts
-
-On ASICs that predate the feature (SparkPix-S, SparkPix-Sv2,
-SparkPix-T, Thriglav), the port does not exist and
-``config.maskEofPause`` is tied to ``'0'``.

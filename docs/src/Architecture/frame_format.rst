@@ -108,8 +108,25 @@ nominal ``eof``:
 * The Column Supervisor raises the header flag only if every enabled
   column's Status Word carries it
 * By default, it stays low on Pause readouts. The ``maskEofPause``
-  configuration bit removes this condition (see
-  :ref:`port_description_asic_eof`)
+  configuration bit (``pgpClk`` domain) removes this condition:
+
+  .. list-table::
+     :header-rows: 1
+     :widths: 20 80
+
+     * - ``maskEofPause``
+       - Header EoF flag
+     * - ``'0'`` (default)
+       - High only on non-Pause readouts in which every enabled column
+         closed with ``eof``
+     * - ``'1'``
+       - Pause is ignored: high whenever every enabled column's Status
+         Word carries the EoF bit, including Pause readouts
+
+  On ASICs that predate the feature, ``config.maskEofPause`` is tied to
+  ``'0'`` in the ASIC top-level wrapper. New ASICs should expose a
+  ``cfgMaskEofPause`` port, synchronize it to ``pgpClk``, and capture
+  it into ``config.maskEofPause`` under ``cfgSel``
 * It is always low on Timeout and Pause-Error readouts, and on dummy
   headers
 
