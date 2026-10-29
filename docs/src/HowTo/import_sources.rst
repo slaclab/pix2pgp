@@ -1,8 +1,8 @@
 .. _how_to_import_sources:
 
-===========================================
+=============================================
 How to Import Pix2PGP Sources in Your Project
-===========================================
+=============================================
 
 Pix2PGP is normally consumed as a git submodule of a larger project. First,
 clone your parent project and add Pix2PGP as a submodule:

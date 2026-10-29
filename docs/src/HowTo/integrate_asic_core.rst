@@ -39,6 +39,9 @@ Prerequisites
     — bit widths of the counters
   * ``EVAL_SOF_C`` / ``EVAL_EOFE_C`` — enable strict SoF / EoFE checking
     on the outbound AXI-Stream
+  * ``EN_EOF_FLAG_C`` — enable the header EoF flag. ``False`` on every
+    ASIC that predates it; ``True`` for new ASICs (see
+    :ref:`frame_eof_flag`)
   * ``HEADER_WIDTH_MULT_C`` — header scaling factor if the natural
     doubled-bus width cannot fit the header bitfields
   * The **header and column-metadata bitfield** definitions
@@ -87,14 +90,19 @@ Generics
    * - ``COLMANAGER_DATA_DEPTH_G``
      - ``integer``
      - ``7``
-     - Data FIFO depth per Column Manager, as ``log2``. E.g. ``7`` → 128
-       entries. Bounded by the silicon area budget of the digital core
-       (see :ref:`flow_pause` for the buffer-sizing trade-off)
+     - Data FIFO depth per Column Manager, as a number of DesignWare
+       FIFO entries (not ``log2``). The FIFO is read through the
+       double-width internal bus (``2 * ASIC_DATABUS_DWIDTH_C``), so
+       each entry holds two hits, i.e. the FIFO holds
+       ``COLMANAGER_DATA_DEPTH_G * 2`` hits. E.g. ``7`` → 14 hits.
+       Bounded by the silicon area budget of the digital core (see
+       :ref:`flow_pause` for the buffer-sizing trade-off)
    * - ``COLMANAGER_STATUS_DEPTH_G``
      - ``integer``
      - ``6``
-     - Status FIFO depth per Column Manager, as ``log2``. E.g. ``6`` → 64
-       entries. Typically smaller than the Data FIFO
+     - Status FIFO depth per Column Manager, as a number of DesignWare
+       FIFO entries (not ``log2``). One entry per closed event or Pause
+       fragment
    * - ``DATAFIFO_PIPE_G``
      - ``natural``
      - ``1``
@@ -179,7 +187,9 @@ per-column User Logic instances.
    * - ``eof``
      - ``in``
      - ``slv``
-     - Per-column End-of-Frame. Closes the event nominally
+     - Per-column End-of-Frame. Closes the event nominally. With
+       ``EN_EOF_FLAG_C = True``, also sets the EoF bit of the column's
+       Status Word
    * - ``overOcc``
      - ``in``
      - ``slv``
@@ -249,13 +259,19 @@ record driven into ``Pix2PgpTop.config``:
        Arbiter from draining that Column Manager
    * - ``timeoutLimit``
      - ``TIMEOUT_LIMIT_WIDTH_C``
-     - Watchdog limit (in PGP-clock cycles) used by the Column
+     - Watchdog limit (in ``sparseClk`` cycles) used by the Column
        Supervisor in the Timeout Readout Sequence
    * - ``pauseLimit``
      - ``TIMEOUT_LIMIT_WIDTH_C``
-     - Pause-timeout limit (in PGP-clock cycles) used by the Column
+     - Pause-timeout limit (in ``sparseClk`` cycles) used by the Column
        Supervisor to group paused columns together on ERO-closure
        ASICs
+   * - ``maskEofPause``
+     - 1
+     - ``pgpClk`` domain. ``'0'`` (default): the header EoF flag is
+       never raised on Pause readouts. ``'1'``: Pause is ignored when
+       the flag is evaluated. Tie to ``'0'`` on ASICs without
+       ``EN_EOF_FLAG_C``. See :ref:`port_description_asic_eof`
 
 A ready-made default value, ``DEFAULT_PIX2PGP_CONFIG_C``, is exported
 by the package. If you have no register-file infrastructure yet, wire
@@ -316,8 +332,8 @@ and 8 lanes (SparkPix-S-style):
          RST_POLARITY_G            => '1',
          PIPELINE_DATA_G           => false,
          PIPELINE_STATUS_G         => true,
-         COLMANAGER_DATA_DEPTH_G   => 7,   -- 128 entries per column
-         COLMANAGER_STATUS_DEPTH_G => 6,   -- 64 entries per column
+         COLMANAGER_DATA_DEPTH_G   => 7,   -- 7 entries -> 14 hits per column
+         COLMANAGER_STATUS_DEPTH_G => 6,   -- 6 events per column
          DATAFIFO_PIPE_G           => 1,
          STATUSFIFO_PIPE_G         => 1)
       port map (

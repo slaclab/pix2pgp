@@ -1,8 +1,8 @@
 .. _architecture_top_level:
 
-=================
+==================
 Top-Level Overview
-=================
+==================
 
 A Pix2PGP-based readout chain has three tiers. Inside the ASIC, one or
 more Pix2PGP cores take sparse data from their assigned slice of the
