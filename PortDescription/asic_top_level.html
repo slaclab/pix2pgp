@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ASIC Top-Level Wrapper &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
+  <title>ASIC Top-Level Wrapper &mdash; pix2pgp v3.1.1-17-gee9d421 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
+      <script src="../_static/documentation_options.js?v=d46b136b"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -58,7 +58,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#serializer-interface">Serializer Interface</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#eof-flag-support-new-asics">EoF Flag Support (New ASICs)</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="fpga_top_level.html">FPGA Top-Level (Pix2PgpAsicStreamRx)</a></li>
@@ -156,7 +155,7 @@ Instantiate the wrapper <code class="docutils literal notranslate"><span class="
 <td><p>—</p></td>
 <td><p>—</p></td>
 <td><p>if <code class="docutils literal notranslate"><span class="pre">EN_ERO_C</span></code></p></td>
-<td><p>yes (see <a class="reference internal" href="#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a>)</p></td>
+<td><p>yes</p></td>
 </tr>
 </tbody>
 </table>
@@ -351,7 +350,12 @@ waits for, evaluates and drains enabled columns</p></li>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span></code></p></td>
 <td><p>in</p></td>
 <td><p>1</p></td>
-<td><p><strong>New ASICs only.</strong> See <a class="reference internal" href="#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a></p></td>
+<td><p><strong>New ASICs only.</strong> Synchronized to <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> →
+<code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code>. <code class="docutils literal notranslate"><span class="pre">'0'</span></code>: the header EoF flag is not
+raised on Pause readouts. <code class="docutils literal notranslate"><span class="pre">'1'</span></code>: Pause is ignored when the
+flag is evaluated. On existing ASICs the port does not exist and
+<code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> is tied to <code class="docutils literal notranslate"><span class="pre">'0'</span></code>. See
+<a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColBusy</span></code></p></td>
 <td><p>out</p></td>
@@ -425,9 +429,7 @@ the column’s Trigger Counter</p></td>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
 <td><p>in</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
-<td><p>End-of-Frame. Closes the event nominally and releases <code class="docutils literal notranslate"><span class="pre">busy</span></code>.
-On ASICs with <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code>, also sets the EoF bit
-in the column’s Status Word</p></td>
+<td><p>End-of-Frame. Closes the event nominally and releases <code class="docutils literal notranslate"><span class="pre">busy</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">overOcc</span></code></p></td>
 <td><p>in</p></td>
@@ -495,43 +497,6 @@ FIFO or the Status FIFO is almost-full. See <a class="reference internal" href="
 </tbody>
 </table>
 </section>
-</section>
-<section id="eof-flag-support-new-asics">
-<span id="port-description-asic-eof"></span><h2>EoF Flag Support (New ASICs)<a class="headerlink" href="#eof-flag-support-new-asics" title="Link to this heading"></a></h2>
-<p>New ASICs should set <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code> in
-<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code> (see <a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>). Their wrapper
-should then add:</p>
-<ul class="simple">
-<li><p>a <code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span> <span class="pre">:</span> <span class="pre">in</span> <span class="pre">std_logic</span></code> port</p></li>
-<li><p>a <code class="docutils literal notranslate"><span class="pre">surf.Synchronizer</span></code> that brings it into the <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain,
-in the same way <code class="docutils literal notranslate"><span class="pre">cfgColumnEnable</span></code> becomes <code class="docutils literal notranslate"><span class="pre">cfgColumnEnablePgp</span></code></p></li>
-<li><p>a capture of the synchronized value into <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code>
-under <code class="docutils literal notranslate"><span class="pre">cfgSel</span></code>, in the <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> configuration process</p></li>
-</ul>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 20.0%" />
-<col style="width: 80.0%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">maskEofPause</span></code></p></th>
-<th class="head"><p>Header EoF flag</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">'0'</span></code> (default)</p></td>
-<td><p>High only on non-Pause readouts in which every enabled column
-closed with <code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
-<td><p>Pause is ignored: high whenever every enabled column’s Status
-Word carries the EoF bit, including Pause readouts</p></td>
-</tr>
-</tbody>
-</table>
-<p>On ASICs that predate the feature (SparkPix-S, SparkPix-Sv2,
-SparkPix-T, Thriglav), the port does not exist and
-<code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> is tied to <code class="docutils literal notranslate"><span class="pre">'0'</span></code>.</p>
 </section>
 </section>
 

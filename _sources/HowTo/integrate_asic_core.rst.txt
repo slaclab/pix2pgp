@@ -271,7 +271,7 @@ record driven into ``Pix2PgpTop.config``:
      - ``pgpClk`` domain. ``'0'`` (default): the header EoF flag is
        never raised on Pause readouts. ``'1'``: Pause is ignored when
        the flag is evaluated. Tie to ``'0'`` on ASICs without
-       ``EN_EOF_FLAG_C``. See :ref:`port_description_asic_eof`
+       ``EN_EOF_FLAG_C``. See :ref:`frame_eof_flag`
 
 A ready-made default value, ``DEFAULT_PIX2PGP_CONFIG_C``, is exported
 by the package. If you have no register-file infrastructure yet, wire

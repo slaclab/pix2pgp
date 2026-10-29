@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Data Frame Format &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
+  <title>Data Frame Format &mdash; pix2pgp v3.1.1-17-gee9d421 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
+      <script src="../_static/documentation_options.js?v=d46b136b"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -195,15 +195,40 @@ it is enabled, an assert in the ASIC top-level wrapper checks that
 <code class="docutils literal notranslate"><span class="pre">EOF_FLAG_POS_C</span></code> lies inside a non-empty <code class="docutils literal notranslate"><span class="pre">FLAGS_RESERVED_POS_C</span></code>.</p>
 <p>The flag is high when <strong>every enabled column</strong> closed its event with a
 nominal <code class="docutils literal notranslate"><span class="pre">eof</span></code>:</p>
-<ul class="simple">
+<ul>
 <li><p>Each Column Manager stores an EoF bit in its Status Word when the
 event was closed by <code class="docutils literal notranslate"><span class="pre">eof</span></code>. It is <code class="docutils literal notranslate"><span class="pre">'0'</span></code> for Over-Occupancy and
 Pause closures</p></li>
 <li><p>The Column Supervisor raises the header flag only if every enabled
 column’s Status Word carries it</p></li>
 <li><p>By default, it stays low on Pause readouts. The <code class="docutils literal notranslate"><span class="pre">maskEofPause</span></code>
-configuration bit removes this condition (see
-<a class="reference internal" href="../PortDescription/asic_top_level.html#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a>)</p></li>
+configuration bit (<code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain) removes this condition:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">maskEofPause</span></code></p></th>
+<th class="head"><p>Header EoF flag</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">'0'</span></code> (default)</p></td>
+<td><p>High only on non-Pause readouts in which every enabled column
+closed with <code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+<td><p>Pause is ignored: high whenever every enabled column’s Status
+Word carries the EoF bit, including Pause readouts</p></td>
+</tr>
+</tbody>
+</table>
+<p>On ASICs that predate the feature, <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> is tied to
+<code class="docutils literal notranslate"><span class="pre">'0'</span></code> in the ASIC top-level wrapper. New ASICs should expose a
+<code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span></code> port, synchronize it to <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>, and capture
+it into <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> under <code class="docutils literal notranslate"><span class="pre">cfgSel</span></code></p>
+</li>
 <li><p>It is always low on Timeout and Pause-Error readouts, and on dummy
 headers</p></li>
 </ul>
