@@ -52,6 +52,7 @@ entity Pix2PgpColumnSupervisor is
       timeoutError  : out sl;
       colPauseError : out sl;
       colPause      : out sl;
+      colEof        : out sl;
       trgCntGlbl    : out slv(TRGCNT_WIDTH_C-1 downto 0);
       colHitmask    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colTimeout    : out slv(NUM_OF_COL_MANAGERS_C-1 downto 0));
@@ -77,6 +78,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    : sl;
       timeoutError    : sl;
       colPause        : sl;
+      colEof          : sl;
       superBusy       : sl;
       statusBus       : Pix2PgpStatusBusArray;
       colHitmask      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -96,6 +98,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colOverOccErr   : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colFifoErr      : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnPause     : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
+      columnEof       : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       statusRdBmsk    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       columnEnable    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       pauseErrorBmsk  : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -111,6 +114,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       overOccError    => '0',
       timeoutError    => '0',
       colPause        => '0',
+      colEof          => '0',
       superBusy       => '0',
       statusBus       => (others => DEFAULT_PIX2PGP_STATUSBUS_C),
       colHitmask      => (others => '0'),
@@ -130,6 +134,7 @@ architecture rtl of Pix2PgpColumnSupervisor is
       colOverOccErr   => (others => '0'),
       colFifoErr      => (others => '0'),
       columnPause     => (others => '0'),
+      columnEof       => (others => '0'),
       statusRdBmsk    => (others => '1'),
       columnEnable    => (others => '1'),
       pauseErrorBmsk  => (others => '0'),
@@ -213,6 +218,9 @@ begin
          -- pause handling
          v.columnPause(col) := statusBusInt(col).pause and v.dataReady(col);
 
+         -- eof handling; column closed its event with a nominal EoF
+         v.columnEof(col) := statusBusInt(col).eof and v.dataReady(col);
+
          -- see columnManager; if both of these are high, an SRO was received while in pause
          -- also, check against the dataReady
          v.pauseErrorBmsk(col) := v.colOverOccErr(col) and v.columnPause(col) and v.dataReady(col);
@@ -287,6 +295,9 @@ begin
                   v.statusRdBmsk := v.columnPause;
                   v.colHitmask   := v.columnPause;
                end if;
+
+               -- set the asic-header EoF flag if present
+               v.colEof := (v.columnEof = v.columnEnable) and uOr(v.columnEnable);
 
                v.state := ARB_START_S;
             end if;
@@ -399,6 +410,7 @@ begin
       colFifoError    <= r.colFifoError;
       overOccError    <= r.overOccError;
       colPause        <= r.pause;
+      colEof          <= r.colEof;
       colPauseError   <= r.pauseError;
       colHitmask      <= r.colHitmask;
       colTimeout      <= r.colTimeout;

@@ -80,6 +80,7 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc     : sl;
       inPause       : sl;
       inPauseError  : sl;
+      inEof         : sl;
       rxError       : sl;
       inFull        : sl;
       laneFull      : sl;
@@ -108,6 +109,7 @@ architecture rtl of Pix2PgpLaneRx is
       inOverOcc     => '0',
       inPause       => '0',
       inPauseError  => '0',
+      inEof         => '0',
       rxError       => '0',
       inFull        => '0',
       laneFull      => '0',
@@ -194,6 +196,7 @@ begin
       variable colErr     : sl := '0';
       variable pauseErr   : sl := '0';
       variable timeout    : sl := '0';
+      variable eofFlag    : sl := '0';
       variable sof        : sl := '0';
       variable eof        : sl := '0';
       variable colHitmask : slv(NUM_OF_COL_MANAGERS_C-1 downto 0) := (others => '0');
@@ -223,6 +226,7 @@ begin
       colErr        := '0';
       pauseErr      := '0';
       timeout       := '0';
+      eofFlag       := '0';
       v.dummy       := '0';
       colHitmask    := (others => '0');
       trgCnt        := (others => '0');
@@ -274,6 +278,7 @@ begin
          v.inOverOcc    := '0';
          v.inPause      := '0';
          v.inPauseError := '0';
+         v.inEof        := '0';
          v.decError     := '0';
          v.eventHitmask := (others => '0');
          v.frameSizeCnt := (others => '0');
@@ -327,12 +332,14 @@ begin
                colErr     := r.headerData(COLUMN_ERROR_FLAG_POS_C);
                pauseErr   := r.headerData(PAUSE_ERROR_FLAG_POS_C);
                timeout    := r.headerData(TIMEOUT_FLAG_POS_C);
+               eofFlag    := r.headerData(EOF_FLAG_POS_C);
                colHitmask := r.headerData(COL_HITMASK_POS_C);
                trgCnt     := resize(r.headerData(TRGCNT_POS_C), TRGCNT_WIDTH_C);
 
                v.inOverOcc    := overOcc;
                v.inPause      := pause and not(pauseErr); -- mask if in pause-error
                v.inPauseError := pauseErr;
+               v.inEof        := eofFlag; -- all columns closed by a nominal EoF
                v.trgCntHeader := trgCnt;
                v.eventHitmask := colHitmask;
                v.validHeader  := '0'; -- reset the flag

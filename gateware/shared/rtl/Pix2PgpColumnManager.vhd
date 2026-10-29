@@ -234,6 +234,7 @@ begin
 
          v.statusFifoDin(STATUSFIFO_OVEROCC_POS_C) := r.overOccStatus;
          v.statusFifoDin(STATUSFIFO_PAUSE_POS_C)   := r.pauseAck; -- write sticky flag
+         v.statusFifoDin(STATUSFIFO_EOF_POS_C)     := r.eofStatus and toSl(EN_EOF_FLAG_C);
          v.statusFifoDin(STATUSFIFO_TRGCNT_POS_C)  := r.trgCnt;
          v.statusFifoDin(STATUSFIFO_DATALEN_POS_C) := r.wrEnCnt;
          v.statusWr := '1';
@@ -270,6 +271,7 @@ begin
       -- status bus assignments (in pgpClk domain)
       statusBus.overOcc   <= statusFifoDout(STATUSFIFO_OVEROCC_POS_C);
       statusBus.pause     <= statusFifoDout(STATUSFIFO_PAUSE_POS_C);
+      statusBus.eof       <= statusFifoDout(STATUSFIFO_EOF_POS_C);
       statusBus.trgCnt    <= statusFifoDout(STATUSFIFO_TRGCNT_POS_C);
       statusBus.dataLen   <= statusFifoDout(STATUSFIFO_DATALEN_POS_C);
       statusBus.fifoError <= statusRdErrorDly or dataRdErrorDly; -- FIFO underflow

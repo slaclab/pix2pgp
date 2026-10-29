@@ -55,7 +55,7 @@ package Pix2PgpPkg is
    function colMetaMap   (flags: slv; col: slv; trgCnt: slv; dataLen: slv) return slv;
    function asicHeaderMap(overOccError: sl; colPause: sl; colFifoError : sl;
                           colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                          colHitmask: slv; trgCntGlbl: slv) return slv;
+                          colEof: sl; colHitmask: slv; trgCntGlbl: slv) return slv;
    function isDummy        (din : slv) return boolean;
    function fpgaPreambleMap(pix2pgpId: slv; pix2pgpType: slv; asicType: slv;
                             asicId: slv; fpgaId: slv; fpgaTrgCnt: slv) return slv;
@@ -87,16 +87,20 @@ package Pix2PgpPkg is
 
    -- status FIFO bus
    -- does not have the same width as the whole status bus;
-   -- *only* the overOcc flag, the pause, the trgCnt, and the dataLen are stored into the FIFO
+   -- *only* the overOcc flag, the pause, the eof, the trgCnt, and the dataLen are stored into the FIFO
    -- the other flags (fifoError/columnEmpty) run parallel the FIFO dout on the status bus
 
-   -- status fifo data width is + 2 because of the overoccupancy and pause flags
-   constant STATUSFIFO_DWIDTH_C       : natural := DATALEN_WIDTH_C + TRGCNT_WIDTH_C + 2;
+   -- status fifo data width is + 3 because of the overoccupancy, pause, and eof flags
+   -- eof is always low if EN_EOF_FLAG_C = False in the respective AsicPkg
+   -- eof in the AsicHeader was introduced after ASIC_TYPE_C = 4 (i.e. after SIPM)
+   --
+   constant STATUSFIFO_DWIDTH_C       : natural := DATALEN_WIDTH_C + TRGCNT_WIDTH_C + 3;
 
    constant STATUSFIFO_OVEROCC_POS_C  : natural := STATUSFIFO_DWIDTH_C-1;
    constant STATUSFIFO_PAUSE_POS_C    : natural := STATUSFIFO_DWIDTH_C-2;
+   constant STATUSFIFO_EOF_POS_C      : natural := STATUSFIFO_DWIDTH_C-3;
 
-   subtype STATUSFIFO_TRGCNT_POS_C   is natural range STATUSFIFO_DWIDTH_C-3
+   subtype STATUSFIFO_TRGCNT_POS_C   is natural range STATUSFIFO_DWIDTH_C-4
                                                 downto DATALEN_WIDTH_C;
 
    subtype STATUSFIFO_DATALEN_POS_C  is natural range DATALEN_WIDTH_C-1
@@ -134,6 +138,7 @@ package Pix2PgpPkg is
       -- flags begin
       overOcc     : sl;
       pause       : sl;
+      eof         : sl;
       fifoError   : sl;
       columnEmpty : sl;
       -- flags end
@@ -145,6 +150,7 @@ package Pix2PgpPkg is
       -- flags begin
       overOcc     => '0',
       pause       => '0',
+      eof         => '0',
       fifoError   => '0',
       columnEmpty => '1',
       -- flags end
@@ -438,7 +444,7 @@ package body Pix2PgpPkg is
 
    function asicHeaderMap (overOccError: sl; colPause: sl; colFifoError : sl;
                            colPauseError: sl; timeoutError: sl; dummyHeader: sl;
-                           colHitmask: slv; trgCntGlbl: slv) return slv is
+                           colEof: sl; colHitmask: slv; trgCntGlbl: slv) return slv is
       variable retHeader: slv(HEADER_DWIDTH_C-1 downto 0) := (others => '0');
    begin
 
@@ -449,6 +455,8 @@ package body Pix2PgpPkg is
       retHeader(TIMEOUT_FLAG_POS_C)      := timeoutError  and not(dummyHeader);
       retHeader(DUMMY_HEADER_POS_C)      := dummyHeader;
       retHeader(FLAGS_RESERVED_POS_C)    := (others => '0');
+      -- eof flag overrides the reserved field MSB; will be low for ASIC_TYPE_C <= 4
+      retHeader(EOF_FLAG_POS_C)          := colEof        and not(dummyHeader);
       retHeader(COL_HITMASK_POS_C)       := colHitmask;
       retHeader(TRGCNT_POS_C)            := resize(trgCntGlbl, rangeToLen(TRGCNT_POS_C'high,
                                                                           TRGCNT_POS_C'low));

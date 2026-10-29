@@ -52,6 +52,7 @@ entity Pix2PgpArbiter is
       colPauseError : in  sl;
       timeoutError  : in  sl;
       colPause      : in  sl;
+      colEof        : in  sl;
       trgCntGlbl    : in  slv(TRGCNT_WIDTH_C-1 downto 0);
       colHitmask    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       colTimeout    : in  slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
@@ -144,7 +145,7 @@ begin
    ------------------------------------------------
    comb : process (r, pgpRst, dataBus, statusBus, arbStart, colFifoError,
                    overOccError, colHitmask, colPause, colPauseError, sAxisSlave,
-                   trgCntGlbl, timeoutError, colTimeout) is
+                   trgCntGlbl, timeoutError, colTimeout, colEof) is
 
       variable v : RegType;
       -- temp variables for status bus
@@ -396,7 +397,8 @@ begin
       --
       --
       v.dataHeader := asicHeaderMap(overOccError, colPause, colFifoError, colPauseError,
-                                    timeoutError, v.dummyHeader, v.colHitmask, v.trgCntGlbl);
+                                    timeoutError, v.dummyHeader, colEof, v.colHitmask,
+                                    v.trgCntGlbl);
       --
       v.sAxisMaster.tData(PIX2PGP_DATABUS_DWIDTH_C-1 downto 0) := v.txData;
       --
