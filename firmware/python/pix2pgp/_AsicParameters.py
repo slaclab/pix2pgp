@@ -18,7 +18,8 @@ class AsicParameterBase:
         1: "SparkPixS",
         2: "SparkPixT",
         3: "Thriglav",
-        4: "SparkPixSv2"}
+        4: "SparkPixSv2",
+        5: "Sipm"}
 
     @classmethod
     def setParams(self):
@@ -26,7 +27,8 @@ class AsicParameterBase:
             'SparkPixS'   : SparkPixSParameters,
             'SparkPixSv2' : SparkPixSv2Parameters,
             'SparkPixT'   : SparkPixTParameters,
-            'Thriglav'    : ThriglavParameters}
+            'Thriglav'    : ThriglavParameters,
+            'Sipm'        : SipmParameters}
 
     def asicParamExtract(self):
         raise NotImplementedError("This method should be overridden by subclasses")
@@ -134,6 +136,33 @@ class ThriglavParameters(AsicParameterBase):
                       'wordLen'    : 8,
                       'headerLen'  : 8,
                       'eroMode'    : True}
+
+        return param_dict
+
+
+class SipmParameters(AsicParameterBase):
+    '''
+    Sipm Parameters
+    '''
+    @property
+    def asicTypeId(self):
+        for key, value in AsicParameterBase.asicTypeDict.items():
+            if value == "Sipm":
+                return key
+        raise ValueError("ASIC type not found in asicTypeDict!")
+
+    def asicParamExtract(self):
+        '''
+        Parameter dictionary
+        '''
+
+        param_dict = {'asicTypeId' : self.asicTypeId,
+                      'asicType'   : AsicParameterBase.asicTypeDict[self.asicTypeId],
+                      'numOfLanes' : 8,
+                      'numOfCols'  : 32,
+                      'wordLen'    : 8,
+                      'headerLen'  : 8,
+                      'eroMode'    : False}
 
         return param_dict
 

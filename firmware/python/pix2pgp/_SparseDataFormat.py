@@ -21,7 +21,8 @@ class SparseDataFormatBase:
             'SparkPixS'  : SparkPixSDataFormat,
             'SparkPixSv2': SparkPixSv2DataFormat,
             'SparkPixT'  : SparkPixTDataFormat,
-            'Thriglav'   : ThriglavDataFormat}
+            'Thriglav'   : ThriglavDataFormat,
+            'Sipm'       : SipmDataFormat}
 
     def dataDecoder(self, colId=0, hitData=None, rawData=False):
         raise NotImplementedError("This method should be overridden by subclasses")
@@ -322,6 +323,71 @@ class ThriglavDataFormat(SparseDataFormatBase):
                     hit['col'],  hit['row'],  hit['toac'],
                     hit['toaf'], hit['toa'],  hit['tot'], hit['overflow'])
                 )
+
+
+class SipmDataFormat(SparseDataFormatBase):
+    '''
+    Sipm Data Format
+    Placeholder 32-bit hit word: [31:16] row address, [15:0] payload
+    (matches the behavioral column model; update once the Sipm word format is defined)
+    '''
+    def dataDecoder(self, colId=0, hitData=None, rawData=False):
+        '''
+        Hit data mapping and decoding
+        '''
+        if hitData is None:
+            click.secho("[WARNING]: dataDecoder; Received None for hitData", bg='yellow')
+            return
+
+        _hitData = hitData if isinstance(hitData, int) else int(hitData, 16)
+
+        _hit = []
+        ret  = []
+
+        _hit.append((_hitData >> 32) & 0xFFFFFFFF)
+        _hit.append((_hitData >>  0) & 0xFFFFFFFF)
+
+        if rawData:
+            ret.append({'col': colId, 'raw': hex(_hit[0]).upper().replace('0X', '0x')})
+            ret.append({'col': colId, 'raw': hex(_hit[1]).upper().replace('0X', '0x')})
+
+        else:
+            _row     = []
+            _payload = []
+
+            _row.append    ((_hit[0] >> 16) & 0xFFFF)
+            _payload.append((_hit[0] >>  0) & 0xFFFF)
+
+            _row.append    ((_hit[1] >> 16) & 0xFFFF)
+            _payload.append((_hit[1] >>  0) & 0xFFFF)
+
+            ret.append({'col'     : colId,
+                        'row'     : _row[0],
+                        'payload' : _payload[0]})
+
+            ret.append({'col'     : colId,
+                        'row'     : _row[1],
+                        'payload' : _payload[1]})
+
+        return ret
+
+    def dataPrinter(self, asicHits=None, rawData=False):
+
+        if asicHits is None or len(asicHits) == 0:
+            click.secho("[INFO]: dataDecoder; Empty event...")
+            return
+
+        if rawData:
+            _formatRaw = 'Col = {0:<4}  Raw = {1:<24}'
+
+            for hit in asicHits:
+                click.secho(_formatRaw.format(hit['col'], str(hit['raw'])))
+
+        else:
+            _formatAsic = 'Col = {0:<4} Row = {1:<6} Payload = {2:<8}'
+
+            for hit in asicHits:
+                click.secho(_formatAsic.format(hit['col'], hit['row'], hit['payload']))
 
 
 SparseDataFormatBase.setData()

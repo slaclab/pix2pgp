@@ -21,7 +21,8 @@ class Pix2PgpHeaderFormatBase:
             'SparkPixS'  : SparkPixSHeaderFormat,
             'SparkPixSv2': SparkPixSv2HeaderFormat,
             'SparkPixT'  : SparkPixTHeaderFormat,
-            'Thriglav'   : ThriglavHeaderFormat}
+            'Thriglav'   : ThriglavHeaderFormat,
+            'Sipm'       : SipmHeaderFormat}
 
     def headerDecoder(self, header):
         raise NotImplementedError("This method should be overridden by subclasses")
@@ -107,6 +108,28 @@ class ThriglavHeaderFormat(Pix2PgpHeaderFormatBase):
                        'timeout'    : bool((_header >> 58) & 0x1),
                        'colHitmask' :      (_header >>  7) & 0x3FFFFFFFFFFFF,
                        'trgCnt'     :      (_header >>  0) & 0x7F}
+
+        return header_dict
+
+class SipmHeaderFormat(Pix2PgpHeaderFormatBase):
+    '''
+    Sipm Header Format
+    '''
+    def headerDecoder(self, header):
+        '''
+        Header mapping and decoding
+        '''
+        _header = header if isinstance(header, int) else int(header, 16)
+
+        header_dict = {'overOcc'    : bool((_header >> 63) & 0x1),
+                       'pause'      : bool((_header >> 62) & 0x1),
+                       'colErr'     : bool((_header >> 61) & 0x1),
+                       'pauseErr'   : bool((_header >> 60) & 0x1),
+                       'dummy'      : bool((_header >> 59) & 0x1),
+                       'timeout'    : bool((_header >> 58) & 0x1),
+                       'eof'        : bool((_header >> 57) & 0x1),
+                       'colHitmask' :      (_header >>  8) & 0xFFFFFFFF,
+                       'trgCnt'     :      (_header >>  0) & 0xFF}
 
         return header_dict
 

@@ -18,7 +18,7 @@ parser.add_argument(
     type     = str,
     required = False,
     default  = 'SparkPixS',
-    help     = "options: SparkPixS, SparkPixT, Thriglav",
+    help     = "options: SparkPixS, SparkPixSv2, SparkPixT, Thriglav, Sipm",
 )
 
 parser.add_argument(

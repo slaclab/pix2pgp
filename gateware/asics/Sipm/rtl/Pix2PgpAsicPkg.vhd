@@ -1,0 +1,145 @@
+-------------------------------------------------------------------------------
+-- Company    : SLAC National Accelerator Laboratory
+-------------------------------------------------------------------------------
+-- Description: Pix2Pgp Package for Sipm
+--
+-------------------------------------------------------------------------------
+-- This file is part of 'Pix2Pgp'.
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Pix2Pgp', including this file,
+-- may be copied, modified, propagated, or distributed except according to
+-- the terms contained in the LICENSE.txt file.
+-------------------------------------------------------------------------------
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_arith.all;
+
+library surf;
+use surf.StdRtlPkg.all;
+use surf.AxiStreamPkg.all;
+
+package Pix2PgpAsicPkg is
+
+   -----------------------------------------------------------------------------
+   ---------------------------------- Sipm -------------------------------------
+   -----------------------------------------------------------------------------
+   -- ASIC-specific parameters
+
+   -- Primary parameters to tune
+   --
+   constant NUM_OF_COL_MANAGERS_C : natural := 32; -- number of columns per serializer
+   constant NUM_OF_SERIALIZERS_C  : natural :=  8; -- number of serializers per-ASIC
+   constant ASIC_DATABUS_DWIDTH_C : natural := 32; -- data width
+
+   -- every ASIC implementation has a specific decimal identifier
+   constant ASIC_TYPE_C : natural := 5; -- Sipm = 5
+
+   --
+   -- if set to True: ASIC relies on an external End-Of-Readout (ERO) trigger
+   -- to close-out an event. The FPGA receiver will instantiate a dedicated ERO
+   -- buffer, and the Lane Supervisor will gate event close-out on the ERO
+   -- reception (see Pix2PgpTriggerManager and Pix2PgpLaneSupervisor);
+   -- Set False for ASICs that close-out events internally (e.g. SparkPix-S).
+   constant EN_ERO_C : boolean := False;
+
+   --
+   -- if set to True: overOcc signal causes trigger counter to increment;
+   -- overOcc increments the trigger counter when it is coupled with an SRO;
+   -- if overOcc is coupled with an ERO, then this needs to be set to False.
+   -- This is the case for ASICs that rely on an ERO strobe.
+   -- So usually EN_ERO_C and INCR_TRGCNT_OVEROCC_C are mutually exclusive
+   constant INCR_TRGCNT_OVEROCC_C : boolean := True;
+
+   -- **************************************************************************
+   --
+   -- Secondary parameters to tune
+   --
+   -- 2^DATALEN_WIDTH_C-1 events should fit in ColManager data FIFO
+   constant DATALEN_WIDTH_C : natural := 5;
+
+   --  counter to double-check alignment
+   constant TRGCNT_WIDTH_C : natural := 6;
+
+   -- timeout counter
+   constant TIMEOUT_LIMIT_WIDTH_C : natural := 12;
+
+   -- internal data bus width is twice the inbound data width to maximize bandwidth
+   constant PIX2PGP_DATABUS_DWIDTH_C : natural := ASIC_DATABUS_DWIDTH_C*2;
+   --
+   constant EVAL_SOF_C  : boolean := True;
+   constant EVAL_EOFE_C : boolean := True;
+   --
+   -- if set to True: each Column Manager propagates an EoF flag to its status FIFO
+   -- upon event closure (i.e. the event was closed by a nominal EoF strobe);
+   -- the Column Supervisor raises the EoF header flag if *all* columns that are
+   -- read-out for that event were closed by an EoF.
+   -- Kept False for ASICs before SIPM (i.e. ASIC_TYPE_C <= 4);
+   -- User should set True for all new ASICs
+   --
+   constant EN_EOF_FLAG_C : boolean := True;
+   --
+   -- **************************************************************************
+
+   ------------------------------------------------------------------------------
+   -- Header and Column metadata mapping
+   -- ~~~~~~
+   -- Header
+   -- ~~~~~~
+   -- Pix2Pgp data frame header *has* to be an integer-multiple of the databus width
+   constant HEADER_WIDTH_MULT_C : natural := 1;
+   --
+   constant HEADER_DWIDTH_C     : natural := HEADER_WIDTH_MULT_C*PIX2PGP_DATABUS_DWIDTH_C;
+   --
+
+   -- bitfields
+   constant OVEROCC_FLAG_POS_C      : natural := HEADER_DWIDTH_C-1; -- 63
+   constant PAUSE_FLAG_POS_C        : natural := HEADER_DWIDTH_C-2; -- 62
+   constant COLUMN_ERROR_FLAG_POS_C : natural := HEADER_DWIDTH_C-3; -- 61
+   constant PAUSE_ERROR_FLAG_POS_C  : natural := HEADER_DWIDTH_C-4; -- 60
+   constant DUMMY_HEADER_POS_C      : natural := HEADER_DWIDTH_C-5; -- 59
+   constant TIMEOUT_FLAG_POS_C      : natural := HEADER_DWIDTH_C-6; -- 58
+   --------------------------
+   subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7  -- [57:40]
+                                              downto HEADER_DWIDTH_C-24;
+   -- EoF flag occupies the MSB of the reserved field (only set if EN_EOF_FLAG_C)
+   constant EOF_FLAG_POS_C          : natural := HEADER_DWIDTH_C-7; -- 57
+   --------------------------
+   -- col-hitmask
+   subtype  COL_HITMASK_POS_C      is natural range  HEADER_DWIDTH_C-25  -- [39:8]
+                                              downto HEADER_DWIDTH_C-56;
+   --------------------------
+   -- trigger counter
+   subtype  TRGCNT_POS_C           is natural range  HEADER_DWIDTH_C-57 -- [7:0]
+                                              downto HEADER_DWIDTH_C-64;
+   ------------------------------------------------------------------------------
+   -- ~~~~~~~~~~~~~~~
+   -- Column Metadata
+   -- ~~~~~~~~~~~~~~~
+   -- Pix2Pgp column metadata *have* to be an equal to the databus width
+   -- three flags: timeout, overOcc and Pause:
+   -- colMeta[26] -> timeout
+   -- colMeta[25] -> overOcc
+   -- colMeta[24] -> pause
+   subtype  META_FLAGS_POS_C   is natural range  PIX2PGP_DATABUS_DWIDTH_C-1 downto 24;
+   subtype  META_COL_POS_C     is natural range  23 downto 16;
+   subtype  META_TRGCNT_POS_C  is natural range  15 downto 8;
+   subtype  META_DATALEN_POS_C is natural range   7 downto 0;
+   ------------------------------------------------------------------------------
+
+   -- FPGA receiver needs to widen the data bus cope with bandwidth;
+   -- The default width (PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C) might be too wide;
+   -- too wide -> synthesis or timing closure issues;
+   -- user can choose to introduce a scaling factor here (e.g. *1/2 or *3/4) to make bus narrower;
+   -- user should use a clk for AsicStreamRx that is faster than the PHY clk at all times...
+   -- ...but a narrower FPGA_DATABUS_DWIDTH_C might need an even faster clk to not cause bottleneck
+   constant FPGA_DATABUS_DWIDTH_C : natural := PIX2PGP_DATABUS_DWIDTH_C*NUM_OF_SERIALIZERS_C;
+
+end Pix2PgpAsicPkg;
+
+package body Pix2PgpAsicPkg is
+
+end package body Pix2PgpAsicPkg;
