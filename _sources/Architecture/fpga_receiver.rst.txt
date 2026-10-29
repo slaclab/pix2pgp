@@ -1,8 +1,8 @@
 .. _architecture_fpga_receiver:
 
-======================
+==========================
 FPGA Receiver Architecture
-======================
+==========================
 
 The Pix2PGP FPGA receiver takes the per-lane frames coming off the
 ASIC's serial links, checks each of them for integrity, and merges
@@ -49,7 +49,8 @@ inbound frame:
 * The **header** is registered first. The header carries:
 
   * ``OverOcc``, ``Pause``, ``Pause-Error``, ``Timeout``, ``Column
-    FIFO Error``, ``Dummy Header`` flags
+    FIFO Error``, ``Dummy Header`` flags, and the ``EoF`` flag (see
+    :ref:`frame_eof_flag`)
   * ``Column Hitmask`` — one bit per Column Manager in the source ASIC
     core; high if that Column recorded hits
   * ``Trigger Counter`` — for the current event
@@ -58,6 +59,12 @@ inbound frame:
 * On successful decoding, the header metadata plus the
   internally-computed frame length are written into the ``LaneRx``
   Status FIFO, indicating event close-out for that lane
+* An **event-closure indicator** is computed per frame from the header:
+  ``inEventDone = EoF or OverOcc``. EoF marks a clean closure of every
+  column; Over-Occupancy marks a closure with hit loss, on both
+  self-closure and ERO ASICs. It is decoded but not yet used by the
+  receiver; it is intended for future flow control. On ASICs without
+  the EoF flag it reduces to ``OverOcc``
 
 .. note::
 

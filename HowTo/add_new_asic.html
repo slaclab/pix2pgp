@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Add Support for a New ASIC &mdash; pix2pgp v2.7.4-200-g88972ae documentation</title>
+  <title>How to Add Support for a New ASIC &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=0307e77c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -76,6 +76,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../PortDescription/index.html">ASIC/FPGA Top-Level Port Description</a></li>
 </ul>
 
         </div>
@@ -142,6 +143,10 @@ enough to fit the header bitfield, scale it up here. See
 <li><p>The <strong>header bitfield</strong> and <strong>column metadata bitfield</strong> definitions —
 the layout of Pause / OverOcc / Pause-Error / Timeout / Column Hitmask /
 Trigger Counter fields inside the frame header</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span></code> — set to <code class="docutils literal notranslate"><span class="pre">True</span></code>. Keep at least one bit in
+<code class="docutils literal notranslate"><span class="pre">FLAGS_RESERVED_POS_C</span></code>, and set <code class="docutils literal notranslate"><span class="pre">EOF_FLAG_POS_C</span></code> to its MSB (see
+<a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>). The top-level assert fails elaboration
+otherwise</p></li>
 </ul>
 <p>Supported <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code> values: <strong>4, 8, 12, 16, 20, 24, 28,
 32 bits</strong>. Using widths below 16 bits requires padding — bandwidth is
@@ -161,6 +166,9 @@ $<span class="w"> </span>mv<span class="w"> </span>Pix2PgpSparkPixTTop.vhd<span 
 <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></li>
 <li><p>Set the number of <code class="docutils literal notranslate"><span class="pre">dinXX</span></code> ports to match <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code></p></li>
 <li><p>Set the width of each <code class="docutils literal notranslate"><span class="pre">dinXX</span></code> port to <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code></p></li>
+<li><p>Add a <code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span></code> port, synchronize it to <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>, and
+capture it into <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> under <code class="docutils literal notranslate"><span class="pre">cfgSel</span></code> (see
+<a class="reference internal" href="../PortDescription/asic_top_level.html#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a>)</p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -304,7 +312,8 @@ constant is in bits).</p>
 <p>Register a <code class="docutils literal notranslate"><span class="pre">NewAsicHeaderFormat</span></code> class and decode the header bit-mapping
 in accordance with the header bitfield in <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code>. The
 upper bit of the header must be at position <code class="docutils literal notranslate"><span class="pre">(wordLen</span> <span class="pre">*</span> <span class="pre">8)</span> <span class="pre">-</span> <span class="pre">1</span></code>; the
-Column Hitmask width must be <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> bits.</p>
+Column Hitmask width must be <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> bits. Decode the
+<code class="docutils literal notranslate"><span class="pre">eof</span></code> flag at <code class="docutils literal notranslate"><span class="pre">EOF_FLAG_POS_C</span></code>.</p>
 </section>
 <section id="pix2pgpcolmetadataformat-py">
 <h3><code class="docutils literal notranslate"><span class="pre">_Pix2PgpColMetadataFormat.py</span></code><a class="headerlink" href="#pix2pgpcolmetadataformat-py" title="Link to this heading"></a></h3>

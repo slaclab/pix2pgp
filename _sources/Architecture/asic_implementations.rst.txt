@@ -1,8 +1,8 @@
 .. _architecture_asic_implementations:
 
-===================
+====================
 ASIC Implementations
-===================
+====================
 
 At the time of writing, Pix2PGP is integrated into four ASICs. Every
 port was performed **solely** by editing the per-ASIC package file

@@ -1,8 +1,8 @@
 .. _architecture_flow_control:
 
-=======================
+==========================
 Data-Flow and Corner Cases
-=======================
+==========================
 
 This section describes the three special conditions Pix2PGP handles
 explicitly at the ASIC-core level: **Over-Occupancy**, **Pause**, and

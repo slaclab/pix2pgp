@@ -1,8 +1,8 @@
 .. _how_to_integrate_fpga_receiver:
 
-=====================================================
+=======================================================
 How to Integrate the Pix2PGP FPGA Receiver in Your FPGA
-=====================================================
+=======================================================
 
 This page describes how to drop the Pix2PGP FPGA receiver into an FPGA
 design. The receiver is a **VHDL** design that expects one PGP4
@@ -175,7 +175,7 @@ ASIC Domain Interface
        model
 
 PGP4 RX Input Interface (``pgpRxClk`` domain)
---------------------------------------------
+---------------------------------------------
 
 .. list-table::
    :header-rows: 1
@@ -200,7 +200,7 @@ PGP4 RX Input Interface (``pgpRxClk`` domain)
        receiver returns to idle
 
 AXI-Stream Output Interface (``pgpRxClk`` domain)
-------------------------------------------------
+-------------------------------------------------
 
 .. list-table::
    :header-rows: 1

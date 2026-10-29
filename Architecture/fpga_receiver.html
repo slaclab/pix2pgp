@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FPGA Receiver Architecture &mdash; pix2pgp v2.7.4-200-g88972ae documentation</title>
+  <title>FPGA Receiver Architecture &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=0307e77c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -63,6 +63,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PortDescription/index.html">ASIC/FPGA Top-Level Port Description</a></li>
 </ul>
 
         </div>
@@ -132,7 +133,8 @@ inbound frame:</p>
 <li><p>The <strong>header</strong> is registered first. The header carries:</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">OverOcc</span></code>, <code class="docutils literal notranslate"><span class="pre">Pause</span></code>, <code class="docutils literal notranslate"><span class="pre">Pause-Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Timeout</span></code>, <code class="docutils literal notranslate"><span class="pre">Column</span>
-<span class="pre">FIFO</span> <span class="pre">Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Dummy</span> <span class="pre">Header</span></code> flags</p></li>
+<span class="pre">FIFO</span> <span class="pre">Error</span></code>, <code class="docutils literal notranslate"><span class="pre">Dummy</span> <span class="pre">Header</span></code> flags, and the <code class="docutils literal notranslate"><span class="pre">EoF</span></code> flag (see
+<a class="reference internal" href="frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Column</span> <span class="pre">Hitmask</span></code> — one bit per Column Manager in the source ASIC
 core; high if that Column recorded hits</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> — for the current event</p></li>
@@ -142,6 +144,12 @@ core; high if that Column recorded hits</p></li>
 <li><p>On successful decoding, the header metadata plus the
 internally-computed frame length are written into the <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code>
 Status FIFO, indicating event close-out for that lane</p></li>
+<li><p>An <strong>event-closure indicator</strong> is computed per frame from the header:
+<code class="docutils literal notranslate"><span class="pre">inEventDone</span> <span class="pre">=</span> <span class="pre">EoF</span> <span class="pre">or</span> <span class="pre">OverOcc</span></code>. EoF marks a clean closure of every
+column; Over-Occupancy marks a closure with hit loss, on both
+self-closure and ERO ASICs. It is decoded but not yet used by the
+receiver; it is intended for future flow control. On ASICs without
+the EoF flag it reduces to <code class="docutils literal notranslate"><span class="pre">OverOcc</span></code></p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

@@ -1,8 +1,8 @@
 .. _how_to_add_new_asic:
 
-===============================
+=================================
 How to Add Support for a New ASIC
-===============================
+=================================
 
 Pix2PGP is designed to be adapted to a new detection ASIC through
 **parameterization only** — no changes to the shared RTL core
@@ -46,6 +46,10 @@ Inside ``NewAsic/rtl/Pix2PgpAsicPkg.vhd``, adjust the following constants:
 * The **header bitfield** and **column metadata bitfield** definitions —
   the layout of Pause / OverOcc / Pause-Error / Timeout / Column Hitmask /
   Trigger Counter fields inside the frame header
+* ``EN_EOF_FLAG_C`` — set to ``True``. Keep at least one bit in
+  ``FLAGS_RESERVED_POS_C``, and set ``EOF_FLAG_POS_C`` to its MSB (see
+  :ref:`frame_eof_flag`). The top-level assert fails elaboration
+  otherwise
 
 Supported ``ASIC_DATABUS_DWIDTH_C`` values: **4, 8, 12, 16, 20, 24, 28,
 32 bits**. Using widths below 16 bits requires padding — bandwidth is
@@ -68,6 +72,9 @@ Update:
   ``NUM_OF_COL_MANAGERS_C``
 * Set the number of ``dinXX`` ports to match ``NUM_OF_COL_MANAGERS_C``
 * Set the width of each ``dinXX`` port to ``ASIC_DATABUS_DWIDTH_C``
+* Add a ``cfgMaskEofPause`` port, synchronize it to ``pgpClk``, and
+  capture it into ``config.maskEofPause`` under ``cfgSel`` (see
+  :ref:`port_description_asic_eof`)
 
 .. note::
 
@@ -219,12 +226,13 @@ parameter class:
    constant is in bits).
 
 ``_Pix2PgpHeaderFormat.py``
---------------------------
+---------------------------
 
 Register a ``NewAsicHeaderFormat`` class and decode the header bit-mapping
 in accordance with the header bitfield in ``Pix2PgpAsicPkg.vhd``. The
 upper bit of the header must be at position ``(wordLen * 8) - 1``; the
-Column Hitmask width must be ``NUM_OF_COL_MANAGERS_C`` bits.
+Column Hitmask width must be ``NUM_OF_COL_MANAGERS_C`` bits. Decode the
+``eof`` flag at ``EOF_FLAG_POS_C``.
 
 ``_Pix2PgpColMetadataFormat.py``
 --------------------------------

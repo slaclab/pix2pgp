@@ -1,0 +1,517 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPGA Top-Level (Pix2PgpAsicStreamRx) &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="ASIC Top-Level Wrapper" href="asic_top_level.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">ASIC/FPGA Top-Level Port Description</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="asic_top_level.html">ASIC Top-Level Wrapper</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">FPGA Top-Level (Pix2PgpAsicStreamRx)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generics">Generics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ports">Ports</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#general-interface">General Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#asic-domain-interface">ASIC Domain Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pgp4-rx-input-interface-pgprxclk-domain">PGP4 RX Input Interface (<code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code> domain)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#axi-stream-output-interface-pgprxclk-domain">AXI-Stream Output Interface (<code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code> domain)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#asic-monitoring-status-output">ASIC Monitoring Status Output</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#axi-lite-interface-axilclk-domain">AXI-Lite Interface (<code class="docutils literal notranslate"><span class="pre">axilClk</span></code> domain)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eof-flag-handling">EoF Flag Handling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">ASIC/FPGA Top-Level Port Description</a></li>
+      <li class="breadcrumb-item active">FPGA Top-Level (Pix2PgpAsicStreamRx)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/PortDescription/fpga_top_level.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fpga-top-level-pix2pgpasicstreamrx">
+<span id="port-description-fpga"></span><h1>FPGA Top-Level (Pix2PgpAsicStreamRx)<a class="headerlink" href="#fpga-top-level-pix2pgpasicstreamrx" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicStreamRx</span></code> (<code class="docutils literal notranslate"><span class="pre">firmware/fpga/rtl/Pix2PgpAsicStreamRx.vhd</span></code>)
+is the FPGA receiver for <strong>one</strong> ASIC. It contains:</p>
+<ul class="simple">
+<li><p>one <code class="docutils literal notranslate"><span class="pre">LaneRxWrapper</span></code> per lane (<code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> plus optional
+<code class="docutils literal notranslate"><span class="pre">LaneMon</span></code>)</p></li>
+<li><p>the Lane Supervisor and the Lane Merger</p></li>
+<li><p>the Trigger Manager (SRO / ERO / DAQ buffering)</p></li>
+<li><p>the AXI-Lite register manager, behind an <code class="docutils literal notranslate"><span class="pre">AxiLiteAsync</span></code> and an
+<code class="docutils literal notranslate"><span class="pre">AxiLiteCrossbar</span></code></p></li>
+<li><p>an output <code class="docutils literal notranslate"><span class="pre">AxiStreamFifoV2</span></code> + <code class="docutils literal notranslate"><span class="pre">AxiStreamGearbox</span></code> stage that
+re-packs <code class="docutils literal notranslate"><span class="pre">tKeep</span></code> on the consolidated stream</p></li>
+</ul>
+<p>It must be compiled against the <strong>same</strong> <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code> as the
+ASIC, since every header bit position comes from that package.
+Instantiate one <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicStreamRx</span></code> per ASIC.</p>
+<p><code class="docutils literal notranslate"><span class="pre">L</span></code> = <code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code> below.</p>
+<section id="generics">
+<h2>Generics<a class="headerlink" href="#generics" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 14.0%" />
+<col style="width: 10.0%" />
+<col style="width: 48.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TPD_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">ns</span></code></p></td>
+<td><p>Simulation-only register delay. Ignored by synthesis</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RST_ASYNC_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code> → asynchronous reset; <code class="docutils literal notranslate"><span class="pre">false</span></code> → synchronous reset</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+<td><p>Polarity of <code class="docutils literal notranslate"><span class="pre">pgpRxRst</span></code> and of the internal receiver resets</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ASIC_RST_POLARITY_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'0'</span></code></p></td>
+<td><p>Polarity of <code class="docutils literal notranslate"><span class="pre">asicRst</span></code> (Trigger Manager only). Independent of
+<code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code>, because the ASIC-facing reset often follows
+the ASIC’s own convention</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ASIC_ID_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p>Written into the <code class="docutils literal notranslate"><span class="pre">ASIC</span> <span class="pre">ID</span></code> field of the consolidated frame
+preamble. Must be unique per receiver if the FPGA serves several
+ASICs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LANE_MON_GEN_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Generate one <code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneMon</span></code> per lane (per-lane statistics
+over AXI-Lite, and the <code class="docutils literal notranslate"><span class="pre">asicMonStatus</span></code> output). If <code class="docutils literal notranslate"><span class="pre">false</span></code>,
+the monitor crossbar slots return SLVERR and <code class="docutils literal notranslate"><span class="pre">asicMonStatus</span></code>
+stays at its default</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LANE_MON_CNT_WIDTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">positive</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p>Width of the per-lane monitoring counters</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRG_FIFO_ADDR_WIDTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">positive</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">6</span></code></p></td>
+<td><p>Trigger-buffer depth (SRO buffer, and ERO buffer if
+<code class="docutils literal notranslate"><span class="pre">EN_ERO_C</span></code>), as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. Size it for the maximum number of
+triggers in flight between <code class="docutils literal notranslate"><span class="pre">asicSro</span></code> and the frame arriving
+on <code class="docutils literal notranslate"><span class="pre">pgp4RxMaster</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">META_FIFO_ADDR_WIDTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">positive</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">6</span></code></p></td>
+<td><p>Depth of each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> metadata (frame status) FIFO, as
+<code class="docutils literal notranslate"><span class="pre">log2</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LANE_FIFO_ADDR_WIDTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">positive</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">9</span></code></p></td>
+<td><p>Depth of each <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> data FIFO, as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. The first-level
+input FIFO in front of it uses <code class="docutils literal notranslate"><span class="pre">LANE_FIFO_ADDR_WIDTH_G</span> <span class="pre">-</span> <span class="pre">2</span></code>.
+Increase for large Pause-fragmented events</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AXIL_BASE_ADDR_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv(31</span> <span class="pre">downto</span> <span class="pre">0)</span></code></p></td>
+<td><p>(none)</p></td>
+<td><p>Base address of the receiver’s AXI-Lite region. The crossbar has
+<code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">+</span> <span class="pre">1</span></code> slots of 64 KiB (<code class="docutils literal notranslate"><span class="pre">addrBits</span> <span class="pre">=</span> <span class="pre">16</span></code>): slot 0 holds the
+receiver’s global registers (<code class="docutils literal notranslate"><span class="pre">Pix2PgpAxiLiteManager</span></code>), and
+slot <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">+</span> <span class="pre">i</span></code> holds the <code class="docutils literal notranslate"><span class="pre">LaneMon</span></code> of lane <code class="docutils literal notranslate"><span class="pre">i</span></code>. The slot
+index is decoded from the bits between bit 16 and the lowest set
+bit of the base (bit 26 if the base is zero). So the base must
+be aligned so that <code class="docutils literal notranslate"><span class="pre">2**(lowestSetBit</span> <span class="pre">-</span> <span class="pre">16)</span> <span class="pre">&gt;=</span> <span class="pre">L</span> <span class="pre">+</span> <span class="pre">1</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="ports">
+<h2>Ports<a class="headerlink" href="#ports" title="Link to this heading"></a></h2>
+<section id="general-interface">
+<h3>General Interface<a class="headerlink" href="#general-interface" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 14.0%" />
+<col style="width: 58.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>Receiver clock. Every <code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> (its <code class="docutils literal notranslate"><span class="pre">laneClk</span></code> is tied to
+this), the Lane Supervisor, the Lane Merger, the AXI-Lite
+manager and the output stream run on it. The <code class="docutils literal notranslate"><span class="pre">pgp4Rx*</span></code> and
+<code class="docutils literal notranslate"><span class="pre">asicRx*</span></code> interfaces must be synchronous to it</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpRxRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>Receiver reset, polarity per <code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code>. Defaults to
+inactive if left open. Internally OR-ed with the AXI-Lite
+user-reset register to form the global receiver reset</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="asic-domain-interface">
+<h3>ASIC Domain Interface<a class="headerlink" href="#asic-domain-interface" title="Link to this heading"></a></h3>
+<p>Every port in this group is on the <code class="docutils literal notranslate"><span class="pre">asicClk</span></code> domain. The Trigger
+Manager handles the crossing into <code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 14.0%" />
+<col style="width: 58.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asicClk</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>Clock the trigger signals are synchronous to</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">asicRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>Trigger Manager reset. Polarity per <code class="docutils literal notranslate"><span class="pre">ASIC_RST_POLARITY_G</span></code>
+(default active-low)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asicSro</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>Start-of-Readout, as forwarded to the ASIC. A rising edge
+increments the FPGA Trigger Counter (if <code class="docutils literal notranslate"><span class="pre">asicSroEn</span></code> is high,
+or if the <code class="docutils literal notranslate"><span class="pre">incrSroEnLow</span></code> register is set). A falling edge
+pushes <code class="docutils literal notranslate"><span class="pre">{trgCnt,</span> <span class="pre">asicSroEn,</span> <span class="pre">sysDaq}</span></code> into the SRO buffer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">asicSroEn</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>High if the SRO actually reached the ASIC. When low, the SRO is
+still buffered, but the Lane Supervisor sends a drop-frame for
+it instead of waiting for lane data</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asicEro</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>End-of-Readout. <strong>Only used when</strong> <code class="docutils literal notranslate"><span class="pre">EN_ERO_C</span> <span class="pre">=</span> <span class="pre">True</span></code>; otherwise
+it may be left open (default <code class="docutils literal notranslate"><span class="pre">'0'</span></code>). A falling edge pushes the
+Trigger Counter of the SRO it closes into the ERO buffer, which
+the Lane Supervisor uses to close the event. The trigger logic
+must keep the SRO → ERO → SRO … sequence intact</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sysDaq</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>DAQ flag, sampled on the SRO falling edge (LCLS DAQ trigger).
+If it was low, the consolidated frame for that trigger is
+dumped and not forwarded downstream. Tie high to always
+forward</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pgp4-rx-input-interface-pgprxclk-domain">
+<h3>PGP4 RX Input Interface (<code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code> domain)<a class="headerlink" href="#pgp4-rx-input-interface-pgprxclk-domain" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 22.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgp4RxMaster</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiStreamMasterArray(L)</span></code></p></td>
+<td><p>Decoded Lane Frames, one per PGP4 receiver. Expected in
+<code class="docutils literal notranslate"><span class="pre">ASIC_DATA_AXI_CONFIG_C</span></code> format
+(<code class="docutils literal notranslate"><span class="pre">PIX2PGP_DATABUS_DWIDTH_C</span></code>-wide). If <code class="docutils literal notranslate"><span class="pre">EVAL_SOF_C</span></code> /
+<code class="docutils literal notranslate"><span class="pre">EVAL_EOFE_C</span></code> are set, the SSI SOF / EOFE <code class="docutils literal notranslate"><span class="pre">tUser</span></code> bits are
+checked</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgp4RxSlave</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiStreamSlaveArray(L)</span></code></p></td>
+<td><p>Handshake back to each PGP4 receiver</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgp4RxLinkUp</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">slv(L-1</span> <span class="pre">downto</span> <span class="pre">0)</span></code></p></td>
+<td><p>Per-lane link-up. A lane that is down is reported as
+<code class="docutils literal notranslate"><span class="pre">Lane</span> <span class="pre">Down</span></code>; if no enabled lane is up, triggers produce
+drop-frames. Do not tie high</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="axi-stream-output-interface-pgprxclk-domain">
+<h3>AXI-Stream Output Interface (<code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code> domain)<a class="headerlink" href="#axi-stream-output-interface-pgprxclk-domain" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 22.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asicRxMaster</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiStreamMasterType</span></code></p></td>
+<td><p>Consolidated Pix2PGP frame (one per trigger, or a drop-frame),
+in <code class="docutils literal notranslate"><span class="pre">PIX2PGP_FPGA_AXI_CONFIG_C</span></code> format
+(<code class="docutils literal notranslate"><span class="pre">FPGA_DATABUS_DWIDTH_C</span></code>-wide). See <a class="reference internal" href="../Architecture/frame_format.html#frame-pix2pgp-frame"><span class="std std-ref">Consolidated Pix2PGP Frame</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">asicRxSlave</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiStreamSlaveType</span></code></p></td>
+<td><p>Handshake from the downstream consumer</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="asic-monitoring-status-output">
+<h3>ASIC Monitoring Status Output<a class="headerlink" href="#asic-monitoring-status-output" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 22.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asicMonStatus</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Pix2PgpLaneStatusArray</span></code></p></td>
+<td><p>Per-lane snapshot from <code class="docutils literal notranslate"><span class="pre">LaneMon</span></code>: <code class="docutils literal notranslate"><span class="pre">valid</span></code> (one-shot per
+received frame), last-seen <code class="docutils literal notranslate"><span class="pre">overOcc</span></code> / <code class="docutils literal notranslate"><span class="pre">pause</span></code> /
+<code class="docutils literal notranslate"><span class="pre">pauseError</span></code>, <code class="docutils literal notranslate"><span class="pre">trgCnt</span></code>, <code class="docutils literal notranslate"><span class="pre">eventHitmask</span></code> and <code class="docutils literal notranslate"><span class="pre">frameSize</span></code>.
+Only driven if <code class="docutils literal notranslate"><span class="pre">LANE_MON_GEN_G</span> <span class="pre">=</span> <span class="pre">true</span></code>. Intended for
+register-free fabric logic such as trigger throttling or
+embedded calibration</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="axi-lite-interface-axilclk-domain">
+<h3>AXI-Lite Interface (<code class="docutils literal notranslate"><span class="pre">axilClk</span></code> domain)<a class="headerlink" href="#axi-lite-interface-axilclk-domain" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 22.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">axilClk</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>AXI-Lite clock. Crossed into <code class="docutils literal notranslate"><span class="pre">pgpRxClk</span></code> by an internal
+<code class="docutils literal notranslate"><span class="pre">AxiLiteAsync</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">axilRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sl</span></code></p></td>
+<td><p>AXI-Lite reset (active-high, SURF convention)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">axilReadMaster</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiLiteReadMasterType</span></code></p></td>
+<td><p>Read request. Defaults to <code class="docutils literal notranslate"><span class="pre">AXI_LITE_READ_MASTER_INIT_C</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">axilReadSlave</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiLiteReadSlaveType</span></code></p></td>
+<td><p>Read response</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">axilWriteMaster</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiLiteWriteMasterType</span></code></p></td>
+<td><p>Write request. Defaults to <code class="docutils literal notranslate"><span class="pre">AXI_LITE_WRITE_MASTER_INIT_C</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">axilWriteSlave</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AxiLiteWriteSlaveType</span></code></p></td>
+<td><p>Write response</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="eof-flag-handling">
+<h2>EoF Flag Handling<a class="headerlink" href="#eof-flag-handling" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">LaneRx</span></code> reads the header EoF flag (<code class="docutils literal notranslate"><span class="pre">EOF_FLAG_POS_C</span></code>; see
+<a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>) and the Over-Occupancy flag, and computes a
+per-frame event-closure indicator:</p>
+<div class="highlight-vhdl notranslate"><div class="highlight"><pre><span></span><span class="n">inEventDone</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="n">eofFlag</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n">overOcc</span><span class="p">;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">eofFlag</span></code> — every enabled column closed cleanly (<code class="docutils literal notranslate"><span class="pre">eof</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">overOcc</span></code> — at least one column closed with hit loss
+(Over-Occupancy). This covers both ASIC families: on SparkPix-S
+Over-Occupancy acts as EoF + SoF, and on ERO ASICs it acts as EoF
+only</p></li>
+</ul>
+<p>The ASIC keeps the two flags separate so that the receiver can still
+tell a clean closure from a lossy one. <code class="docutils literal notranslate"><span class="pre">inEventDone</span></code> is decoded only;
+no receiver logic acts on it yet. On ASICs with
+<code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">eofFlag</span></code> is always <code class="docutils literal notranslate"><span class="pre">'0'</span></code> (the bit is a
+reserved, zero bit), so <code class="docutils literal notranslate"><span class="pre">inEventDone</span></code> reduces to <code class="docutils literal notranslate"><span class="pre">overOcc</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="asic_top_level.html" class="btn btn-neutral float-left" title="ASIC Top-Level Wrapper" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

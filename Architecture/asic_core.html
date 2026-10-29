@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ASIC Core Architecture &mdash; pix2pgp v2.7.4-200-g88972ae documentation</title>
+  <title>ASIC Core Architecture &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=0307e77c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -62,6 +62,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PortDescription/index.html">ASIC/FPGA Top-Level Port Description</a></li>
 </ul>
 
         </div>
@@ -157,6 +158,9 @@ is written into the Status FIFO, made up of:</p>
 reception</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Pause</span></code> flag — high if the event closed because a FIFO reached its
 almost-full threshold</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EoF</span></code> flag — high if the event closed because of a nominal <code class="docutils literal notranslate"><span class="pre">EoF</span></code>
+reception. Always <code class="docutils literal notranslate"><span class="pre">'0'</span></code> unless <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code> (see
+<a class="reference internal" href="frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Data-Length</span> <span class="pre">Counter</span></code> value — how many hits were recorded for this
 event</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Trigger</span> <span class="pre">Counter</span></code> value — which trigger this event belongs to</p></li>
@@ -208,7 +212,7 @@ drain FIFOs as fast as possible. The <code class="docutils literal notranslate">
 the outbound frame’s header. See <a class="reference internal" href="flow_control.html#flow-pause-error"><span class="std std-ref">Pause-Error (Digital Over-Occupancy)</span></a></p></li>
 <li><p><strong>Timeout</strong> — a subset (but not all) of the Status FIFOs are
 non-empty. A watchdog counter is armed, and if the state persists
-for a configurable number of PGP-clock cycles, the event is closed
+for a configurable number of <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> cycles, the event is closed
 with the Timeout flag raised, and only the non-empty columns are
 drained. If all Status FIFOs go non-empty before the watchdog
 expires, one of the other three sequences is initiated instead.
@@ -218,6 +222,12 @@ signal to close events</p></li>
 <p>Once a sequence is chosen, the Supervisor registers the aggregate
 metadata (Column Hitmask, Trigger Counter, status flags) and signals
 the Arbiter to begin.</p>
+<p>On ASICs with <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code>, the Supervisor also computes
+the header <strong>EoF</strong> flag at the start of a Nominal or Pause sequence. It
+is high if every enabled column’s Status Word carries the EoF bit, and,
+unless <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> is set, only if the sequence is not a
+Pause readout. It is cleared for Timeout and Pause-Error sequences.
+See <a class="reference internal" href="frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>.</p>
 </section>
 <section id="arbiter">
 <span id="architecture-arbiter"></span><h2>Arbiter<a class="headerlink" href="#arbiter" title="Link to this heading"></a></h2>

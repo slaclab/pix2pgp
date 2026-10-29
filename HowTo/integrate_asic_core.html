@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Integrate the Pix2PGP Core in Your ASIC &mdash; pix2pgp v2.7.4-200-g88972ae documentation</title>
+  <title>How to Integrate the Pix2PGP Core in Your ASIC &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=0307e77c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -74,6 +74,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmarking.html">How to Benchmark Throughput and Latency</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../PortDescription/index.html">ASIC/FPGA Top-Level Port Description</a></li>
 </ul>
 
         </div>
@@ -136,6 +137,9 @@ incremented on an Over-Occupancy event</p></li>
 — bit widths of the counters</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">EVAL_SOF_C</span></code> / <code class="docutils literal notranslate"><span class="pre">EVAL_EOFE_C</span></code> — enable strict SoF / EoFE checking
 on the outbound AXI-Stream</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span></code> — enable the header EoF flag. <code class="docutils literal notranslate"><span class="pre">False</span></code> on every
+ASIC that predates it; <code class="docutils literal notranslate"><span class="pre">True</span></code> for new ASICs (see
+<a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">HEADER_WIDTH_MULT_C</span></code> — header scaling factor if the natural
 doubled-bus width cannot fit the header bitfields</p></li>
 <li><p>The <strong>header and column-metadata bitfield</strong> definitions</p></li>
@@ -198,15 +202,20 @@ Arbiter status buses. Usually leave enabled</p></td>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">7</span></code></p></td>
-<td><p>Data FIFO depth per Column Manager, as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. E.g. <code class="docutils literal notranslate"><span class="pre">7</span></code> → 128
-entries. Bounded by the silicon area budget of the digital core
-(see <a class="reference internal" href="../Architecture/flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a> for the buffer-sizing trade-off)</p></td>
+<td><p>Data FIFO depth per Column Manager, as a number of DesignWare
+FIFO entries (not <code class="docutils literal notranslate"><span class="pre">log2</span></code>). The FIFO is read through the
+double-width internal bus (<code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">ASIC_DATABUS_DWIDTH_C</span></code>), so
+each entry holds two hits, i.e. the FIFO holds
+<code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span> <span class="pre">*</span> <span class="pre">2</span></code> hits. E.g. <code class="docutils literal notranslate"><span class="pre">7</span></code> → 14 hits.
+Bounded by the silicon area budget of the digital core (see
+<a class="reference internal" href="../Architecture/flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a> for the buffer-sizing trade-off)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_STATUS_DEPTH_G</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">6</span></code></p></td>
-<td><p>Status FIFO depth per Column Manager, as <code class="docutils literal notranslate"><span class="pre">log2</span></code>. E.g. <code class="docutils literal notranslate"><span class="pre">6</span></code> → 64
-entries. Typically smaller than the Data FIFO</p></td>
+<td><p>Status FIFO depth per Column Manager, as a number of DesignWare
+FIFO entries (not <code class="docutils literal notranslate"><span class="pre">log2</span></code>). One entry per closed event or Pause
+fragment</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATAFIFO_PIPE_G</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
@@ -316,7 +325,9 @@ Manager and increments its Trigger Counter</p></td>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">slv</span></code></p></td>
-<td><p>Per-column End-of-Frame. Closes the event nominally</p></td>
+<td><p>Per-column End-of-Frame. Closes the event nominally. With
+<code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code>, also sets the EoF bit of the column’s
+Status Word</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">overOcc</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">in</span></code></p></td>
@@ -409,14 +420,21 @@ Arbiter from draining that Column Manager</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timeoutLimit</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code></p></td>
-<td><p>Watchdog limit (in PGP-clock cycles) used by the Column
+<td><p>Watchdog limit (in <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> cycles) used by the Column
 Supervisor in the Timeout Readout Sequence</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pauseLimit</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code></p></td>
-<td><p>Pause-timeout limit (in PGP-clock cycles) used by the Column
+<td><p>Pause-timeout limit (in <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> cycles) used by the Column
 Supervisor to group paused columns together on ERO-closure
 ASICs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">maskEofPause</span></code></p></td>
+<td><p>1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain. <code class="docutils literal notranslate"><span class="pre">'0'</span></code> (default): the header EoF flag is
+never raised on Pause readouts. <code class="docutils literal notranslate"><span class="pre">'1'</span></code>: Pause is ignored when
+the flag is evaluated. Tie to <code class="docutils literal notranslate"><span class="pre">'0'</span></code> on ASICs without
+<code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span></code>. See <a class="reference internal" href="../PortDescription/asic_top_level.html#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a></p></td>
 </tr>
 </tbody>
 </table>
@@ -484,8 +502,8 @@ and 8 lanes (SparkPix-S-style):</p>
 <span class="w">      </span><span class="n">RST_POLARITY_G</span><span class="w">            </span><span class="o">=&gt;</span><span class="w"> </span><span class="sc">'1'</span><span class="p">,</span>
 <span class="w">      </span><span class="n">PIPELINE_DATA_G</span><span class="w">           </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">false</span><span class="p">,</span>
 <span class="w">      </span><span class="n">PIPELINE_STATUS_G</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">true</span><span class="p">,</span>
-<span class="w">      </span><span class="n">COLMANAGER_DATA_DEPTH_G</span><span class="w">   </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 128 entries per column</span>
-<span class="w">      </span><span class="n">COLMANAGER_STATUS_DEPTH_G</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 64 entries per column</span>
+<span class="w">      </span><span class="n">COLMANAGER_DATA_DEPTH_G</span><span class="w">   </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 7 entries -&gt; 14 hits per column</span>
+<span class="w">      </span><span class="n">COLMANAGER_STATUS_DEPTH_G</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">   </span><span class="c1">-- 6 events per column</span>
 <span class="w">      </span><span class="n">DATAFIFO_PIPE_G</span><span class="w">           </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">      </span><span class="n">STATUSFIFO_PIPE_G</span><span class="w">         </span><span class="o">=&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
 <span class="w">   </span><span class="k">port</span><span class="w"> </span><span class="k">map</span><span class="w"> </span><span class="p">(</span>

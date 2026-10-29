@@ -1,0 +1,569 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASIC Top-Level Wrapper &mdash; pix2pgp v3.1.1-16-g97c278b documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=eb3360d3"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FPGA Top-Level (Pix2PgpAsicStreamRx)" href="fpga_top_level.html" />
+    <link rel="prev" title="ASIC/FPGA Top-Level Port Description" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            pix2pgp
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Setup/index.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../HowTo/index.html">HowTos</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">ASIC/FPGA Top-Level Port Description</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ASIC Top-Level Wrapper</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generics">Generics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ports">Ports</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#general-interface">General Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#configuration-interface">Configuration Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#column-manager-interface">Column Manager Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#serializer-interface">Serializer Interface</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eof-flag-support-new-asics">EoF Flag Support (New ASICs)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fpga_top_level.html">FPGA Top-Level (Pix2PgpAsicStreamRx)</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pix2pgp</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">ASIC/FPGA Top-Level Port Description</a></li>
+      <li class="breadcrumb-item active">ASIC Top-Level Wrapper</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/PortDescription/asic_top_level.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="asic-top-level-wrapper">
+<span id="port-description-asic"></span><h1>ASIC Top-Level Wrapper<a class="headerlink" href="#asic-top-level-wrapper" title="Link to this heading"></a></h1>
+<p>Every supported ASIC has a wrapper <code class="docutils literal notranslate"><span class="pre">Pix2Pgp&lt;AsicName&gt;Top</span></code> under
+<code class="docutils literal notranslate"><span class="pre">gateware/asics/&lt;AsicName&gt;/rtl/</span></code>. It instantiates, for <strong>one</strong> lane:</p>
+<ul class="simple">
+<li><p>the shared <code class="docutils literal notranslate"><span class="pre">Pix2PgpTop</span></code> core (Column Managers, Column Supervisor,
+Arbiter)</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">Pix2Pgp4TxLiteWrapper</span></code> (PGP4 transmitter)</p></li>
+<li><p>a 66-bit → 32-bit <code class="docutils literal notranslate"><span class="pre">Gearbox</span></code> toward the serializer</p></li>
+<li><p>the clock-domain synchronizers and capture registers for the
+configuration inputs</p></li>
+</ul>
+<p>The wrapper exposes <strong>only</strong> <code class="docutils literal notranslate"><span class="pre">std_logic</span></code> / <code class="docutils literal notranslate"><span class="pre">std_logic_vector</span></code> ports,
+with hardcoded widths, so it can be instantiated from a SystemVerilog /
+Verilog ASIC top. Asserts inside the wrapper check every port width
+against the constants of <code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code> at elaboration time.
+Instantiate the wrapper <code class="docutils literal notranslate"><span class="pre">NUM_OF_SERIALIZERS_C</span></code> times per ASIC.</p>
+<p>In the tables below, <code class="docutils literal notranslate"><span class="pre">N</span></code> = <code class="docutils literal notranslate"><span class="pre">NUM_OF_COL_MANAGERS_C</span></code> and
+<code class="docutils literal notranslate"><span class="pre">W</span></code> = <code class="docutils literal notranslate"><span class="pre">ASIC_DATABUS_DWIDTH_C</span></code>:</p>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Per-ASIC widths</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 29.4%" />
+<col style="width: 17.6%" />
+<col style="width: 17.6%" />
+<col style="width: 17.6%" />
+<col style="width: 17.6%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>ASIC</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">W</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">cfgPauseLimit</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SparkPix-S</p></td>
+<td><p>24</p></td>
+<td><p>20</p></td>
+<td><p>no</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>SparkPix-Sv2</p></td>
+<td><p>24</p></td>
+<td><p>20</p></td>
+<td><p>no</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>SparkPix-T</p></td>
+<td><p>24</p></td>
+<td><p>32</p></td>
+<td><p>yes</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>Thriglav</p></td>
+<td><p>50</p></td>
+<td><p>32</p></td>
+<td><p>yes</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>New ASICs (<code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code>)</p></td>
+<td><p>—</p></td>
+<td><p>—</p></td>
+<td><p>if <code class="docutils literal notranslate"><span class="pre">EN_ERO_C</span></code></p></td>
+<td><p>yes (see <a class="reference internal" href="#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a>)</p></td>
+</tr>
+</tbody>
+</table>
+<section id="generics">
+<h2>Generics<a class="headerlink" href="#generics" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 12.0%" />
+<col style="width: 10.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TPD_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">ns</span></code></p></td>
+<td><p>Simulation-only register delay. Ignored by synthesis</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RST_ASYNC_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code> → asynchronous reset; <code class="docutils literal notranslate"><span class="pre">false</span></code> → synchronous reset</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">std_logic</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'0'</span></code></p></td>
+<td><p>Reset polarity of <code class="docutils literal notranslate"><span class="pre">sparseRst</span></code> / <code class="docutils literal notranslate"><span class="pre">pgpRst</span></code> / <code class="docutils literal notranslate"><span class="pre">pgpHardRst</span></code>.
+<code class="docutils literal notranslate"><span class="pre">'0'</span></code> = active-low (the wrapper default; the shared
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpTop</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">'1'</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_DATA_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Register the Data Bus inside the Arbiter before it is
+multiplexed onto the AXI-Stream. Use for timing closure</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_STATUS_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">boolean</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p>Register the Status Bus inside the Column Supervisor and the
+Arbiter. Usually left enabled</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">8</span></code></p></td>
+<td><p>Data FIFO depth per Column Manager, as a number of DesignWare
+FIFO entries (not <code class="docutils literal notranslate"><span class="pre">log2</span></code>). The FIFO is read through the
+double-width internal bus (<code class="docutils literal notranslate"><span class="pre">2*W</span></code>), so each entry holds two
+hits, i.e. the FIFO holds <code class="docutils literal notranslate"><span class="pre">COLMANAGER_DATA_DEPTH_G</span> <span class="pre">*</span> <span class="pre">2</span></code> hits.
+The <code class="docutils literal notranslate"><span class="pre">surfFifo</span></code> variant (GHDL / FPGA emulation) ignores it and
+uses a fixed internal address width</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">COLMANAGER_STATUS_DEPTH_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">integer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">8</span></code></p></td>
+<td><p>Status FIFO depth per Column Manager, as a number of DesignWare
+FIFO entries (one per closed event / Pause fragment). Same
+<code class="docutils literal notranslate"><span class="pre">surfFifo</span></code> caveat as above</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATAFIFO_PIPE_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Pipeline stages on the Data FIFO write-side inputs and on its
+read-error flag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">STATUSFIFO_PIPE_G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">natural</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Pipeline stages on the Status FIFO write-side inputs and on its
+read-error flag</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="ports">
+<h2>Ports<a class="headerlink" href="#ports" title="Link to this heading"></a></h2>
+<section id="general-interface">
+<h3>General Interface<a class="headerlink" href="#general-interface" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 12.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Width</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sparseClk</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>User Logic (matrix / sparse) clock. Write side of every Column
+Manager FIFO, the Column Manager FSMs and the watchdogs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpClk</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>PGP / serializer clock. Column Supervisor, Arbiter, PGP4
+transmitter, serializer gearbox, and the read side of every
+FIFO</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sparseRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>Reset on <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code>, polarity per <code class="docutils literal notranslate"><span class="pre">RST_POLARITY_G</span></code>. Also
+resets the FIFOs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>Reset of the Pix2PGP core logic on <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>, and of the
+<code class="docutils literal notranslate"><span class="pre">pgpClk</span></code>-domain configuration registers</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgpHardRst</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>Reset of the PGP4 transmitter and the serializer gearbox only.
+Kept separate so that the core can be reset without dropping
+the PGP link</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="configuration-interface">
+<h3>Configuration Interface<a class="headerlink" href="#configuration-interface" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">cfg*</span></code> inputs come from the ASIC’s slow-control register file and
+are treated as asynchronous. The wrapper synchronizes each one to the
+clock domain where it is used, then captures it into the internal
+<code class="docutils literal notranslate"><span class="pre">config</span></code> record while <code class="docutils literal notranslate"><span class="pre">cfgSel</span></code> is high.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 12.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Width</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgSel</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>Configuration capture enable. While high, the internal
+<code class="docutils literal notranslate"><span class="pre">config</span></code> record tracks the synchronized <code class="docutils literal notranslate"><span class="pre">cfg*</span></code> inputs; while
+low, it holds its last value. Tie high if the register file
+does not need a commit strobe</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgTimeoutLimit</span></code></p></td>
+<td><p>in</p></td>
+<td><p>12 (<code class="docutils literal notranslate"><span class="pre">TIMEOUT_LIMIT_WIDTH_C</span></code>)</p></td>
+<td><p>Column Supervisor watchdog limit for the Timeout Readout
+Sequence. The watchdog counts on <strong>sparseClk</strong>. Not used on
+ERO ASICs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgPauseLimit</span></code></p></td>
+<td><p>in</p></td>
+<td><p>12</p></td>
+<td><p><strong>ERO ASICs only.</strong> Pause-timeout window (<code class="docutils literal notranslate"><span class="pre">sparseClk</span></code>
+cycles) during which the Column Supervisor groups paused
+columns before draining them. On SparkPix-S/Sv2, the port does
+not exist and <code class="docutils literal notranslate"><span class="pre">config.pauseLimit</span></code> is tied to zero</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColumnEnable</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Per-column enable. Synchronized to both domains:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> → <code class="docutils literal notranslate"><span class="pre">config.colEnaPgp</span></code>: the Column Supervisor only
+waits for, evaluates and drains enabled columns</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> → <code class="docutils literal notranslate"><span class="pre">config.colEnaSparse</span></code>: masks the column’s
+<code class="docutils literal notranslate"><span class="pre">busy</span></code> output</p></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p><strong>New ASICs only.</strong> See <a class="reference internal" href="#port-description-asic-eof"><span class="std std-ref">EoF Flag Support (New ASICs)</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColBusy</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p>OR of the per-column busy signals</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColDataEmpty</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p>AND of every Column Manager Data FIFO empty flag</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgColStatusEmpty</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p>AND of every Column Manager Status FIFO empty flag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cfgSuperBusy</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p>Column Supervisor busy (not in <code class="docutils literal notranslate"><span class="pre">IDLE</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfgArbBusy</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p>Arbiter busy (frame transmission in progress)</p></td>
+</tr>
+</tbody>
+</table>
+<p>The five read-back outputs come from both clock domains and are <strong>not</strong>
+synchronized. They are meant for slow-control polling.</p>
+</section>
+<section id="column-manager-interface">
+<h3>Column Manager Interface<a class="headerlink" href="#column-manager-interface" title="Link to this heading"></a></h3>
+<p>Every port in this group is on the <code class="docutils literal notranslate"><span class="pre">sparseClk</span></code> domain and is driven
+by, or drives, the per-column User Logic. Bit <code class="docutils literal notranslate"><span class="pre">i</span></code> of each vector
+belongs to Column Manager <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 12.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Width</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">din0</span></code> … <code class="docutils literal notranslate"><span class="pre">din&lt;N-1&gt;</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">W</span></code> each</p></td>
+<td><p>Per-column data word. Written into the Data FIFO on <code class="docutils literal notranslate"><span class="pre">wrEn</span></code>.
+One port per column, because <code class="docutils literal notranslate"><span class="pre">W</span></code>-wide arrays cannot cross the
+VHDL/SystemVerilog boundary cleanly</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wrEn</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Write-enable. Only accepted while the column is in-frame
+(between <code class="docutils literal notranslate"><span class="pre">sof</span></code> and the event closure)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sof</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Start-of-Frame. On a rising edge, opens an event and increments
+the column’s Trigger Counter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>End-of-Frame. Closes the event nominally and releases <code class="docutils literal notranslate"><span class="pre">busy</span></code>.
+On ASICs with <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code>, also sets the EoF bit
+in the column’s Status Word</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">overOcc</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Over-Occupancy, a single-cycle strobe. Closes the current event
+with the Over-Occupancy flag set; <code class="docutils literal notranslate"><span class="pre">busy</span></code> stays high. With
+<code class="docutils literal notranslate"><span class="pre">INCR_TRGCNT_OVEROCC_C</span> <span class="pre">=</span> <span class="pre">True</span></code> (SparkPix-S), it also opens the
+next event and increments the Trigger Counter. See
+<a class="reference internal" href="../Architecture/flow_control.html#flow-over-occupancy"><span class="std std-ref">Over-Occupancy</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pauseAck</span></code></p></td>
+<td><p>in</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Pause acknowledge from the User Logic. A rising edge while
+in-frame closes the current fragment with the Pause flag set</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">busy</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>High from <code class="docutils literal notranslate"><span class="pre">sof</span></code> until the <code class="docutils literal notranslate"><span class="pre">eof</span></code>-closure Status Word is
+written. Masked by <code class="docutils literal notranslate"><span class="pre">config.colEnaSparse</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pause</span></code></p></td>
+<td><p>out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Back-pressure toward the User Logic. High while either the Data
+FIFO or the Status FIFO is almost-full. See <a class="reference internal" href="../Architecture/flow_control.html#flow-pause"><span class="std std-ref">Pause (Back-Pressure)</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="serializer-interface">
+<h3>Serializer Interface<a class="headerlink" href="#serializer-interface" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 8.0%" />
+<col style="width: 12.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dir</p></th>
+<th class="head"><p>Width</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgpDout</span></code></p></td>
+<td><p>out</p></td>
+<td><p>32</p></td>
+<td><p>PGP4-encoded 64b/66b stream, geared down to 32 bits
+(<code class="docutils literal notranslate"><span class="pre">SER_DWIDTH_C</span></code>) for the serializer. <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pgpDoutValid</span></code></p></td>
+<td><p>out</p></td>
+<td><p>1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pgpDout</span></code> is valid</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pgpDoutReady</span></code></p></td>
+<td><p>in</p></td>
+<td><p>1</p></td>
+<td><p>Serializer is ready to accept <code class="docutils literal notranslate"><span class="pre">pgpDout</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="eof-flag-support-new-asics">
+<span id="port-description-asic-eof"></span><h2>EoF Flag Support (New ASICs)<a class="headerlink" href="#eof-flag-support-new-asics" title="Link to this heading"></a></h2>
+<p>New ASICs should set <code class="docutils literal notranslate"><span class="pre">EN_EOF_FLAG_C</span> <span class="pre">=</span> <span class="pre">True</span></code> in
+<code class="docutils literal notranslate"><span class="pre">Pix2PgpAsicPkg.vhd</span></code> (see <a class="reference internal" href="../Architecture/frame_format.html#frame-eof-flag"><span class="std std-ref">Header EoF Flag</span></a>). Their wrapper
+should then add:</p>
+<ul class="simple">
+<li><p>a <code class="docutils literal notranslate"><span class="pre">cfgMaskEofPause</span> <span class="pre">:</span> <span class="pre">in</span> <span class="pre">std_logic</span></code> port</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">surf.Synchronizer</span></code> that brings it into the <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> domain,
+in the same way <code class="docutils literal notranslate"><span class="pre">cfgColumnEnable</span></code> becomes <code class="docutils literal notranslate"><span class="pre">cfgColumnEnablePgp</span></code></p></li>
+<li><p>a capture of the synchronized value into <code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code>
+under <code class="docutils literal notranslate"><span class="pre">cfgSel</span></code>, in the <code class="docutils literal notranslate"><span class="pre">pgpClk</span></code> configuration process</p></li>
+</ul>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">maskEofPause</span></code></p></th>
+<th class="head"><p>Header EoF flag</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">'0'</span></code> (default)</p></td>
+<td><p>High only on non-Pause readouts in which every enabled column
+closed with <code class="docutils literal notranslate"><span class="pre">eof</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+<td><p>Pause is ignored: high whenever every enabled column’s Status
+Word carries the EoF bit, including Pause readouts</p></td>
+</tr>
+</tbody>
+</table>
+<p>On ASICs that predate the feature (SparkPix-S, SparkPix-Sv2,
+SparkPix-T, Thriglav), the port does not exist and
+<code class="docutils literal notranslate"><span class="pre">config.maskEofPause</span></code> is tied to <code class="docutils literal notranslate"><span class="pre">'0'</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="ASIC/FPGA Top-Level Port Description" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fpga_top_level.html" class="btn btn-neutral float-right" title="FPGA Top-Level (Pix2PgpAsicStreamRx)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SLAC National Accelerator Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

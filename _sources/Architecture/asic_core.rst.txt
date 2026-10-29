@@ -1,8 +1,8 @@
 .. _architecture_asic_core:
 
-===================
+======================
 ASIC Core Architecture
-===================
+======================
 
 The Pix2PGP ASIC core is comprised of three main module types:
 
@@ -71,6 +71,9 @@ is written into the Status FIFO, made up of:
   reception
 * ``Pause`` flag — high if the event closed because a FIFO reached its
   almost-full threshold
+* ``EoF`` flag — high if the event closed because of a nominal ``EoF``
+  reception. Always ``'0'`` unless ``EN_EOF_FLAG_C = True`` (see
+  :ref:`frame_eof_flag`)
 * ``Data-Length Counter`` value — how many hits were recorded for this
   event
 * ``Trigger Counter`` value — which trigger this event belongs to
@@ -125,7 +128,7 @@ following **Readout Sequences** is initiated:
   the outbound frame's header. See :ref:`flow_pause_error`
 * **Timeout** — a subset (but not all) of the Status FIFOs are
   non-empty. A watchdog counter is armed, and if the state persists
-  for a configurable number of PGP-clock cycles, the event is closed
+  for a configurable number of ``sparseClk`` cycles, the event is closed
   with the Timeout flag raised, and only the non-empty columns are
   drained. If all Status FIFOs go non-empty before the watchdog
   expires, one of the other three sequences is initiated instead.
@@ -135,6 +138,13 @@ following **Readout Sequences** is initiated:
 Once a sequence is chosen, the Supervisor registers the aggregate
 metadata (Column Hitmask, Trigger Counter, status flags) and signals
 the Arbiter to begin.
+
+On ASICs with ``EN_EOF_FLAG_C = True``, the Supervisor also computes
+the header **EoF** flag at the start of a Nominal or Pause sequence. It
+is high if every enabled column's Status Word carries the EoF bit, and,
+unless ``config.maskEofPause`` is set, only if the sequence is not a
+Pause readout. It is cleared for Timeout and Pause-Error sequences.
+See :ref:`frame_eof_flag`.
 
 .. _architecture_arbiter:
 

@@ -26,6 +26,7 @@ Circuits (ASICs) that operate on a sparse readout scheme. It provides:
    Setup/index
    Architecture/index
    HowTo/index
+   PortDescription/index
 
 Please email cbakalis@slac.stanford.edu if you see any errors or have any
 questions about anything in the current documentation.

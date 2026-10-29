@@ -1,8 +1,8 @@
 .. _architecture_frame_format:
 
-===============
+=================
 Data Frame Format
-===============
+=================
 
 Pix2PGP defines two nested frame formats:
 
@@ -30,7 +30,8 @@ The Lane Frame is comprised of:
 * **Header** (always present)
 
   * Status flags: lane-wide ``Pause``, ``Over-Occupancy``, ``Pause-Error``,
-    ``Timeout``, ``Column FIFO Error``, ``Dummy Header``
+    ``Timeout``, ``Column FIFO Error``, ``Dummy Header``, and (on ASICs
+    with ``EN_EOF_FLAG_C = True``) ``EoF`` — see :ref:`frame_eof_flag`
   * ``Column Hitmask`` — one bit per Column Manager. If a bit is high,
     that Column recorded at least one hit for this event
   * ``Trigger Counter`` — the event's trigger identifier
@@ -65,6 +66,61 @@ Managers on the same data bus, the header requires at least 78 bits, so
 
 The **Column Metadata word does not have a scaling factor** — it must fit
 in the native ``PIX2PGP_DATABUS_DWIDTH_C``.
+
+.. _frame_eof_flag:
+
+Header EoF Flag
+---------------
+
+The header has a reserved field, ``FLAGS_RESERVED_POS_C``, between the
+status flags and the Column Hitmask. Its MSB, ``EOF_FLAG_POS_C``, holds
+the **EoF flag**. Both are defined in ``Pix2PgpAsicPkg.vhd``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 20
+
+   * - ASIC
+     - ``FLAGS_RESERVED_POS_C``
+     - ``EOF_FLAG_POS_C``
+   * - SparkPix-S / SparkPix-Sv2
+     - [33:32]
+     - 33
+   * - SparkPix-T
+     - [57:32]
+     - 57
+   * - Thriglav
+     - [57:57]
+     - 57
+
+The flag is enabled per ASIC with ``EN_EOF_FLAG_C``. It is ``False``
+for every ASIC listed above, so for them the bit is always ``'0'`` and
+the header is unchanged. **New ASICs should set it to** ``True``. When
+it is enabled, an assert in the ASIC top-level wrapper checks that
+``EOF_FLAG_POS_C`` lies inside a non-empty ``FLAGS_RESERVED_POS_C``.
+
+The flag is high when **every enabled column** closed its event with a
+nominal ``eof``:
+
+* Each Column Manager stores an EoF bit in its Status Word when the
+  event was closed by ``eof``. It is ``'0'`` for Over-Occupancy and
+  Pause closures
+* The Column Supervisor raises the header flag only if every enabled
+  column's Status Word carries it
+* By default, it stays low on Pause readouts. The ``maskEofPause``
+  configuration bit removes this condition (see
+  :ref:`port_description_asic_eof`)
+* It is always low on Timeout and Pause-Error readouts, and on dummy
+  headers
+
+Over-Occupancy closures do **not** set the flag. The FPGA ``LaneRx``
+combines EoF and Over-Occupancy into an event-closure indicator, so a
+clean closure can still be told apart from a lossy one (see
+:ref:`architecture_fpga_lane_rx`).
+
+The Python decoders of the existing ASICs do not expose the flag. It
+is to be added in the header-format class of the first ASIC that
+enables it.
 
 Supported Data-Bus Widths
 -------------------------

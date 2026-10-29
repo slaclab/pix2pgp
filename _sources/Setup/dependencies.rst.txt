@@ -1,8 +1,8 @@
 .. _setup_dependencies:
 
-====================
+=====================
 External Dependencies
-====================
+=====================
 
 Pix2PGP depends on the following external components; these are pulled in
 as git submodules under ``firmware/submodules``:
