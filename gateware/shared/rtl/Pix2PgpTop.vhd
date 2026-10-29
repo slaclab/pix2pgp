@@ -74,6 +74,7 @@ architecture rtl of Pix2PgpTop is
    signal superBusy      : sl;
    signal colPause       : sl;
    signal colPauseError  : sl;
+   signal colEof         : sl;
    signal timeoutError   : sl;
    signal anyColBusy     : sl;
    signal trgCntGlbl     : slv(TRGCNT_WIDTH_C-1 downto 0);
@@ -156,6 +157,7 @@ begin
          timeoutError  => timeoutError,
          colPauseError => colPauseError,
          colPause      => colPause,
+         colEof        => colEof,
          colHitmask    => colHitmask,
          colTimeout    => colTimeout);
 
@@ -186,6 +188,7 @@ begin
          overOccError  => overOccError,
          timeoutError  => timeoutError,
          colPause      => colPause,
+         colEof        => colEof,
          colHitmask    => colHitmask,
          colTimeout    => colTimeout,
          -- Pgp4TxLite Interface

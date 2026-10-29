@@ -73,6 +73,15 @@ package Pix2PgpAsicPkg is
    constant EVAL_SOF_C  : boolean := True;
    constant EVAL_EOFE_C : boolean := True;
    --
+   -- if set to True: each Column Manager propagates an EoF flag to its status FIFO
+   -- upon event closure (i.e. the event was closed by a nominal EoF strobe);
+   -- the Column Supervisor raises the EoF header flag if *all* columns that are
+   -- read-out for that event were closed by an EoF.
+   -- Kept False for ASICs before SIPM (i.e. ASIC_TYPE_C <= 4);
+   -- User should set True for all new ASICs
+   --
+   constant EN_EOF_FLAG_C : boolean := False;
+   --
    -- **************************************************************************
 
    ------------------------------------------------------------------------------
@@ -96,6 +105,8 @@ package Pix2PgpAsicPkg is
    --------------------------
    subtype  FLAGS_RESERVED_POS_C   is natural range  HEADER_DWIDTH_C-7   -- [57:32]
                                               downto HEADER_DWIDTH_C-32;
+   -- EoF flag occupies the MSB of the reserved field (only set if EN_EOF_FLAG_C)
+   constant EOF_FLAG_POS_C          : natural := HEADER_DWIDTH_C-7; -- 57
    --------------------------
    -- col-hitmask
    subtype  COL_HITMASK_POS_C      is natural range  HEADER_DWIDTH_C-33  -- [31:8]

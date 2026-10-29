@@ -156,6 +156,10 @@ begin
    assert (FPGA_DATABUS_DWIDTH_C >= FPGA_PREAMBLE_LEN_C)
       report "[ERROR]: Pix2PgpSparkPixSv2Top; FPGA RX Preamble Length is larger than the width of the FPGA databus. Please check your Pkg file!" severity failure;
 
+   assert (not(EN_EOF_FLAG_C) or (EOF_FLAG_POS_C <= FLAGS_RESERVED_POS_C'high and
+                                  EOF_FLAG_POS_C >= FLAGS_RESERVED_POS_C'low))
+      report "[ERROR]: Pix2PgpSparkPixSv2Top; EN_EOF_FLAG_C is set but EOF_FLAG_POS_C is not within FLAGS_RESERVED_POS_C (or the reserved field is empty). Please check your Pkg file!" severity failure;
+
    --------------------------------------------------------------------------
 
    -- Top Level
@@ -301,12 +305,15 @@ begin
    process(pgpRst, pgpClk)
    begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         config.colEnaPgp <= (others => '0');
+         config.colEnaPgp    <= (others => '0');
+         config.maskEofPause <= '0';
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
-            config.colEnaPgp <= (others => '0');
+            config.colEnaPgp    <= (others => '0');
+            config.maskEofPause <= '0';
          elsif cfgSel = '1' then
-            config.colEnaPgp <= cfgColumnEnablePgp;
+            config.colEnaPgp    <= cfgColumnEnablePgp;
+            config.maskEofPause <= '0'; -- no such feature in sparkpix-sv2
          end if;
       end if;
    end process;
