@@ -111,13 +111,15 @@ package Pix2PgpPkg is
       colEnaPgp    : slv(NUM_OF_COL_MANAGERS_C-1 downto 0);
       timeoutLimit : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
       pauseLimit   : slv(TIMEOUT_LIMIT_WIDTH_C-1 downto 0);
+      maskEofPause : sl;
    end record;
 
    constant DEFAULT_PIX2PGP_CONFIG_C : Pix2PgpCfgConfigType := (
       colEnaSparse => (others => '1'),
       colEnaPgp    => (others => '1'),
       timeoutLimit => (others => '1'),
-      pauseLimit   => (others => '1'));
+      pauseLimit   => (others => '1'),
+      maskEofPause => '0');
 
    type Pix2PgpCfgReadbackType is record
       cfgColBusy        : sl;

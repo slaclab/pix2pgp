@@ -369,12 +369,15 @@ begin
    process(pgpRst, pgpClk)
    begin
       if (RST_ASYNC_G and pgpRst = RST_POLARITY_G) then
-         config.colEnaPgp <= (others => '0');
+         config.colEnaPgp    <= (others => '0');
+         config.maskEofPause <= '0';
       elsif (rising_edge(pgpClk)) then
          if pgpRst = RST_POLARITY_G then
-            config.colEnaPgp <= (others => '0');
+            config.colEnaPgp    <= (others => '0');
+            config.maskEofPause <= '0';
          elsif cfgSel = '1' then
-            config.colEnaPgp <= cfgColumnEnablePgp;
+            config.colEnaPgp    <= cfgColumnEnablePgp;
+            config.maskEofPause <= '0'; -- no such feature in thriglav
          end if;
       end if;
    end process;

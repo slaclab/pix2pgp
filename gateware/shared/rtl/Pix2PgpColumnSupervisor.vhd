@@ -298,9 +298,10 @@ begin
                end if;
 
                -- set the asic-header EoF flag if all columns closed with an EoF;
-               -- not on pause read-outs (only the paused columns are read)
+               -- by default, not on pause read-outs (only the paused columns are read);
+               -- if config.maskEofPause is high, the pause flag is masked-off from the evaluation
                v.colEof := toSl(v.columnEof = v.columnEnable) and uOr(v.columnEnable) and
-                           not(v.pause);
+                           (not(v.pause) or config.maskEofPause);
 
                v.state := ARB_START_S;
             end if;
